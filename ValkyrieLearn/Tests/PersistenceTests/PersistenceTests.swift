@@ -17,6 +17,61 @@ import LearningCore
         )
         return try AppState(context: ModelContext(container))
     }
+
+    private func challengeReadyState(in container: ModelContainer) throws -> AppState {
+        let store = try LearningStore(context: ModelContext(container))
+        var profile = try store.loadProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+
+        try store.save(
+            profile: profile,
+            mathAdventure: MathAdventureSaveState(placementComplete: true),
+            workshop: false,
+            sound: true,
+            reducedMotion: false,
+            world: "mathCastle"
+        )
+        return try AppState(context: ModelContext(container))
+    }
+
+    private func solveActiveMath(_ state: AppState) throws {
+        guard let runtime = state.activeMath else {
+            return XCTFail("Expected an active Math mechanic")
+        }
+
+        switch runtime {
+        case .crystalCart(let model):
+            while model.encounter.operation == .subtraction
+                    ? (state.cart?.quantity ?? model.quantity) > model.encounter.targetQuantity
+                    : (state.cart?.quantity ?? model.quantity) < model.encounter.targetQuantity {
+                if model.encounter.operation == .subtraction {
+                    XCTAssertTrue(state.decrementActive())
+                } else {
+                    XCTAssertTrue(state.incrementActive())
+                }
+            }
+
+        case .balanceScale(let model):
+            state.chooseComparison(model.correctChoice)
+
+        case .numberBond(let model):
+            state.setActiveValue(model.correctMissingPart)
+
+        case .tenFrame(let model):
+            var remaining = model.encounter.targetQuantity - model.filled
+            while remaining > 0 {
+                XCTAssertTrue(state.incrementActive())
+                remaining -= 1
+            }
+
+        case .missingBridge(let model):
+            state.setActiveValue(model.correctNumber)
+        }
+
+        XCTAssertEqual(state.submit()?.outcome, .correct)
+    }
     func testSwiftDataRoundTripAcrossContexts() async throws {
         let container = try LearningStore.container(inMemory: true)
         let store = try LearningStore(context: ModelContext(container))
@@ -208,6 +263,80 @@ import LearningCore
 
         XCTAssertTrue(MathManipulativeSupport.supports(encounter))
         XCTAssertNotNil(state.activeMath)
+    }
+
+
+    func testChallengeGateCompletionUnlocksMovableMoonLanternAcrossRelaunch() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try challengeReadyState(in: container)
+
+        XCTAssertEqual(state.challengeGateStatus, .ready)
+        XCTAssertTrue(state.beginChallengeGate())
+        XCTAssertEqual(state.challengeGateStatus, .active)
+
+        for completed in 0..<ChallengeGateCatalog.challengeCount {
+            guard case .encounter(let encounter) = state.prepareNext() else {
+                return XCTFail("Expected Challenge Gate encounter \(completed + 1)")
+            }
+            XCTAssertEqual(encounter.context, "challengeGate")
+            try solveActiveMath(state)
+
+            if completed < ChallengeGateCatalog.challengeCount - 1 {
+                XCTAssertEqual(state.challengeGateStatus, .active)
+                XCTAssertEqual(state.challengeGateCompletedCount, completed + 1)
+            }
+        }
+
+        XCTAssertEqual(state.challengeGateStatus, .completed)
+        XCTAssertTrue(state.hasStoryReward(.moonLantern))
+        XCTAssertEqual(state.storyRewardPlacement(.moonLantern), 0)
+
+        XCTAssertEqual(
+            state.cycleStoryRewardPlacement(.moonLantern, slotCount: 3),
+            1
+        )
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.challengeGateStatus, .completed)
+        XCTAssertTrue(restored.hasStoryReward(.moonLantern))
+        XCTAssertEqual(restored.storyRewardPlacement(.moonLantern), 1)
+        XCTAssertFalse(restored.beginChallengeGate())
+    }
+
+    func testChallengeGateProgressRestoresMidRun() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try challengeReadyState(in: container)
+
+        XCTAssertTrue(state.beginChallengeGate())
+        guard case .encounter(let first) = state.prepareNext() else {
+            return XCTFail("Expected first Challenge Gate encounter")
+        }
+        XCTAssertEqual(first.context, "challengeGate")
+        try solveActiveMath(state)
+        XCTAssertEqual(state.challengeGateCompletedCount, 1)
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.challengeGateStatus, .active)
+        XCTAssertEqual(restored.challengeGateCompletedCount, 1)
+        XCTAssertFalse(restored.hasStoryReward(.moonLantern))
+
+        guard case .encounter(let second) = restored.prepareNext() else {
+            return XCTFail("Expected Challenge Gate to resume at second encounter")
+        }
+        XCTAssertNotEqual(second.id, first.id)
+        XCTAssertEqual(second.context, "challengeGate")
+    }
+
+    func testChallengeGateCannotInterruptActiveScoredEncounter() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try challengeReadyState(in: container)
+
+        guard case .encounter = state.prepareNext() else {
+            return XCTFail("Expected normal adaptive encounter")
+        }
+        XCTAssertNotNil(state.activeMath)
+        XCTAssertFalse(state.beginChallengeGate())
+        XCTAssertEqual(state.challengeGateStatus, .ready)
     }
 
 }
