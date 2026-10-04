@@ -8,7 +8,15 @@ final class MathAdventureTests: XCTestCase {
         let after = date.addingTimeInterval(30)
         switch try XCTUnwrap(adventure.runtime) {
         case .crystalCart(let model):
-            for _ in model.quantity..<model.encounter.targetQuantity { XCTAssertTrue(adventure.increment(at: after)) }
+            if model.quantity < model.encounter.targetQuantity {
+                for _ in model.quantity..<model.encounter.targetQuantity {
+                    XCTAssertTrue(adventure.increment(at: after))
+                }
+            } else if model.quantity > model.encounter.targetQuantity {
+                for _ in model.encounter.targetQuantity..<model.quantity {
+                    XCTAssertTrue(adventure.decrement(at: after))
+                }
+            }
         case .balanceScale(let model): adventure.chooseComparison(model.correctChoice)
         case .numberBond(let model): adventure.setNumber(model.correctMissingPart)
         case .tenFrame(let model):
