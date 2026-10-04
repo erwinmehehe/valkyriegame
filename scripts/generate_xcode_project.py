@@ -75,7 +75,8 @@ for config in ['Debug','Release']:
     project_configs.append(put('ProjectConfig:'+config,'XCBuildConfiguration',name=config,buildSettings={
         'SDKROOT':'iphoneos','CLANG_ENABLE_MODULES':'YES','CLANG_ENABLE_OBJC_ARC':'YES','SWIFT_VERSION':'5.0',
         'IPHONEOS_DEPLOYMENT_TARGET':'17.0','SWIFT_STRICT_CONCURRENCY':'targeted',
-        'ENABLE_TESTABILITY':'YES' if config=='Debug' else 'NO'}))
+        'ENABLE_TESTABILITY':'YES' if config=='Debug' else 'NO',
+        'ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO'}))
 project_config_list=put('ProjectConfigs','XCConfigurationList',buildConfigurations=project_configs,defaultConfigurationIsVisible=0,defaultConfigurationName='Release')
 project_id=put('Project','PBXProject',attributes={'BuildIndependentTargetsInParallel':'YES','LastUpgradeCheck':'1600'},buildConfigurationList=project_config_list,
               compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=main_group,
