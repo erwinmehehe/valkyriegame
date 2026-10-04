@@ -38,12 +38,12 @@ for name,files,kind in [('ValkyrieLearn',app_files,'application'),('LearningCore
     product = put('Product:'+name,'PBXFileReference', explicitFileType='wrapper.application' if kind=='application' else 'wrapper.cfbundle',
                   path=name+('.app' if kind=='application' else '.xctest'), sourceTree='BUILT_PRODUCTS_DIR')
     products.append(product)
-    source_builds = [put('Build:'+name+str(p),'PBXBuildFile',fileRef=file_refs[str(p.relative_to(ROOT))]) for p in files]
+    source_builds = [put('Build:'+name+str(p.relative_to(ROOT)),'PBXBuildFile',fileRef=file_refs[str(p.relative_to(ROOT))]) for p in files]
     sources = put('Sources:'+name,'PBXSourcesBuildPhase',buildActionMask=2147483647,files=source_builds,runOnlyForDeploymentPostprocessing=0)
     product_dependency = put('PackageProduct:'+name,'XCSwiftPackageProductDependency',package=package,productName='LearningCore')
     framework_build = put('LinkPackage:'+name,'PBXBuildFile',productRef=product_dependency)
     frameworks = put('Frameworks:'+name,'PBXFrameworksBuildPhase',buildActionMask=2147483647,files=[framework_build],runOnlyForDeploymentPostprocessing=0)
-    resource_builds = [put('Resource:'+str(p),'PBXBuildFile',fileRef=file_refs[str(p.relative_to(ROOT))]) for p in resources] if kind=='application' else []
+    resource_builds = [put('Resource:'+str(p.relative_to(ROOT)),'PBXBuildFile',fileRef=file_refs[str(p.relative_to(ROOT))]) for p in resources] if kind=='application' else []
     resource_phase = put('Resources:'+name,'PBXResourcesBuildPhase',buildActionMask=2147483647,files=resource_builds,runOnlyForDeploymentPostprocessing=0)
     configs=[]
     for config in ['Debug','Release']:

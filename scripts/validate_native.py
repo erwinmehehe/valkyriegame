@@ -24,6 +24,6 @@ for p in (ROOT/'ValkyrieLearn/Learning').rglob('*.swift'):
  assert not re.search(r'import\s+(SpriteKit|SwiftUI|SwiftData|UIKit|AVFoundation)',p.read_text()), p
 for p in (ROOT/'ValkyrieLearn').rglob('*.swift'):
  assert not re.search(r'(WKWebView|import WebKit|import JavaScriptCore)',p.read_text()), p
-baseline = subprocess.check_output(['git','show','1bca669d6736c4810e53bd1cfa487625f8232992:index.html'],cwd=ROOT)
-assert hashlib.sha256(baseline).digest() == hashlib.sha256((ROOT/'index.html').read_bytes()).digest()
+# Pinned prototype digest works in shallow CI clones too.
+assert hashlib.sha256((ROOT/'index.html').read_bytes()).hexdigest() == '3ac15b0237acfd5a4e0bc55abe57ba84c46c2e24a66284088f84c0561e9f82fe'
 print('PASS project references, deterministic generation, landscape/iPad configuration, framework separation and unchanged prototype.')
