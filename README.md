@@ -4,7 +4,11 @@ ValkyrieLearn is a native iPad educational adventure for a strong early learner.
 
 ## Current status
 
-The repository currently contains an HTML/JavaScript playable prototype in `index.html`. That prototype is a design and interaction reference only.
+The repository now includes a native iPad Milestone 0–1 source foundation in `ValkyrieLearn/`, a committed `ValkyrieLearn.xcodeproj`, and a standalone plain-Swift `LearningCore` package. The HTML/JavaScript prototype in `index.html` remains an unchanged design and interaction reference.
+
+The native source provides Story Tree, Math Castle, protagonist movement, Pip, Crystal Cart, local SwiftData and core tests. Production art and real-iPad acceptance are still pending; this is not the completed Adaptive Math Castle vertical slice. See [implementation status and exact Mac build steps](docs/IMPLEMENTATION_M0_M1.md).
+
+Open `ValkyrieLearn.xcodeproj` with Xcode 16+ to build for iPadOS 17+. Run `swift test` for the platform-independent learning tests.
 
 **Production direction is now locked to native iPadOS. Do not continue extending the HTML prototype as the production game.**
 
