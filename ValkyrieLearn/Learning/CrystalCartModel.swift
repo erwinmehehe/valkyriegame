@@ -399,3 +399,176 @@ public enum MathManipulativeSupport {
         }
     }
 }
+
+
+public enum MathMechanicRuntimeError: Error {
+    case unsupportedEncounter
+}
+
+/// Single learning-side adapter used by Math Castle regardless of the active renderer.
+/// SpriteKit can send simple actions without owning arithmetic, correctness, support,
+/// or evidence rules.
+public enum MathMechanicRuntime {
+    case crystalCart(CrystalCartModel)
+    case balanceScale(BalanceScaleModel)
+    case numberBond(NumberBondMachineModel)
+    case tenFrame(TenFrameModel)
+    case missingBridge(MissingNumberBridgeModel)
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        switch encounter.mechanicID {
+        case MathMechanicID.crystalCart:
+            self = .crystalCart(try CrystalCartModel(encounter: encounter, at: date))
+        case MathMechanicID.balanceScale:
+            self = .balanceScale(try BalanceScaleModel(encounter: encounter, at: date))
+        case MathMechanicID.numberBondMachine:
+            self = .numberBond(try NumberBondMachineModel(encounter: encounter, at: date))
+        case MathMechanicID.tenFrameGate:
+            self = .tenFrame(try TenFrameModel(encounter: encounter, at: date))
+        case MathMechanicID.missingNumberBridge:
+            self = .missingBridge(try MissingNumberBridgeModel(encounter: encounter, at: date))
+        default:
+            throw MathMechanicRuntimeError.unsupportedEncounter
+        }
+    }
+
+    public var encounter: LearningEncounter {
+        switch self {
+        case .crystalCart(let model): return model.encounter
+        case .balanceScale(let model): return model.encounter
+        case .numberBond(let model): return model.encounter
+        case .tenFrame(let model): return model.encounter
+        case .missingBridge(let model): return model.encounter
+        }
+    }
+
+    public var completed: Bool {
+        switch self {
+        case .crystalCart(let model): return model.completed
+        case .balanceScale(let model): return model.completed
+        case .numberBond(let model): return model.completed
+        case .tenFrame(let model): return model.completed
+        case .missingBridge(let model): return model.completed
+        }
+    }
+
+    public var support: SupportLevel {
+        switch self {
+        case .crystalCart(let model): return model.support
+        case .balanceScale(let model): return model.support
+        case .numberBond(let model): return model.support
+        case .tenFrame(let model): return model.support
+        case .missingBridge(let model): return model.support
+        }
+    }
+
+    @discardableResult public mutating func increment() -> Bool {
+        switch self {
+        case .crystalCart(var model):
+            let changed = model.add()
+            self = .crystalCart(model)
+            return changed
+        case .numberBond(var model):
+            let changed = model.addPart()
+            self = .numberBond(model)
+            return changed
+        case .tenFrame(var model):
+            let changed = model.addCounter()
+            self = .tenFrame(model)
+            return changed
+        case .missingBridge(var model):
+            let changed = model.increment()
+            self = .missingBridge(model)
+            return changed
+        case .balanceScale:
+            return false
+        }
+    }
+
+    @discardableResult public mutating func decrement() -> Bool {
+        switch self {
+        case .crystalCart(var model):
+            let changed = model.remove()
+            self = .crystalCart(model)
+            return changed
+        case .numberBond(var model):
+            let changed = model.removePart()
+            self = .numberBond(model)
+            return changed
+        case .tenFrame(var model):
+            let changed = model.removeCounter()
+            self = .tenFrame(model)
+            return changed
+        case .missingBridge(var model):
+            let changed = model.decrement()
+            self = .missingBridge(model)
+            return changed
+        case .balanceScale:
+            return false
+        }
+    }
+
+    public mutating func setValue(_ value: Int) {
+        switch self {
+        case .numberBond(var model):
+            model.setPart(value)
+            self = .numberBond(model)
+        case .missingBridge(var model):
+            model.setNumber(value)
+            self = .missingBridge(model)
+        default:
+            break
+        }
+    }
+
+    public mutating func chooseComparison(_ choice: ComparisonChoice) {
+        guard case .balanceScale(var model) = self else { return }
+        model.choose(choice)
+        self = .balanceScale(model)
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        switch self {
+        case .crystalCart(var model):
+            model.apply(scaffold)
+            self = .crystalCart(model)
+        case .balanceScale(var model):
+            model.apply(scaffold)
+            self = .balanceScale(model)
+        case .numberBond(var model):
+            model.apply(scaffold)
+            self = .numberBond(model)
+        case .tenFrame(var model):
+            model.apply(scaffold)
+            self = .tenFrame(model)
+        case .missingBridge(var model):
+            model.apply(scaffold)
+            self = .missingBridge(model)
+        }
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        switch self {
+        case .crystalCart(var model):
+            let evidence = model.submit(at: date)
+            self = .crystalCart(model)
+            return evidence
+        case .balanceScale(var model):
+            let evidence = model.submit(at: date)
+            self = .balanceScale(model)
+            return evidence
+        case .numberBond(var model):
+            let evidence = model.submit(at: date)
+            self = .numberBond(model)
+            return evidence
+        case .tenFrame(var model):
+            let evidence = model.submit(at: date)
+            self = .tenFrame(model)
+            return evidence
+        case .missingBridge(var model):
+            let evidence = model.submit(at: date)
+            self = .missingBridge(model)
+            return evidence
+        }
+    }
+}
