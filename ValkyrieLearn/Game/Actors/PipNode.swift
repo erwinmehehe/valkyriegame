@@ -27,7 +27,7 @@ import SpriteKit
     /// side to help the machinery after a successful solve.
     func helpRoute(to destination: CGPoint, reducedMotion: Bool) {
         self.reducedMotion = reducedMotion
-        removeAction(forKey: "routeHelp")
+        removeAction(forKey: "travel")
 
         guard !reducedMotion else {
             face(toward: destination)
@@ -42,6 +42,6 @@ import SpriteKit
         run(.sequence([
             action,
             .run { [weak self] in self?.operate(reducedMotion: false) }
-        ]), withKey: "routeHelp")
+        ]), withKey: "travel")
     }
 }
