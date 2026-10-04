@@ -436,7 +436,12 @@ public enum ParentMathSummaryBuilder {
         }
 
         let block = Array(activities[startIndex...])
-        let academic = block.filter { $0.skillID != nil }
+        let placementFingerprints = Set(
+            MathAdventure.playableProbes.map { $0.encounter.fingerprint }
+        )
+        let academic = block.filter {
+            $0.skillID != nil && !placementFingerprints.contains($0.fingerprint)
+        }
         guard !academic.isEmpty else { return nil }
 
         var ids: [SkillID] = []
