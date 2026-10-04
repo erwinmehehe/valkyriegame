@@ -5,6 +5,7 @@ import LearningCore
 
 @MainActor final class AppState: ObservableObject {
     enum World: String { case storyTree, mathCastle }
+    enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
 
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -25,6 +26,33 @@ import LearningCore
     var activeEncounter: LearningEncounter? { mathAdventure.runtime?.encounter }
     var activeCompleted: Bool { mathAdventure.runtime?.completed ?? false }
     var placementComplete: Bool { mathAdventure.placementComplete }
+    var challengeGateStatus: ChallengeGateStatus {
+        if profile.hasStoryReward(ChallengeGateCatalog.reward) { return .completed }
+        if mathAdventure.challengeGateSession != nil { return .active }
+        guard placementComplete else { return .locked }
+        return ChallengeGateCatalog.canStart(for: profile, graph: graph) ? .ready : .locked
+    }
+    var challengeGateCompletedCount: Int {
+        mathAdventure.challengeGateSession?.completedCount ?? 0
+    }
+    var challengeGateTotalCount: Int {
+        mathAdventure.challengeGateSession?.encounterIDs.count ?? ChallengeGateCatalog.challengeCount
+    }
+
+    func hasStoryReward(_ reward: StoryRewardID) -> Bool {
+        profile.hasStoryReward(reward)
+    }
+
+    func storyRewardPlacement(_ reward: StoryRewardID) -> Int {
+        profile.storyRewardPlacement(reward)
+    }
+
+    @discardableResult
+    func cycleStoryRewardPlacement(_ reward: StoryRewardID, slotCount: Int) -> Int {
+        let slot = profile.cycleStoryRewardPlacement(reward, slotCount: slotCount)
+        persist()
+        return slot
+    }
 
     /// Compatibility view for the original Crystal Cart scene/tests.
     var cart: CrystalCartModel? {
@@ -62,6 +90,10 @@ import LearningCore
             workshop = false
         }
 
+        if mathAdventure.challengeGateSession != nil {
+            return prepareChallengeGateBeat()
+        }
+
         if !mathAdventure.placementComplete {
             return preparePlacement()
         }
@@ -71,9 +103,10 @@ import LearningCore
 
     @discardableResult
     func startWorkshop(_ encounter: LearningEncounter) -> Bool {
-        // Keep hidden placement uninterrupted. Workshop opens after the castle has
-        // quietly learned enough to start an adaptive session.
-        guard mathAdventure.placementComplete else { return false }
+        // Keep hidden placement and Challenge Gate uninterrupted. Workshop opens
+        // only during normal adaptive play.
+        guard mathAdventure.placementComplete,
+              mathAdventure.challengeGateSession == nil else { return false }
 
         if let runtime = mathAdventure.runtime, !runtime.completed, !workshop {
             return false
@@ -95,6 +128,29 @@ import LearningCore
             saveError = "This workshop example could not be opened."
             return false
         }
+    }
+
+    @discardableResult
+    func beginChallengeGate() -> Bool {
+        if mathAdventure.challengeGateSession != nil { return true }
+        guard placementComplete,
+              !profile.hasStoryReward(ChallengeGateCatalog.reward) else {
+            return false
+        }
+
+        if let runtime = mathAdventure.runtime, !runtime.completed {
+            return false
+        }
+
+        guard let session = ChallengeGateCatalog.makeSession(for: profile, graph: graph) else {
+            return false
+        }
+
+        mathAdventure.runtime = nil
+        mathAdventure.challengeGateSession = session
+        workshop = false
+        persist()
+        return true
     }
 
     @discardableResult
@@ -222,7 +278,9 @@ import LearningCore
 
         MasteryEngine().record(evidence, in: &profile)
 
-        if !mathAdventure.placementComplete {
+        if mathAdventure.challengeGateSession != nil {
+            resolveChallengeGate(evidence)
+        } else if !mathAdventure.placementComplete {
             resolvePlacement(evidence)
         } else if evidence.outcome == .correct {
             _ = sessionCursor?.advance()
@@ -264,6 +322,56 @@ import LearningCore
             saveError = nil
         } catch {
             saveError = "Progress could not be saved. Keep the app open and retry in Settings."
+        }
+    }
+
+    private func prepareChallengeGateBeat() -> EncounterSelection {
+        guard let session = mathAdventure.challengeGateSession else {
+            return prepareAdaptiveBeat()
+        }
+
+        if session.isComplete {
+            _ = profile.unlockStoryReward(session.rewardID)
+            mathAdventure.challengeGateSession = nil
+            mathAdventure.runtime = nil
+            persist()
+            return .explorationBreak
+        }
+
+        guard let encounterID = session.nextEncounterID,
+              let encounter = ChallengeGateCatalog.encounter(id: encounterID),
+              graph.isEligible(encounter.skillID, for: profile),
+              MathManipulativeSupport.supports(encounter) else {
+            saveError = "The Challenge Gate is waiting for a prerequisite machine."
+            return .needsContent(nil)
+        }
+
+        do {
+            mathAdventure.runtime = try MathMechanicRuntime(encounter: encounter)
+            workshop = false
+            profile.begin(encounter, at: Date())
+            persist()
+            return .encounter(encounter)
+        } catch {
+            saveError = "The Challenge Gate machine could not be opened."
+            return .needsContent(encounter.skillID)
+        }
+    }
+
+    private func resolveChallengeGate(_ evidence: LearningEvidence) {
+        guard evidence.outcome == .correct,
+              var session = mathAdventure.challengeGateSession,
+              session.markCompleted(evidence.encounterID) else {
+            return
+        }
+
+        mathAdventure.runtime = nil
+
+        if session.isComplete {
+            _ = profile.unlockStoryReward(session.rewardID)
+            mathAdventure.challengeGateSession = nil
+        } else {
+            mathAdventure.challengeGateSession = session
         }
     }
 
