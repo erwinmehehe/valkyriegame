@@ -58,7 +58,14 @@ import LearningCore
         XCTAssertTrue(restored.runtime?.completed == true)
         XCTAssertEqual(restored.adventure.placement.completedProbeCount, 1)
         XCTAssertNil(restored.submit())
-        XCTAssertEqual(restored.profile.progress(for: MathSkills.compare).evidence.count, 1)
+        XCTAssertTrue(
+            restored.profile.progress(for: MathSkills.compare).evidence.isEmpty,
+            "Hidden placement is diagnostic and must not create mastery evidence."
+        )
+        XCTAssertTrue(
+            restored.profile.placementReadySkillIDs?.contains(MathSkills.compare) == true,
+            "Independent placement success should survive restore as provisional readiness."
+        )
         XCTAssertTrue(restored.advanceEncounter())
         XCTAssertNotEqual(restored.prepareNext(), first)
     }
