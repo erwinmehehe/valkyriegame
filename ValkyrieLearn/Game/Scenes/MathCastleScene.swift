@@ -20,6 +20,18 @@ import LearningCore
     private var routeLights: [SKShapeNode] = []
     private var challengeRunes: [SKShapeNode] = []
     private var wasPowered = false
+    private var physicalBridge: SKNode?
+    private var powerConduit: SKShapeNode?
+    private var destinationBeacon: SKShapeNode?
+    private var starlightOrb: SKShapeNode?
+    private var environmentGears: [SKNode] = []
+    private let routeDestination = CGPoint(x: 1085, y: 205)
+    private let routeEnergyPoints = [
+        CGPoint(x: 890, y: 330),
+        CGPoint(x: 965, y: 350),
+        CGPoint(x: 1035, y: 380),
+        CGPoint(x: 1090, y: 420)
+    ]
     private let questionPlate = SKShapeNode(
         rectOf: CGSize(width: 650, height: 76),
         cornerRadius: 24
@@ -33,6 +45,14 @@ import LearningCore
         MathCastleEncounterCatalog.missingNumberBridge
     ]
     private var workshopIndices = [0, 0, 0, 0, 0]
+
+    override func didMove(to view: SKView) {
+        super.didMove(to: view)
+        // The v3.31 reference keeps the protagonist inside the world composition
+        // instead of letting the character dominate the learning object.
+        valkyrie.setScale(0.68)
+        pip.setScale(0.88)
+    }
 
     override func buildWorld() {
         super.buildWorld()
@@ -106,6 +126,7 @@ import LearningCore
             lamp.zPosition = 25; lamp.name = "powerRouteLamp\(index)"; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
             lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
         }
+        buildPhysicalProgression()
         updateChallengeGateAppearance()
         openOrder()
     }
@@ -122,6 +143,236 @@ import LearningCore
         // Touch area stays large even where the lever's silhouette is narrow.
         let hit = ArtSystem.box(CGSize(width: 150, height: 110), color: .clear, radius: 0); hit.name = "submit"; node.addChild(hit)
         addChild(node); return node
+    }
+
+    /// Recreates the v3.31 Math Castle cause-and-effect loop in native SpriteKit:
+    /// solve the embedded machine -> energy travels through the room -> bridge opens
+    /// -> the destination becomes physically reachable.
+    private func buildPhysicalProgression() {
+        let conduitPath = CGMutablePath()
+        conduitPath.move(to: routeEnergyPoints[0])
+        routeEnergyPoints.dropFirst().forEach { conduitPath.addLine(to: $0) }
+        let conduit = SKShapeNode(path: conduitPath)
+        conduit.name = "castlePowerConduit"
+        conduit.zPosition = 17
+        conduit.strokeColor = UIColor(red: 0.45, green: 0.52, blue: 0.62, alpha: 0.38)
+        conduit.lineWidth = 6
+        conduit.glowWidth = 0
+        addChild(conduit)
+        powerConduit = conduit
+
+        let bridgeRoot = SKNode()
+        bridgeRoot.name = "physicalRouteBridge"
+        bridgeRoot.position = CGPoint(x: 1190, y: 192)
+        bridgeRoot.zPosition = 14
+        bridgeRoot.zRotation = -0.08
+
+        let rail = ArtSystem.box(
+            CGSize(width: 250, height: 12),
+            color: UIColor(red: 0.84, green: 0.61, blue: 0.27, alpha: 0.95),
+            radius: 4
+        )
+        rail.position = CGPoint(x: -125, y: 26)
+        rail.strokeColor = UIColor(red: 1, green: 0.83, blue: 0.42, alpha: 0.95)
+        bridgeRoot.addChild(rail)
+
+        for index in 0..<6 {
+            let plank = ArtSystem.box(
+                CGSize(width: 38, height: 42),
+                color: UIColor(red: 0.42, green: 0.25, blue: 0.12, alpha: 0.96),
+                radius: 5
+            )
+            plank.name = "physicalRoutePlank\(index)"
+            plank.strokeColor = UIColor(red: 0.88, green: 0.65, blue: 0.31, alpha: 0.92)
+            plank.lineWidth = 2
+            plank.position = CGPoint(x: -24 - CGFloat(index) * 41, y: 0)
+            bridgeRoot.addChild(plank)
+        }
+
+        bridgeRoot.xScale = 0.06
+        bridgeRoot.alpha = 0.18
+        addChild(bridgeRoot)
+        physicalBridge = bridgeRoot
+
+        let beacon = SKShapeNode(circleOfRadius: 54)
+        beacon.name = "routeDestinationBeacon"
+        beacon.position = CGPoint(x: 1110, y: 430)
+        beacon.zPosition = 730
+        beacon.fillColor = UIColor(red: 1, green: 0.83, blue: 0.32, alpha: 0.06)
+        beacon.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.38, alpha: 0.35)
+        beacon.lineWidth = 3
+        beacon.glowWidth = 0
+        addChild(beacon)
+        destinationBeacon = beacon
+
+        let orb = SKShapeNode(circleOfRadius: 11)
+        orb.name = "routeStarlightOrb"
+        orb.position = routeEnergyPoints[0]
+        orb.zPosition = 830
+        orb.fillColor = UIColor(red: 0.80, green: 0.96, blue: 1, alpha: 1)
+        orb.strokeColor = .white
+        orb.lineWidth = 2
+        orb.glowWidth = 10
+        orb.isHidden = true
+        addChild(orb)
+        starlightOrb = orb
+
+        for (index, point) in [CGPoint(x: 995, y: 315), CGPoint(x: 1045, y: 338)].enumerated() {
+            let gear = ArtSystem.gear(radius: index == 0 ? 18 : 14)
+            gear.name = "environmentGear\(index)"
+            gear.position = point
+            gear.zPosition = 18
+            gear.alpha = 0.72
+            addChild(gear)
+            environmentGears.append(gear)
+        }
+
+        resetPhysicalProgression()
+    }
+
+    private func resetPhysicalProgression() {
+        physicalBridge?.removeAllActions()
+        physicalBridge?.xScale = 0.06
+        physicalBridge?.alpha = 0.18
+
+        powerConduit?.removeAllActions()
+        powerConduit?.strokeColor = UIColor(red: 0.45, green: 0.52, blue: 0.62, alpha: 0.38)
+        powerConduit?.glowWidth = 0
+
+        destinationBeacon?.removeAllActions()
+        destinationBeacon?.alpha = 0.35
+        destinationBeacon?.glowWidth = 0
+        nextGear?.removeAction(forKey: "routeReadyPulse")
+        nextGear?.setScale(1)
+
+        starlightOrb?.removeAllActions()
+        starlightOrb?.isHidden = true
+        starlightOrb?.position = routeEnergyPoints[0]
+
+        environmentGears.forEach {
+            $0.removeAction(forKey: "poweredSpin")
+            $0.speed = 1
+        }
+
+        for lamp in routeLights {
+            lamp.removeAllActions()
+            lamp.fillColor = UIColor(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
+            lamp.glowWidth = 0
+            lamp.setScale(1)
+        }
+    }
+
+    private func openPhysicalProgression() {
+        guard let bridge = physicalBridge else { return }
+
+        if reducedMotion {
+            bridge.xScale = 1
+            bridge.alpha = 1
+            powerConduit?.strokeColor = UIColor(red: 0.73, green: 0.93, blue: 1, alpha: 0.95)
+            powerConduit?.glowWidth = 6
+            destinationBeacon?.alpha = 1
+            destinationBeacon?.glowWidth = 18
+            for lamp in routeLights {
+                lamp.fillColor = UIColor(red: 1, green: 0.86, blue: 0.4, alpha: 1)
+                lamp.glowWidth = 6
+            }
+            return
+        }
+
+        powerConduit?.strokeColor = UIColor(red: 0.73, green: 0.93, blue: 1, alpha: 0.95)
+        powerConduit?.glowWidth = 5
+
+        for (index, lamp) in routeLights.enumerated() {
+            let delay = Double(index) * 0.11
+            lamp.run(.sequence([
+                .wait(forDuration: delay),
+                .run {
+                    lamp.fillColor = UIColor(red: 1, green: 0.86, blue: 0.4, alpha: 1)
+                    lamp.glowWidth = 7
+                },
+                .scale(to: 1.28, duration: 0.09),
+                .scale(to: 1, duration: 0.14)
+            ]), withKey: "powerArrival")
+        }
+
+        if let orb = starlightOrb {
+            orb.isHidden = false
+            orb.alpha = 1
+            orb.position = routeEnergyPoints[0]
+            let travel = routeEnergyPoints.dropFirst().map {
+                SKAction.move(to: $0, duration: 0.16)
+            }
+            orb.run(.sequence(travel + [
+                .group([
+                    .fadeOut(withDuration: 0.22),
+                    .scale(to: 1.7, duration: 0.22)
+                ]),
+                .run { orb.isHidden = true; orb.setScale(1); orb.alpha = 1 }
+            ]), withKey: "routeTravel")
+        }
+
+        for (index, gear) in environmentGears.enumerated() {
+            let angle = CGFloat.pi * (index.isMultiple(of: 2) ? 2.4 : -2.4)
+            gear.run(.rotate(byAngle: angle, duration: 0.95), withKey: "poweredSpin")
+        }
+
+        let unfold = SKAction.scaleX(to: 1, duration: 1.05)
+        unfold.timingMode = .easeOut
+        bridge.run(.group([
+            unfold,
+            .fadeAlpha(to: 1, duration: 0.38)
+        ]), withKey: "routeOpen")
+
+        destinationBeacon?.run(.sequence([
+            .wait(forDuration: 0.62),
+            .run { [weak self] in
+                self?.destinationBeacon?.alpha = 1
+                self?.destinationBeacon?.glowWidth = 18
+            },
+            .scale(to: 1.12, duration: 0.18),
+            .scale(to: 1, duration: 0.22)
+        ]), withKey: "routeReady")
+
+        nextGear?.run(.repeatForever(.sequence([
+            .scale(to: 1.08, duration: 0.65),
+            .scale(to: 1, duration: 0.65)
+        ])), withKey: "routeReadyPulse")
+    }
+
+    private func playMechanicSuccessReaction() {
+        (mechanic as? MathCastleReactiveMechanic)?.playSuccessReaction(reducedMotion: reducedMotion)
+    }
+
+    private func wakeMechanic() {
+        guard !reducedMotion, let mechanic else { return }
+        mechanic.removeAction(forKey: "wake")
+        mechanic.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1, duration: 0.18)
+        ]), withKey: "wake")
+    }
+
+    private func playGentleRetryReaction() {
+        guard !reducedMotion else { return }
+        if let mechanic {
+            mechanic.removeAction(forKey: "retry")
+            mechanic.run(.sequence([
+                .moveBy(x: -6, y: 0, duration: 0.07),
+                .moveBy(x: 12, y: 0, duration: 0.10),
+                .moveBy(x: -6, y: 0, duration: 0.07)
+            ]), withKey: "retry")
+        }
+        powerLight?.run(.sequence([
+            .run { [weak self] in
+                self?.powerLight?.fillColor = UIColor(red: 0.88, green: 0.63, blue: 0.25, alpha: 1)
+                self?.powerLight?.glowWidth = 5
+            },
+            .wait(forDuration: 0.22),
+            .run { [weak self] in
+                self?.powerLight?.fillColor = UIColor(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+                self?.powerLight?.glowWidth = 0
+            }
+        ]), withKey: "gentleRetry")
     }
 
     private func updateChallengeGateAppearance() {
@@ -159,12 +410,29 @@ import LearningCore
 
     private func updatePower(_ powered: Bool) {
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
-        powerLight?.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.38, alpha: 1) : .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
-        powerLight?.glowWidth = powered ? 16 : 0
-        for lamp in routeLights { lamp.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.4, alpha: 1) : .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1); lamp.glowWidth = powered ? 6 : 0 }
-        if powered && !wasPowered && !reducedMotion {
-            lever?.run(.sequence([.rotate(toAngle: -0.18, duration: 0.16), .rotate(toAngle: 0, duration: 0.22)]), withKey: "pull")
+
+        if powered {
+            powerLight?.fillColor = UIColor(red: 1, green: 0.86, blue: 0.38, alpha: 1)
+            powerLight?.glowWidth = 16
+
+            if !wasPowered {
+                playMechanicSuccessReaction()
+                openPhysicalProgression()
+                if !reducedMotion {
+                    lever?.run(.sequence([
+                        .rotate(toAngle: -0.18, duration: 0.16),
+                        .rotate(toAngle: 0, duration: 0.22)
+                    ]), withKey: "pull")
+                }
+            }
+        } else {
+            powerLight?.fillColor = UIColor(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+            powerLight?.glowWidth = 0
+            if wasPowered || physicalBridge?.xScale != 0.06 {
+                resetPhysicalProgression()
+            }
         }
+
         wasPowered = powered
         updateChallengeGateAppearance()
     }
@@ -307,7 +575,20 @@ import LearningCore
                 instruction.text = "Finish Pip's work order first. You can explore and come back."
                 return
             }
-            state.advanceEncounter(); openOrder()
+
+            if state.runtime?.completed == true {
+                engaged = false
+                showQuestion(nil)
+                instruction.text = "The route is open. Follow the bridge to the next discovery."
+                travel(to: routeDestination) { [weak self] in
+                    guard let self else { return }
+                    self.state.advanceEncounter()
+                    self.openOrder()
+                }
+            } else {
+                state.advanceEncounter()
+                openOrder()
+            }
         case "workshop0": workshop(0)
         case "workshop1": workshop(1)
         case "workshop2": workshop(2)
@@ -359,7 +640,8 @@ import LearningCore
         refresh(); pip.operate(reducedMotion: reducedMotion)
         updateChallengeGateAppearance()
         if evidence.outcome == .correct {
-            valkyrie.pose(.celebrate); state.audio.play("success")
+            valkyrie.pose(.celebrate)
+            state.audio.play("success")
             showQuestion(nil)
             if wasChallengeGate && state.challengeGateStatus == .completed {
                 instruction.text = "The final rune shines! Your Moon Lantern is waiting at Story Tree."
@@ -369,7 +651,9 @@ import LearningCore
                 instruction.text = completionMessage
             }
         } else {
-            valkyrie.pose(.react); showScaffold()
+            valkyrie.pose(.react)
+            playGentleRetryReaction()
+            showScaffold()
         }
     }
 
@@ -432,7 +716,9 @@ import LearningCore
             valkyrie.face(toward: CGPoint(x: 820, y: 310))
             pip.face(toward: CGPoint(x: 820, y: 310))
             state.beginInteraction()
-            engaged = true; refresh()
+            engaged = true
+            wakeMechanic()
+            refresh()
         } else {
             engaged = false
             instruction.text = "Valkyrie is walking over. Tap the machine again when she arrives."
