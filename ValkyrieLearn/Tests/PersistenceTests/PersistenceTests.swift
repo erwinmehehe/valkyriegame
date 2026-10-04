@@ -122,7 +122,8 @@ import LearningCore
         let mechanic = TenFrameGateMechanic()
         let current = try TenFrameModel(encounter: encounter)
         mechanic.render(current)
-        let cells = try XCTUnwrap(mechanic.children.first).children.compactMap { $0 as? SKShapeNode }
+        let cells = try XCTUnwrap(mechanic.childNode(withName: "tenFrameCells")).children.compactMap { $0 as? SKShapeNode }
+        XCTAssertEqual(cells.count, 10)
         // SpriteKit stores resolved colors; compare against the same rendering
         // conversion rather than UIColor's dynamic system-color identity.
         let reference = SKShapeNode()

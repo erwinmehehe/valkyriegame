@@ -233,6 +233,7 @@ import LearningCore
         super.init()
         name = MathMechanicID.tenFrameGate
         zPosition = 750
+        cells.name = "tenFrameCells"
 
         let brass = UIColor(red: 0.69, green: 0.46, blue: 0.21, alpha: 1)
         for x in [-183,183] {
