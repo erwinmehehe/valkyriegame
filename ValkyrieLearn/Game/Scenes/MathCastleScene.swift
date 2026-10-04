@@ -11,6 +11,7 @@ import LearningCore
     private var engaged = false
     private var selection: EncounterSelection?
     private var gate: SKNode?
+    private var gateRunes: [SKShapeNode] = []
 
     override func buildWorld() {
         super.buildWorld()
@@ -56,6 +57,7 @@ import LearningCore
             at: CGPoint(x: 1120, y: 555),
             size: CGSize(width: 175, height: 110)
         )
+        decorateChallengeGate()
 
         updateGateAppearance()
         openOrder()
@@ -85,22 +87,52 @@ import LearningCore
         }
     }
 
+    private func decorateChallengeGate() {
+        gateRunes.removeAll()
+        guard let gate else { return }
+
+        for index in 0..<ChallengeGateCatalog.challengeCount {
+            let rune = SKShapeNode(circleOfRadius: 10)
+            rune.position = CGPoint(x: CGFloat(index - 1) * 34, y: -28)
+            rune.fillColor = .darkGray
+            rune.strokeColor = .white.withAlphaComponent(0.7)
+            rune.lineWidth = 2
+            rune.name = "challengeGate"
+            gate.addChild(rune)
+            gateRunes.append(rune)
+        }
+    }
+
     private func updateGateAppearance() {
+        let litCount: Int
+
         switch state.challengeGateStatus {
         case .locked:
             gate?.alpha = 0.45
+            litCount = 0
+
         case .ready:
             gate?.alpha = 1.0
+            litCount = 0
             if reducedMotion == false {
                 gate?.run(.sequence([
                     .fadeAlpha(to: 0.72, duration: 0.7),
                     .fadeAlpha(to: 1.0, duration: 0.7)
                 ]))
             }
+
         case .active:
             gate?.alpha = 1.0
+            litCount = state.challengeGateCompletedCount
+
         case .completed:
-            gate?.alpha = 0.85
+            gate?.alpha = 0.95
+            litCount = ChallengeGateCatalog.challengeCount
+        }
+
+        for (index, rune) in gateRunes.enumerated() {
+            rune.fillColor = index < litCount ? .systemYellow : .darkGray
+            rune.setScale(index < litCount ? 1.12 : 1.0)
         }
     }
 
