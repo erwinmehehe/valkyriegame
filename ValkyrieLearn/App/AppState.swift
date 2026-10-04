@@ -10,16 +10,23 @@ import LearningCore
     @Published var reducedMotion: Bool { didSet { persist() } }
     @Published private(set) var saveError: String?
     private(set) var profile: LearnerProfile
-    private(set) var cart: CrystalCartModel?
-    private(set) var workshop: Bool
+    private(set) var adventure: MathAdventure
+    var runtime: MathMechanicRuntime? { adventure.runtime }
+    var cart: CrystalCartModel? {
+        if case .crystalCart(let cart) = runtime { return cart }
+        return nil
+    }
+    var workshop: Bool { adventure.workshop }
+    var isPlacement: Bool { adventure.isPlacement }
+    var previewVisible: Bool { adventure.previewVisible(at: Date()) }
+    var interactionStarted: Bool { adventure.interactionStarted }
     let graph: SkillGraph
     let audio = AudioSystem()
     private let store: LearningStore
     init(context: ModelContext) throws {
         store = try LearningStore(context: context)
         profile = try store.loadProfile()
-        cart = try store.loadCart()
-        workshop = store.snapshot.workshop
+        adventure = try store.loadAdventure(continuingLearner: !profile.skills.isEmpty)
         soundEnabled = store.snapshot.soundEnabled
         reducedMotion = store.snapshot.reducedMotion
         world = World(rawValue: store.snapshot.lastWorld) ?? .storyTree
@@ -29,62 +36,45 @@ import LearningCore
     }
     func travel(to world: World) { self.world = world; persist() }
     func prepareNext() -> EncounterSelection {
-        if let cart, !cart.completed { return .encounter(cart.encounter) }
-        let selection = AdaptiveDirector(graph: graph).next(for: profile, candidates: MathFoundation.encounters, now: Date())
-        if case .encounter(let encounter) = selection {
-            do {
-                cart = try CrystalCartModel(encounter: encounter)
-                workshop = false
-                profile.begin(encounter, at: Date())
-                persist()
-            } catch { saveError = "This work order could not be opened." }
+        do {
+            ReviewScheduler().markDue(in: &profile, at: Date())
+            let selection = try adventure.prepareNext(profile: &profile, now: Date())
+            persist(); return selection
+        } catch {
+            saveError = "This work order could not be opened. Your saved progress has not been reset."
+            return .needsContent(nil)
         }
-        return selection
+    }
+    func beginInteraction() {
+        do { try adventure.beginInteraction(at: Date()); persist() }
+        catch { saveError = "Pip could not start this work order. Try returning to Story Tree." }
+    }
+    @discardableResult func advanceEncounter() -> Bool {
+        let advanced = adventure.advanceEncounter(); persist(); return advanced
     }
     @discardableResult func startWorkshop(_ encounter: LearningEncounter) -> Bool {
-        // Unscored sandbox: no mastery, evidence or prerequisite bypass.
-        guard cart == nil || cart?.completed == true || workshop else { return false }
-        let engagement = EngagementDirector()
-        guard engagement.allows(encounter, profile: profile),
-              !engagement.needsWorldChange(profile: profile, now: Date()) else { return false }
         do {
-            cart = try CrystalCartModel(encounter: encounter); workshop = true
-            profile.begin(encounter, at: Date()); persist(); return true
+            let opened = try adventure.startWorkshop(encounter, profile: &profile, now: Date())
+            if opened { persist() }; return opened
         } catch { saveError = "This workshop example could not be opened."; return false }
     }
-    func addCrystal() { guard cart != nil else { return }; _ = cart?.add(); persist() }
-    func removeCrystal() { guard cart != nil else { return }; _ = cart?.remove(); persist() }
+    func addCrystal() { beginInteraction(); _ = adventure.increment(at: Date()); persist() }
+    func removeCrystal() { beginInteraction(); _ = adventure.decrement(at: Date()); persist() }
+    func chooseComparison(_ choice: ComparisonChoice) { beginInteraction(); adventure.chooseComparison(choice); persist() }
+    func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
-        guard let current = cart, !current.completed else { return nil }
-        let scaffold = ScaffoldingEngine().next(after: current.support)
-        cart?.apply(scaffold)
-        var cue = scaffold.cue
-        var demonstrates = scaffold.demonstratesStep
-        if demonstrates {
-            if current.quantity < current.encounter.targetQuantity {
-                _ = cart?.add(); cue = "Watch Pip add one crystal. Then you can try."
-            } else if current.quantity > current.encounter.targetQuantity {
-                _ = cart?.remove(); cue = "Watch Pip take one crystal back. Then you can try."
-            } else {
-                cue = "The cart is ready. Try Pip's lever."; demonstrates = false
-            }
-        }
-        persist()
-        return Scaffold(support: scaffold.support, cue: cue, demonstratesStep: demonstrates)
+        beginInteraction()
+        let scaffold = adventure.scaffold(at: Date()); persist(); return scaffold
     }
     func submit() -> LearningEvidence? {
-        guard let evidence = cart?.submit() else { return nil }
-        if !workshop { MasteryEngine().record(evidence, in: &profile) }
-        persist(); return evidence
+        beginInteraction()
+        let evidence = adventure.submit(profile: &profile, at: Date()); persist(); return evidence
     }
-    func finishExploration() {
-        profile.recordActivity(ActivityRecord(fingerprint: "pipWind-\(UUID())", mechanicID: "pipWind", timestamp: Date()))
-        persist()
-    }
+    func finishExploration() { adventure.finishExploration(profile: &profile, at: Date()); persist() }
     func retrySave() { persist() }
     func persist() {
         do {
-            try store.save(profile: profile, cart: cart, workshop: workshop,
+            try store.save(profile: profile, adventure: adventure,
                            sound: soundEnabled, reducedMotion: reducedMotion, world: world.rawValue)
             saveError = nil
         } catch { saveError = "Progress could not be saved. Keep the app open and retry in Settings." }

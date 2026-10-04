@@ -56,6 +56,7 @@ import LearningCore
     private let beam = ArtSystem.box(CGSize(width: 360, height: 18), color: .systemOrange, radius: 8)
     private var leftPan: SKNode?
     private var rightPan: SKNode?
+    private var equalGear: SKShapeNode?
 
     override init() {
         super.init()
@@ -73,6 +74,10 @@ import LearningCore
         )
         stand.position = CGPoint(x: 0, y: -40)
         addChild(stand)
+        let equal = ArtSystem.box(CGSize(width: 100, height: 64), color: .darkGray)
+        equal.position = CGPoint(x: 0, y: -115); equal.name = "scaleEqual"
+        equal.addChild(ArtSystem.label("Equal", size: 21))
+        addChild(equal); equalGear = equal
 
         leftPan = addPan(name: "scaleLeft", x: -150)
         rightPan = addPan(name: "scaleRight", x: 150)
@@ -107,6 +112,11 @@ import LearningCore
         rightPan?.position.y = -45 + rightOffset
         leftContents.position.y = leftOffset
         rightContents.position.y = rightOffset
+        for (pan, choice) in [(leftPan, ComparisonChoice.left), (rightPan, ComparisonChoice.right)] {
+            (pan as? SKShapeNode)?.strokeColor = model.selected == choice ? .systemYellow : .white
+            (pan as? SKShapeNode)?.lineWidth = model.selected == choice ? 5 : 1.5
+        }
+        equalGear?.fillColor = model.selected == .equal ? .systemOrange : .darkGray
         renderQuantity(model.leftQuantity, in: leftContents, centerX: -150, targetName: "scaleLeft")
         renderQuantity(model.rightQuantity, in: rightContents, centerX: 150, targetName: "scaleRight")
     }
@@ -172,6 +182,11 @@ import LearningCore
         addChild(wholeLabel)
         addChild(knownContents)
         addChild(selectedContents)
+        let supply = ArtSystem.box(CGSize(width: 100, height: 100), color: .darkGray)
+        supply.position = CGPoint(x: -265, y: -30); supply.name = "bondSupply"
+        let token = SKShapeNode(circleOfRadius: 18)
+        token.fillColor = .cyan; token.strokeColor = .white; supply.addChild(token)
+        addChild(supply)
     }
 
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
@@ -202,6 +217,7 @@ import LearningCore
 @MainActor final class TenFrameGateMechanic: SKNode {
     private let cells = SKNode()
     private var latestModel: TenFrameModel?
+    private var latestAllowsPreview = true
     private let previewActionKey = "quickLookPreview"
 
     override init() {
@@ -225,14 +241,20 @@ import LearningCore
             cells.addChild(cell)
         }
         addChild(cells)
+        let supply = ArtSystem.box(CGSize(width: 100, height: 100), color: .darkGray)
+        supply.position = CGPoint(x: -270, y: 0); supply.name = "tenFrameSupply"
+        let token = SKShapeNode(circleOfRadius: 18)
+        token.fillColor = .systemTeal; token.strokeColor = .white; supply.addChild(token)
+        addChild(supply)
     }
 
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
 
-    func render(_ model: TenFrameModel) {
+    func render(_ model: TenFrameModel, allowPreview: Bool = true) {
         latestModel = model
+        latestAllowsPreview = allowPreview
         let now = Date()
-        let previewVisible = model.previewIsVisible(at: now)
+        let previewVisible = allowPreview && model.previewIsVisible(at: now)
         let visibleQuantity = previewVisible ? model.encounter.targetQuantity : model.filled
         cells.children.enumerated().forEach { index, cell in
             guard let shape = cell as? SKShapeNode else { return }
@@ -240,7 +262,8 @@ import LearningCore
                 ? .systemTeal
                 : .init(red: 0.17, green: 0.20, blue: 0.30, alpha: 1)
             shape.name = previewVisible ? "tenFramePreview"
-                : (index < model.encounter.initialQuantity ? "tenFrameFixed" : "tenFrameCell")
+                : (index < model.encounter.initialQuantity ? "tenFrameFixed"
+                   : (index < model.filled ? "tenFrameFilled" : "tenFrameCell"))
         }
         removeAction(forKey: previewActionKey)
         if previewVisible {
@@ -248,7 +271,7 @@ import LearningCore
             let remaining = max(0, model.startedAt.addingTimeInterval(model.previewDuration).timeIntervalSince(now))
             run(.sequence([.wait(forDuration: remaining), .run { [weak self] in
                 guard let self, let latest = self.latestModel else { return }
-                self.render(latest)
+                self.render(latest, allowPreview: self.latestAllowsPreview)
             }]), withKey: previewActionKey)
         }
     }

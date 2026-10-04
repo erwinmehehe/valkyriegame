@@ -1,7 +1,6 @@
 import XCTest
 import SwiftData
 import SpriteKit
-import SpriteKit
 import LearningCore
 @testable import ValkyrieLearn
 

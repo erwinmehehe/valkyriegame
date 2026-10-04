@@ -50,8 +50,38 @@ typealias LearnerSnapshot = LearningSchemaV1.LearnerSnapshot
         guard profile.schemaVersion == 1 else { throw StoreError.unsupportedProfileVersion }
         return profile
     }
+    private struct MathSave: Codable {
+        let mathAdventureVersion: Int
+        let adventure: MathAdventure
+    }
+    func loadAdventure(continuingLearner: Bool) throws -> MathAdventure {
+        guard let data = snapshot.cartData else {
+            return MathAdventure(continuingLearner: continuingLearner)
+        }
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        if object?["mathAdventureVersion"] != nil {
+            let saved = try JSONDecoder().decode(MathSave.self, from: data)
+            guard saved.mathAdventureVersion == 1 else { throw StoreError.unsupportedAdventureVersion }
+            return saved.adventure
+        }
+        // Compatible upgrade from the original V1 Crystal Cart JSON. Preserve
+        // quantities, attempts, support, completion and workshop status exactly.
+        let cart = try JSONDecoder().decode(CrystalCartModel.self, from: data)
+        return MathAdventure(legacyCart: cart, workshop: snapshot.workshop, continuingLearner: continuingLearner)
+    }
     func loadCart() throws -> CrystalCartModel? {
-        try snapshot.cartData.map { try JSONDecoder().decode(CrystalCartModel.self, from: $0) }
+        if case .crystalCart(let cart) = try loadAdventure(continuingLearner: false).runtime { return cart }
+        return nil
+    }
+    func save(profile: LearnerProfile, adventure: MathAdventure,
+              sound: Bool, reducedMotion: Bool, world: String) throws {
+        let profileData = try JSONEncoder().encode(profile)
+        let adventureData = try JSONEncoder().encode(MathSave(mathAdventureVersion: 1, adventure: adventure))
+        snapshot.profileData = profileData; snapshot.cartData = adventureData
+        snapshot.workshop = adventure.workshop; snapshot.soundEnabled = sound
+        snapshot.reducedMotion = reducedMotion; snapshot.lastWorld = world
+        do { try context.save() }
+        catch { context.rollback(); throw error }
     }
     func save(profile: LearnerProfile, cart: CrystalCartModel?, workshop: Bool,
               sound: Bool, reducedMotion: Bool, world: String) throws {
@@ -63,5 +93,5 @@ typealias LearnerSnapshot = LearningSchemaV1.LearnerSnapshot
         do { try context.save() }
         catch { context.rollback(); throw error }
     }
-    enum StoreError: Error { case unsupportedProfileVersion }
+    enum StoreError: Error { case unsupportedProfileVersion, unsupportedAdventureVersion }
 }

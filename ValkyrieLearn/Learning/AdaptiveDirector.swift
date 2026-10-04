@@ -93,7 +93,7 @@ public struct PlacementRecommendation: Equatable, Sendable {
     }
 }
 
-public struct PlacementSession: Equatable, Sendable {
+public struct PlacementSession: Codable, Equatable, Sendable {
     public fileprivate(set) var nextBand: Int
     public fileprivate(set) var attemptedProbeIDs: Set<String>
     public fileprivate(set) var highestIndependentBand: Int?

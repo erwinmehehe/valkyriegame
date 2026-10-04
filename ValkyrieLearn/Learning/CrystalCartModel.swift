@@ -2,7 +2,7 @@ import Foundation
 
 // Reusable model: rendering and touch input don't own the arithmetic.
 // Future operations require their own completion strategy; unsupported ones fail explicitly.
-public struct CrystalCartModel: Codable {
+public struct CrystalCartModel: Codable, Equatable, Sendable {
     public enum CartError: Error { case unsupportedOperation, invalidQuantity }
     public let encounter: LearningEncounter
     public private(set) var quantity: Int
@@ -185,7 +185,7 @@ public struct TenFrameModel: Codable, Equatable, Sendable {
     public private(set) var attempts: Int
     public private(set) var support: SupportLevel
     public private(set) var completed: Bool
-    public let startedAt: Date
+    public private(set) var startedAt: Date
 
     /// Quick-look probes hide the reference before accepting construction.
     public var previewDuration: TimeInterval { encounter.context == "quickLook" ? 1.25 : 0 }
@@ -228,6 +228,12 @@ public struct TenFrameModel: Codable, Equatable, Sendable {
 
     public mutating func apply(_ scaffold: Scaffold) {
         support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func replayPreview(at date: Date) {
+        guard !completed, previewDuration > 0 else { return }
+        support = ManipulativeEvidence.stronger(support, .lightHint)
+        startedAt = date
     }
 
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
@@ -416,7 +422,7 @@ public enum MathMechanicRuntimeError: Error {
 /// Single learning-side adapter used by Math Castle regardless of the active renderer.
 /// SpriteKit can send simple actions without owning arithmetic, correctness, support,
 /// or evidence rules.
-public enum MathMechanicRuntime {
+public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case crystalCart(CrystalCartModel)
     case balanceScale(BalanceScaleModel)
     case numberBond(NumberBondMachineModel)
