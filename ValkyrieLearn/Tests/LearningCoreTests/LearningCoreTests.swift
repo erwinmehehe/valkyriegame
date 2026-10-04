@@ -666,4 +666,109 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(plan.encounters.first?.lane, .learning)
     }
 
+
+    func testChallengeGateRequiresSecurePerformanceAndPrerequisites() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+
+        XCTAssertFalse(
+            ChallengeGateCatalog.canStart(for: profile, graph: graph),
+            "Secure source labels alone must not bypass missing prerequisites."
+        )
+
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+        XCTAssertTrue(ChallengeGateCatalog.canStart(for: profile, graph: graph))
+
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .developing)
+        XCTAssertFalse(
+            ChallengeGateCatalog.canStart(for: profile, graph: graph),
+            "Placement readiness must not count as secure performance."
+        )
+    }
+
+    func testChallengeGateSessionUsesThreeDifferentMechanics() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+
+        let session = try XCTUnwrap(
+            ChallengeGateCatalog.makeSession(for: profile, graph: graph)
+        )
+
+        XCTAssertEqual(session.encounterIDs.count, ChallengeGateCatalog.challengeCount)
+        XCTAssertEqual(session.rewardID, .moonLantern)
+
+        let encounters = session.encounterIDs.compactMap(ChallengeGateCatalog.encounter)
+        XCTAssertEqual(encounters.count, ChallengeGateCatalog.challengeCount)
+        XCTAssertEqual(
+            Set(encounters.map(\.mechanicID)).count,
+            ChallengeGateCatalog.challengeCount
+        )
+        XCTAssertTrue(encounters.allSatisfy { $0.challengeDepth > 0 })
+        XCTAssertTrue(encounters.allSatisfy(MathManipulativeSupport.supports))
+    }
+
+    func testChallengeGateSessionProgressCannotSkipUnknownEncounter() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+
+        var session = try XCTUnwrap(
+            ChallengeGateCatalog.makeSession(for: profile, graph: graph)
+        )
+
+        XCTAssertFalse(session.isComplete)
+        XCTAssertFalse(session.markCompleted("not-in-this-gate"))
+        XCTAssertEqual(session.completedCount, 0)
+
+        for encounterID in session.encounterIDs {
+            XCTAssertTrue(session.markCompleted(encounterID))
+        }
+
+        XCTAssertTrue(session.isComplete)
+        XCTAssertNil(session.nextEncounterID)
+    }
+
+    func testStoryTreeRewardUnlockAndPlacementArePersistentModelState() throws {
+        var profile = LearnerProfile()
+
+        XCTAssertFalse(profile.hasStoryReward(.moonLantern))
+        XCTAssertEqual(profile.storyRewardPlacement(.moonLantern), 0)
+        XCTAssertEqual(profile.cycleStoryRewardPlacement(.moonLantern, slotCount: 3), 0)
+
+        XCTAssertTrue(profile.unlockStoryReward(.moonLantern))
+        XCTAssertFalse(profile.unlockStoryReward(.moonLantern))
+        XCTAssertEqual(profile.cycleStoryRewardPlacement(.moonLantern, slotCount: 3), 1)
+        XCTAssertEqual(profile.cycleStoryRewardPlacement(.moonLantern, slotCount: 3), 2)
+
+        let data = try JSONEncoder().encode(profile)
+        let restored = try JSONDecoder().decode(LearnerProfile.self, from: data)
+
+        XCTAssertTrue(restored.hasStoryReward(.moonLantern))
+        XCTAssertEqual(restored.storyRewardPlacement(.moonLantern), 2)
+    }
+
+    func testLearnerProfileDecodesBeforeStoryRewardsExisted() throws {
+        let legacyJSON = """
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "schemaVersion": 1,
+          "skills": {},
+          "recentActivities": [],
+          "usedFingerprints": []
+        }
+        """.data(using: .utf8)!
+
+        let profile = try JSONDecoder().decode(LearnerProfile.self, from: legacyJSON)
+        XCTAssertFalse(profile.hasStoryReward(.moonLantern))
+        XCTAssertEqual(profile.storyRewardPlacement(.moonLantern), 0)
+    }
+
 }
