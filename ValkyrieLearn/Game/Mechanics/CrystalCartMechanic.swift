@@ -36,7 +36,8 @@ import LearningCore
         for index in 0..<model.quantity {
             let crystal = Self.crystal()
             crystal.position = CGPoint(x: 714 + (index % 5) * 58, y: 310 - (index / 5) * 61)
-            crystal.name = index < model.encounter.initialQuantity ? "fixedCrystal" : "cartCrystal"
+            let subtraction = model.encounter.operation == .subtraction
+            crystal.name = subtraction || index >= model.encounter.initialQuantity ? "cartCrystal" : "fixedCrystal"
             if index < model.encounter.initialQuantity { crystal.fillColor = .systemPurple }
             contents.addChild(crystal)
         }
@@ -77,6 +78,15 @@ import LearningCore
 
         addPan(name: "scaleLeft", x: -150)
         addPan(name: "scaleRight", x: 150)
+
+        let equal = ArtSystem.box(
+            CGSize(width: 92, height: 52),
+            color: .init(red: 0.30, green: 0.34, blue: 0.44, alpha: 1)
+        )
+        equal.position = CGPoint(x: 0, y: -92)
+        equal.name = "scaleEqual"
+        equal.addChild(ArtSystem.label("Equal", size: 20))
+        addChild(equal)
 
         addChild(leftContents)
         addChild(rightContents)
@@ -220,7 +230,13 @@ import LearningCore
             shape.fillColor = index < model.filled
                 ? .systemTeal
                 : .init(red: 0.17, green: 0.20, blue: 0.30, alpha: 1)
-            shape.name = index < model.encounter.initialQuantity ? "tenFrameFixed" : "tenFrameCell"
+            if index < model.encounter.initialQuantity {
+                shape.name = "tenFrameFixed"
+            } else if index < model.filled {
+                shape.name = "tenFrameToken"
+            } else {
+                shape.name = "tenFrameCell"
+            }
         }
     }
 }
@@ -280,6 +296,8 @@ import LearningCore
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
+        case MathMechanicID.crystalCart:
+            return CrystalCartMechanic()
         case MathMechanicID.balanceScale:
             return BalanceScaleMechanic()
         case MathMechanicID.numberBondMachine:
