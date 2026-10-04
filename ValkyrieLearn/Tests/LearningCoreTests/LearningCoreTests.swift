@@ -771,4 +771,148 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(profile.storyRewardPlacement(.moonLantern), 0)
     }
 
+
+    func testParentMathSummarySeparatesStrengthsDevelopingReviewAndReadyNext() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+
+        profile.skills[MathSkills.quantity.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .developing)
+        profile.skills[MathSkills.counting.rawValue] = SkillProgress(state: .reviewDue)
+
+        let summary = ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: epoch
+        )
+
+        XCTAssertTrue(summary.strengths.contains { $0.id == MathSkills.quantity })
+        XCTAssertTrue(summary.developing.contains { $0.id == MathSkills.addition })
+        XCTAssertTrue(summary.reviewNeeds.contains { $0.id == MathSkills.counting })
+
+        XCTAssertTrue(
+            summary.readyNext.contains { $0.id == MathSkills.oneToOne10 },
+            "Secure quantity recognition should make the next prerequisite-safe number-sense skill visible."
+        )
+        XCTAssertFalse(summary.readyNext.contains { $0.id == MathSkills.missing })
+    }
+
+    func testParentMathSummaryNeverPromotesPlacementOnlyReadinessToStrength() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady([
+            MathSkills.quantity,
+            MathSkills.oneToOne10,
+            MathSkills.counting
+        ])
+
+        let summary = ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: epoch
+        )
+
+        XCTAssertEqual(summary.placementReadyCount, 3)
+        XCTAssertFalse(summary.strengths.contains { $0.id == MathSkills.quantity })
+        XCTAssertFalse(summary.developing.contains { $0.id == MathSkills.quantity })
+        XCTAssertFalse(summary.readyNext.contains { $0.id == MathSkills.quantity })
+        XCTAssertEqual(profile.progress(for: MathSkills.quantity).state, .new)
+    }
+
+    func testParentMathSummaryBuildsRecentLearningBlockWithoutRawQuestionCounts() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+
+        let oldEncounter = LearningEncounter(
+            id: "parent-old",
+            skillID: MathSkills.quantity,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .concrete,
+            operation: .counting,
+            initialQuantity: 0,
+            targetQuantity: 5,
+            prompt: "Old work"
+        )
+        let additionEncounter = LearningEncounter(
+            id: "parent-add",
+            skillID: MathSkills.addition,
+            mechanicID: MathMechanicID.tenFrameGate,
+            representation: .pictorial,
+            operation: .addition,
+            initialQuantity: 4,
+            targetQuantity: 7,
+            prompt: "Recent addition"
+        )
+        let reasoningEncounter = LearningEncounter(
+            id: "parent-reason",
+            skillID: MathSkills.missing,
+            mechanicID: MathMechanicID.missingNumberBridge,
+            representation: .reasoning,
+            operation: .missingAddend,
+            initialQuantity: 6,
+            targetQuantity: 10,
+            prompt: "Recent reasoning"
+        )
+
+        profile.begin(oldEncounter, at: epoch.addingTimeInterval(-7_200))
+        profile.begin(additionEncounter, at: epoch.addingTimeInterval(-300))
+        profile.begin(reasoningEncounter, at: epoch.addingTimeInterval(-120))
+
+        MasteryEngine().record(
+            LearningEvidence(
+                encounterID: additionEncounter.id,
+                skillID: additionEncounter.skillID,
+                outcome: .correct,
+                supportLevel: .independent,
+                representation: additionEncounter.representation,
+                mechanicID: additionEncounter.mechanicID,
+                timestamp: epoch.addingTimeInterval(-280)
+            ),
+            in: &profile
+        )
+        MasteryEngine().record(
+            LearningEvidence(
+                encounterID: reasoningEncounter.id,
+                skillID: reasoningEncounter.skillID,
+                outcome: .correct,
+                supportLevel: .lightHint,
+                representation: .reasoning,
+                mechanicID: reasoningEncounter.mechanicID,
+                timestamp: epoch.addingTimeInterval(-100),
+                transferContext: true
+            ),
+            in: &profile
+        )
+
+        let summary = ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: epoch
+        )
+        let session = try XCTUnwrap(summary.recentSession)
+
+        XCTAssertEqual(
+            session.skills.map(\.id),
+            [MathSkills.addition, MathSkills.missing]
+        )
+        XCTAssertGreaterThan(session.startedAt, epoch.addingTimeInterval(-1_000))
+        XCTAssertTrue(session.usedPipSupport)
+        XCTAssertTrue(session.includedReasoningOrStory)
+    }
+
+    func testParentMathSummaryHandlesEmptyProfile() throws {
+        let graph = try MathSkillCatalog.graph()
+        let summary = ParentMathSummaryBuilder.build(
+            profile: LearnerProfile(),
+            graph: graph,
+            now: epoch
+        )
+
+        XCTAssertTrue(summary.strengths.isEmpty)
+        XCTAssertTrue(summary.developing.isEmpty)
+        XCTAssertTrue(summary.reviewNeeds.isEmpty)
+        XCTAssertNil(summary.recentSession)
+        XCTAssertFalse(summary.readyNext.isEmpty)
+    }
+
 }
