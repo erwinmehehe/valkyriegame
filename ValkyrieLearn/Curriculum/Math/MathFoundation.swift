@@ -234,6 +234,13 @@ public enum MathPlacement {
             )
         )
     ]
+
+    /// Placement probes that the current native Math Castle can actually render.
+    /// Unsupported future probes stay in `probes` for later mechanics instead of
+    /// being faked through an unrelated interaction.
+    public static var playableProbes: [PlacementProbe] {
+        probes.filter { MathManipulativeSupport.supports($0.encounter) }
+    }
 }
 
 
