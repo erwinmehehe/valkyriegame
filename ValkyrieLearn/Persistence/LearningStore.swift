@@ -66,10 +66,9 @@ typealias LearnerSnapshot = LearningSchemaV1.LearnerSnapshot
     }
 
     func loadCart() throws -> CrystalCartModel? {
-        switch try loadMathAdventure().runtime {
-        case .crystalCart(let cart): return cart
-        default: return nil
-        }
+        guard let runtime = try loadMathAdventure().runtime else { return nil }
+        guard case .crystalCart(let cart) = runtime else { return nil }
+        return cart
     }
 
     func save(profile: LearnerProfile, mathAdventure: MathAdventureSaveState, workshop: Bool,
