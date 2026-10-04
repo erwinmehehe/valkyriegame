@@ -641,7 +641,7 @@ import LearningCore
                 self.state.finishExploration(); self.state.audio.play("gear")
                 self.instruction.text = "Pip's gears hum! Explore or choose a new work order."
             }
-        case "next":
+        case "next", "routeDestinationBeacon":
             guard state.runtime == nil || state.runtime?.completed == true || state.workshop else {
                 instruction.text = "Finish Pip's work order first. You can explore and come back."
                 return
