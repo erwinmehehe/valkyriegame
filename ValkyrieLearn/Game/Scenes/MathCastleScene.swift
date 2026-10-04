@@ -74,6 +74,9 @@ import LearningCore
 
         case .encounter:
             instruction.text = "Tap the castle machine to walk over and help Pip."
+
+        case nil:
+            instruction.text = "Pip is checking the castle machines."
         }
     }
 
