@@ -63,7 +63,7 @@ import LearningCore
         XCTAssertNotNil(bridge.action(forKey: "routeOpen"))
         let beacon = try XCTUnwrap(scene.childNode(withName: "routeDestinationBeacon") as? SKShapeNode)
         XCTAssertNotNil(beacon.action(forKey: "routeReady"))
-        XCTAssertNotNil(scene.pip.action(forKey: "routeHelp"))
+        XCTAssertNotNil(scene.pip.action(forKey: "travel"))
 
         scene.handleTap(at: CGPoint(x: 1110, y: 430))
         XCTAssertNotNil(scene.valkyrie.action(forKey: "travel"), "A solved work order should be followed by physical movement across the opened route.")
