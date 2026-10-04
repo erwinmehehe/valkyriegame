@@ -740,4 +740,37 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertFalse(summary.developing.contains { $0.id == probe.skillID })
     }
 
+
+    func testCrystalCartSupportsNativeSubtraction() throws {
+        let encounter = LearningEncounter(
+            id: "cart-subtract-test",
+            skillID: MathSkills.subtraction,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .concrete,
+            operation: .subtraction,
+            initialQuantity: 8,
+            targetQuantity: 5,
+            prompt: "Eight crystals are here. Take away three."
+        )
+
+        XCTAssertTrue(MathManipulativeSupport.supports(encounter))
+        var cart = try CrystalCartModel(encounter: encounter, at: epoch)
+        XCTAssertEqual(cart.quantity, 8)
+        XCTAssertTrue(cart.remove())
+        XCTAssertTrue(cart.remove())
+        XCTAssertTrue(cart.remove())
+        XCTAssertEqual(cart.quantity, 5)
+        XCTAssertEqual(cart.submit(at: epoch.addingTimeInterval(10))?.outcome, .correct)
+    }
+
+    func testPlayablePlacementIncludesSubtractionNowThatCartSupportsIt() {
+        XCTAssertTrue(
+            MathAdventure.playableProbes.contains {
+                $0.skillID == MathSkills.subtraction
+                    && $0.encounter.operation == .subtraction
+                    && $0.encounter.mechanicID == MathMechanicID.crystalCart
+            }
+        )
+    }
+
 }
