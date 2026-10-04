@@ -1,0 +1,161 @@
+{
+  "reference": "ValkyrieLearn-v3.31-Word-Garden-RC.zip",
+  "archiveSHA256": "13aadcd6d32392305944d0930d411a99a256bb1353abb13ed085bd119aad5b74",
+  "sources": {
+    "adventure-art/overworld.png": "8a63d79b14164164ab09906e66d94d83f3d1d42bbc7fde5e142362b28ad9afcb",
+    "adventure-art/worlds.png": "d5c9751db4ce15fa8d754bd257b611095607ecb15d07163ad22d1ed177741c94",
+    "adventure-art/valkyrie-poses.png": "a41a36ec998ea5453b1c25ee61b20c263b02b8514c58f5af55d46c894ab4dfcd",
+    "adventure-art/valkyrie-garden-actions.png": "071ff087b5ae812e70571eb061863a3a55fb4f74a0d2ed6abb1690c4dd211d07",
+    "characters/pip.png": "bb04f91e950ae7470a4945de5c081c632ec71831ff08806545fcf370fae3b3bc",
+    "adventure-art/props.png": "bab365e5c77e2ac13a99ca45af3128abc2c6f2a17322244131bba458ddb97146"
+  },
+  "outputs": {
+    "AdventureArt.xcassets/StarlightIsles.imageset/art.jpg": {
+      "sha256": "a178e132fdb2cfa6112f8c6c3f7a7b10d0161b287bb8ce5651ada8f03bb57e37",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    "AdventureArt.xcassets/MathCastle.imageset/art.jpg": {
+      "sha256": "7e9b6bb2a9b0398cb78ae773e8f5a9e3a6a0c43f705e8ab640211e1f70343ddb",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    "AdventureArt.xcassets/CastleCourtyard.imageset/art.png": {
+      "sha256": "ea13883a47d664ec41a2eec16887cd56c39264bcafce26b6b07daf8026ff25ba",
+      "size": [
+        1280,
+        250
+      ]
+    },
+    "Valkyrie.atlas/idle_01.png": {
+      "sha256": "9c23d5bb34259368ca095ed3fc3a4d674b7197c1f1f753d09129e81b45c3ba2f",
+      "size": [
+        370,
+        480
+      ]
+    },
+    "Valkyrie.atlas/walk_01.png": {
+      "sha256": "9f2c5ef3611e842fa272e8d1c2e65fa89243176b378ae5745bf66d88119d25aa",
+      "size": [
+        370,
+        480
+      ]
+    },
+    "Valkyrie.atlas/walk_02.png": {
+      "sha256": "bb8b45905c5de6ee6c9dd41a69259e7fbda6528a4a196cde84894bd4e0a43e7c",
+      "size": [
+        370,
+        480
+      ]
+    },
+    "Valkyrie.atlas/interact_01.png": {
+      "sha256": "9ac9b89e6e0b0a6c790745b36a68a613df628fd464c9de2dec3dbd50982235e4",
+      "size": [
+        370,
+        480
+      ]
+    },
+    "Valkyrie.atlas/celebrate_01.png": {
+      "sha256": "9c23d5bb34259368ca095ed3fc3a4d674b7197c1f1f753d09129e81b45c3ba2f",
+      "size": [
+        370,
+        480
+      ]
+    },
+    "Valkyrie.atlas/react_01.png": {
+      "sha256": "9c23d5bb34259368ca095ed3fc3a4d674b7197c1f1f753d09129e81b45c3ba2f",
+      "size": [
+        370,
+        480
+      ]
+    },
+    "Pip.atlas/idle_01.png": {
+      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
+      "size": [
+        360,
+        420
+      ]
+    },
+    "Pip.atlas/walk_01.png": {
+      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
+      "size": [
+        360,
+        420
+      ]
+    },
+    "Pip.atlas/interact_01.png": {
+      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
+      "size": [
+        360,
+        420
+      ]
+    },
+    "Pip.atlas/celebrate_01.png": {
+      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
+      "size": [
+        360,
+        420
+      ]
+    },
+    "Pip.atlas/react_01.png": {
+      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
+      "size": [
+        360,
+        420
+      ]
+    },
+    "AdventureArt.xcassets/CrystalCart.imageset/art.png": {
+      "sha256": "daa510d5c852ec0a9bc9612f58bf62cb2a7c849412fe8ab2d1c3e2a81e758655",
+      "size": [
+        479,
+        374
+      ]
+    },
+    "AdventureArt.xcassets/Crystal.imageset/art.png": {
+      "sha256": "64660bdbd28dac327a11442956d08acd69818b5ce896ef4e29ea52d199c3f39b",
+      "size": [
+        296,
+        449
+      ]
+    },
+    "AdventureArt.xcassets/StoryBloom.imageset/art.png": {
+      "sha256": "7aa92a7072fdaeef41545675371cebd226956ce39ca71b83aedefa53399e8f74",
+      "size": [
+        435,
+        437
+      ]
+    },
+    "AdventureArt.xcassets/IslesForegroundLeft.imageset/art.png": {
+      "sha256": "bce33e695be0893d9751dbb3d03b5cf6ecb5ea0fc7a2c55be79c59b3ee7d067c",
+      "size": [
+        150,
+        160
+      ]
+    },
+    "AdventureArt.xcassets/IslesForegroundRight.imageset/art.png": {
+      "sha256": "bab12f0d68a45c0a55ed2d751e55c46bedd35f18b143c3263921fa37dec5e34d",
+      "size": [
+        150,
+        160
+      ]
+    },
+    "AdventureArt.xcassets/CastleForegroundLeft.imageset/art.png": {
+      "sha256": "7e9eb0abca5e253de5b346bc7422f02044656633302e7d0ba3e87b70c7bb675e",
+      "size": [
+        150,
+        160
+      ]
+    },
+    "AdventureArt.xcassets/CastleForegroundRight.imageset/art.png": {
+      "sha256": "816c5a038629059b4e83d23190f2e08c4b4b087b11af4fc25b32ba10252e80ef",
+      "size": [
+        150,
+        160
+      ]
+    }
+  }
+}

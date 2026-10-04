@@ -1,7 +1,7 @@
 import SpriteKit
 
 @MainActor final class PipNode: CharacterNode {
-    init() { super.init(character: "Pip", color: .systemTeal, height: 105) }
+    init() { super.init(character: "Pip", color: .systemTeal, height: 145) }
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
     func operate(reducedMotion: Bool) {
         self.reducedMotion = reducedMotion

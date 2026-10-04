@@ -15,11 +15,13 @@ import SpriteKit
                         .aspectRatio(16 / 9, contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                Button { settings = true } label: {
-                    Image(systemName: "gearshape.fill").font(.title2).padding(14)
+                if state.world == .storyTree {
+                    Button { settings = true } label: {
+                        Image(systemName: "gearshape.fill").font(.title2).padding(14)
+                    }
+                    .accessibilityLabel("Adventure settings")
+                    .foregroundStyle(.white).background(.black.opacity(0.35), in: Circle()).padding()
                 }
-                .accessibilityLabel("Adventure settings")
-                .buttonStyle(.borderedProminent).padding()
                 if state.saveError != nil {
                     Text("Ask a grown-up to check saving in Settings.")
                         .padding().background(.ultraThinMaterial).frame(maxHeight: .infinity, alignment: .bottom)

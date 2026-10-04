@@ -8,18 +8,16 @@ import LearningCore
     override init() {
         super.init()
         zPosition = 750
-        let cart = ArtSystem.box(CGSize(width: 305, height: 165), color: .init(red: 0.50, green: 0.30, blue: 0.14, alpha: 1))
-        cart.position = cartCenter; cart.name = "cart"; addChild(cart)
-        for x in [735, 925] {
-            let wheel = SKShapeNode(circleOfRadius: 32); wheel.fillColor = .darkGray
-            wheel.strokeColor = .systemOrange; wheel.lineWidth = 5
-            wheel.position = CGPoint(x: x, y: 170); wheel.name = "cart"; addChild(wheel)
+        if let cart = ArtSystem.sprite("CrystalCart", size: CGSize(width: 365, height: 255)) {
+            cart.position = CGPoint(x: 830, y: 253); cart.name = "cart"; addChild(cart)
         }
-        let supply = ArtSystem.box(CGSize(width: 125, height: 145), color: .init(red: 0.26, green: 0.25, blue: 0.34, alpha: 1))
+        // A native drop surface keeps every crystal independently manipulable.
+        let cartHit = ArtSystem.box(CGSize(width: 305, height: 165), color: .clear, radius: 0)
+        cartHit.position = cartCenter; cartHit.name = "cart"; addChild(cartHit)
+        let supply = ArtSystem.box(CGSize(width: 125, height: 100), color: .init(red: 0.26, green: 0.25, blue: 0.34, alpha: 0.9), radius: 9)
+        supply.strokeColor = .init(red: 0.77, green: 0.59, blue: 0.32, alpha: 1); supply.lineWidth = 3
         supply.position = supplyCenter; supply.name = "supply"; addChild(supply)
-        let crystal = Self.crystal(); crystal.position = supplyCenter; crystal.name = "supply"; addChild(crystal)
-        let supplyLabel = ArtSystem.label("Crystals", size: 20)
-        supplyLabel.position = CGPoint(x: 595, y: 340); addChild(supplyLabel)
+        let crystal = Self.crystal(); crystal.position = supplyCenter; crystal.setScale(1.45); crystal.name = "supply"; addChild(crystal)
         addChild(contents)
     }
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
@@ -29,7 +27,10 @@ import LearningCore
         path.addLine(to: CGPoint(x: 18, y: -25)); path.addLine(to: CGPoint(x: -18, y: -25))
         path.addLine(to: CGPoint(x: -26, y: 8)); path.closeSubpath()
         let node = SKShapeNode(path: path); node.fillColor = .cyan
-        node.strokeColor = .white; node.lineWidth = 2; return node
+        if let sprite = ArtSystem.sprite("Crystal", size: CGSize(width: 44, height: 59)) {
+            node.fillColor = .clear; node.strokeColor = .clear; node.addChild(sprite)
+        } else { node.strokeColor = .white; node.lineWidth = 2 }
+        return node
     }
     func render(_ model: CrystalCartModel) {
         contents.removeAllChildren()
@@ -37,7 +38,10 @@ import LearningCore
             let crystal = Self.crystal()
             crystal.position = CGPoint(x: 714 + (index % 5) * 58, y: 310 - (index / 5) * 61)
             crystal.name = index < model.encounter.initialQuantity ? "fixedCrystal" : "cartCrystal"
-            if index < model.encounter.initialQuantity { crystal.fillColor = .systemPurple }
+            if index < model.encounter.initialQuantity {
+                if let sprite = crystal.children.first as? SKSpriteNode { sprite.color = .systemPurple; sprite.colorBlendFactor = 0.28 }
+                else { crystal.fillColor = .systemPurple }
+            }
             contents.addChild(crystal)
         }
     }
@@ -69,15 +73,14 @@ import LearningCore
 
         let stand = ArtSystem.box(
             CGSize(width: 22, height: 180),
-            color: .darkGray,
+            color: .init(red: 0.73, green: 0.51, blue: 0.24, alpha: 1),
             radius: 8
         )
         stand.position = CGPoint(x: 0, y: -40)
         addChild(stand)
-        let equal = ArtSystem.box(CGSize(width: 100, height: 64), color: .darkGray)
+        let equal = ArtSystem.gear(radius: 36, symbol: "=")
         equal.position = CGPoint(x: 0, y: -115); equal.name = "scaleEqual"
-        equal.addChild(ArtSystem.label("Equal", size: 21))
-        addChild(equal); equalGear = equal
+        addChild(equal); equalGear = equal.children.first as? SKShapeNode
 
         leftPan = addPan(name: "scaleLeft", x: -150)
         rightPan = addPan(name: "scaleRight", x: 150)
@@ -93,10 +96,15 @@ import LearningCore
     private func addPan(name: String, x: CGFloat) -> SKNode {
         let pan = ArtSystem.box(
             CGSize(width: 180, height: 72),
-            color: .init(red: 0.34, green: 0.38, blue: 0.48, alpha: 1)
+            color: .init(red: 0.35, green: 0.5, blue: 0.53, alpha: 1)
         )
         pan.position = CGPoint(x: x, y: -45)
         pan.name = name
+        let chains = CGMutablePath()
+        chains.move(to: CGPoint(x: x-70, y: -15)); chains.addLine(to: CGPoint(x: x, y: 45))
+        chains.addLine(to: CGPoint(x: x+70, y: -15))
+        let hanger = SKShapeNode(path: chains); hanger.strokeColor = .init(red: 0.88, green: 0.66, blue: 0.28, alpha: 1); hanger.lineWidth = 3
+        addChild(hanger)
         addChild(pan)
         return pan
     }
@@ -159,6 +167,7 @@ import LearningCore
             CGSize(width: 430, height: 250),
             color: .init(red: 0.22, green: 0.26, blue: 0.40, alpha: 1)
         )
+        shell.strokeColor = .init(red: 0.84, green: 0.64, blue: 0.3, alpha: 1); shell.lineWidth = 5
         shell.name = "bondMachine"
         addChild(shell)
 
@@ -192,7 +201,7 @@ import LearningCore
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
 
     func render(_ model: NumberBondMachineModel) {
-        wholeLabel.text = "Whole: \(model.whole)"
+        wholeLabel.text = "\(model.whole)"
         renderTokens(model.knownPart, in: knownContents, centerX: -105, fixed: true)
         renderTokens(model.selectedPart, in: selectedContents, centerX: 105, fixed: false)
     }
@@ -224,6 +233,17 @@ import LearningCore
         super.init()
         name = MathMechanicID.tenFrameGate
         zPosition = 750
+        cells.name = "tenFrameCells"
+
+        let brass = UIColor(red: 0.69, green: 0.46, blue: 0.21, alpha: 1)
+        for x in [-183,183] {
+            let pillar = ArtSystem.box(CGSize(width: 22, height: 205), color: brass, radius: 5)
+            pillar.position = CGPoint(x: x, y: -10); addChild(pillar)
+        }
+        for y in [-118,98] {
+            let crossbar = ArtSystem.box(CGSize(width: 400, height: 24), color: brass, radius: 5)
+            crossbar.position.y = CGFloat(y); addChild(crossbar)
+        }
 
         for index in 0..<10 {
             let cell = ArtSystem.box(
@@ -290,7 +310,12 @@ import LearningCore
             CGSize(width: 500, height: 150),
             color: .init(red: 0.35, green: 0.29, blue: 0.24, alpha: 1)
         )
+        bridge.strokeColor = .init(red: 0.81, green: 0.61, blue: 0.26, alpha: 1); bridge.lineWidth = 4
         bridge.name = "missingBridge"
+        for x in stride(from: -230, through: 230, by: 46) {
+            let joint = ArtSystem.box(CGSize(width: 2, height: 142), color: .init(red: 0.18, green: 0.12, blue: 0.1, alpha: 0.55), radius: 0)
+            joint.position.x = CGFloat(x); bridge.addChild(joint)
+        }
         addChild(bridge)
 
         equation.position = CGPoint(x: -70, y: 20)
@@ -308,16 +333,14 @@ import LearningCore
         answer.name = "missingAnswer"
         addChild(answer)
 
-        let minus = ArtSystem.box(CGSize(width: 70, height: 56), color: .darkGray)
+        let minus = ArtSystem.gear(radius: 30, symbol: "−")
         minus.position = CGPoint(x: 85, y: -55)
         minus.name = "missingMinus"
-        minus.addChild(ArtSystem.label("−", size: 34))
         addChild(minus)
 
-        let plus = ArtSystem.box(CGSize(width: 70, height: 56), color: .darkGray)
+        let plus = ArtSystem.gear(radius: 30, symbol: "+")
         plus.position = CGPoint(x: 205, y: -55)
         plus.name = "missingPlus"
-        plus.addChild(ArtSystem.label("+", size: 34))
         addChild(plus)
     }
 
