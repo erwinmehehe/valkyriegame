@@ -14,10 +14,12 @@ Current repository progression:
 - PR #6 live Math Castle integration — stacked on PR #5
 - PR #7 Challenge Gate + persistent Moon Lantern Story Tree reward — stacked on PR #6
 - PR #8 parent-facing adaptive Math dashboard — stacked on PR #7
+- PR #10 v3.31 visual migration Phase 1 — stacked on PR #8; Story Tree, Math Castle, Valkyrie and Pip now use source-derived v3.31 native art
+- PR #9 `native/math-playable-integration` — separate parallel integration branch against `main`; it overlaps AppState, MathCastleScene, persistence and project files and must be reconciled deliberately rather than blindly merged into the stacked chain
 
-The current vertical-slice stack therefore includes hidden placement, the 73-skill Math graph, mastery/review/scaffolding, adaptive session planning, five reusable mechanics, Challenge Gate, persistent Story Tree reward state, and parent Math reporting.
+The current stacked vertical slice therefore includes hidden placement, the 73-skill Math graph, mastery/review/scaffolding, adaptive session planning, five reusable mechanics, Challenge Gate, persistent Story Tree reward state, parent Math reporting, and the first v3.31 native visual migration.
 
-**Merge order is PR #5 → PR #6 → PR #7 → PR #8.** Do not flatten or merge a later stacked PR before its base unless the stack is deliberately rebased first.
+**Stacked merge order is PR #5 → PR #6 → PR #7 → PR #8 → PR #10.** PR #9 is a parallel alternative/integration branch, not a missing step in that sequence. Do not merge both integration paths mechanically; review and reconcile their overlapping files first. Do not flatten or merge a later stacked PR before its base unless the stack is deliberately rebased first.
 
 **Current acceptance gate:** finish CI for the stack, merge in order, then validate the complete experience on the intended physical iPad. Do not begin Puzzle Palace v2, Word Garden v2, Science Lab v2, Chapter 2, or major new-world expansion until the native Adaptive Math Castle vertical slice is genuinely good on-device.
 
