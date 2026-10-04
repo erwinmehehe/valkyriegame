@@ -703,7 +703,7 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(session.encounterIDs.count, ChallengeGateCatalog.challengeCount)
         XCTAssertEqual(session.rewardID, .moonLantern)
 
-        let encounters = session.encounterIDs.compactMap(ChallengeGateCatalog.encounter)
+        let encounters = session.encounterIDs.compactMap { ChallengeGateCatalog.encounter(id: $0) }
         XCTAssertEqual(encounters.count, ChallengeGateCatalog.challengeCount)
         XCTAssertEqual(
             Set(encounters.map(\.mechanicID)).count,
