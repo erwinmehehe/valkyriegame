@@ -1,6 +1,10 @@
 import SpriteKit
 
 @MainActor final class StoryTreeScene: AdventureScene {
+    override var sourceBackdrop: ArtSystem.Backdrop? {
+        ArtSystem.Backdrop(resource: "V331_StoryTree", ext: "jpg")
+    }
+
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
@@ -25,11 +29,23 @@ import SpriteKit
     override func willLeave() { activeTouch = nil; moved = false; super.willLeave() }
     override func buildWorld() {
         super.buildWorld()
-        let trunk = ArtSystem.box(CGSize(width: 145, height: 320), color: .brown)
-        trunk.position = CGPoint(x: 430, y: 420); trunk.zPosition = 30; addChild(trunk)
-        let canopy = SKShapeNode(ellipseOf: CGSize(width: 470, height: 225))
-        canopy.fillColor = .systemGreen.withAlphaComponent(0.7); canopy.strokeColor = .clear
-        canopy.position = CGPoint(x: 430, y: 575); canopy.zPosition = 35; addChild(canopy)
+
+        // Keep the old procedural tree only as a fallback if the v3.31 reference
+        // asset is unavailable in a development build.
+        if !usingSourceArt {
+            let trunk = ArtSystem.box(CGSize(width: 145, height: 320), color: .brown)
+            trunk.position = CGPoint(x: 430, y: 420)
+            trunk.zPosition = 30
+            addChild(trunk)
+
+            let canopy = SKShapeNode(ellipseOf: CGSize(width: 470, height: 225))
+            canopy.fillColor = .systemGreen.withAlphaComponent(0.7)
+            canopy.strokeColor = .clear
+            canopy.position = CGPoint(x: 430, y: 575)
+            canopy.zPosition = 35
+            addChild(canopy)
+        }
+
         _ = hotspot("Math Castle →", name: "castle", at: CGPoint(x: 1050, y: 320), size: CGSize(width: 230, height: 100))
         _ = hotspot("Wind Pip", name: "pipWind", at: CGPoint(x: 600, y: 285))
         renderMoonLantern()
