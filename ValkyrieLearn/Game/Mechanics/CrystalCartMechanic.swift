@@ -314,31 +314,69 @@ import LearningCore
         name = MathMechanicID.missingNumberBridge
         zPosition = 750
 
-        let bridge = ArtSystem.box(
-            CGSize(width: 500, height: 150),
-            color: .init(red: 0.35, green: 0.29, blue: 0.24, alpha: 1)
-        )
-        bridge.strokeColor = .init(red: 0.81, green: 0.61, blue: 0.26, alpha: 1); bridge.lineWidth = 4
-        bridge.name = "missingBridge"
-        for x in stride(from: -230, through: 230, by: 46) {
-            let joint = ArtSystem.box(CGSize(width: 2, height: 142), color: .init(red: 0.18, green: 0.12, blue: 0.1, alpha: 0.55), radius: 0)
-            joint.position.x = CGFloat(x); bridge.addChild(joint)
+        // The deck spans a castle water channel. Empty spaces show the water
+        // beneath it; there is no answer panel filling the whole structure.
+        let water = SKShapeNode(ellipseOf: CGSize(width: 490, height: 86))
+        water.position = CGPoint(x: 0, y: -115)
+        water.fillColor = .init(red: 0.08, green: 0.25, blue: 0.32, alpha: 0.88)
+        water.strokeColor = .init(red: 0.23, green: 0.53, blue: 0.60, alpha: 0.5)
+        water.lineWidth = 3; water.zPosition = -5; water.name = "missingBridge"
+        addChild(water)
+        for row in 0..<3 {
+            let ripple = CGMutablePath()
+            ripple.move(to: CGPoint(x: -205 + CGFloat(row) * 24, y: -106 - CGFloat(row) * 12))
+            ripple.addQuadCurve(to: CGPoint(x: 190 - CGFloat(row) * 24, y: -106 - CGFloat(row) * 12),
+                control: CGPoint(x: 0, y: -94 - CGFloat(row) * 12))
+            let wave = SKShapeNode(path: ripple)
+            wave.strokeColor = .init(red: 0.53, green: 0.85, blue: 0.85, alpha: 0.25)
+            wave.lineWidth = 2; wave.zPosition = -4; wave.name = "missingBridge"
+            addChild(wave)
         }
-        addChild(bridge)
+        for x in [-246, 246] {
+            let support = ArtSystem.box(CGSize(width: 18, height: 130),
+                color: .init(red: 0.39, green: 0.27, blue: 0.16, alpha: 1), radius: 3)
+            support.position = CGPoint(x: x, y: -96)
+            support.name = "missingBridge"; support.zPosition = -1
+            addChild(support)
+            let cap = ArtSystem.box(CGSize(width: 28, height: 12),
+                color: .init(red: 0.79, green: 0.57, blue: 0.24, alpha: 1), radius: 3)
+            cap.position = CGPoint(x: x, y: -30); cap.name = "missingBridge"
+            addChild(cap)
+        }
+        let rope = CGMutablePath()
+        rope.move(to: CGPoint(x: -246, y: -35))
+        rope.addQuadCurve(to: CGPoint(x: 246, y: -35), control: CGPoint(x: 0, y: -70))
+        let rail = SKShapeNode(path: rope)
+        rail.strokeColor = .init(red: 0.79, green: 0.61, blue: 0.34, alpha: 1)
+        rail.lineWidth = 5; rail.name = "missingBridge"; rail.zPosition = -1
+        addChild(rail)
 
-        equation.position = CGPoint(x: -70, y: 20)
-        addChild(equation)
+        // A small suspended work order supplies the relationship; the child's
+        // actual answer is built into the bridge below it.
+        for x in [-190, 80] {
+            let post = ArtSystem.box(CGSize(width: 12, height: 148),
+                color: .init(red: 0.40, green: 0.28, blue: 0.16, alpha: 1), radius: 2)
+            post.position = CGPoint(x: x, y: 8); post.zPosition = -2; post.name = "missingBridge"
+            addChild(post)
+            let chain = ArtSystem.box(CGSize(width: 4, height: 30),
+                color: .init(red: 0.78, green: 0.59, blue: 0.27, alpha: 1), radius: 1)
+            chain.position = CGPoint(x: x, y: 67); chain.name = "missingBridge"; addChild(chain)
+        }
+        let lintel = ArtSystem.box(CGSize(width: 306, height: 12),
+            color: .init(red: 0.40, green: 0.28, blue: 0.16, alpha: 1), radius: 3)
+        lintel.position = CGPoint(x: -55, y: 82); lintel.name = "missingBridge"; addChild(lintel)
+        let sign = ArtSystem.box(CGSize(width: 310, height: 62),
+            color: .init(red: 0.25, green: 0.19, blue: 0.13, alpha: 0.94), radius: 6)
+        sign.position = CGPoint(x: -55, y: 20); sign.name = "missingBridge"
+        sign.strokeColor = .init(red: 0.79, green: 0.57, blue: 0.24, alpha: 1); sign.lineWidth = 2
+        addChild(sign)
+        equation.fontSize = 29; equation.position = sign.position; equation.name = "missingBridge"
+        equation.fontColor = .init(red: 1, green: 0.94, blue: 0.77, alpha: 1); addChild(equation)
 
-        let answerBox = ArtSystem.box(
-            CGSize(width: 88, height: 78),
-            color: .init(red: 0.20, green: 0.42, blue: 0.50, alpha: 1)
-        )
-        answerBox.position = CGPoint(x: 145, y: 20)
-        answerBox.name = "missingAnswer"
-        addChild(answerBox)
-
-        answer.position = CGPoint(x: 145, y: 5)
-        answer.name = "missingAnswer"
+        let dial = ArtSystem.gear(radius: 44)
+        dial.position = CGPoint(x: 145, y: 20); dial.name = "missingAnswer"
+        addChild(dial)
+        answer.fontSize = 36; answer.position = dial.position; answer.name = "missingAnswer"
         addChild(answer)
 
         let minus = ArtSystem.gear(radius: 30, symbol: "−")
@@ -379,8 +417,10 @@ import LearningCore
             slot.position = deckPoint(index)
             slot.name = fixed ? "missingFixed" : (filled ? "missingPlank" : "missingSlot")
             slot.fillColor = fixed ? .init(red: 0.54, green: 0.40, blue: 0.28, alpha: 1)
-                : (filled ? .init(red: 0.28, green: 0.66, blue: 0.65, alpha: 1) : .init(white: 0.06, alpha: 0.7))
-            slot.strokeColor = model.completed ? .systemYellow : .init(red: 0.86, green: 0.67, blue: 0.34, alpha: 1)
+                : (filled ? .init(red: 0.29, green: 0.51, blue: 0.43, alpha: 1) : .clear)
+            slot.strokeColor = model.completed ? .systemYellow
+                : .init(red: 0.86, green: 0.67, blue: 0.34, alpha: filled ? 0.8 : 0.3)
+            slot.children.forEach { $0.isHidden = !filled }
             slot.glowWidth = model.completed ? 3 : 0
             deck.addChild(slot)
         }
@@ -390,6 +430,20 @@ import LearningCore
         let plank = ArtSystem.box(CGSize(width: 44, height: 48), color: .init(red: 0.28, green: 0.66, blue: 0.65, alpha: 1), radius: 4)
         plank.strokeColor = .init(red: 0.86, green: 0.67, blue: 0.34, alpha: 1)
         plank.lineWidth = 2
+        for x in [-10, 10] {
+            let grain = CGMutablePath()
+            grain.move(to: CGPoint(x: x, y: -17))
+            grain.addQuadCurve(to: CGPoint(x: x + 2, y: 17), control: CGPoint(x: x - 4, y: 0))
+            let groove = SKShapeNode(path: grain)
+            groove.strokeColor = .init(red: 0.12, green: 0.18, blue: 0.12, alpha: 0.35)
+            groove.lineWidth = 1
+            plank.addChild(groove)
+        }
+        for point in [CGPoint(x: -13, y: 17), CGPoint(x: 13, y: -17)] {
+            let nail = SKShapeNode(circleOfRadius: 2)
+            nail.position = point; nail.fillColor = .init(red: 0.9, green: 0.75, blue: 0.44, alpha: 1)
+            nail.strokeColor = .clear; plank.addChild(nail)
+        }
         return plank
     }
 

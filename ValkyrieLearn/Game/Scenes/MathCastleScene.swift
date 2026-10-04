@@ -314,15 +314,16 @@ import LearningCore
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
         if engaged {
-            showQuestion(
+            let isBridge = runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
+            showQuestion(isBridge ? nil : (
                 state.previewVisible
                     ? "Watch the lights. Remember how many you see."
                     : runtime.encounter.prompt
-            )
+            ))
             instruction.text = state.previewVisible
                 ? "Look closely. Pip will hide the lights in a moment."
                 : (runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
-                    ? "Move spare planks into the gaps. Tap a loose plank to take it back. Pull Pip's lever to check."
+                    ? "Pip needs \(runtime.encounter.targetQuantity) bridge planks. \(runtime.encounter.initialQuantity) are fixed. Fill the gaps, then pull his lever."
                     : "Use the machine, then pull Pip's lever to check your idea.")
         } else {
             showQuestion(nil)
