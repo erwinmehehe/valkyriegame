@@ -54,6 +54,9 @@ import LearningCore
 @MainActor final class BalanceScaleMechanic: SKNode {
     private let leftContents = SKNode()
     private let rightContents = SKNode()
+    private var leftPan: SKShapeNode?
+    private var rightPan: SKShapeNode?
+    private var equalButton: SKShapeNode?
 
     override init() {
         super.init()
@@ -76,8 +79,8 @@ import LearningCore
         stand.position = CGPoint(x: 0, y: -40)
         addChild(stand)
 
-        addPan(name: "scaleLeft", x: -150)
-        addPan(name: "scaleRight", x: 150)
+        leftPan = addPan(name: "scaleLeft", x: -150)
+        rightPan = addPan(name: "scaleRight", x: 150)
 
         let equal = ArtSystem.box(
             CGSize(width: 92, height: 52),
@@ -87,6 +90,7 @@ import LearningCore
         equal.name = "scaleEqual"
         equal.addChild(ArtSystem.label("Equal", size: 20))
         addChild(equal)
+        equalButton = equal
 
         addChild(leftContents)
         addChild(rightContents)
@@ -94,7 +98,8 @@ import LearningCore
 
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
 
-    private func addPan(name: String, x: CGFloat) {
+    @discardableResult
+    private func addPan(name: String, x: CGFloat) -> SKShapeNode {
         let pan = ArtSystem.box(
             CGSize(width: 180, height: 72),
             color: .init(red: 0.34, green: 0.38, blue: 0.48, alpha: 1)
@@ -102,14 +107,21 @@ import LearningCore
         pan.position = CGPoint(x: x, y: -45)
         pan.name = name
         addChild(pan)
+        return pan
     }
 
     func render(_ model: BalanceScaleModel) {
-        renderQuantity(model.leftQuantity, in: leftContents, centerX: -150)
-        renderQuantity(model.rightQuantity, in: rightContents, centerX: 150)
+        renderQuantity(model.leftQuantity, in: leftContents, centerX: -150, hitName: "scaleLeft")
+        renderQuantity(model.rightQuantity, in: rightContents, centerX: 150, hitName: "scaleRight")
+
+        let idle = UIColor(red: 0.34, green: 0.38, blue: 0.48, alpha: 1)
+        let selected = UIColor.systemTeal
+        leftPan?.fillColor = model.selected == .left ? selected : idle
+        rightPan?.fillColor = model.selected == .right ? selected : idle
+        equalButton?.fillColor = model.selected == .equal ? selected : UIColor(red: 0.30, green: 0.34, blue: 0.44, alpha: 1)
     }
 
-    private func renderQuantity(_ quantity: Int, in node: SKNode, centerX: CGFloat) {
+    private func renderQuantity(_ quantity: Int, in node: SKNode, centerX: CGFloat, hitName: String) {
         node.removeAllChildren()
         for index in 0..<quantity {
             let token = tokenNode()
@@ -119,6 +131,7 @@ import LearningCore
                 x: centerX - 52 + CGFloat(column) * 26,
                 y: -35 + CGFloat(row) * 26
             )
+            token.name = hitName
             node.addChild(token)
         }
     }
