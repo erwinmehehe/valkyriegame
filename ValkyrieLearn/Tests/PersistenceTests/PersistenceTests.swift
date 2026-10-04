@@ -4,6 +4,19 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class PersistenceTests: XCTestCase {
+    private func unlockedState(in container: ModelContainer) throws -> AppState {
+        let store = try LearningStore(context: ModelContext(container))
+        let profile = try store.loadProfile()
+        try store.save(
+            profile: profile,
+            mathAdventure: MathAdventureSaveState(placementComplete: true),
+            workshop: false,
+            sound: true,
+            reducedMotion: false,
+            world: "storyTree"
+        )
+        return try AppState(context: ModelContext(container))
+    }
     func testSwiftDataRoundTripAcrossContexts() async throws {
         let container = try LearningStore.container(inMemory: true)
         let store = try LearningStore(context: ModelContext(container))
@@ -23,8 +36,8 @@ import LearningCore
     }
     func testAppStateRestoresWorkshopWithoutAwardingMastery() async throws {
         let container = try LearningStore.container(inMemory: true)
-        let state = try AppState(context: ModelContext(container))
-        state.startWorkshop(MathFoundation.workshopExamples[1])
+        let state = try unlockedState(in: container)
+        XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[1]))
         for _ in 0..<3 { state.addCrystal() }
         XCTAssertEqual(state.submit()?.outcome, .correct)
         let restored = try AppState(context: ModelContext(container))
@@ -35,8 +48,8 @@ import LearningCore
     }
     func testDemonstrationCorrectsOvershootAndPreservesAssistance() async throws {
         let container = try LearningStore.container(inMemory: true)
-        let state = try AppState(context: ModelContext(container))
-        state.startWorkshop(MathFoundation.workshopExamples[1]) // 4 + 3
+        let state = try unlockedState(in: container)
+        XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[1])) // 4 + 3
         for _ in 0..<4 { state.addCrystal() }
         XCTAssertEqual(state.cart?.quantity, 8)
         _ = state.scaffold(); _ = state.scaffold()
@@ -51,18 +64,19 @@ import LearningCore
     }
     func testWorkshopTracksRepetitionWithoutMasteryAndCannotDiscardScoredWork() async throws {
         let container = try LearningStore.container(inMemory: true)
-        let state = try AppState(context: ModelContext(container))
+        let state = try unlockedState(in: container)
         let example = MathFoundation.workshopExamples[0]
         XCTAssertTrue(state.startWorkshop(example))
         for _ in 0..<7 { state.addCrystal() }; _ = state.submit()
         XCTAssertFalse(state.startWorkshop(example))
         XCTAssertEqual(state.profile.progress(for: example.skillID).state, .new)
         XCTAssertTrue(state.profile.usedFingerprints.contains(example.fingerprint))
-        let scored = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scoredContainer = try LearningStore.container(inMemory: true)
+        let scored = try unlockedState(in: scoredContainer)
         _ = scored.prepareNext()
-        let before = scored.cart?.encounter
+        let before = scored.activeEncounter
         XCTAssertFalse(scored.startWorkshop(MathFoundation.workshopExamples[1]))
-        XCTAssertEqual(scored.cart?.encounter, before)
+        XCTAssertEqual(scored.activeEncounter, before)
     }
     func testUnsupportedProfileDoesNotResetProgress() async throws {
         let container = try LearningStore.container(inMemory: true)
@@ -72,4 +86,128 @@ import LearningCore
         XCTAssertThrowsError(try store.loadProfile())
         XCTAssertEqual(try JSONDecoder().decode(LearnerProfile.self, from: store.snapshot.profileData).schemaVersion, 99)
     }
+
+    func testHiddenPlacementRunsThroughPlayableNativeMechanics() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+
+        guard case .encounter(let comparison) = state.prepareNext() else {
+            return XCTFail("Expected hidden placement encounter")
+        }
+        XCTAssertEqual(comparison.mechanicID, MathMechanicID.balanceScale)
+        XCTAssertFalse(state.placementComplete)
+
+        state.chooseComparison(.right)
+        XCTAssertEqual(state.submit()?.outcome, .correct)
+
+        guard case .encounter(let subtraction) = state.prepareNext() else {
+            return XCTFail("Expected subtraction probe after easy comparison")
+        }
+        XCTAssertEqual(subtraction.operation, .subtraction)
+        XCTAssertEqual(subtraction.mechanicID, MathMechanicID.crystalCart)
+        for _ in 0..<3 { XCTAssertTrue(state.decrementActive()) }
+        XCTAssertEqual(state.submit()?.outcome, .correct)
+
+        guard case .encounter(let bond) = state.prepareNext() else {
+            return XCTFail("Expected number-bond probe")
+        }
+        XCTAssertEqual(bond.mechanicID, MathMechanicID.numberBondMachine)
+        state.setActiveValue(4)
+        XCTAssertEqual(state.submit()?.outcome, .correct)
+
+        guard case .encounter(let missing) = state.prepareNext() else {
+            return XCTFail("Expected missing-number probe")
+        }
+        XCTAssertEqual(missing.mechanicID, MathMechanicID.missingNumberBridge)
+        state.setActiveValue(3)
+        XCTAssertEqual(state.submit()?.outcome, .correct)
+
+        XCTAssertTrue(state.placementComplete)
+        XCTAssertNotEqual(state.profile.progress(for: MathSkills.bonds10).state, .mastered)
+        XCTAssertTrue(state.profile.placementReadySkillIDs?.contains(MathSkills.bonds10) == true)
+
+        let next = state.prepareNext()
+        if case .needsContent = next {
+            XCTFail("Adaptive Math Castle should continue after placement")
+        }
+    }
+
+    func testPlacementSessionAndNonCartRuntimeRestoreAcrossRelaunch() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+
+        guard case .encounter = state.prepareNext() else {
+            return XCTFail("Expected first placement probe")
+        }
+        state.chooseComparison(.right)
+        XCTAssertEqual(state.submit()?.outcome, .correct)
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertFalse(restored.placementComplete)
+        XCTAssertEqual(restored.mathAdventure.placementSession?.highestIndependentBand, 2)
+
+        guard case .encounter(let nextProbe) = restored.prepareNext() else {
+            return XCTFail("Expected restored placement to continue")
+        }
+        XCTAssertEqual(nextProbe.operation, .subtraction)
+    }
+
+    func testUnifiedMathRuntimeRoundTripsThroughExistingSwiftDataBlob() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let store = try LearningStore(context: ModelContext(container))
+        let profile = try store.loadProfile()
+        var runtime = try MathMechanicRuntime(
+            encounter: MathCastleEncounterCatalog.numberBondMachine[0]
+        )
+        runtime.setValue(2)
+
+        let mathState = MathAdventureSaveState(
+            runtime: runtime,
+            placementSession: PlacementEngine(probes: MathPlacement.playableProbes).begin(),
+            placementComplete: false
+        )
+
+        try store.save(
+            profile: profile,
+            mathAdventure: mathState,
+            workshop: false,
+            sound: true,
+            reducedMotion: false,
+            world: "mathCastle"
+        )
+
+        let restored = try LearningStore(context: ModelContext(container))
+        XCTAssertEqual(try restored.loadMathAdventure(), mathState)
+    }
+
+    func testLegacyCrystalCartBlobMigratesWithoutSwiftDataSchemaChange() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let store = try LearningStore(context: ModelContext(container))
+        var legacy = try CrystalCartModel(encounter: MathFoundation.encounters[0])
+        _ = legacy.add()
+
+        store.snapshot.cartData = try JSONEncoder().encode(legacy)
+        try store.context.save()
+
+        let migrated = try LearningStore(context: ModelContext(container)).loadMathAdventure()
+        guard case .crystalCart(let restored)? = migrated.runtime else {
+            return XCTFail("Expected legacy cart to migrate into unified runtime")
+        }
+        XCTAssertEqual(restored.quantity, legacy.quantity)
+        XCTAssertFalse(migrated.placementComplete)
+    }
+
+    func testAdaptiveSessionStartsWithSupportedRuntimeAfterPlacement() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try unlockedState(in: container)
+
+        let selection = state.prepareNext()
+        guard case .encounter(let encounter) = selection else {
+            return XCTFail("Expected adaptive Math Castle encounter")
+        }
+
+        XCTAssertTrue(MathManipulativeSupport.supports(encounter))
+        XCTAssertNotNil(state.activeMath)
+    }
+
 }
