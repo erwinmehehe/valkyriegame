@@ -721,4 +721,23 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(restored.storyRewardPlacement(.moonLantern), 1)
     }
 
+
+    func testParentSummaryDoesNotReportHiddenPlacementAsRecentLearning() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(MathAdventure.playableProbes.first)
+        profile.begin(probe.encounter, at: epoch)
+        profile.markPlacementReady([probe.skillID])
+
+        let summary = ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: epoch.addingTimeInterval(30)
+        )
+
+        XCTAssertNil(summary.recentSession)
+        XCTAssertFalse(summary.strengths.contains { $0.id == probe.skillID })
+        XCTAssertFalse(summary.developing.contains { $0.id == probe.skillID })
+    }
+
 }
