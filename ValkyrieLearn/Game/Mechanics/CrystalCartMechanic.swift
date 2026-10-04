@@ -37,10 +37,16 @@ import LearningCore
         for index in 0..<model.quantity {
             let crystal = Self.crystal()
             crystal.position = CGPoint(x: 714 + (index % 5) * 58, y: 310 - (index / 5) * 61)
-            crystal.name = index < model.encounter.initialQuantity ? "fixedCrystal" : "cartCrystal"
-            if index < model.encounter.initialQuantity {
-                if let sprite = crystal.children.first as? SKSpriteNode { sprite.color = .systemPurple; sprite.colorBlendFactor = 0.28 }
-                else { crystal.fillColor = .systemPurple }
+            let fixed = model.encounter.operation != .subtraction
+                && index < model.encounter.initialQuantity
+            crystal.name = fixed ? "fixedCrystal" : "cartCrystal"
+            if fixed {
+                if let sprite = crystal.children.first as? SKSpriteNode {
+                    sprite.color = .systemPurple
+                    sprite.colorBlendFactor = 0.28
+                } else {
+                    crystal.fillColor = .systemPurple
+                }
             }
             contents.addChild(crystal)
         }
