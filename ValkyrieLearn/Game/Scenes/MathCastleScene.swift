@@ -10,7 +10,7 @@ import LearningCore
     private var activeTouch: UITouch?
     private var dragOrigin: String?
     private var startPoint = CGPoint.zero
-    private var ghost: SKShapeNode?
+    private var ghost: SKNode?
     private var didDrag = false
     private var engaged = false
     private var selection: EncounterSelection?
@@ -232,9 +232,9 @@ import LearningCore
         case MathMechanicID.balanceScale:
             return "Tap the left side, Equal, or the right side."
         case MathMechanicID.numberBondMachine:
-            return "Tap the teal chamber to add. Tap a teal crystal to remove."
+            return "Tap the glowing chamber to add. Tap a crystal to remove."
         case MathMechanicID.tenFrameGate:
-            return "Tap an empty space to light it. Tap a new light to remove it."
+            return "Tap an empty rune space to place starlight. Tap a new crystal to remove it."
         case MathMechanicID.missingNumberBridge:
             return "Use + and − to set the missing number."
         default:
