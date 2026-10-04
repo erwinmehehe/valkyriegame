@@ -120,4 +120,108 @@ final class LearningCoreTests: XCTestCase {
         let restored = try JSONDecoder().decode(CrystalCartModel.self, from: JSONEncoder().encode(cart))
         XCTAssertEqual(restored.quantity, 1); XCTAssertEqual(restored.support, .lightHint)
     }
+ 
+
+    private func placementEvidence(
+        _ probe: PlacementProbe,
+        outcome: Outcome = .correct,
+        support: SupportLevel = .independent,
+        easy: Bool = false
+    ) -> LearningEvidence {
+        LearningEvidence(
+            encounterID: probe.encounter.id,
+            skillID: probe.skillID,
+            outcome: outcome,
+            supportLevel: support,
+            representation: probe.encounter.representation,
+            mechanicID: probe.encounter.mechanicID,
+            timestamp: epoch,
+            easySuccess: easy
+        )
+    }
+
+    func testPlacementJumpsForwardThenBracketsIndependentCeiling() {
+        let engine = PlacementEngine(probes: MathPlacement.probes)
+        var session = engine.begin(startBand: 2)
+
+        let compare = engine.nextProbe(for: session)!
+        XCTAssertEqual(compare.band, 2)
+        engine.record(placementEvidence(compare, easy: true), for: compare, in: &session)
+
+        let subtraction = engine.nextProbe(for: session)!
+        XCTAssertEqual(subtraction.band, 4)
+        engine.record(placementEvidence(subtraction, outcome: .incorrect), for: subtraction, in: &session)
+
+        let addition = engine.nextProbe(for: session)!
+        XCTAssertEqual(addition.band, 3)
+        engine.record(placementEvidence(addition), for: addition, in: &session)
+
+        XCTAssertTrue(session.isComplete)
+        XCTAssertNil(engine.nextProbe(for: session))
+
+        let recommendation = engine.recommendation(for: session)
+        XCTAssertEqual(recommendation.highestIndependentBand, 3)
+        XCTAssertEqual(recommendation.firstSupportNeededBand, 4)
+        XCTAssertEqual(recommendation.suggestedBand, 4)
+        XCTAssertEqual(recommendation.suggestedSkillID, MathSkills.subtraction)
+        XCTAssertEqual(recommendation.confidence, .high)
+    }
+
+    func testPlacementSupportedSuccessStepsBackWithoutGrantingMastery() {
+        let engine = PlacementEngine(probes: MathPlacement.probes)
+        var session = engine.begin(startBand: 6)
+        let probe = engine.nextProbe(for: session)!
+        XCTAssertEqual(probe.band, 6)
+
+        let item = placementEvidence(probe, support: .lightHint)
+        engine.record(item, for: probe, in: &session)
+
+        XCTAssertEqual(session.firstSupportNeededBand, 6)
+        XCTAssertEqual(session.nextBand, 5)
+
+        var profile = LearnerProfile()
+        XCTAssertEqual(profile.progress(for: probe.skillID).state, .new)
+        MasteryEngine().record(item, in: &profile)
+        XCTAssertEqual(profile.progress(for: probe.skillID).state, .learning)
+    }
+
+    func testPlacementRejectsMismatchedOrDuplicateEvidence() {
+        let engine = PlacementEngine(probes: MathPlacement.probes)
+        var session = engine.begin(startBand: 3)
+        let probe = engine.nextProbe(for: session)!
+
+        let wrongEncounter = LearningEvidence(
+            encounterID: "not-this-probe",
+            skillID: probe.skillID,
+            outcome: .correct,
+            timestamp: epoch
+        )
+        engine.record(wrongEncounter, for: probe, in: &session)
+        XCTAssertEqual(session.completedProbeCount, 0)
+
+        let valid = placementEvidence(probe)
+        engine.record(valid, for: probe, in: &session)
+        XCTAssertEqual(session.completedProbeCount, 1)
+
+        engine.record(valid, for: probe, in: &session)
+        XCTAssertEqual(session.completedProbeCount, 1)
+    }
+
+    func testPlacementCanReachAdvancedReasoningWithoutAgeCeiling() {
+        let engine = PlacementEngine(probes: MathPlacement.probes, maxProbes: 8)
+        var session = engine.begin(startBand: 7)
+
+        while let probe = engine.nextProbe(for: session), !session.isComplete {
+            engine.record(placementEvidence(probe, easy: true), for: probe, in: &session)
+        }
+
+        XCTAssertEqual(session.highestIndependentBand, 9)
+        XCTAssertTrue(session.isComplete)
+
+        let recommendation = engine.recommendation(for: session)
+        XCTAssertEqual(recommendation.suggestedBand, 9)
+        XCTAssertEqual(recommendation.suggestedSkillID, MathSkills.reasoning)
+        XCTAssertEqual(recommendation.confidence, .high)
+    }
+
 }
