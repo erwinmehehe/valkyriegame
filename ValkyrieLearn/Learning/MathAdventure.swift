@@ -28,7 +28,8 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     }
 
     // Only actually implemented mechanics enter the native placement adventure.
-    // Place-value, subtraction and error-analysis probes remain authored future content.
+    // Unsupported place-value/error-analysis probes remain authored future content
+    // until their native manipulatives exist.
     public static var playableProbes: [PlacementProbe] {
         MathPlacement.probes.compactMap { probe in
             if probe.band == 1 {
