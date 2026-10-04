@@ -688,4 +688,37 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(profile.recentActivities.count, 2, "Planning must not mutate live history")
     }
 
+
+    func testParentSummaryDoesNotTurnPlacementReadinessIntoMastery() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady([
+            MathSkills.quantity,
+            MathSkills.counting,
+            MathSkills.compare
+        ])
+
+        let summary = ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: epoch
+        )
+
+        XCTAssertEqual(summary.placementReadyCount, 3)
+        XCTAssertFalse(summary.strengths.contains { $0.id == MathSkills.compare })
+        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .new)
+    }
+
+    func testStoryRewardAndPlacementRoundTrip() throws {
+        var profile = LearnerProfile()
+        XCTAssertTrue(profile.unlockStoryReward(.moonLantern))
+        XCTAssertEqual(profile.cycleStoryRewardPlacement(.moonLantern, slotCount: 3), 1)
+
+        let data = try JSONEncoder().encode(profile)
+        let restored = try JSONDecoder().decode(LearnerProfile.self, from: data)
+
+        XCTAssertTrue(restored.hasStoryReward(.moonLantern))
+        XCTAssertEqual(restored.storyRewardPlacement(.moonLantern), 1)
+    }
+
 }

@@ -18,7 +18,13 @@ import LearningCore
     private var lever: SKNode?
     private var powerLight: SKShapeNode?
     private var routeLights: [SKShapeNode] = []
+    private var challengeRunes: [SKShapeNode] = []
     private var wasPowered = false
+    private let questionPlate = SKShapeNode(
+        rectOf: CGSize(width: 650, height: 84),
+        cornerRadius: 24
+    )
+    private let questionLabel = ArtSystem.label("", size: 23)
     private let workshopGroups: [[LearningEncounter]] = [
         MathFoundation.workshopExamples,
         MathCastleEncounterCatalog.balanceScale,
@@ -33,7 +39,9 @@ import LearningCore
         _ = worldControl("‹", name: "home", at: CGPoint(x: 52, y: 669))
         // A source-textured courtyard supports the live actors and machinery.
         if let floor = ArtSystem.sprite("CastleCourtyard", size: CGSize(width: 1280, height: 250)) {
-            floor.position = CGPoint(x: 640, y: 125); floor.zPosition = -80; addChild(floor)
+            floor.position = CGPoint(x: 640, y: 125)
+            floor.zPosition = -80
+            addChild(floor)
         }
         // The five workshop seals are mounted on one physical brass rack.
         let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
@@ -46,6 +54,25 @@ import LearningCore
             _ = worldGear(symbol, name: "workshop\(index)", at: CGPoint(x: 150 + index * 90, y: 535), radius: 31)
         }
         _ = worldGear("↻", name: "wind", at: CGPoint(x: 390, y: 605), radius: 32)
+
+        questionPlate.position = CGPoint(x: 790, y: 602)
+        questionPlate.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.20, alpha: 0.78)
+        questionPlate.strokeColor = UIColor(red: 1.0, green: 0.76, blue: 0.28, alpha: 0.95)
+        questionPlate.lineWidth = 3
+        questionPlate.zPosition = 1995
+        questionPlate.name = "questionPromptPlate"
+        questionPlate.isHidden = true
+        addChild(questionPlate)
+
+        questionLabel.position = CGPoint(x: 790, y: 602)
+        questionLabel.preferredMaxLayoutWidth = 590
+        questionLabel.numberOfLines = 2
+        questionLabel.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.86, alpha: 1)
+        questionLabel.zPosition = 2000
+        questionLabel.name = "questionPrompt"
+        questionLabel.isHidden = true
+        addChild(questionLabel)
+
         pip.name = "help"
         nextGear = worldGear("→", name: "next", at: CGPoint(x: 1110, y: 430), radius: 34)
         lever = makeLever()
@@ -55,16 +82,30 @@ import LearningCore
         light.strokeColor = .init(red: 0.95, green: 0.71, blue: 0.32, alpha: 1)
         addChild(light); powerLight = light
         let portal = SKShapeNode(ellipseOf: CGSize(width: 115, height: 170))
-        portal.position = CGPoint(x: 1125, y: 567); portal.zPosition = 25; portal.name = "lift"
+        portal.position = CGPoint(x: 1125, y: 567); portal.zPosition = 25; portal.name = "challengeGate"
         portal.fillColor = .init(red: 0.33, green: 0.73, blue: 1, alpha: 0.08)
         portal.strokeColor = .init(red: 0.56, green: 0.87, blue: 1, alpha: 0.2); portal.glowWidth = 8
         addChild(portal); gate = portal
+
+        for index in 0..<ChallengeGateCatalog.challengeCount {
+            let rune = SKShapeNode(circleOfRadius: 10)
+            rune.position = CGPoint(x: 1090 + index * 35, y: 505)
+            rune.zPosition = 40
+            rune.fillColor = .darkGray
+            rune.strokeColor = UIColor(red: 1, green: 0.78, blue: 0.35, alpha: 0.9)
+            rune.lineWidth = 2
+            rune.name = "challengeGate"
+            addChild(rune)
+            challengeRunes.append(rune)
+        }
+
         for index in 0..<5 {
             let lamp = SKShapeNode(circleOfRadius: 7)
             lamp.position = CGPoint(x: 1080 + index * 10, y: 390 + index * 28)
             lamp.zPosition = 25; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
             lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
         }
+        updateChallengeGateAppearance()
         openOrder()
     }
 
@@ -82,6 +123,31 @@ import LearningCore
         addChild(node); return node
     }
 
+    private func updateChallengeGateAppearance() {
+        let litCount: Int
+        switch state.challengeGateStatus {
+        case .locked:
+            gate?.alpha = 0.45
+            litCount = 0
+        case .ready:
+            gate?.alpha = 0.95
+            litCount = 0
+        case .active:
+            gate?.alpha = 1.0
+            litCount = state.challengeGateCompletedCount
+        case .completed:
+            gate?.alpha = 1.0
+            litCount = ChallengeGateCatalog.challengeCount
+        }
+
+        for (index, rune) in challengeRunes.enumerated() {
+            let lit = index < litCount
+            rune.fillColor = lit ? .systemYellow : .darkGray
+            rune.glowWidth = lit ? 7 : 0
+            rune.setScale(lit ? 1.12 : 1.0)
+        }
+    }
+
     private func updatePower(_ powered: Bool) {
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
         powerLight?.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.38, alpha: 1) : .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
@@ -95,8 +161,21 @@ import LearningCore
         wasPowered = powered
     }
 
+    private func showQuestion(_ text: String?) {
+        guard let text, !text.isEmpty else {
+            questionPlate.isHidden = true
+            questionLabel.isHidden = true
+            questionLabel.text = nil
+            return
+        }
+        questionLabel.text = "Pip asks: " + text
+        questionPlate.isHidden = false
+        questionLabel.isHidden = false
+    }
+
     private func openOrder() {
         clearDrag(); engaged = false
+        showQuestion(nil)
         selection = state.prepareNext()
         refresh()
         if state.runtime?.completed == true {
@@ -141,8 +220,16 @@ import LearningCore
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
         if engaged {
-            instruction.text = state.previewVisible ? "Watch the lights. Remember how many you see."
-                : runtime.encounter.prompt
+            showQuestion(
+                state.previewVisible
+                    ? "Watch the lights. Remember how many you see."
+                    : runtime.encounter.prompt
+            )
+            instruction.text = state.previewVisible
+                ? "Look closely. Pip will hide the lights in a moment."
+                : "Use the machine, then pull Pip's lever to check your idea."
+        } else {
+            showQuestion(nil)
         }
     }
 
@@ -218,11 +305,8 @@ import LearningCore
         case "workshop2": workshop(2)
         case "workshop3": workshop(3)
         case "workshop4": workshop(4)
-        case "lift":
-            engaged = false
-            travel(to: CGPoint(x: 1110, y: 230)) { [weak self] in
-                self?.instruction.text = "The starlight lifts lead farther into the castle. More paths are still being built."
-            }
+        case "challengeGate":
+            openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "scaleBeam",
              MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
             engageMachine()
@@ -260,15 +344,57 @@ import LearningCore
 
     private func submit() {
         guard canManipulate() else { engageMachine(); return }
+        let wasChallengeGate = state.challengeGateStatus == .active
         guard let evidence = state.submit() else {
             instruction.text = "Touch a scale pan, or the equal gear, before pulling Pip's lever."; return
         }
         refresh(); pip.operate(reducedMotion: reducedMotion)
+        updateChallengeGateAppearance()
         if evidence.outcome == .correct {
             valkyrie.pose(.celebrate); state.audio.play("success")
-            instruction.text = completionMessage
+            showQuestion(nil)
+            if wasChallengeGate && state.challengeGateStatus == .completed {
+                instruction.text = "The final rune shines! Your Moon Lantern is waiting at Story Tree."
+            } else if wasChallengeGate {
+                instruction.text = "A Challenge Gate rune lights up. Follow the arrow for the next challenge."
+            } else {
+                instruction.text = completionMessage
+            }
         } else {
             valkyrie.pose(.react); showScaffold()
+        }
+    }
+
+    private func openChallengeGate() {
+        switch state.challengeGateStatus {
+        case .locked:
+            instruction.text = "The Challenge Gate is still gathering starlight. Keep helping Pip with ready skills."
+
+        case .ready:
+            if let runtime = state.runtime, !runtime.completed {
+                instruction.text = "Finish this work order before entering the Challenge Gate."
+                return
+            }
+            if state.beginChallengeGate() {
+                engaged = false
+                renderedEncounterID = nil
+                updateChallengeGateAppearance()
+                openOrder()
+            } else {
+                instruction.text = "The Challenge Gate needs a little more readiness before it opens."
+            }
+
+        case .active:
+            if state.runtime == nil || state.runtime?.completed == true {
+                _ = state.advanceEncounter()
+                openOrder()
+            } else {
+                instruction.text = "The Challenge Gate is already open. Finish the glowing machine."
+                engageMachine()
+            }
+
+        case .completed:
+            instruction.text = "The Challenge Gate is restored. Your Moon Lantern is waiting at Story Tree."
         }
     }
 

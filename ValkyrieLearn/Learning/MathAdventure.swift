@@ -1,6 +1,6 @@
 import Foundation
 
-public enum MathActivityMode: String, Codable, Sendable { case placement, practice, workshop }
+public enum MathActivityMode: String, Codable, Sendable { case placement, practice, challenge, workshop }
 
 /// Durable learning-side execution state. A planned activity is reselected after
 /// each response so new evidence, review deadlines and engagement affect the next beat.
@@ -14,6 +14,8 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     public private(set) var laneCounts: [SessionLane: Int] = [:]
     public private(set) var activeLane: SessionLane?
     public private(set) var encountersSinceExploration = 0
+    /// Optional so saves written before Challenge Gate continue to decode.
+    public private(set) var challengeGateSession: ChallengeGateSession?
 
     public init(legacyCart: CrystalCartModel? = nil, workshop: Bool = false, continuingLearner: Bool = false) {
         placement = Self.placementEngine.begin()
@@ -53,6 +55,26 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     public mutating func prepareNext(profile: inout LearnerProfile, now: Date) throws -> EncounterSelection {
         // Returning home/relaunching must not silently advance a solved or unsolved object.
         if let runtime { return .encounter(runtime.encounter) }
+
+        if let session = challengeGateSession {
+            if session.isComplete {
+                _ = profile.unlockStoryReward(session.rewardID)
+                challengeGateSession = nil
+                return .explorationBreak
+            }
+            guard let encounterID = session.nextEncounterID,
+                  let encounter = ChallengeGateCatalog.encounter(id: encounterID),
+                  MathManipulativeSupport.supports(encounter) else {
+                return .needsContent(nil)
+            }
+            let graph = try MathSkills.graph()
+            guard graph.isEligible(encounter.skillID, for: profile) else {
+                return .needsContent(encounter.skillID)
+            }
+            try open(encounter, mode: .challenge, lane: nil, profile: &profile, now: now)
+            return .encounter(encounter)
+        }
+
         if explorationPending { return .explorationBreak }
         if EngagementDirector().needsWorldChange(profile: profile, now: now) || encountersSinceExploration >= 4 {
             explorationPending = true
@@ -97,6 +119,26 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         runtime = try MathMechanicRuntime(encounter: current.encounter, at: now)
         interactionStarted = true
     }
+    @discardableResult
+    public mutating func beginChallengeGate(
+        profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> Bool {
+        guard placementComplete,
+              runtime == nil,
+              !explorationPending,
+              challengeGateSession == nil,
+              !profile.hasStoryReward(ChallengeGateCatalog.reward),
+              let session = ChallengeGateCatalog.makeSession(for: profile, graph: graph) else {
+            return false
+        }
+        challengeGateSession = session
+        mode = .challenge
+        interactionStarted = false
+        activeLane = nil
+        return true
+    }
+
     @discardableResult public mutating func startWorkshop(_ encounter: LearningEncounter, profile: inout LearnerProfile, now: Date) throws -> Bool {
         guard runtime == nil || runtime?.completed == true || workshop,
               !explorationPending,
@@ -142,8 +184,25 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 // A first incorrect response is diagnostic; later scaffolded retries
                 // cannot erase it or cause a second jump for the same probe.
                 Self.placementEngine.record(evidence, for: probe, in: &placement)
+                if PlacementResponse(evidence) == .independentSuccess,
+                   let graph = try? MathSkills.graph() {
+                    profile.markPlacementReady(graph.prerequisiteClosure(including: probe.skillID))
+                }
                 placementComplete = placement.isComplete
             }
+
+            if mode == .challenge,
+               evidence.outcome == .correct,
+               var session = challengeGateSession,
+               session.markCompleted(evidence.encounterID) {
+                if session.isComplete {
+                    _ = profile.unlockStoryReward(session.rewardID)
+                    challengeGateSession = nil
+                } else {
+                    challengeGateSession = session
+                }
+            }
+
             if evidence.outcome == .correct {
                 encountersSinceExploration += 1
                 if let activeLane { laneCounts[activeLane, default: 0] += 1 }

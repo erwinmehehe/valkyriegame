@@ -322,3 +322,170 @@ public enum MathSkillCatalog {
         )
     }
 }
+
+
+// MARK: - Parent-facing Math summary
+
+public struct ParentMathSkillSnapshot: Equatable, Sendable {
+    public let id: SkillID
+    public let title: String
+    public let strand: MathStrand
+    public let state: SkillState
+    public let isPlacementReadyOnly: Bool
+}
+
+public struct ParentMathRecentSession: Equatable, Sendable {
+    public let startedAt: Date
+    public let endedAt: Date
+    public let skills: [ParentMathSkillSnapshot]
+    public let usedPipSupport: Bool
+    public let includedReasoningOrStory: Bool
+}
+
+public struct ParentMathSummary: Equatable, Sendable {
+    public let strengths: [ParentMathSkillSnapshot]
+    public let developing: [ParentMathSkillSnapshot]
+    public let reviewNeeds: [ParentMathSkillSnapshot]
+    public let readyNext: [ParentMathSkillSnapshot]
+    public let recentSession: ParentMathRecentSession?
+    public let placementReadyCount: Int
+}
+
+public enum ParentMathSummaryBuilder {
+    public static let defaultSessionGap: TimeInterval = 20 * 60
+
+    public static func build(
+        profile: LearnerProfile,
+        graph: SkillGraph,
+        now: Date = Date(),
+        sessionGap: TimeInterval = defaultSessionGap
+    ) -> ParentMathSummary {
+        let descriptors = MathSkillCatalog.descriptors.sorted {
+            $0.developmentalOrder < $1.developmentalOrder
+        }
+
+        func snapshot(_ descriptor: MathSkillDescriptor) -> ParentMathSkillSnapshot {
+            let progress = profile.progress(for: descriptor.id)
+            return ParentMathSkillSnapshot(
+                id: descriptor.id,
+                title: descriptor.title,
+                strand: descriptor.strand,
+                state: progress.state,
+                isPlacementReadyOnly: progress.state == .new
+                    && profile.placementReadySkillIDs?.contains(descriptor.id) == true
+            )
+        }
+
+        let strengths = descriptors.filter {
+            let state = profile.progress(for: $0.id).state
+            return state == .secure || state == .mastered
+        }.map(snapshot)
+
+        let developing = descriptors.filter {
+            let state = profile.progress(for: $0.id).state
+            return state == .learning || state == .developing
+        }.map(snapshot)
+
+        let reviewNeeds = descriptors.filter { descriptor in
+            let progress = profile.progress(for: descriptor.id)
+            if progress.state == .reviewDue { return true }
+            guard let due = progress.reviewDate, due <= now else { return false }
+            return progress.state == .secure || progress.state == .mastered
+        }.map(snapshot)
+
+        let readyNext = descriptors.filter { descriptor in
+            let progress = profile.progress(for: descriptor.id)
+            guard progress.state == .new,
+                  profile.readiness(for: descriptor.id) < SkillState.developing.readiness else {
+                return false
+            }
+            return graph.isEligible(descriptor.id, for: profile)
+        }.map(snapshot)
+
+        return ParentMathSummary(
+            strengths: strengths,
+            developing: developing,
+            reviewNeeds: reviewNeeds,
+            readyNext: readyNext,
+            recentSession: makeRecentSession(
+                profile: profile,
+                now: now,
+                sessionGap: max(60, sessionGap)
+            ),
+            placementReadyCount: profile.placementReadySkillIDs?.count ?? 0
+        )
+    }
+
+    private static func makeRecentSession(
+        profile: LearnerProfile,
+        now: Date,
+        sessionGap: TimeInterval
+    ) -> ParentMathRecentSession? {
+        let activities = profile.recentActivities.sorted { $0.timestamp < $1.timestamp }
+        guard let last = activities.last,
+              last.timestamp <= now.addingTimeInterval(60) else {
+            return nil
+        }
+
+        var startIndex = activities.count - 1
+        while startIndex > 0 {
+            let current = activities[startIndex]
+            let previous = activities[startIndex - 1]
+            if current.timestamp.timeIntervalSince(previous.timestamp) > sessionGap { break }
+            startIndex -= 1
+        }
+
+        let block = Array(activities[startIndex...])
+        let academic = block.filter { $0.skillID != nil }
+        guard !academic.isEmpty else { return nil }
+
+        var ids: [SkillID] = []
+        var seen: Set<SkillID> = []
+        for activity in academic {
+            guard let skillID = activity.skillID, seen.insert(skillID).inserted else { continue }
+            ids.append(skillID)
+        }
+
+        let skills = ids.compactMap { id -> ParentMathSkillSnapshot? in
+            guard let descriptor = MathSkillCatalog.descriptor(for: id) else { return nil }
+            return snapshotForRecent(descriptor, profile: profile)
+        }
+
+        let start = block.first?.timestamp ?? academic.first!.timestamp
+        let lastActivity = block.last?.timestamp ?? academic.last!.timestamp
+        let evidenceWindowEnd = min(now.addingTimeInterval(1), lastActivity.addingTimeInterval(sessionGap))
+        let evidence = profile.skills.values.flatMap(\.evidence).filter {
+            $0.timestamp >= start && $0.timestamp <= evidenceWindowEnd
+        }
+        let end = max(lastActivity, evidence.map(\.timestamp).max() ?? lastActivity)
+
+        return ParentMathRecentSession(
+            startedAt: start,
+            endedAt: end,
+            skills: skills,
+            usedPipSupport: evidence.contains {
+                $0.outcome == .correct && $0.supportLevel != .independent
+            },
+            includedReasoningOrStory: academic.contains {
+                $0.representation == .reasoning || $0.representation == .story
+            } || evidence.contains {
+                $0.representation == .reasoning || $0.representation == .story
+            }
+        )
+    }
+
+    private static func snapshotForRecent(
+        _ descriptor: MathSkillDescriptor,
+        profile: LearnerProfile
+    ) -> ParentMathSkillSnapshot {
+        let progress = profile.progress(for: descriptor.id)
+        return ParentMathSkillSnapshot(
+            id: descriptor.id,
+            title: descriptor.title,
+            strand: descriptor.strand,
+            state: progress.state,
+            isPlacementReadyOnly: progress.state == .new
+                && profile.placementReadySkillIDs?.contains(descriptor.id) == true
+        )
+    }
+}

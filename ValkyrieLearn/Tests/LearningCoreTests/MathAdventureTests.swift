@@ -126,4 +126,71 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(seen, MathMechanicID.adaptiveSet)
         XCTAssertGreaterThan(adventure.laneCounts.values.reduce(0, +), 0)
     }
+
+    func testPlacementSuccessCreatesProvisionalReadinessWithoutFalseMastery() throws {
+        var adventure = MathAdventure()
+        var profile = LearnerProfile()
+
+        _ = try adventure.prepareNext(profile: &profile, now: epoch)
+        let encounter = try XCTUnwrap(adventure.runtime?.encounter)
+        XCTAssertEqual(encounter.skillID, MathSkills.compare)
+
+        XCTAssertEqual(try solve(&adventure, profile: &profile, at: epoch).outcome, .correct)
+
+        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .learning)
+        XCTAssertGreaterThanOrEqual(
+            profile.readiness(for: MathSkills.compare),
+            SkillState.developing.readiness
+        )
+        XCTAssertTrue(profile.placementReadySkillIDs?.contains(MathSkills.compare) == true)
+    }
+
+    func testChallengeGateRequiresObservedSecurePerformanceNotPlacementAlone() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+
+        var adventure = MathAdventure(continuingLearner: true)
+        XCTAssertFalse(adventure.beginChallengeGate(profile: profile, graph: graph))
+
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+        XCTAssertTrue(adventure.beginChallengeGate(profile: profile, graph: graph))
+        XCTAssertEqual(adventure.challengeGateSession?.encounterIDs.count, ChallengeGateCatalog.challengeCount)
+    }
+
+    func testChallengeGateCompletesThreeDifferentMechanicsAndUnlocksMoonLantern() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+
+        var adventure = MathAdventure(continuingLearner: true)
+        XCTAssertTrue(adventure.beginChallengeGate(profile: profile, graph: graph))
+
+        var mechanics: Set<String> = []
+        var date = epoch
+
+        for index in 0..<ChallengeGateCatalog.challengeCount {
+            guard case .encounter(let encounter) = try adventure.prepareNext(profile: &profile, now: date) else {
+                return XCTFail("Expected Challenge Gate encounter \(index + 1)")
+            }
+            XCTAssertEqual(encounter.context, "challengeGate")
+            mechanics.insert(encounter.mechanicID)
+            XCTAssertEqual(try solve(&adventure, profile: &profile, at: date).outcome, .correct)
+
+            if index < ChallengeGateCatalog.challengeCount - 1 {
+                XCTAssertNotNil(adventure.challengeGateSession)
+                XCTAssertTrue(adventure.advanceEncounter())
+            }
+
+            date = date.addingTimeInterval(60)
+        }
+
+        XCTAssertEqual(mechanics.count, ChallengeGateCatalog.challengeCount)
+        XCTAssertTrue(profile.hasStoryReward(.moonLantern))
+        XCTAssertNil(adventure.challengeGateSession)
+    }
+
 }
