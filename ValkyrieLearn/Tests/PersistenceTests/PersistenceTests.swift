@@ -108,7 +108,7 @@ import LearningCore
                 let tokens = mechanic.children.flatMap { $0.children }.filter { $0.name == side }
                 XCTAssertFalse(tokens.isEmpty)
                 for token in tokens {
-                    let point = token.convert(.zero, to: scene)
+                    let point = token.convert(CGPoint.zero, to: scene)
                     XCTAssertEqual(scene.targetName(at: point), side)
                 }
             }
