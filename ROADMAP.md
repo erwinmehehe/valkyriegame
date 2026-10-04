@@ -1,144 +1,155 @@
-# ValkyrieLearn Roadmap
+# ValkyrieLearn Final Production Roadmap
+
+## Status
+
+This roadmap supersedes the earlier browser-first direction.
+
+**Production target: native iPadOS.**
+
+The current `index.html` build is a prototype/reference only.
 
 ## Product goal
 
-Build ValkyrieLearn into an adaptive learning adventure for a strong 5-year-old Kinder 2 learner, with Math as the flagship subject. The game should continuously identify what the learner already understands, teach the next skill she is ready for, revisit prior learning through spaced review, and stretch her without making the experience feel like worksheets or a placement test.
+Build ValkyrieLearn into an adaptive learning adventure for a strong 5-year-old Kinder 2 learner.
 
-## Core design principles
+Math is the flagship subject.
 
-- Learning stays inside the adventure.
-- The curriculum is invisible to the child and visible to the learning engine.
-- Difficulty adapts skill by skill, not through one global "Math Level".
-- One correct answer does not equal mastery.
-- Strong performance should unlock deeper reasoning, not just larger numbers.
-- Struggle should change the teaching method, not simply repeat the same question.
-- No identical question twice.
-- No gameplay mechanic more than twice in a row.
-- After 3 easy independent successes, increase challenge.
-- After 2 meaningful struggles, change representation or scaffolding.
-- Every 3-5 minutes, something should change visually, mechanically, or narratively.
-- Every session should include player choice and at least one non-academic interaction.
-- End sessions while the child still wants more.
+The game should continuously:
 
-## Learning architecture
+- identify what she already understands
+- find the next appropriate skill
+- teach it through physical adventure mechanics
+- scaffold when she struggles
+- revisit learned concepts through spaced review
+- unlock deeper reasoning when she is ready
+- prevent boredom by varying mechanics, context, story, choice, and challenge
 
-```
-CurriculumGraph
-      |
-LearnerProfile
-      |
-AdaptiveDirector
-      |
-EncounterGenerator
-      |
-WorldMechanic
-      |
-EvidenceRecorder
-      |
-MasteryEngine
-      |
-ReviewScheduler
-```
+Age is not a ceiling. Demonstrated understanding controls advancement.
 
-Supporting systems:
+## Locked technology
 
-```
-StoryManager
-RewardManager
-SaveManager
-AudioManager
-EngagementDirector
-```
+- Swift
+- SpriteKit
+- SwiftUI
+- SwiftData
+- AVFoundation
+- CloudKit later only if needed
+- TestFlight
+- GitHub
+- Xcode
 
-## Math Castle: flagship adaptive subject
+Primary platform: **iPad**
+Primary orientation: **landscape**
+Primary interaction: **tap-to-move + direct touch manipulation**
 
-### Number Sense
-- quantities and cardinality
-- counting forward/backward
-- subitizing
-- numeral-to-quantity matching
-- number order and missing numbers
-- one more / one less
-- greater / fewer / equal
-- estimation
-- numbers to 20, 50, and 100 when ready
+## Product principles
 
-### Number Relationships
-- compose/decompose numbers
-- number bonds to 5, 10, and 20
-- multiple ways to make the same number
-- doubles and near doubles
-- make-10 strategies
+1. Learning is inside the adventure.
+2. Curriculum is invisible to the child.
+3. Adapt by micro-skill, not a single global level.
+4. One correct answer never equals mastery.
+5. Strong performance unlocks deeper thinking, not repetitive larger numbers.
+6. Struggle changes teaching representation.
+7. Engagement and learning are both optimization targets.
+8. Rewards should change or expand the child's world.
+9. No ads, dark patterns, or unnecessary online dependency.
+10. Do not expand scope before the Adaptive Math Castle vertical slice works.
 
-### Addition & Subtraction
-- concrete groups
-- pictorial representations
-- symbolic equations
-- missing addends
-- related facts
-- mental strategies
-- story problems
-- error analysis
+## Phase 0 — Freeze and prepare
 
-### Place Value
-- groups of ten
-- tens and ones
-- build and compare two-digit numbers
-- one more/less
-- ten more/less when ready
+### Goals
+- stop expanding the old generated curriculum
+- document final product decisions
+- preserve HTML prototype as reference
+- create native Xcode project
 
-### Patterns & Early Algebra
-- AB, AAB, ABB, ABC
-- missing pattern elements
-- create a rule
-- equivalence
-- true/false equations
+### Deliverables
+- SwiftUI app shell
+- SpriteKit container
+- SwiftData persistence
+- test target
+- landscape iPad support
+- initial asset import pipeline
 
-### Geometry & Spatial Reasoning
-- shapes
-- composing and rotating shapes
-- symmetry
-- maps and mazes
-- position and direction
-- tangram-style challenges
+### Done when
+The empty native app runs reliably on the target iPad and can enter a SpriteKit scene.
 
-### Measurement, Time, Money & Data
-- length, height, weight, capacity
-- simple time concepts
-- practical money problems
-- sorting, tallying, picture graphs
+---
 
-### Advanced Stretch
-Only when demonstrated readiness supports it:
-- equal groups
-- repeated addition
-- early multiplication concepts
-- equal sharing and early division
-- halves and quarters
-- multi-step reasoning
+## Phase 1 — Native game-feel foundation
 
-## Adaptive placement
+### Goals
+Make Valkyrie feel like a protagonist in a real world before building lots of curriculum.
 
-The first Math Castle adventure should quietly sample a range of skills rather than present a test screen.
+### Build
+- Valkyrie sprite atlas
+- idle/walk/interact/celebrate/react animations
+- tap-to-move
+- scene interaction hotspots
+- camera/depth system
+- foreground occlusion
+- Pip companion
+- one Math Castle environment
+- basic audio
+- reduced-motion option
 
-Example sequence:
-1. count a small set
-2. subitize
-3. compare quantities
-4. add with objects
-5. subtract with objects
-6. solve a missing addend
-7. use number bonds
-8. compare two-digit numbers
-9. build tens and ones
-10. solve a reasoning/error problem
+### Done when
+A child can tap through the room, Valkyrie visibly travels and interacts, Pip participates in-scene, and the experience feels native to iPad.
 
-If performance is clearly strong, jump forward quickly. If a challenge is difficult, probe nearby prerequisite skills and teach through another representation.
+---
 
-## Learner profile
+## Phase 2 — Math Skill Graph v2
 
-Track each micro-skill independently using states such as:
+### Goal
+Replace the old broad/generated math structure with a real developmental skill graph.
 
+### Strands
+- number sense
+- number composition
+- number bonds
+- addition
+- subtraction
+- place value
+- patterns/early algebra
+- geometry/spatial reasoning
+- measurement
+- time
+- money
+- data
+- mathematical reasoning
+- equal groups/sharing/fractions as readiness-based stretch
+
+### Requirements
+- explicit prerequisites
+- skill IDs
+- representation options
+- encounter compatibility
+- readiness relationships
+- no age ceiling
+
+### Done when
+The learning engine can answer:
+
+- what the learner knows
+- what prerequisite is missing
+- what is ready next
+- what should be reviewed
+
+---
+
+## Phase 3 — Learner profile and mastery
+
+### Build
+- per-skill states
+- LearningEvidence
+- support-level weighting
+- representation tracking
+- response-time capture where useful
+- transfer evidence
+- mastery transitions
+- review-due state
+
+### States
 - New
 - Learning
 - Developing
@@ -146,204 +157,383 @@ Track each micro-skill independently using states such as:
 - Review Due
 - Mastered
 
-Evidence should include:
-- independent correct
-- hint-assisted correct
-- demonstration-assisted success
-- incorrect attempts
-- response time
-- representation used
-- last practiced
-- transfer/application success
+### Critical rule
+One correct answer does not mark a skill mastered.
 
-## Mastery model
+### Done when
+Unit tests prove repeated, delayed, varied evidence is required for strong mastery claims.
 
-Mastery should require repeated evidence across time and representations.
+---
 
-Example:
-1. solve 3 + 2 with crystals
-2. later solve 3 birds + 2 birds
-3. later solve 3 + 2 symbolically
-4. later detect an incorrect claim such as 3 + 2 = 6
+## Phase 4 — Hidden adaptive placement
 
-Only then should the skill be considered strongly mastered.
+### Goal
+Discover the learner's actual math ceiling without presenting a test screen.
 
-## Adaptive session mix
+### Adventure probes
+- counting/cardinality
+- subitizing
+- comparison
+- addition
+- subtraction
+- missing addend
+- number bonds
+- two-digit comparison
+- tens/ones
+- reasoning/error detection
 
-Starting guideline:
-- 60% current learning zone
+### Behavior
+- jump ahead after clear independent success
+- probe prerequisites after struggle
+- stop over-testing known concepts
+- record support level
+
+### Done when
+A strong early learner reaches appropriately challenging content quickly.
+
+---
+
+## Phase 5 — Adaptive Director
+
+### Selection inputs
+- skill need
+- prerequisites
+- mastery state
+- review due
+- support history
+- representation history
+- recent mechanics
+- engagement
+- story/world context
+
+### Starting session mix
+- 60% current learning
 - 20% spaced review
-- 15% gentle stretch
+- 15% stretch
 - 5% confidence/fun
 
-This mix should adapt to engagement and performance.
+### Done when
+The engine can build a varied sequence without repeating trivial work or getting stuck.
 
-## Anti-boredom / engagement system
+---
 
-The Adaptive Director should optimize both learning and engagement.
+## Phase 6 — Reusable Math Castle mechanics
 
-Signals to consider:
-- repeated fast/easy success
-- repeated struggle
-- random tapping
-- sudden response-time changes
-- abandoning activities
-- repeated menu opening
-- preferred mechanics
+Build at least five for the first vertical slice, then expand toward the full set.
 
-Responses:
-- increase challenge
-- change mechanic
-- change representation
-- trigger a surprise event
-- offer a player choice
-- insert exploration or creative play
-- open a Challenge Gate
+Candidate mechanics:
 
-## Reusable Math Castle mechanics
+1. Crystal Cart
+2. Balance Scale
+3. Number Bond Machine
+4. Ten Frame Gate
+5. Missing Number Bridge
+6. Gear Equation
+7. Pattern Conveyor
+8. Measurement Workshop
+9. Shape Builder
+10. Treasure Shop
+11. Clock Tower
+12. Number Line Jump
+13. Place Value Factory
+14. Firefly Estimation
+15. Pip's Mistake Machine
 
-Build 10-15 reusable mechanics that can teach many skills:
-- Crystal Cart
-- Balance Scale
-- Number Bond Machine
-- Ten Frame Gate
-- Gear Equation
-- Missing Number Bridge
-- Pattern Conveyor
-- Measurement Workshop
-- Shape Builder
-- Treasure Shop
-- Clock Tower
-- Number Line Jump
-- Place Value Factory
-- Firefly Estimation
-- Pip's Mistake Machine
+Each mechanic must support multiple skills/representations where sensible.
 
-## Challenge Gate
+### Done when
+The same math skill can appear through multiple game experiences.
 
-When a skill becomes secure, optional harder puzzles should appear.
+---
+
+## Phase 7 — Adaptive scaffolding
+
+### Escalation
+1. conceptual cue
+2. visual/highlight cue
+3. reduce complexity
+4. demonstrate first step
+5. collaborate if needed
+6. schedule a similar transfer problem
+
+### Done when
+A wrong answer changes teaching rather than simply repeating the question.
+
+---
+
+## Phase 8 — Anti-boredom / Engagement Director
+
+### Non-negotiable rules
+- no identical question twice
+- no same mechanic more than twice consecutively
+- increase depth after repeated easy independent success
+- change representation after repeated struggle
+- world/mechanic/story change every few minutes
+- player choice each normal session
+- at least one non-academic interaction
+- review in a different context when possible
+- natural stopping points
+
+### Surprise/content beats
+- secret room
+- golden crystal
+- companion mishap
+- unexpected bridge problem
+- rare creature
+- Story Tree signal
+- optional side challenge
+
+### Done when
+A normal session does not feel like a sequence of worksheets even though meaningful evidence is being collected.
+
+---
+
+## Phase 9 — Challenge Gate
+
+For skills that are secure, unlock optional deeper reasoning.
 
 Examples:
-- make 8 in three different ways
-- identify and fix Pip's mistake
-- solve number clues
-- find multiple valid solutions
-- compare strategies
-- solve multi-step story problems
+- make a number several ways
+- find/fix Pip's mistake
+- number riddles
+- multiple solutions
+- strategy comparison
+- multi-step problems
 
-Strong performance should unlock interesting thinking, not just more routine questions.
+### Done when
+Advanced performance leads to richer thinking rather than only bigger numbers.
 
-## Integrating other subjects
+---
 
-### Word Garden
-- phonological awareness
-- phonics
-- blending/segmenting
-- vocabulary
-- Filipino language
-- reading comprehension
-- storytelling
-- memory
+## Phase 10 — Story Tree reward loop
 
-### Science Lab
-Use:
-Observe -> Predict -> Test -> Observe Result -> Explain
+### Build
+- persistent home state
+- one learning-earned decoration/creature/plant
+- placement/use interaction
+- visible world growth
 
-Include plants, weather, materials, light, sound, habitats, and simple engineering experiments.
+### Rule
+Reward loop:
 
-### Puzzle Palace
-Focus on:
+**learning -> world change -> reward -> creativity -> return**
+
+### Done when
+At least one Math Castle learning achievement permanently changes Story Tree.
+
+---
+
+## Phase 11 — Parent Math dashboard
+
+Show:
+
+- strengths
+- developing skills
+- review needs
+- ready-next skills
+- recent session summary
+
+Avoid raw question-count vanity metrics.
+
+### Done when
+A parent can understand what the child knows and what the system is teaching next.
+
+---
+
+# Milestone A — Native Adaptive Math Castle Vertical Slice
+
+This is the first major release target.
+
+It must include:
+
+- native iPad app
+- landscape SpriteKit world
+- Valkyrie protagonist
+- Pip companion
+- tap-to-move
+- hidden adaptive placement
+- Math Skill Graph v2
+- learner profile
+- real mastery
+- spaced review
+- scaffolding
+- at least 5 reusable mechanics
+- Engagement Director rules
+- Challenge Gate
+- one Story Tree persistent reward
+- parent-facing summary
+- local persistence
+- core tests
+
+**Do not start major work on Chapter 2 or new worlds before this milestone is genuinely good on-device.**
+
+---
+
+## Phase 12 — Puzzle Palace v2
+
+Focus:
+
 - working memory
 - inhibitory control
 - cognitive flexibility
 - patterns
-- spatial reasoning
-- planning
+- spatial rotation
+- sorting
+- path planning
 - sequencing
-- early computational thinking / coding
+- early coding/debugging concepts
 
-### Social-emotional learning
-Embed in story situations rather than quizzes:
-- persistence
+Replace the current "one missing rune pattern repeated three times" level of depth with genuinely different cognitive mechanics.
+
+---
+
+## Phase 13 — Word Garden v2
+
+Keep Word Garden's strong physical-adventure structure and deepen the curriculum.
+
+Add:
+
+- phonological awareness
+- beginning/ending sounds
+- syllables
+- oral blending/segmentation
+- phoneme manipulation
+- letter-sound mapping
+- CVC decoding
+- vocabulary
+- comprehension
+- storytelling
+- Filipino language experiences
+
+Use recorded instructional audio for phonemes.
+
+---
+
+## Phase 14 — Science Lab v2
+
+Use:
+
+**Observe -> Predict -> Test -> Observe Result -> Explain**
+
+Suggested areas:
+
+- Greenhouse
+- Weather Tower
+- Creature Grove
+
+Focus on experimentation instead of trivia.
+
+---
+
+## Phase 15 — Social-emotional and independence layer
+
+Embed in story moments:
+
 - asking for help
-- frustration
+- persistence
+- handling mistakes
 - empathy
 - cooperation
-- problem solving
+- waiting
+- calming strategies
+- apology
+- simple conflict resolution
 
-## Rewards and Story Tree
+Do not build an SEL multiple-choice island.
 
-Learning should change the world.
+---
 
-Rewards can include:
-- plants
-- lanterns
-- creatures
-- books
-- outfits
-- companion accessories
-- building pieces
-- Story Tree decorations
+## Phase 16 — Creativity and expression
 
-Use the loop:
+Add open-ended use of earned rewards:
 
-```
-learning -> world change -> reward -> creativity -> return
-```
+- garden
+- room
+- companion homes
+- Story Tree
+- flags/shields
+- simple rhythm/music
+- story creation
 
-## Parent view
+Not every activity needs one correct answer.
 
-Show useful skill information rather than question counts.
+---
 
-Example:
-- Number bonds to 10 — Secure
-- Missing addends — Developing
-- Subtraction within 10 — Needs review
-- Place value — Ready next
-- Working memory — Developing
+## Phase 17 — Optional offline/physical learning
 
-## Build order
+Later only:
 
-1. Freeze expansion of the existing 2,700-question curriculum.
-2. Build Math Skill Graph v2.
-3. Build per-skill learner profile.
-4. Build hidden adaptive placement.
-5. Replace the current mastery model.
-6. Add spaced review.
-7. Add adaptive scaffolding.
-8. Rebuild Math Castle with reusable manipulatives.
-9. Add Challenge Gate.
-10. Connect world interactions directly to learning evidence.
-11. Add engagement / anti-boredom rules.
-12. Build parent Math dashboard.
-13. Upgrade Puzzle Palace for executive function.
-14. Rebuild Word Garden using the same adaptive engine.
-15. Rebuild Science Lab around investigation.
-16. Add social-emotional story moments.
-17. Expand Story Tree rewards and creation.
-18. Add optional offline quests and movement breaks.
-19. Expand into Grade 1+ content only when demonstrated readiness supports it.
+- find objects
+- observe weather
+- movement breaks
+- tidy/independence quests
+- parent-confirmed real-world tasks
 
-## Current immediate priority
+No camera is required.
 
-The next production milestone should be:
+---
 
-**Adaptive Math Castle vertical slice**
+## Phase 18 — Cloud / multi-device only if needed
 
-It should include:
-- hidden placement
-- per-skill evidence
-- 5-6 reusable math mechanics
-- adaptive difficulty
-- adaptive scaffolding
-- spaced review
-- Challenge Gate
-- at least one world-changing reward
-- anti-boredom mechanic rotation
-- parent-facing skill summary
+Only after the local product works well:
 
-The goal is for the child to say:
+- optional CloudKit sync
+- multiple learner profiles
+- parent device view
 
-> "Can I play Valkyrie?"
+Do not build a server/account platform prematurely.
 
-while the engine quietly becomes better at deciding what she should learn next.
+---
+
+# Art direction requirements across all phases
+
+- Valkyrie is a real protagonist, not a tiny UI sprite
+- connected physical environments
+- strong foreground-to-background depth
+- learning objects embedded in the world
+- companions have visible functional roles
+- routes, bridges, stairs, water, machinery, paths
+- animation/audio make actions feel consequential
+- avoid floating quiz UI over static backgrounds
+
+---
+
+# What not to build yet
+
+- Chapter 2
+- fifth world
+- thousands of new generated questions
+- web production version
+- monetization
+- ads
+- account/backend platform
+- required speech recognition
+- 3D conversion
+- multiplayer
+- giant avatar system
+- excessive badge systems
+
+---
+
+# North-star acceptance test
+
+A successful session should look like this:
+
+1. Valkyrie enters Math Castle because Pip needs help.
+2. The system already knows easy counting is secure, so it does not waste time on it.
+3. A number-bond mechanic appears.
+4. The learner succeeds quickly.
+5. Difficulty/depth increases.
+6. A missing-addend task causes difficulty.
+7. Pip scaffolds using physical crystals.
+8. A related task appears later in a different representation.
+9. The learner succeeds independently.
+10. A spatial or executive-function activity changes the pace.
+11. An optional Challenge Gate opens.
+12. A meaningful reward is earned.
+13. Story Tree changes.
+14. Parent view reports what changed in the learner profile.
+
+The child experiences an adventure.
+
+The system experiences high-quality learning evidence.
