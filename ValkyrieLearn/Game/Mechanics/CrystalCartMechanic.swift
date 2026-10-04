@@ -306,6 +306,8 @@ import LearningCore
 @MainActor final class MissingNumberBridgeMechanic: SKNode {
     private let equation = ArtSystem.label("", size: 38)
     private let answer = ArtSystem.label("", size: 44)
+    private let deck = SKNode()
+    private var latestModel: MissingNumberBridgeModel?
 
     override init() {
         super.init()
@@ -348,6 +350,18 @@ import LearningCore
         plus.position = CGPoint(x: 205, y: -55)
         plus.name = "missingPlus"
         addChild(plus)
+
+        // A stack of spare planks lives beside the bridge, within reach of Pip.
+        let supply = ArtSystem.box(CGSize(width: 100, height: 84), color: .init(red: 0.29, green: 0.20, blue: 0.14, alpha: 1))
+        supply.position = CGPoint(x: -270, y: 25); supply.name = "missingSupply"
+        for index in 0..<3 {
+            let plank = Self.plank()
+            plank.position = CGPoint(x: CGFloat(index - 1) * 15, y: CGFloat(index) * 5)
+            supply.addChild(plank)
+        }
+        addChild(supply)
+        deck.zPosition = 2
+        addChild(deck)
     }
 
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
@@ -355,6 +369,45 @@ import LearningCore
     func render(_ model: MissingNumberBridgeModel) {
         equation.text = "\(model.encounter.initialQuantity) + ? = \(model.encounter.targetQuantity)"
         answer.text = "\(model.selectedNumber)"
+        latestModel = model
+        deck.removeAllChildren()
+        let total = model.encounter.initialQuantity + model.selectedNumber
+        for index in 0..<max(model.encounter.targetQuantity, total) {
+            let fixed = index < model.encounter.initialQuantity
+            let filled = index < total
+            let slot = Self.plank()
+            slot.position = deckPoint(index)
+            slot.name = fixed ? "missingFixed" : (filled ? "missingPlank" : "missingSlot")
+            slot.fillColor = fixed ? .init(red: 0.54, green: 0.40, blue: 0.28, alpha: 1)
+                : (filled ? .init(red: 0.28, green: 0.66, blue: 0.65, alpha: 1) : .init(white: 0.06, alpha: 0.7))
+            slot.strokeColor = model.completed ? .systemYellow : .init(red: 0.86, green: 0.67, blue: 0.34, alpha: 1)
+            slot.glowWidth = model.completed ? 3 : 0
+            deck.addChild(slot)
+        }
+    }
+
+    static func plank() -> SKShapeNode {
+        let plank = ArtSystem.box(CGSize(width: 44, height: 48), color: .init(red: 0.28, green: 0.66, blue: 0.65, alpha: 1), radius: 4)
+        plank.strokeColor = .init(red: 0.86, green: 0.67, blue: 0.34, alpha: 1)
+        plank.lineWidth = 2
+        return plank
+    }
+
+    private func deckPoint(_ index: Int) -> CGPoint {
+        // Extra planks remain visible below the required span so overshooting is
+        // recoverable by direct touch; the renderer never silently fixes an answer.
+        CGPoint(x: -224 + CGFloat(index % 10) * 48, y: -90 - CGFloat(index / 10) * 54)
+    }
+
+    func receives(_ point: CGPoint) -> Bool {
+        guard let model = latestModel else { return false }
+        return (0..<max(model.encounter.targetQuantity, model.encounter.initialQuantity + model.selectedNumber)).contains {
+            CGRect(x: deckPoint($0).x - 24, y: deckPoint($0).y - 26, width: 48, height: 52).contains(point)
+        }
+    }
+
+    func returnsToSupply(_ point: CGPoint) -> Bool {
+        CGRect(x: -320, y: -17, width: 100, height: 84).contains(point)
     }
 }
 

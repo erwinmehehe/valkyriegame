@@ -108,6 +108,17 @@ import LearningCore
         castle.handleTap(at: CGPoint(x: 1120, y: 250))
         try await capture(castle, in: view, name: "Math-Castle-native-powered")
         castle.willLeave()
+        XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.missingNumberBridge[0]))
+        let bridge = MathCastleScene(state: state); bridge.reducedMotion = true
+        view.presentScene(bridge)
+        bridge.valkyrie.position = CGPoint(x: 490, y: 175)
+        bridge.handleTap(at: CGPoint(x: 965, y: 330))
+        try await capture(bridge, in: view, name: "Math-Castle-native-bridge-gaps")
+        for _ in 0..<4 { bridge.drop(origin: "missingSupply", at: CGPoint(x: 884, y: 220)) }
+        bridge.handleTap(at: CGPoint(x: 1120, y: 250))
+        XCTAssertTrue(state.runtime?.completed == true)
+        try await capture(bridge, in: view, name: "Math-Castle-native-bridge-repaired")
+        bridge.willLeave()
     }
 
     private func capture(_ scene: AdventureScene, in view: SKView, name: String) async throws {

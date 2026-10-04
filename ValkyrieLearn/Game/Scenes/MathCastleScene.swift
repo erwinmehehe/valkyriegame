@@ -235,7 +235,9 @@ import LearningCore
             )
             instruction.text = state.previewVisible
                 ? "Look closely. Pip will hide the lights in a moment."
-                : "Use the machine, then pull Pip's lever to check your idea."
+                : (runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
+                    ? "Move spare planks into the gaps. Tap a loose plank to take it back. Pull Pip's lever to check."
+                    : "Use the machine, then pull Pip's lever to check your idea.")
         } else {
             showQuestion(nil)
         }
@@ -249,7 +251,7 @@ import LearningCore
         guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch; startPoint = touch.location(in: self); didDrag = false
         if canManipulate(), let name = targetName(at: startPoint),
-           ["supply", "cartCrystal", "bondSupply", "bondToken", "tenFrameSupply", "tenFrameFilled"].contains(name) {
+           ["supply", "cartCrystal", "bondSupply", "bondToken", "tenFrameSupply", "tenFrameFilled", "missingSupply", "missingPlank"].contains(name) {
             dragOrigin = name
         }
     }
@@ -261,7 +263,9 @@ import LearningCore
         didDrag = true
         guard dragOrigin != nil else { return }
         if ghost == nil {
-            ghost = CrystalCartMechanic.crystal(); ghost?.zPosition = 1900
+            ghost = dragOrigin == "missingSupply" || dragOrigin == "missingPlank"
+                ? MissingNumberBridgeMechanic.plank() : CrystalCartMechanic.crystal()
+            ghost?.zPosition = 1900
             if let ghost { addChild(ghost) }
         }
         ghost?.position = point
@@ -284,9 +288,9 @@ import LearningCore
         let target = targetName(at: point)
         switch target {
         case "home": state.travel(to: .storyTree)
-        case "supply", "bondSupply", "bondSelected", "tenFrameSupply", "tenFrameCell", "missingPlus":
+        case "supply", "bondSupply", "bondSelected", "tenFrameSupply", "tenFrameCell", "missingPlus", "missingSupply", "missingSlot":
             manipulate { self.state.addCrystal() }
-        case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus":
+        case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus", "missingPlank":
             manipulate { self.state.removeCrystal() }
         case "scaleLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight": manipulate { self.state.chooseComparison(.right) }
@@ -315,7 +319,7 @@ import LearningCore
         case "workshop4": workshop(4)
         case "challengeGate":
             openChallengeGate()
-        case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "scaleBeam",
+        case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
             engageMachine()
         default:
@@ -328,7 +332,8 @@ import LearningCore
         action(); refresh(); valkyrie.pose(.interact); state.audio.play("crystal")
     }
 
-    private func drop(origin: String, at point: CGPoint) {
+    func drop(origin: String, at point: CGPoint) {
+        guard canManipulate() else { return }
         guard let mechanic else { return }
         let local = mechanic.convert(point, from: self)
         var changed = false
@@ -345,6 +350,10 @@ import LearningCore
             if CGRect(x: -160, y: -62, width: 320, height: 128).contains(local) { state.addCrystal(); changed = true }
         case "tenFrameFilled":
             if CGRect(x: -320, y: -50, width: 100, height: 100).contains(local) { state.removeCrystal(); changed = true }
+        case "missingSupply":
+            if let bridge = mechanic as? MissingNumberBridgeMechanic, bridge.receives(local) { state.addCrystal(); changed = true }
+        case "missingPlank":
+            if let bridge = mechanic as? MissingNumberBridgeMechanic, bridge.returnsToSupply(local) { state.removeCrystal(); changed = true }
         default: break
         }
         if changed { refresh(); valkyrie.pose(.interact); state.audio.play("crystal") }
