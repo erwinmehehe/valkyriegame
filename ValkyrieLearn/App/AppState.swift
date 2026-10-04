@@ -43,6 +43,14 @@ import LearningCore
         profile.hasStoryReward(reward)
     }
 
+    func parentMathSummary(now: Date = Date()) -> ParentMathSummary {
+        ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: now
+        )
+    }
+
     func storyRewardPlacement(_ reward: StoryRewardID) -> Int {
         profile.storyRewardPlacement(reward)
     }
