@@ -124,18 +124,25 @@ import LearningCore
         let current = try TenFrameModel(encounter: encounter)
         mechanic.render(current)
         let cells = try XCTUnwrap(mechanic.children.first).children.compactMap { $0 as? SKShapeNode }
-        XCTAssertEqual(cells.filter { $0.fillColor == .systemTeal }.count, 5)
+        // SpriteKit stores resolved colors; compare against the same rendering
+        // conversion rather than UIColor's dynamic system-color identity.
+        let reference = SKShapeNode()
+        reference.fillColor = .systemTeal
+        func isLit(_ cell: SKShapeNode) -> Bool {
+            cell.fillColor.cgColor == reference.fillColor.cgColor
+        }
+        XCTAssertEqual(cells.filter(isLit).count, 5)
         XCTAssertTrue(cells.allSatisfy { $0.name == "tenFramePreview" })
         mechanic.render(current)
-        XCTAssertEqual(cells.filter { $0.fillColor == .systemTeal }.count, 5)
+        XCTAssertEqual(cells.filter(isLit).count, 5)
 
         let expired = try TenFrameModel(encounter: encounter,
             at: Date().addingTimeInterval(-current.previewDuration - 1))
         mechanic.render(expired)
-        XCTAssertEqual(cells.filter { $0.fillColor == .systemTeal }.count, 0)
+        XCTAssertEqual(cells.filter(isLit).count, 0)
         XCTAssertTrue(cells.allSatisfy { $0.name == "tenFrameCell" })
         mechanic.render(expired)
-        XCTAssertEqual(cells.filter { $0.fillColor == .systemTeal }.count, 0)
+        XCTAssertEqual(cells.filter(isLit).count, 0)
         XCTAssertFalse(mechanic.hasActions())
     }
 
