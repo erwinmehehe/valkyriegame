@@ -9,7 +9,9 @@ public enum MathSkills {
     public static let subtraction = SkillID(rawValue: "math.subtractionObjects")
     public static let bonds5 = SkillID(rawValue: "math.numberBonds5")
     public static let bonds10 = SkillID(rawValue: "math.numberBonds10")
-    public static let missing = SkillID(rawValue: "math.missingAddends")\n    public static let placeValue = SkillID(rawValue: "math.placeValueTensOnes")\n    public static let reasoning = SkillID(rawValue: "math.reasoningErrorAnalysis")
+    public static let missing = SkillID(rawValue: "math.missingAddends")
+    public static let placeValue = SkillID(rawValue: "math.placeValueTensOnes")
+    public static let reasoning = SkillID(rawValue: "math.reasoningErrorAnalysis")
     public static func graph() throws -> SkillGraph {
         try SkillGraph([
             SkillDefinition(quantity),
@@ -20,7 +22,9 @@ public enum MathSkills {
             SkillDefinition(subtraction, prerequisites: [counting, addition]),
             SkillDefinition(bonds5, prerequisites: [addition, subitizing]),
             SkillDefinition(bonds10, prerequisites: [bonds5]),
-            SkillDefinition(missing, prerequisites: [addition, bonds10]),\n            SkillDefinition(placeValue, prerequisites: [counting, compare]),\n            SkillDefinition(reasoning, prerequisites: [addition, subtraction])
+            SkillDefinition(missing, prerequisites: [addition, bonds10]),
+            SkillDefinition(placeValue, prerequisites: [counting, compare]),
+            SkillDefinition(reasoning, prerequisites: [addition, subtraction])
         ])
     }
 }
