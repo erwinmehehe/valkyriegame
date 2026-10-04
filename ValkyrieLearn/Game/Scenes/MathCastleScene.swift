@@ -21,7 +21,7 @@ import LearningCore
     private var challengeRunes: [SKShapeNode] = []
     private var wasPowered = false
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 650, height: 84),
+        rectOf: CGSize(width: 650, height: 76),
         cornerRadius: 24
     )
     private let questionLabel = ArtSystem.label("", size: 23)
@@ -55,7 +55,7 @@ import LearningCore
         }
         _ = worldGear("↻", name: "wind", at: CGPoint(x: 390, y: 605), radius: 32)
 
-        questionPlate.position = CGPoint(x: 790, y: 602)
+        questionPlate.position = CGPoint(x: 790, y: 607)
         questionPlate.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.20, alpha: 0.78)
         questionPlate.strokeColor = UIColor(red: 1.0, green: 0.76, blue: 0.28, alpha: 0.95)
         questionPlate.lineWidth = 3
@@ -64,7 +64,7 @@ import LearningCore
         questionPlate.isHidden = true
         addChild(questionPlate)
 
-        questionLabel.position = CGPoint(x: 790, y: 602)
+        questionLabel.position = CGPoint(x: 790, y: 607)
         questionLabel.preferredMaxLayoutWidth = 590
         questionLabel.numberOfLines = 2
         questionLabel.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.86, alpha: 1)
