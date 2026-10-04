@@ -51,12 +51,13 @@ import LearningCore
         addChild(workshopLabel)
 
         gate = hotspot(
-            "Castle lift",
-            name: "lift",
+            "Challenge Gate",
+            name: "challengeGate",
             at: CGPoint(x: 1120, y: 555),
-            size: CGSize(width: 155, height: 110)
+            size: CGSize(width: 175, height: 110)
         )
 
+        updateGateAppearance()
         openOrder()
     }
 
@@ -73,10 +74,33 @@ import LearningCore
             instruction.text = "Pip is rebuilding the next castle machine. Explore the workshop for now."
 
         case .encounter:
-            instruction.text = "Tap the castle machine to walk over and help Pip."
+            if state.challengeGateStatus == .active {
+                instruction.text = "Challenge Gate · Rune \(state.challengeGateCompletedCount + 1) of \(state.challengeGateTotalCount). Tap the machine when you're ready."
+            } else {
+                instruction.text = "Tap the castle machine to walk over and help Pip."
+            }
 
         case nil:
             instruction.text = "Pip is checking the castle machines."
+        }
+    }
+
+    private func updateGateAppearance() {
+        switch state.challengeGateStatus {
+        case .locked:
+            gate?.alpha = 0.45
+        case .ready:
+            gate?.alpha = 1.0
+            if reducedMotion == false {
+                gate?.run(.sequence([
+                    .fadeAlpha(to: 0.72, duration: 0.7),
+                    .fadeAlpha(to: 1.0, duration: 0.7)
+                ]))
+            }
+        case .active:
+            gate?.alpha = 1.0
+        case .completed:
+            gate?.alpha = 0.85
         }
     }
 
@@ -367,10 +391,8 @@ import LearningCore
         case "workshop2":
             workshop(2)
 
-        case "lift":
-            travel(to: CGPoint(x: 1110, y: 230)) { [weak self] in
-                self?.instruction.text = "The lift leads farther into Math Castle. More rooms unlock as the castle learns what you can do."
-            }
+        case "challengeGate":
+            openChallengeGate()
 
         default:
             engaged = false
@@ -401,6 +423,8 @@ import LearningCore
             return
         }
 
+        let wasChallengeGate = state.challengeGateStatus == .active
+
         guard let evidence = state.submit() else {
             instruction.text = "Choose an answer on the machine first."
             return
@@ -412,8 +436,16 @@ import LearningCore
         if evidence.outcome == .correct {
             valkyrie.pose(.celebrate)
             state.audio.play("success")
-            gate?.run(.fadeAlpha(to: 0.5, duration: reducedMotion ? 0 : 0.4))
-            instruction.text = "The castle machine wakes up! Explore, or choose the next work order."
+            updateGateAppearance()
+
+            if wasChallengeGate && state.challengeGateStatus == .completed {
+                instruction.text = "The final rune shines! A Moon Lantern has appeared at Story Tree."
+            } else if wasChallengeGate {
+                instruction.text = "A Challenge Gate rune lights up. Choose the next challenge when you're ready."
+            } else {
+                gate?.run(.fadeAlpha(to: 0.5, duration: reducedMotion ? 0 : 0.4))
+                instruction.text = "The castle machine wakes up! Explore, or choose the next work order."
+            }
         } else {
             valkyrie.pose(.react)
 
@@ -425,6 +457,36 @@ import LearningCore
                 instruction.text = "That changed the machine, but not in the way Pip expected. Let's look together."
                 showScaffold()
             }
+        }
+    }
+
+    private func openChallengeGate() {
+        switch state.challengeGateStatus {
+        case .locked:
+            instruction.text = "The Challenge Gate is still gathering starlight. Keep helping Pip with ready skills."
+
+        case .ready:
+            if let runtime = state.activeMath, !runtime.completed {
+                instruction.text = "Finish this work order before entering the Challenge Gate."
+                return
+            }
+            if state.beginChallengeGate() {
+                updateGateAppearance()
+                openOrder()
+            } else {
+                instruction.text = "The Challenge Gate needs a little more readiness before it opens."
+            }
+
+        case .active:
+            if state.activeMath == nil || state.activeCompleted {
+                openOrder()
+            } else {
+                instruction.text = "The Challenge Gate is already open. Finish the glowing machine."
+                engageActive()
+            }
+
+        case .completed:
+            instruction.text = "The Challenge Gate is restored. Your Moon Lantern is waiting at Story Tree."
         }
     }
 
