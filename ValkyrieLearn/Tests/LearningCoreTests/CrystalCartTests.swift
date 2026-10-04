@@ -35,9 +35,13 @@ final class CrystalCartTests: XCTestCase {
         for _ in 0..<12 { XCTAssertTrue(cart.add()) }; XCTAssertFalse(cart.add())
         for _ in 0..<5 { cart.remove() }; XCTAssertEqual(cart.quantity, 7)
         XCTAssertEqual(cart.submit()?.outcome, .correct)
-        let unsupported = LearningEncounter(id: "future", skillID: MathSkills.subtraction,
-            operation: .subtraction, initialQuantity: 5, targetQuantity: 2, prompt: "Future")
-        XCTAssertThrowsError(try CrystalCartModel(encounter: unsupported))
+        let unsupported = LearningEncounter(id: "future", skillID: MathSkills.equalGroups,
+            operation: .equalGroups, initialQuantity: 0, targetQuantity: 6, prompt: "Make equal groups.")
+        XCTAssertThrowsError(try CrystalCartModel(encounter: unsupported)) { error in
+            guard case CrystalCartModel.CartError.unsupportedOperation = error else {
+                return XCTFail("Expected unsupported operation, got \(error)")
+            }
+        }
     }
 
     func testNumberBondMachineProducesEvidence() throws {
