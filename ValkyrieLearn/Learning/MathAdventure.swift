@@ -179,7 +179,11 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     public mutating func submit(profile: inout LearnerProfile, at now: Date) -> LearningEvidence? {
         guard interactionStarted, let evidence = runtime?.submit(at: now) else { return nil }
         if !workshop {
-            MasteryEngine().record(evidence, in: &profile)
+            // Hidden placement is diagnostic. It can establish provisional readiness
+            // but must never mutate observed mastery or masquerade as practice evidence.
+            if mode != .placement {
+                MasteryEngine().record(evidence, in: &profile)
+            }
             if mode == .placement, let probe = Self.playableProbes.first(where: { $0.encounter.id == evidence.encounterID }) {
                 // A first incorrect response is diagnostic; later scaffolded retries
                 // cannot erase it or cause a second jump for the same probe.
