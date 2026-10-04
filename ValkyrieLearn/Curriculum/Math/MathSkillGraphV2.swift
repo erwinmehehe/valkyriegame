@@ -523,11 +523,18 @@ public enum ParentMathSummaryBuilder {
         }
 
         let start = block.first?.timestamp ?? academic.first!.timestamp
-        let end = block.last?.timestamp ?? academic.last!.timestamp
+        let lastActivity = block.last?.timestamp ?? academic.last!.timestamp
+        let evidenceWindowEnd = min(
+            now.addingTimeInterval(1),
+            lastActivity.addingTimeInterval(sessionGap)
+        )
 
         let sessionEvidence = profile.skills.values
             .flatMap(\.evidence)
-            .filter { $0.timestamp >= start && $0.timestamp <= end.addingTimeInterval(1) }
+            .filter { $0.timestamp >= start && $0.timestamp <= evidenceWindowEnd }
+
+        let evidenceEnd = sessionEvidence.map(\.timestamp).max() ?? lastActivity
+        let end = max(lastActivity, evidenceEnd)
 
         let usedPipSupport = sessionEvidence.contains {
             $0.outcome == .correct && $0.supportLevel != .independent
