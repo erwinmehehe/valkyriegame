@@ -666,4 +666,26 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(plan.encounters.first?.lane, .learning)
     }
 
+    func testSessionPlannerHonorsElapsedWorldChangeBeforeFirstEncounter() throws {
+        let skill = SkillID(rawValue: "session.elapsed")
+        let graph = try SkillGraph([SkillDefinition(skill)])
+        var profile = LearnerProfile()
+        profile.recordActivity(ActivityRecord(fingerprint: "old", mechanicID: "cart",
+            skillID: skill, timestamp: epoch.addingTimeInterval(-181)))
+        let candidate = sessionEncounter(id: "fresh", skill: skill, mechanic: "scale", target: 5)
+        let planner = SessionPlanner(graph: graph,
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0))
+        let plan = planner.plan(for: profile, candidates: [candidate], encounterCount: 1, now: epoch)
+        XCTAssertEqual(plan.beats.first, .explorationBreak)
+        XCTAssertEqual(plan.explorationBreakCount, 1)
+        XCTAssertEqual(plan.encounterCount, 1)
+
+        profile.recordActivity(ActivityRecord(fingerprint: "real-exploration",
+            mechanicID: "exploration", timestamp: epoch.addingTimeInterval(-10)))
+        let refreshed = planner.plan(for: profile, candidates: [candidate], encounterCount: 1, now: epoch)
+        XCTAssertEqual(refreshed.explorationBreakCount, 0)
+        XCTAssertEqual(refreshed.encounterCount, 1)
+        XCTAssertEqual(profile.recentActivities.count, 2, "Planning must not mutate live history")
+    }
+
 }
