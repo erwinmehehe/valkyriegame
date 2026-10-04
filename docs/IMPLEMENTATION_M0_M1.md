@@ -93,9 +93,21 @@ Swift 6.0.3 Linux was temporarily installed for actual compilation/testing.
   iPad-only/landscape configuration, learning-module separation and prototype preservation.
 - `git diff --check` passed.
 
-**Actual Xcode app build, SwiftData macros/integration tests, simulator launch and physical iPad gameplay are NOT yet verified locally.**
-CI is supplied to run the Apple build/test gate. LearningCore has also passed clean `swift test` runs on Linux and macOS CI. Initial Apple integration runs caught checkout-dependent project IDs, a simulator architecture mismatch and a missing SKNode initializer override; fixes are included. The final native gate result must be checked before calling this an installable build.
-No IPA or TestFlight release is claimed.
+## Apple CI verification
+
+Native code commit: `f2670d1d3f49441a3686dfe76dc8d21fee5d8058`.
+[Successful run 37190988268](https://github.com/erwinmehehe/valkyriegame/actions/runs/37190988268).
+
+- Linux CI: clean `swift test -j 2` pass (15 tests).
+- macOS CI: clean `swift test` pass (15 tests).
+- Xcode 16.4 (16F6), arm64 iPad Pro 11-inch (M4) Simulator, iOS 18.5: native app and test targets compiled; `xcodebuild test` **TEST SUCCEEDED**.
+- Native simulator suites: **20 tests, zero failures** (15 learning/core/cart, 5 SwiftData/AppState).
+- SwiftData schema/macros and hosted AppState persistence tests are therefore Apple-platform verified.
+- Initial Apple runs caught checkout-dependent project IDs, simulator architecture mismatch, missing SKNode initializer override and a non-public scaffold constructor. All were fixed before the successful run.
+
+The local environment still has no Xcode, but the remote Mac/iPad Simulator gate actually ran and passed.
+**Physical iPad installation, touch gameplay, force-quit disk persistence, audio interruption/device performance and production art remain unverified.**
+Simulator unit tests do not prove a child can play the full interaction path. No IPA or TestFlight release is claimed.
 
 ## Additional source review
 
@@ -115,7 +127,7 @@ xcodebuild -list -project ValkyrieLearn.xcodeproj
 xcrun simctl list devices available
 # Replace the destination with an installed iPad simulator name or UDID.
 xcodebuild test -project ValkyrieLearn.xcodeproj -scheme ValkyrieLearn \
-  -destination 'platform=iOS Simulator,name=iPad (10th generation)' \
+  -destination 'platform=iOS Simulator,name=iPad Pro 11-inch (M4),OS=18.5' \
   -resultBundlePath NativeTests.xcresult CODE_SIGNING_ALLOWED=NO
 open ValkyrieLearn.xcodeproj
 ```
