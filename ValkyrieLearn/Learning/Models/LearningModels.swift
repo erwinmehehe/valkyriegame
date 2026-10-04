@@ -66,6 +66,40 @@ public struct LearningEncounter: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
+public struct ChallengeGateSession: Codable, Equatable, Sendable {
+    public let encounterIDs: [String]
+    public private(set) var completedEncounterIDs: Set<String>
+    public let rewardID: StoryRewardID
+
+    public init(
+        encounterIDs: [String],
+        completedEncounterIDs: Set<String> = [],
+        rewardID: StoryRewardID = .moonLantern
+    ) {
+        self.encounterIDs = encounterIDs
+        self.completedEncounterIDs = completedEncounterIDs.intersection(Set(encounterIDs))
+        self.rewardID = rewardID
+    }
+
+    public var isComplete: Bool {
+        !encounterIDs.isEmpty && encounterIDs.allSatisfy(completedEncounterIDs.contains)
+    }
+
+    public var nextEncounterID: String? {
+        encounterIDs.first { !completedEncounterIDs.contains($0) }
+    }
+
+    public var completedCount: Int {
+        completedEncounterIDs.count
+    }
+
+    @discardableResult
+    public mutating func markCompleted(_ encounterID: String) -> Bool {
+        guard encounterIDs.contains(encounterID) else { return false }
+        return completedEncounterIDs.insert(encounterID).inserted
+    }
+}
+
 public struct LearningEvidence: Identifiable, Codable, Equatable, Sendable {
     public let id: UUID
     public let encounterID: String
