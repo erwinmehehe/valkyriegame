@@ -446,3 +446,155 @@ public enum MathCastleEncounterCatalog {
             )
     }
 }
+
+
+/// Optional deeper-reasoning content unlocked by demonstrated secure performance.
+///
+/// The gate never blocks normal Math Castle progression. It opens only when the learner
+/// has at least two genuinely secure source skills and at least three prerequisite-safe
+/// challenge encounters are available through different mechanics.
+public enum ChallengeGateCatalog {
+    public static let reward: StoryRewardID = .moonLantern
+    public static let minimumSecureSourceSkills = 2
+    public static let challengeCount = 3
+
+    public static let sourceSkills: [SkillID] = [
+        MathSkills.compare,
+        MathSkills.addition,
+        MathSkills.subtraction,
+        MathSkills.bonds10,
+        MathSkills.missing
+    ]
+
+    public static let encounters: [LearningEncounter] = [
+        LearningEncounter(
+            id: "challenge-add-4-to-9",
+            skillID: MathSkills.addition,
+            mechanicID: MathMechanicID.tenFrameGate,
+            representation: .reasoning,
+            operation: .addition,
+            initialQuantity: 4,
+            targetQuantity: 9,
+            prompt: "The gate shows four lights. Build nine without counting from one.",
+            context: "challengeGate",
+            challengeDepth: 1
+        ),
+        LearningEncounter(
+            id: "challenge-subtract-10-to-6",
+            skillID: MathSkills.subtraction,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .story,
+            operation: .subtraction,
+            initialQuantity: 10,
+            targetQuantity: 6,
+            prompt: "Ten crystals arrive. Four power the bridge. Leave the rest in Pip's cart.",
+            context: "challengeGate",
+            challengeDepth: 1
+        ),
+        LearningEncounter(
+            id: "challenge-compare-equal-8-8",
+            skillID: MathSkills.explainComparison,
+            mechanicID: MathMechanicID.balanceScale,
+            representation: .reasoning,
+            operation: .comparison,
+            initialQuantity: 8,
+            targetQuantity: 8,
+            prompt: "Both pans look different, but the gate says they balance. Which relationship is true?",
+            context: "challengeGate",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "challenge-same-total-4-to-10",
+            skillID: MathSkills.sameTotalDifferentWay,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .reasoning,
+            operation: .numberBond,
+            initialQuantity: 4,
+            targetQuantity: 10,
+            prompt: "Pip made ten with three and seven. Make ten another way with four already in one chamber.",
+            context: "challengeGate",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "challenge-pip-mistake-5-plus-3",
+            skillID: MathSkills.reasoning,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .reasoning,
+            operation: .numberBond,
+            initialQuantity: 5,
+            targetQuantity: 8,
+            prompt: "Pip says five and three make nine. Fix his machine so the whole is eight.",
+            context: "challengeGate",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "challenge-missing-9-to-14",
+            skillID: MathSkills.addWithin20,
+            mechanicID: MathMechanicID.missingNumberBridge,
+            representation: .symbolic,
+            operation: .missingAddend,
+            initialQuantity: 9,
+            targetQuantity: 14,
+            prompt: "Nine plus what opens the fourteen-stone bridge?",
+            context: "challengeGate",
+            challengeDepth: 2
+        )
+    ]
+
+    public static func secureSourceCount(for profile: LearnerProfile) -> Int {
+        sourceSkills.reduce(0) { count, skill in
+            let secure = profile.progress(for: skill).state.readiness >= SkillState.secure.readiness
+            return count + (secure ? 1 : 0)
+        }
+    }
+
+    public static func availableEncounters(
+        for profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> [LearningEncounter] {
+        encounters.filter {
+            graph.isEligible($0.skillID, for: profile)
+                && MathManipulativeSupport.supports($0)
+        }
+    }
+
+    public static func canStart(
+        for profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> Bool {
+        guard !profile.hasStoryReward(reward),
+              secureSourceCount(for: profile) >= minimumSecureSourceSkills else {
+            return false
+        }
+
+        let available = availableEncounters(for: profile, graph: graph)
+        return Set(available.map(\.mechanicID)).count >= challengeCount
+    }
+
+    public static func makeSession(
+        for profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> ChallengeGateSession? {
+        guard canStart(for: profile, graph: graph) else { return nil }
+
+        let available = availableEncounters(for: profile, graph: graph)
+        var selected: [LearningEncounter] = []
+        var usedMechanics: Set<String> = []
+
+        for encounter in available where !usedMechanics.contains(encounter.mechanicID) {
+            selected.append(encounter)
+            usedMechanics.insert(encounter.mechanicID)
+            if selected.count == challengeCount { break }
+        }
+
+        guard selected.count == challengeCount else { return nil }
+        return ChallengeGateSession(
+            encounterIDs: selected.map(\.id),
+            rewardID: reward
+        )
+    }
+
+    public static func encounter(id: String) -> LearningEncounter? {
+        encounters.first { $0.id == id }
+    }
+}
