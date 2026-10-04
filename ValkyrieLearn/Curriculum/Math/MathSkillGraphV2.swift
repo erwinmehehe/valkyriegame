@@ -311,4 +311,14 @@ public enum MathSkillCatalog {
     public static var stretchSkills: [MathSkillDescriptor] {
         descriptors.filter(\.isStretch)
     }
+
+    public static func sessionPlanner(
+        configuration: SessionPlannerConfiguration = SessionPlannerConfiguration()
+    ) throws -> SessionPlanner {
+        SessionPlanner(
+            graph: try graph(),
+            stretchSkillIDs: Set(stretchSkills.map(\.id)),
+            configuration: configuration
+        )
+    }
 }
