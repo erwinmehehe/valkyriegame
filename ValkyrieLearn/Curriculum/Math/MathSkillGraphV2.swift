@@ -322,3 +322,231 @@ public enum MathSkillCatalog {
         )
     }
 }
+
+
+// MARK: - Parent-facing Math summary
+
+public struct ParentMathSkillSnapshot: Equatable, Sendable {
+    public let id: SkillID
+    public let title: String
+    public let strand: MathStrand
+    public let state: SkillState
+    public let isPlacementReadyOnly: Bool
+
+    public init(
+        id: SkillID,
+        title: String,
+        strand: MathStrand,
+        state: SkillState,
+        isPlacementReadyOnly: Bool
+    ) {
+        self.id = id
+        self.title = title
+        self.strand = strand
+        self.state = state
+        self.isPlacementReadyOnly = isPlacementReadyOnly
+    }
+}
+
+public struct ParentMathRecentSession: Equatable, Sendable {
+    public let startedAt: Date
+    public let endedAt: Date
+    public let skills: [ParentMathSkillSnapshot]
+    public let usedPipSupport: Bool
+    public let includedReasoningOrStory: Bool
+
+    public init(
+        startedAt: Date,
+        endedAt: Date,
+        skills: [ParentMathSkillSnapshot],
+        usedPipSupport: Bool,
+        includedReasoningOrStory: Bool
+    ) {
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.skills = skills
+        self.usedPipSupport = usedPipSupport
+        self.includedReasoningOrStory = includedReasoningOrStory
+    }
+}
+
+public struct ParentMathSummary: Equatable, Sendable {
+    public let strengths: [ParentMathSkillSnapshot]
+    public let developing: [ParentMathSkillSnapshot]
+    public let reviewNeeds: [ParentMathSkillSnapshot]
+    public let readyNext: [ParentMathSkillSnapshot]
+    public let recentSession: ParentMathRecentSession?
+    public let placementReadyCount: Int
+
+    public init(
+        strengths: [ParentMathSkillSnapshot],
+        developing: [ParentMathSkillSnapshot],
+        reviewNeeds: [ParentMathSkillSnapshot],
+        readyNext: [ParentMathSkillSnapshot],
+        recentSession: ParentMathRecentSession?,
+        placementReadyCount: Int
+    ) {
+        self.strengths = strengths
+        self.developing = developing
+        self.reviewNeeds = reviewNeeds
+        self.readyNext = readyNext
+        self.recentSession = recentSession
+        self.placementReadyCount = placementReadyCount
+    }
+}
+
+/// Converts the adaptive learner model into a compact grown-up summary.
+///
+/// This deliberately reports skill meaning and readiness instead of question totals.
+/// Hidden-placement readiness stays separate from observed mastery and is never listed
+/// as a "strength" until real evidence moves the skill into secure/mastered.
+public enum ParentMathSummaryBuilder {
+    public static let defaultSessionGap: TimeInterval = 20 * 60
+
+    public static func build(
+        profile: LearnerProfile,
+        graph: SkillGraph,
+        now: Date = Date(),
+        sessionGap: TimeInterval = defaultSessionGap
+    ) -> ParentMathSummary {
+        let descriptors = MathSkillCatalog.descriptors.sorted {
+            $0.developmentalOrder < $1.developmentalOrder
+        }
+
+        func snapshot(_ descriptor: MathSkillDescriptor) -> ParentMathSkillSnapshot {
+            let progress = profile.progress(for: descriptor.id)
+            let placementOnly = progress.state == .new
+                && profile.placementReadySkillIDs?.contains(descriptor.id) == true
+
+            return ParentMathSkillSnapshot(
+                id: descriptor.id,
+                title: descriptor.title,
+                strand: descriptor.strand,
+                state: progress.state,
+                isPlacementReadyOnly: placementOnly
+            )
+        }
+
+        let strengths = descriptors
+            .filter {
+                let state = profile.progress(for: $0.id).state
+                return state == .secure || state == .mastered
+            }
+            .map(snapshot)
+
+        let developing = descriptors
+            .filter {
+                let state = profile.progress(for: $0.id).state
+                return state == .learning || state == .developing
+            }
+            .map(snapshot)
+
+        let reviewNeeds = descriptors
+            .filter { descriptor in
+                let progress = profile.progress(for: descriptor.id)
+                if progress.state == .reviewDue { return true }
+                guard let due = progress.reviewDate, due <= now else { return false }
+                return progress.state == .secure || progress.state == .mastered
+            }
+            .map(snapshot)
+
+        let readyNext = descriptors
+            .filter { descriptor in
+                let progress = profile.progress(for: descriptor.id)
+                guard progress.state == .new,
+                      profile.readiness(for: descriptor.id) < SkillState.developing.readiness else {
+                    return false
+                }
+                return graph.isEligible(descriptor.id, for: profile)
+            }
+            .map(snapshot)
+
+        let recentSession = makeRecentSession(
+            profile: profile,
+            now: now,
+            sessionGap: max(60, sessionGap)
+        )
+
+        return ParentMathSummary(
+            strengths: strengths,
+            developing: developing,
+            reviewNeeds: reviewNeeds,
+            readyNext: readyNext,
+            recentSession: recentSession,
+            placementReadyCount: profile.placementReadySkillIDs?.count ?? 0
+        )
+    }
+
+    private static func makeRecentSession(
+        profile: LearnerProfile,
+        now: Date,
+        sessionGap: TimeInterval
+    ) -> ParentMathRecentSession? {
+        let activities = profile.recentActivities.sorted { $0.timestamp < $1.timestamp }
+        guard let last = activities.last,
+              last.timestamp <= now.addingTimeInterval(60) else {
+            return nil
+        }
+
+        var startIndex = activities.count - 1
+        while startIndex > 0 {
+            let current = activities[startIndex]
+            let previous = activities[startIndex - 1]
+            if current.timestamp.timeIntervalSince(previous.timestamp) > sessionGap {
+                break
+            }
+            startIndex -= 1
+        }
+
+        let block = Array(activities[startIndex...])
+        let academic = block.filter { $0.skillID != nil }
+        guard !academic.isEmpty else { return nil }
+
+        var orderedSkillIDs: [SkillID] = []
+        var seen: Set<SkillID> = []
+        for activity in academic {
+            guard let skillID = activity.skillID, seen.insert(skillID).inserted else { continue }
+            orderedSkillIDs.append(skillID)
+        }
+
+        let snapshots = orderedSkillIDs.compactMap { skillID -> ParentMathSkillSnapshot? in
+            guard let descriptor = MathSkillCatalog.descriptor(for: skillID) else { return nil }
+            let progress = profile.progress(for: skillID)
+            return ParentMathSkillSnapshot(
+                id: skillID,
+                title: descriptor.title,
+                strand: descriptor.strand,
+                state: progress.state,
+                isPlacementReadyOnly: progress.state == .new
+                    && profile.placementReadySkillIDs?.contains(skillID) == true
+            )
+        }
+
+        let start = block.first?.timestamp ?? academic.first!.timestamp
+        let end = block.last?.timestamp ?? academic.last!.timestamp
+
+        let sessionEvidence = profile.skills.values
+            .flatMap(\.evidence)
+            .filter { $0.timestamp >= start && $0.timestamp <= end.addingTimeInterval(1) }
+
+        let usedPipSupport = sessionEvidence.contains {
+            $0.outcome == .correct && $0.supportLevel != .independent
+        }
+
+        let includedReasoningOrStory =
+            academic.contains {
+                $0.representation == .reasoning || $0.representation == .story
+            }
+            || sessionEvidence.contains {
+                $0.representation == .reasoning || $0.representation == .story
+            }
+
+        return ParentMathRecentSession(
+            startedAt: start,
+            endedAt: end,
+            skills: snapshots,
+            usedPipSupport: usedPipSupport,
+            includedReasoningOrStory: includedReasoningOrStory
+        )
+    }
+}
