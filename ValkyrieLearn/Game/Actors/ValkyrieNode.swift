@@ -100,7 +100,9 @@ import SpriteKit
     private func showOnly(_ sprite: SKSpriteNode) {
         placeholderNodes.forEach { $0.isHidden = true }
         sourceSprite.isHidden = sourceSprite !== sprite
-        atlasSprite?.isHidden = atlasSprite !== sprite
+        if let atlasSprite {
+            atlasSprite.isHidden = atlasSprite !== sprite
+        }
     }
 
     private func showPlaceholders() {
