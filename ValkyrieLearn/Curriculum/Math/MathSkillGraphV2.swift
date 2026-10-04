@@ -440,7 +440,9 @@ public enum ParentMathSummaryBuilder {
             MathAdventure.playableProbes.map { $0.encounter.fingerprint }
         )
         let academic = block.filter {
-            $0.skillID != nil && !placementFingerprints.contains($0.fingerprint)
+            $0.skillID != nil
+                && !$0.fingerprint.contains("|hiddenPlacement|")
+                && !placementFingerprints.contains($0.fingerprint)
         }
         guard !academic.isEmpty else { return nil }
 
