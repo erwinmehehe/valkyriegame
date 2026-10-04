@@ -773,4 +773,20 @@ final class LearningCoreTests: XCTestCase {
         )
     }
 
+
+    func testPlayablePlacementReachesReasoningWithoutFakingPlaceValue() {
+        let reasoning = MathAdventure.playableProbes.first {
+            $0.skillID == MathSkills.reasoning
+        }
+        XCTAssertEqual(reasoning?.band, 9)
+        XCTAssertEqual(reasoning?.encounter.mechanicID, MathMechanicID.numberBondMachine)
+        XCTAssertEqual(reasoning?.encounter.representation, .reasoning)
+        XCTAssertEqual(reasoning?.encounter.challengeDepth, 2)
+
+        XCTAssertFalse(
+            MathAdventure.playableProbes.contains { $0.skillID == MathSkills.placeValue },
+            "Do not claim a place-value diagnostic until the native place-value manipulative exists."
+        )
+    }
+
 }
