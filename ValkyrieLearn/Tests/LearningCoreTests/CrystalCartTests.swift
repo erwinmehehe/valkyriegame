@@ -277,7 +277,7 @@ final class CrystalCartTests: XCTestCase {
             profile.readiness(for: MathSkills.bonds5),
             SkillState.developing.readiness
         )
-        XCTAssertTrue(graph.isEligible(MathSkills.missing, for: profile))
+        XCTAssertTrue(graph.isEligible(MathSkills.make10, for: profile))
     }
 
     func testMathAdventureSaveStateRoundTripsAllRuntimeKinds() throws {
