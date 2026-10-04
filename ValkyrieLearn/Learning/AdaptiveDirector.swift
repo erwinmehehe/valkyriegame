@@ -690,3 +690,31 @@ public struct SessionPlanner: Sendable {
         Dictionary(uniqueKeysWithValues: SessionLane.allCases.map { ($0, 0) })
     }
 }
+
+
+/// Lightweight consumable cursor so the game layer can execute a preplanned adaptive
+/// session one beat at a time without owning scheduling policy.
+public struct SessionPlanCursor: Sendable {
+    public let plan: SessionPlan
+    public private(set) var index: Int
+
+    public init(plan: SessionPlan, index: Int = 0) {
+        self.plan = plan
+        self.index = min(max(0, index), plan.beats.count)
+    }
+
+    public var current: SessionBeat? {
+        guard index < plan.beats.count else { return nil }
+        return plan.beats[index]
+    }
+
+    public var isComplete: Bool { index >= plan.beats.count }
+    public var remainingBeatCount: Int { max(0, plan.beats.count - index) }
+
+    @discardableResult public mutating func advance() -> SessionBeat? {
+        guard index < plan.beats.count else { return nil }
+        let completed = plan.beats[index]
+        index += 1
+        return completed
+    }
+}
