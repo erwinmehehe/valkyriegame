@@ -50,18 +50,55 @@ typealias LearnerSnapshot = LearningSchemaV1.LearnerSnapshot
         guard profile.schemaVersion == 1 else { throw StoreError.unsupportedProfileVersion }
         return profile
     }
-    func loadCart() throws -> CrystalCartModel? {
-        try snapshot.cartData.map { try JSONDecoder().decode(CrystalCartModel.self, from: $0) }
+    func loadMathAdventure() throws -> MathAdventureSaveState {
+        guard let data = snapshot.cartData else { return MathAdventureSaveState() }
+
+        if let current = try? JSONDecoder().decode(MathAdventureSaveState.self, from: data) {
+            return current
+        }
+
+        // Backward-compatible migration from the original CrystalCart-only blob.
+        if let legacyCart = try? JSONDecoder().decode(CrystalCartModel.self, from: data) {
+            return MathAdventureSaveState(runtime: .crystalCart(legacyCart))
+        }
+
+        throw StoreError.invalidMathAdventure
     }
-    func save(profile: LearnerProfile, cart: CrystalCartModel?, workshop: Bool,
+
+    func loadCart() throws -> CrystalCartModel? {
+        switch try loadMathAdventure().runtime {
+        case .crystalCart(let cart): return cart
+        default: return nil
+        }
+    }
+
+    func save(profile: LearnerProfile, mathAdventure: MathAdventureSaveState, workshop: Bool,
               sound: Bool, reducedMotion: Bool, world: String) throws {
         let data = try JSONEncoder().encode(profile)
-        let cartData = try cart.map { try JSONEncoder().encode($0) }
-        snapshot.profileData = data; snapshot.cartData = cartData
-        snapshot.workshop = workshop; snapshot.soundEnabled = sound
-        snapshot.reducedMotion = reducedMotion; snapshot.lastWorld = world
+        let mathData = try JSONEncoder().encode(mathAdventure)
+        snapshot.profileData = data
+        snapshot.cartData = mathData
+        snapshot.workshop = workshop
+        snapshot.soundEnabled = sound
+        snapshot.reducedMotion = reducedMotion
+        snapshot.lastWorld = world
         do { try context.save() }
         catch { context.rollback(); throw error }
     }
-    enum StoreError: Error { case unsupportedProfileVersion }
+
+    // Compatibility overload used by the original Milestone 0-1 tests and callers.
+    func save(profile: LearnerProfile, cart: CrystalCartModel?, workshop: Bool,
+              sound: Bool, reducedMotion: Bool, world: String) throws {
+        let runtime = cart.map { MathMechanicRuntime.crystalCart($0) }
+        try save(
+            profile: profile,
+            mathAdventure: MathAdventureSaveState(runtime: runtime),
+            workshop: workshop,
+            sound: sound,
+            reducedMotion: reducedMotion,
+            world: world
+        )
+    }
+
+    enum StoreError: Error { case unsupportedProfileVersion, invalidMathAdventure }
 }
