@@ -421,61 +421,40 @@ public enum ParentMathSummaryBuilder {
         now: Date,
         sessionGap: TimeInterval
     ) -> ParentMathRecentSession? {
-        let activities = profile.recentActivities.sorted { $0.timestamp < $1.timestamp }
-        guard let last = activities.last,
-              last.timestamp <= now.addingTimeInterval(60) else {
-            return nil
-        }
+        // Activity history includes opened machines and unscored workshop play.
+        // Only submitted, scored evidence belongs in the parent learning summary.
+        // Exclude known diagnostic IDs for profiles from earlier placement builds.
+        let diagnosticIDs = Set(
+            (MathPlacement.probes + MathAdventure.playableProbes).map { $0.encounter.id }
+        )
+        let scored = profile.skills.values.flatMap(\.evidence).filter {
+            $0.timestamp <= now
+                && !diagnosticIDs.contains($0.encounterID)
+                && MathSkillCatalog.descriptor(for: $0.skillID) != nil
+        }.sorted { $0.timestamp < $1.timestamp }
+        guard let last = scored.last else { return nil }
 
-        var startIndex = activities.count - 1
+        var startIndex = scored.count - 1
         while startIndex > 0 {
-            let current = activities[startIndex]
-            let previous = activities[startIndex - 1]
-            if current.timestamp.timeIntervalSince(previous.timestamp) > sessionGap { break }
+            if scored[startIndex].timestamp.timeIntervalSince(scored[startIndex - 1].timestamp) > sessionGap {
+                break
+            }
             startIndex -= 1
         }
-
-        let block = Array(activities[startIndex...])
-        let placementFingerprints = Set(
-            MathAdventure.playableProbes.map { $0.encounter.fingerprint }
-        )
-        let academic = block.filter {
-            $0.skillID != nil
-                && !$0.fingerprint.contains("|hiddenPlacement|")
-                && !placementFingerprints.contains($0.fingerprint)
-        }
-        guard !academic.isEmpty else { return nil }
-
-        var ids: [SkillID] = []
+        let block = Array(scored[startIndex...])
         var seen: Set<SkillID> = []
-        for activity in academic {
-            guard let skillID = activity.skillID, seen.insert(skillID).inserted else { continue }
-            ids.append(skillID)
-        }
-
-        let skills = ids.compactMap { id -> ParentMathSkillSnapshot? in
-            guard let descriptor = MathSkillCatalog.descriptor(for: id) else { return nil }
+        let skills = block.compactMap { evidence -> ParentMathSkillSnapshot? in
+            guard seen.insert(evidence.skillID).inserted,
+                  let descriptor = MathSkillCatalog.descriptor(for: evidence.skillID) else { return nil }
             return snapshotForRecent(descriptor, profile: profile)
         }
 
-        let start = block.first?.timestamp ?? academic.first!.timestamp
-        let lastActivity = block.last?.timestamp ?? academic.last!.timestamp
-        let evidenceWindowEnd = min(now.addingTimeInterval(1), lastActivity.addingTimeInterval(sessionGap))
-        let evidence = profile.skills.values.flatMap(\.evidence).filter {
-            $0.timestamp >= start && $0.timestamp <= evidenceWindowEnd
-        }
-        let end = max(lastActivity, evidence.map(\.timestamp).max() ?? lastActivity)
-
         return ParentMathRecentSession(
-            startedAt: start,
-            endedAt: end,
+            startedAt: block[0].timestamp,
+            endedAt: last.timestamp,
             skills: skills,
-            usedPipSupport: evidence.contains {
-                $0.outcome == .correct && $0.supportLevel != .independent
-            },
-            includedReasoningOrStory: academic.contains {
-                $0.representation == .reasoning || $0.representation == .story
-            } || evidence.contains {
+            usedPipSupport: block.contains { $0.supportLevel != .independent },
+            includedReasoningOrStory: block.contains {
                 $0.representation == .reasoning || $0.representation == .story
             }
         )

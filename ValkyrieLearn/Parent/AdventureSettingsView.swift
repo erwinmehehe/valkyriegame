@@ -157,7 +157,7 @@ import LearningCore
             Label(
                 session.usedPipSupport
                     ? "Pip support was used during this learning block."
-                    : "Recorded successes in this block were independent.",
+                    : "No Pip support was recorded in this learning block.",
                 systemImage: session.usedPipSupport ? "person.2.fill" : "figure.child"
             )
             .font(.footnote)

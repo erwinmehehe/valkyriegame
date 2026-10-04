@@ -69,6 +69,8 @@ import SpriteKit
             at: CGPoint(x: 795, y: 445),
             size: CGSize(width: 210, height: 56)
         )
+        // Arrival feet are at y = 450 (actor depth 550); keep the sign behind them.
+        sign.zPosition = 540
         let post = ArtSystem.box(
             CGSize(width: 15, height: 95),
             color: .init(red: 0.39, green: 0.24, blue: 0.12, alpha: 1),
