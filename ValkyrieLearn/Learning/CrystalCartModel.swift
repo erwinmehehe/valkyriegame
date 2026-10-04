@@ -2,7 +2,7 @@ import Foundation
 
 // Reusable model: rendering and touch input don't own the arithmetic.
 // Future operations require their own completion strategy; unsupported ones fail explicitly.
-public struct CrystalCartModel: Codable {
+public struct CrystalCartModel: Codable, Equatable, Sendable {
     public enum CartError: Error { case unsupportedOperation, invalidQuantity }
     public let encounter: LearningEncounter
     public private(set) var quantity: Int
@@ -11,16 +11,39 @@ public struct CrystalCartModel: Codable {
     public private(set) var completed = false
     public let startedAt: Date
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
-        guard [.counting, .addition, .missingAddend].contains(encounter.operation) else { throw CartError.unsupportedOperation }
-        guard (0...12).contains(encounter.initialQuantity), (1...12).contains(encounter.targetQuantity),
-              encounter.initialQuantity < encounter.targetQuantity else { throw CartError.invalidQuantity }
-        self.encounter = encounter; quantity = encounter.initialQuantity; startedAt = date
+        guard [.counting, .addition, .subtraction, .missingAddend].contains(encounter.operation) else {
+            throw CartError.unsupportedOperation
+        }
+        guard (0...12).contains(encounter.initialQuantity), (0...12).contains(encounter.targetQuantity) else {
+            throw CartError.invalidQuantity
+        }
+
+        switch encounter.operation {
+        case .subtraction:
+            guard encounter.initialQuantity > encounter.targetQuantity else {
+                throw CartError.invalidQuantity
+            }
+        default:
+            guard encounter.initialQuantity < encounter.targetQuantity else {
+                throw CartError.invalidQuantity
+            }
+        }
+
+        self.encounter = encounter
+        quantity = encounter.initialQuantity
+        startedAt = date
     }
     @discardableResult public mutating func add() -> Bool {
-        guard !completed, quantity < 12 else { return false }; quantity += 1; return true
+        let ceiling = encounter.operation == .subtraction ? encounter.initialQuantity : 12
+        guard !completed, quantity < ceiling else { return false }
+        quantity += 1
+        return true
     }
     @discardableResult public mutating func remove() -> Bool {
-        guard !completed, quantity > encounter.initialQuantity else { return false }; quantity -= 1; return true
+        let floor = encounter.operation == .subtraction ? 0 : encounter.initialQuantity
+        guard !completed, quantity > floor else { return false }
+        quantity -= 1
+        return true
     }
     public mutating func apply(_ scaffold: Scaffold) { support = maxSupport(support, scaffold.support) }
     private func maxSupport(_ a: SupportLevel, _ b: SupportLevel) -> SupportLevel { a.rawValue >= b.rawValue ? a : b }
@@ -385,7 +408,7 @@ public enum MathManipulativeSupport {
     public static func supports(_ encounter: LearningEncounter) -> Bool {
         switch encounter.mechanicID {
         case MathMechanicID.crystalCart:
-            return [.counting, .addition, .missingAddend].contains(encounter.operation)
+            return [.counting, .addition, .subtraction, .missingAddend].contains(encounter.operation)
         case MathMechanicID.balanceScale:
             return encounter.operation == .comparison
         case MathMechanicID.numberBondMachine:
@@ -408,7 +431,7 @@ public enum MathMechanicRuntimeError: Error {
 /// Single learning-side adapter used by Math Castle regardless of the active renderer.
 /// SpriteKit can send simple actions without owning arithmetic, correctness, support,
 /// or evidence rules.
-public enum MathMechanicRuntime {
+public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case crystalCart(CrystalCartModel)
     case balanceScale(BalanceScaleModel)
     case numberBond(NumberBondMachineModel)
@@ -570,5 +593,24 @@ public enum MathMechanicRuntime {
             self = .missingBridge(model)
             return evidence
         }
+    }
+}
+
+
+/// Persisted native Math Castle state. It intentionally reuses the existing SwiftData
+/// blob so this integration does not require a schema migration.
+public struct MathAdventureSaveState: Codable, Equatable, Sendable {
+    public var runtime: MathMechanicRuntime?
+    public var placementSession: PlacementSession?
+    public var placementComplete: Bool
+
+    public init(
+        runtime: MathMechanicRuntime? = nil,
+        placementSession: PlacementSession? = nil,
+        placementComplete: Bool = false
+    ) {
+        self.runtime = runtime
+        self.placementSession = placementSession
+        self.placementComplete = placementComplete
     }
 }
