@@ -54,8 +54,10 @@ import LearningCore
         for _ in 0..<target { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
         scene.handleTap(at: CGPoint(x: 1120, y: 250))
         XCTAssertTrue(state.runtime?.completed == true)
+        let powerLight = try XCTUnwrap(scene.childNode(withName: "castlePowerLight") as? SKShapeNode)
+        XCTAssertEqual(powerLight.glowWidth, 16)
         let portal = try XCTUnwrap(scene.childNode(withName: "challengeGate") as? SKShapeNode)
-        XCTAssertEqual(portal.glowWidth, 18)
+        XCTAssertEqual(portal.glowWidth, 4, "Ordinary work powers the castle route but must not fake Challenge Gate readiness.")
         scene.willLeave()
     }
 
