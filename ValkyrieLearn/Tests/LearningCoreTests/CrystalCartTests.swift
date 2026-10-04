@@ -41,7 +41,7 @@ final class CrystalCartTests: XCTestCase {
     }
 
     func testNumberBondMachineProducesEvidence() throws {
-        let encounter = MathCastleEncounterCatalog.numberBondMachine[1]
+        let encounter = MathCastleEncounterCatalog.numberBondMachine[2]
         var model = try NumberBondMachineModel(encounter: encounter, at: Date(timeIntervalSince1970: 100))
 
         XCTAssertEqual(model.knownPart, 6)
@@ -107,14 +107,15 @@ final class CrystalCartTests: XCTestCase {
         let encounters = MathCastleEncounterCatalog.all
 
         XCTAssertGreaterThan(encounters.count, MathFoundation.encounters.count)
-        XCTAssertLessThan(encounters.count, 40)
+        XCTAssertLessThan(encounters.count, 50)
         XCTAssertEqual(Set(encounters.map(\.id)).count, encounters.count)
 
         // Legacy foundation intentionally contains a few different skill IDs that
         // render the same math surface. EngagementDirector blocks those repeats at
         // runtime. New native mechanics themselves must not introduce duplicates.
         let newMechanics =
-            MathCastleEncounterCatalog.balanceScale
+            MathCastleEncounterCatalog.prerequisites
+            + MathCastleEncounterCatalog.balanceScale
             + MathCastleEncounterCatalog.numberBondMachine
             + MathCastleEncounterCatalog.tenFrameGate
             + MathCastleEncounterCatalog.missingNumberBridge
@@ -228,6 +229,85 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertTrue(cursor.isComplete)
         XCTAssertNil(cursor.current)
         XCTAssertNil(cursor.advance())
+    }
+
+    func testFixedAnswersDoNotClaimExplanationOrAlternativeSplitEvidence() throws {
+        let equal = MathCastleEncounterCatalog.balanceScale[2]
+        XCTAssertEqual(equal.skillID, MathSkills.compare)
+        XCTAssertEqual(equal.representation, .concrete)
+        var scale = try BalanceScaleModel(encounter: equal)
+        scale.choose(.equal)
+        XCTAssertFalse(try XCTUnwrap(scale.submit()).transferContext)
+        let split = MathCastleEncounterCatalog.numberBondMachine[3]
+        XCTAssertEqual(split.skillID, MathSkills.bonds10)
+        XCTAssertEqual(split.representation, .concrete)
+        var bond = try NumberBondMachineModel(encounter: split)
+        bond.setPart(7)
+        XCTAssertFalse(try XCTUnwrap(bond.submit()).transferContext)
+    }
+
+    func testQuickLookRejectsConstructionUntilReferenceHasHidden() throws {
+        let encounter = try XCTUnwrap(MathCastleEncounterCatalog.prerequisites.first {
+            $0.context == "quickLook"
+        })
+        let start = Date(timeIntervalSince1970: 500)
+        var model = try TenFrameModel(encounter: encounter, at: start)
+        XCTAssertTrue(model.previewIsVisible(at: start))
+        XCTAssertFalse(model.addCounter(at: start))
+        XCTAssertFalse(model.removeCounter(at: start))
+        XCTAssertNil(model.submit(at: start))
+        XCTAssertEqual(model.attempts, 0)
+        let after = start.addingTimeInterval(model.previewDuration)
+        XCTAssertFalse(model.previewIsVisible(at: after))
+        for _ in 0..<encounter.targetQuantity { XCTAssertTrue(model.addCounter(at: after)) }
+        XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
+    }
+
+    func testFreshLearnerCanReachAllFiveMechanicsThroughRealEligibleEvidence() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        var now = Date(timeIntervalSince1970: 1000)
+        var seenMechanics = Set<String>()
+        // Replan after each real response; never seed skill readiness by hand.
+        for _ in 0..<60 {
+            let plan = try MathCastleEncounterCatalog.sessionPlan(for: profile,
+                encounterCount: 1, now: now)
+            guard let item = plan.encounters.first else { break }
+            let encounter = item.encounter
+            XCTAssertTrue(graph.isEligible(encounter.skillID, for: profile))
+            for beat in plan.beats {
+                if case .explorationBreak = beat {
+                    profile.recordActivity(ActivityRecord(fingerprint: "walk-\(now)",
+                        mechanicID: "exploration", timestamp: now))
+                }
+            }
+            XCTAssertFalse(profile.usedFingerprints.contains(encounter.fingerprint))
+            profile.begin(encounter, at: now)
+            var runtime = try MathMechanicRuntime(encounter: encounter,
+                at: now.addingTimeInterval(-30))
+            switch runtime {
+            case .crystalCart:
+                for _ in encounter.initialQuantity..<encounter.targetQuantity {
+                    XCTAssertTrue(runtime.increment())
+                }
+            case .balanceScale(let model): runtime.chooseComparison(model.correctChoice)
+            case .numberBond(let model): runtime.setValue(model.correctMissingPart)
+            case .tenFrame(let model):
+                for _ in model.filled..<encounter.targetQuantity {
+                    XCTAssertTrue(runtime.increment())
+                }
+            case .missingBridge(let model): runtime.setValue(model.correctNumber)
+            }
+            let evidence = try XCTUnwrap(runtime.submit(at: now))
+            XCTAssertEqual(evidence.outcome, .correct)
+            MasteryEngine().record(evidence, in: &profile)
+            seenMechanics.insert(encounter.mechanicID)
+            now = now.addingTimeInterval(31)
+        }
+        XCTAssertEqual(seenMechanics, MathMechanicID.adaptiveSet)
+        XCTAssertGreaterThanOrEqual(profile.progress(for: MathSkills.bonds10).state.readiness,
+                                    SkillState.developing.readiness)
+        XCTAssertTrue(graph.isEligible(MathSkills.missing, for: profile))
     }
 
 }

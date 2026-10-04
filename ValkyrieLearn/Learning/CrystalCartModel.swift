@@ -33,7 +33,9 @@ public struct CrystalCartModel: Codable {
             outcome: correct ? .correct : .incorrect, supportLevel: support,
             representation: encounter.representation, mechanicID: encounter.mechanicID,
             attempts: attempts, responseTime: max(0, date.timeIntervalSince(startedAt)), timestamp: date,
-            transferContext: encounter.representation == .story || encounter.representation == .reasoning,
+            // A representation label alone does not demonstrate transfer.
+            // These fixed-answer manipulatives currently assess their concrete relation only.
+            transferContext: false,
             easySuccess: correct && support == .independent && attempts == 1 && date.timeIntervalSince(startedAt) < 25)
     }
 }
@@ -185,6 +187,12 @@ public struct TenFrameModel: Codable, Equatable, Sendable {
     public private(set) var completed: Bool
     public let startedAt: Date
 
+    /// Quick-look probes hide the reference before accepting construction.
+    public var previewDuration: TimeInterval { encounter.context == "quickLook" ? 1.25 : 0 }
+    public func previewIsVisible(at date: Date = Date()) -> Bool {
+        date.timeIntervalSince(startedAt) < previewDuration
+    }
+
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         guard encounter.mechanicID == MathMechanicID.tenFrameGate else {
             throw ModelError.unsupportedMechanic
@@ -206,14 +214,14 @@ public struct TenFrameModel: Codable, Equatable, Sendable {
         startedAt = date
     }
 
-    @discardableResult public mutating func addCounter() -> Bool {
-        guard !completed, filled < 10 else { return false }
+    @discardableResult public mutating func addCounter(at date: Date = Date()) -> Bool {
+        guard !previewIsVisible(at: date), !completed, filled < 10 else { return false }
         filled += 1
         return true
     }
 
-    @discardableResult public mutating func removeCounter() -> Bool {
-        guard !completed, filled > encounter.initialQuantity else { return false }
+    @discardableResult public mutating func removeCounter(at date: Date = Date()) -> Bool {
+        guard !previewIsVisible(at: date), !completed, filled > encounter.initialQuantity else { return false }
         filled -= 1
         return true
     }
@@ -223,7 +231,7 @@ public struct TenFrameModel: Codable, Equatable, Sendable {
     }
 
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
-        guard !completed else { return nil }
+        guard !previewIsVisible(at: date), !completed else { return nil }
         attempts += 1
         let correct = filled == encounter.targetQuantity
         completed = correct

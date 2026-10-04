@@ -53,17 +53,16 @@ import LearningCore
 @MainActor final class BalanceScaleMechanic: SKNode {
     private let leftContents = SKNode()
     private let rightContents = SKNode()
+    private let beam = ArtSystem.box(CGSize(width: 360, height: 18), color: .systemOrange, radius: 8)
+    private var leftPan: SKNode?
+    private var rightPan: SKNode?
 
     override init() {
         super.init()
         name = MathMechanicID.balanceScale
         zPosition = 750
 
-        let beam = ArtSystem.box(
-            CGSize(width: 360, height: 18),
-            color: .systemOrange,
-            radius: 8
-        )
+        beam.name = "scaleBeam"
         beam.position = CGPoint(x: 0, y: 40)
         addChild(beam)
 
@@ -75,8 +74,10 @@ import LearningCore
         stand.position = CGPoint(x: 0, y: -40)
         addChild(stand)
 
-        addPan(name: "scaleLeft", x: -150)
-        addPan(name: "scaleRight", x: 150)
+        leftPan = addPan(name: "scaleLeft", x: -150)
+        rightPan = addPan(name: "scaleRight", x: 150)
+        leftContents.zPosition = 1
+        rightContents.zPosition = 1
 
         addChild(leftContents)
         addChild(rightContents)
@@ -84,7 +85,7 @@ import LearningCore
 
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
 
-    private func addPan(name: String, x: CGFloat) {
+    private func addPan(name: String, x: CGFloat) -> SKNode {
         let pan = ArtSystem.box(
             CGSize(width: 180, height: 72),
             color: .init(red: 0.34, green: 0.38, blue: 0.48, alpha: 1)
@@ -92,17 +93,29 @@ import LearningCore
         pan.position = CGPoint(x: x, y: -45)
         pan.name = name
         addChild(pan)
+        return pan
     }
 
     func render(_ model: BalanceScaleModel) {
-        renderQuantity(model.leftQuantity, in: leftContents, centerX: -150)
-        renderQuantity(model.rightQuantity, in: rightContents, centerX: 150)
+        // Positive rotation lowers the left end in SpriteKit's upward y-axis.
+        let angle: CGFloat = model.leftQuantity == model.rightQuantity ? 0
+            : (model.leftQuantity > model.rightQuantity ? 0.14 : -0.14)
+        beam.zRotation = angle
+        let leftOffset = -150 * sin(angle)
+        let rightOffset = 150 * sin(angle)
+        leftPan?.position.y = -45 + leftOffset
+        rightPan?.position.y = -45 + rightOffset
+        leftContents.position.y = leftOffset
+        rightContents.position.y = rightOffset
+        renderQuantity(model.leftQuantity, in: leftContents, centerX: -150, targetName: "scaleLeft")
+        renderQuantity(model.rightQuantity, in: rightContents, centerX: 150, targetName: "scaleRight")
     }
 
-    private func renderQuantity(_ quantity: Int, in node: SKNode, centerX: CGFloat) {
+    private func renderQuantity(_ quantity: Int, in node: SKNode, centerX: CGFloat, targetName: String) {
         node.removeAllChildren()
         for index in 0..<quantity {
             let token = tokenNode()
+            token.name = targetName
             let column = index % 5
             let row = index / 5
             token.position = CGPoint(
@@ -188,6 +201,8 @@ import LearningCore
 
 @MainActor final class TenFrameGateMechanic: SKNode {
     private let cells = SKNode()
+    private var latestModel: TenFrameModel?
+    private let previewActionKey = "quickLookPreview"
 
     override init() {
         super.init()
@@ -215,12 +230,26 @@ import LearningCore
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
 
     func render(_ model: TenFrameModel) {
+        latestModel = model
+        let now = Date()
+        let previewVisible = model.previewIsVisible(at: now)
+        let visibleQuantity = previewVisible ? model.encounter.targetQuantity : model.filled
         cells.children.enumerated().forEach { index, cell in
             guard let shape = cell as? SKShapeNode else { return }
-            shape.fillColor = index < model.filled
+            shape.fillColor = index < visibleQuantity
                 ? .systemTeal
                 : .init(red: 0.17, green: 0.20, blue: 0.30, alpha: 1)
-            shape.name = index < model.encounter.initialQuantity ? "tenFrameFixed" : "tenFrameCell"
+            shape.name = previewVisible ? "tenFramePreview"
+                : (index < model.encounter.initialQuantity ? "tenFrameFixed" : "tenFrameCell")
+        }
+        removeAction(forKey: previewActionKey)
+        if previewVisible {
+            // Re-renders retain the original deadline; they cannot replay the flash.
+            let remaining = max(0, model.startedAt.addingTimeInterval(model.previewDuration).timeIntervalSince(now))
+            run(.sequence([.wait(forDuration: remaining), .run { [weak self] in
+                guard let self, let latest = self.latestModel else { return }
+                self.render(latest)
+            }]), withKey: previewActionKey)
         }
     }
 }

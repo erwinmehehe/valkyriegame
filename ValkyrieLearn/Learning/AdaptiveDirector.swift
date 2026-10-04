@@ -390,6 +390,13 @@ public struct SessionPlanner: Sendable {
         var selectedCount = 0
         var breakSerial = 0
 
+        // Elapsed play time matters even when a learner spends a long time on
+        // only one encounter. Never reset the clock just because a plan is rebuilt.
+        if EngagementDirector().needsWorldChange(profile: shadow, now: now) {
+            appendExplorationBreak(to: &beats, profile: &shadow, now: now,
+                                   serial: &breakSerial, encounterIndex: 0)
+        }
+
         while selectedCount < requested {
             if configuration.explorationEveryEncounters > 0,
                selectedCount > 0,
