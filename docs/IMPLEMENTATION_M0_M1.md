@@ -1,5 +1,26 @@
 # Native foundation implementation — Milestones 0–1
 
+## Current follow-on status — October 4, 2026
+
+This file began as the Milestones 0–1 implementation report. Treat the early sections below as historical evidence of what the foundation pass contained, not as the current feature inventory.
+
+Current repository progression:
+
+- PR #1 native foundation — merged to `main`
+- PR #2 hidden adaptive Math placement — merged to `main`
+- PR #3 Math Skill Graph v2 — merged to `main`
+- PR #4 adaptive 60/20/15/5 session planner — merged to `main`
+- PR #5 reusable five-mechanic Math layer — open against `main`
+- PR #6 live Math Castle integration — stacked on PR #5
+- PR #7 Challenge Gate + persistent Moon Lantern Story Tree reward — stacked on PR #6
+- PR #8 parent-facing adaptive Math dashboard — stacked on PR #7
+
+The current vertical-slice stack therefore includes hidden placement, the 73-skill Math graph, mastery/review/scaffolding, adaptive session planning, five reusable mechanics, Challenge Gate, persistent Story Tree reward state, and parent Math reporting.
+
+**Merge order is PR #5 → PR #6 → PR #7 → PR #8.** Do not flatten or merge a later stacked PR before its base unless the stack is deliberately rebased first.
+
+**Current acceptance gate:** finish CI for the stack, merge in order, then validate the complete experience on the intended physical iPad. Do not begin Puzzle Palace v2, Word Garden v2, Science Lab v2, Chapter 2, or major new-world expansion until the native Adaptive Math Castle vertical slice is genuinely good on-device.
+
 ## Audit and scope
 
 Baseline main commit: `1bca669d6736c4810e53bd1cfa487625f8232992`.
@@ -141,10 +162,16 @@ reduced motion; sound off/interruption/background; partial cart and profile rest
 no progress lost on save errors; a normal 15-minute session without crashes. Final art/touch pacing
 still needs child/device review. The current audio policy stops interrupted audio; automatic music resume is later work.
 
-## Exact next implementation milestone
+## Current next implementation milestone
 
-First clear the Mac/iPad build and interaction gates above. Then implement **hidden adaptive Math placement**
-and expand from Crystal Cart to **3–5 reusable Math mechanics**, with authored alternate representations and
-challenge depth so the existing director can respond to readiness/struggle without running out of content.
-Follow with mastery/review/scaffolding refinement and Challenge Gate, then Story Tree rewards and parent Math summary.
-Do not expand worlds or Chapter 2 in that next pass.
+The earlier "build hidden placement and 3–5 reusable Math mechanics" milestone has been implemented in the follow-on PR stack described at the top of this file.
+
+The next release gate is now **device validation and stack integration**, not another major feature expansion:
+
+1. merge PR #5 → PR #6 → PR #7 → PR #8 in order after their required checks pass
+2. run the full adaptive Math Castle flow on the intended physical iPad
+3. verify touch targets, drag/tap alternatives, orientation, performance, sound interruption, force-quit persistence, reduced motion, and readability
+4. observe the child using hidden placement, all five mechanics, scaffolding, Challenge Gate, Story Tree reward interaction, and natural stopping points
+5. fix any usability or boredom failures found on-device before calling Milestone A accepted
+
+Only after that acceptance gate should Phase 12+ world expansion begin.
