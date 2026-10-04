@@ -4,6 +4,12 @@ import SpriteKit
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
+    private var moonLanternNode: SKNode?
+    private let moonLanternSlots = [
+        CGPoint(x: 315, y: 555),
+        CGPoint(x: 430, y: 625),
+        CGPoint(x: 545, y: 555)
+    ]
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch; touchStart = touch.location(in: self); moved = false
@@ -26,8 +32,64 @@ import SpriteKit
         canopy.position = CGPoint(x: 430, y: 575); canopy.zPosition = 35; addChild(canopy)
         _ = hotspot("Math Castle →", name: "castle", at: CGPoint(x: 1050, y: 320), size: CGSize(width: 230, height: 100))
         _ = hotspot("Wind Pip", name: "pipWind", at: CGPoint(x: 600, y: 285))
-        instruction.text = "Story Tree · Tap a path to walk. Visit Pip or the castle."
+        renderMoonLantern()
+        if state.hasStoryReward(.moonLantern) {
+            instruction.text = "Story Tree grew a Moon Lantern! Tap it to choose a different branch."
+        } else {
+            instruction.text = "Story Tree · Tap a path to walk. Visit Pip or the castle."
+        }
     }
+    private func renderMoonLantern() {
+        moonLanternNode?.removeFromParent()
+        moonLanternNode = nil
+
+        guard state.hasStoryReward(.moonLantern), !moonLanternSlots.isEmpty else { return }
+
+        let placement = state.storyRewardPlacement(.moonLantern) % moonLanternSlots.count
+        let lantern = SKNode()
+        lantern.name = "moonLantern"
+        lantern.position = moonLanternSlots[placement]
+        lantern.zPosition = 120
+
+        let glow = SKShapeNode(circleOfRadius: 48)
+        glow.fillColor = .systemYellow.withAlphaComponent(0.20)
+        glow.strokeColor = .clear
+        glow.name = "moonLantern"
+        lantern.addChild(glow)
+
+        let hanger = SKShapeNode(rectOf: CGSize(width: 5, height: 30), cornerRadius: 2)
+        hanger.fillColor = .systemOrange
+        hanger.strokeColor = .clear
+        hanger.position = CGPoint(x: 0, y: 36)
+        hanger.name = "moonLantern"
+        lantern.addChild(hanger)
+
+        let body = SKShapeNode(
+            rectOf: CGSize(width: 50, height: 62),
+            cornerRadius: 14
+        )
+        body.fillColor = .systemYellow
+        body.strokeColor = .white
+        body.lineWidth = 3
+        body.name = "moonLantern"
+        lantern.addChild(body)
+
+        let moon = ArtSystem.label("☾", size: 31)
+        moon.fontColor = .init(red: 0.22, green: 0.24, blue: 0.40, alpha: 1)
+        moon.name = "moonLantern"
+        lantern.addChild(moon)
+
+        if !reducedMotion {
+            glow.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.45, duration: 1.1),
+                .fadeAlpha(to: 1.0, duration: 1.1)
+            ])))
+        }
+
+        addChild(lantern)
+        moonLanternNode = lantern
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = activeTouch, touches.contains(touch) else { return }
         defer { activeTouch = nil; moved = false }
@@ -45,6 +107,12 @@ import SpriteKit
                 self.instruction.text = "Pip's little gears are ready. Where shall we go?"
                 self.state.audio.play("gear")
             }
+        case "moonLantern":
+            guard state.hasStoryReward(.moonLantern) else { return }
+            _ = state.cycleStoryRewardPlacement(.moonLantern, slotCount: moonLanternSlots.count)
+            renderMoonLantern()
+            state.audio.play("success")
+            instruction.text = "The Moon Lantern found a new branch. Tap it again whenever you want to move it."
         default: walkIfValid(point)
         }
     }
