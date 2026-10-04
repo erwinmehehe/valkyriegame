@@ -1,0 +1,28 @@
+name: Native foundation
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  learning-core:
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test -j 2
+  ipad-build-and-tests:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/validate_native.py
+      - run: swift test
+      - name: iPad Simulator unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          simulator_id=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for devices in d["devices"].values() for x in devices if x["name"].startswith("iPad")))')
+          xcodebuild test -project ValkyrieLearn.xcodeproj -scheme ValkyrieLearn \
+            -destination "platform=iOS Simulator,id=$simulator_id" \
+            -resultBundlePath NativeTests.xcresult CODE_SIGNING_ALLOWED=NO
