@@ -171,7 +171,7 @@ public enum MathSkillCatalog {
         .init(id: MathSkills.make10, strand: .numberComposition, title: "Make-10 Strategy", developmentalOrder: 18,
               prerequisites: [MathSkills.bonds10]),
         .init(id: MathSkills.doubles10, strand: .numberComposition, title: "Doubles within 10", developmentalOrder: 19,
-              prerequisites: [MathSkills.bonds5, MathSkills.addition]),
+              prerequisites: [MathSkills.bonds5]),
 
         // Addition: concrete -> pictorial -> symbolic -> strategy -> application.
         .init(id: MathSkills.combine5, strand: .addition, title: "Combine Groups within 5", developmentalOrder: 20,
