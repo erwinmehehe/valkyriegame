@@ -1,0 +1,36 @@
+import Foundation
+
+public struct SkillDefinition: Sendable {
+    public let id: SkillID
+    public let prerequisites: [SkillID]
+    public let requiredReadiness: SkillState
+    public init(_ id: SkillID, prerequisites: [SkillID] = [], requiredReadiness: SkillState = .developing) {
+        self.id = id; self.prerequisites = prerequisites; self.requiredReadiness = requiredReadiness
+    }
+}
+public enum SkillGraphError: Error { case duplicate, missingPrerequisite, cycle }
+public struct SkillGraph: Sendable {
+    public let skills: [SkillID: SkillDefinition]
+    public init(_ definitions: [SkillDefinition]) throws {
+        var map: [SkillID: SkillDefinition] = [:]
+        for definition in definitions {
+            guard map[definition.id] == nil else { throw SkillGraphError.duplicate }
+            map[definition.id] = definition
+        }
+        for definition in definitions {
+            guard definition.prerequisites.allSatisfy({ map[$0] != nil }) else { throw SkillGraphError.missingPrerequisite }
+        }
+        func visit(_ id: SkillID, path: Set<SkillID>) throws {
+            guard !path.contains(id) else { throw SkillGraphError.cycle }
+            for prerequisite in map[id]!.prerequisites { try visit(prerequisite, path: path.union([id])) }
+        }
+        for id in map.keys { try visit(id, path: []) }
+        skills = map
+    }
+    public func isEligible(_ id: SkillID, for profile: LearnerProfile) -> Bool {
+        guard let skill = skills[id] else { return false }
+        return skill.prerequisites.allSatisfy {
+            profile.progress(for: $0).state.readiness >= skill.requiredReadiness.readiness
+        }
+    }
+}
