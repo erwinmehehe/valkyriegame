@@ -20,6 +20,7 @@ import LearningCore
     private var routeLights: [SKShapeNode] = []
     private var challengeRunes: [SKShapeNode] = []
     private var wasPowered = false
+    private var initialBuildComplete = false
     private var physicalBridge: SKNode?
     private var powerConduit: SKShapeNode?
     private var destinationBeacon: SKShapeNode?
@@ -52,6 +53,7 @@ import LearningCore
         // instead of letting the character dominate the learning object.
         valkyrie.setScale(0.68)
         pip.setScale(0.88)
+        initialBuildComplete = true
     }
 
     override func buildWorld() {
@@ -262,10 +264,10 @@ import LearningCore
         }
     }
 
-    private func openPhysicalProgression() {
+    private func openPhysicalProgression(animated: Bool = true) {
         guard let bridge = physicalBridge else { return }
 
-        if reducedMotion {
+        if !animated || reducedMotion {
             bridge.xScale = 1
             bridge.alpha = 1
             powerConduit?.strokeColor = UIColor(red: 0.73, green: 0.93, blue: 1, alpha: 0.95)
@@ -416,9 +418,11 @@ import LearningCore
             powerLight?.glowWidth = 16
 
             if !wasPowered {
-                playMechanicSuccessReaction()
-                openPhysicalProgression()
-                if !reducedMotion {
+                if initialBuildComplete {
+                    playMechanicSuccessReaction()
+                }
+                openPhysicalProgression(animated: initialBuildComplete)
+                if initialBuildComplete && !reducedMotion {
                     lever?.run(.sequence([
                         .rotate(toAngle: -0.18, duration: 0.16),
                         .rotate(toAngle: 0, duration: 0.22)
@@ -637,9 +641,10 @@ import LearningCore
         guard let evidence = state.submit() else {
             instruction.text = "Touch a scale pan, or the equal gear, before pulling Pip's lever."; return
         }
-        refresh(); pip.operate(reducedMotion: reducedMotion)
+        refresh()
         updateChallengeGateAppearance()
         if evidence.outcome == .correct {
+            pip.helpRoute(to: CGPoint(x: 975, y: 225), reducedMotion: reducedMotion)
             valkyrie.pose(.celebrate)
             state.audio.play("success")
             showQuestion(nil)
