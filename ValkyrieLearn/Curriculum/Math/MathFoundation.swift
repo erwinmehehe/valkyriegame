@@ -249,6 +249,31 @@ public enum MathPlacement {
 /// These are intentionally few and varied. The goal is adaptive delivery across
 /// different representations and mechanics, not a large generated question bank.
 public enum MathCastleEncounterCatalog {
+    public static let crystalCartSubtraction: [LearningEncounter] = [
+        LearningEncounter(
+            id: "cart-subtract-8-to-5",
+            skillID: MathSkills.subtraction,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .concrete,
+            operation: .subtraction,
+            initialQuantity: 8,
+            targetQuantity: 5,
+            prompt: "Eight crystals are in the cart. Send three back to Pip.",
+            context: "crystalMine"
+        ),
+        LearningEncounter(
+            id: "cart-subtract-6-to-2",
+            skillID: MathSkills.subtraction,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .concrete,
+            operation: .subtraction,
+            initialQuantity: 6,
+            targetQuantity: 2,
+            prompt: "Six crystals are here. Leave exactly two in the cart.",
+            context: "crystalMine"
+        )
+    ]
+
     public static let balanceScale: [LearningEncounter] = [
         LearningEncounter(
             id: "scale-compare-5-8",
@@ -399,6 +424,7 @@ public enum MathCastleEncounterCatalog {
 
     public static let all: [LearningEncounter] =
         MathFoundation.encounters
+        + crystalCartSubtraction
         + balanceScale
         + numberBondMachine
         + tenFrameGate
