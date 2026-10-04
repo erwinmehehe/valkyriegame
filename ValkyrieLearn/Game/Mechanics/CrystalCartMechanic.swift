@@ -369,7 +369,7 @@ import LearningCore
 
     func playSuccessReaction(reducedMotion: Bool) {
         let active = cells.children.compactMap { $0 as? SKShapeNode }
-            .filter { $0.fillColor != UIColor(red: 0.17, green: 0.20, blue: 0.30, alpha: 1) }
+            .filter { ["tenFrameFixed", "tenFrameFilled", "tenFramePreview"].contains($0.name ?? "") }
 
         for (index, cell) in active.enumerated() {
             cell.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.38, alpha: 1)
