@@ -1,5 +1,7 @@
 import XCTest
 import SwiftData
+import SpriteKit
+import SpriteKit
 import LearningCore
 @testable import ValkyrieLearn
 
@@ -72,4 +74,76 @@ import LearningCore
         XCTAssertThrowsError(try store.loadProfile())
         XCTAssertEqual(try JSONDecoder().decode(LearnerProfile.self, from: store.snapshot.profileData).schemaVersion, 99)
     }
+    func testBalanceScaleShowsHeavierSideLowerAndResetsForEquality() async throws {
+        let mechanic = BalanceScaleMechanic()
+        let beam = try XCTUnwrap(mechanic.childNode(withName: "scaleBeam"))
+        let left = try XCTUnwrap(mechanic.childNode(withName: "scaleLeft"))
+        let right = try XCTUnwrap(mechanic.childNode(withName: "scaleRight"))
+        for (leftQuantity, rightQuantity) in [(9, 6), (5, 8), (7, 7)] {
+            let encounter = LearningEncounter(id: "scale-render", skillID: MathSkills.compare,
+                mechanicID: MathMechanicID.balanceScale, operation: .comparison,
+                initialQuantity: leftQuantity, targetQuantity: rightQuantity, prompt: "Compare")
+            mechanic.render(try BalanceScaleModel(encounter: encounter))
+            if leftQuantity > rightQuantity {
+                XCTAssertLessThan(left.position.y, right.position.y)
+                XCTAssertGreaterThan(beam.zRotation, 0)
+            } else if leftQuantity < rightQuantity {
+                XCTAssertGreaterThan(left.position.y, right.position.y)
+                XCTAssertLessThan(beam.zRotation, 0)
+            } else {
+                XCTAssertEqual(left.position.y, right.position.y)
+                XCTAssertEqual(beam.zRotation, 0)
+            }
+        }
+    }
+    func testBalanceScaleCrystalTapsResolveToTheirSideAfterTilt() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let scene = AdventureScene(state: try AppState(context: ModelContext(container)))
+        let mechanic = BalanceScaleMechanic()
+        mechanic.position = CGPoint(x: 640, y: 360)
+        scene.addChild(mechanic)
+        for encounter in MathCastleEncounterCatalog.balanceScale.prefix(2) {
+            mechanic.render(try BalanceScaleModel(encounter: encounter))
+            for side in ["scaleLeft", "scaleRight"] {
+                let tokens = mechanic.children.flatMap { $0.children }.filter { $0.name == side }
+                XCTAssertFalse(tokens.isEmpty)
+                for token in tokens {
+                    let point = token.convert(CGPoint.zero, to: scene)
+                    XCTAssertEqual(scene.targetName(at: point), side)
+                }
+            }
+        }
+    }
+
+    func testTenFrameQuickLookPreviewExpiresWithoutReplayingOnRender() async throws {
+        let encounter = LearningEncounter(id: "quick-look-render", skillID: MathSkills.subitizing,
+            mechanicID: MathMechanicID.tenFrameGate, representation: .pictorial,
+            operation: .quantityMatching, initialQuantity: 0, targetQuantity: 5,
+            prompt: "How many lights flashed?", context: "quickLook")
+        let mechanic = TenFrameGateMechanic()
+        let current = try TenFrameModel(encounter: encounter)
+        mechanic.render(current)
+        let cells = try XCTUnwrap(mechanic.children.first).children.compactMap { $0 as? SKShapeNode }
+        // SpriteKit stores resolved colors; compare against the same rendering
+        // conversion rather than UIColor's dynamic system-color identity.
+        let reference = SKShapeNode()
+        reference.fillColor = .systemTeal
+        func isLit(_ cell: SKShapeNode) -> Bool {
+            cell.fillColor.cgColor == reference.fillColor.cgColor
+        }
+        XCTAssertEqual(cells.filter(isLit).count, 5)
+        XCTAssertTrue(cells.allSatisfy { $0.name == "tenFramePreview" })
+        mechanic.render(current)
+        XCTAssertEqual(cells.filter(isLit).count, 5)
+
+        let expired = try TenFrameModel(encounter: encounter,
+            at: Date().addingTimeInterval(-current.previewDuration - 1))
+        mechanic.render(expired)
+        XCTAssertEqual(cells.filter(isLit).count, 0)
+        XCTAssertTrue(cells.allSatisfy { $0.name == "tenFrameCell" })
+        mechanic.render(expired)
+        XCTAssertEqual(cells.filter(isLit).count, 0)
+        XCTAssertFalse(mechanic.hasActions())
+    }
+
 }

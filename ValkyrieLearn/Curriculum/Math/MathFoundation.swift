@@ -24,7 +24,8 @@ public enum MathFoundation {
         var result: [LearningEncounter] = []
 
         for (skill, prefix) in [(MathSkills.quantity, "quantity"), (MathSkills.counting, "count")] {
-            for total in [7, 5, 8, 6] {
+            let totals = skill == MathSkills.quantity ? [7, 5, 8, 6] : [3, 4, 9, 10]
+            for total in totals {
                 result.append(
                     LearningEncounter(
                         id: "\(prefix)-\(total)",
@@ -234,4 +235,253 @@ public enum MathPlacement {
             )
         )
     ]
+}
+
+
+/// Authored encounter set for the first reusable Math Castle mechanics.
+///
+/// These are intentionally few and varied. The goal is adaptive delivery across
+/// different representations and mechanics, not a large generated question bank.
+public enum MathCastleEncounterCatalog {
+    public static let balanceScale: [LearningEncounter] = [
+        LearningEncounter(
+            id: "scale-compare-5-8",
+            skillID: MathSkills.compare,
+            mechanicID: MathMechanicID.balanceScale,
+            representation: .concrete,
+            operation: .comparison,
+            initialQuantity: 5,
+            targetQuantity: 8,
+            prompt: "Which side has more crystals?",
+            context: "gearHall"
+        ),
+        LearningEncounter(
+            id: "scale-compare-9-6",
+            skillID: MathSkills.compare,
+            mechanicID: MathMechanicID.balanceScale,
+            representation: .concrete,
+            operation: .comparison,
+            initialQuantity: 9,
+            targetQuantity: 6,
+            prompt: "Which side is heavier with crystals?",
+            context: "gearHall"
+        ),
+        LearningEncounter(
+            id: "scale-compare-7-7",
+            skillID: MathSkills.compare,
+            mechanicID: MathMechanicID.balanceScale,
+            representation: .concrete,
+            operation: .comparison,
+            initialQuantity: 7,
+            targetQuantity: 7,
+            prompt: "Do both pans hold the same number of crystals?",
+            context: "gearHall"
+        )
+    ]
+
+    public static let numberBondMachine: [LearningEncounter] = [
+        LearningEncounter(
+            id: "bond-5-known-2",
+            skillID: MathSkills.bonds5,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .concrete,
+            operation: .numberBond,
+            initialQuantity: 2,
+            targetQuantity: 5,
+            prompt: "Five crystals power the machine. Two are here. Fill the other chamber.",
+            context: "crystalMine"
+        ),
+        LearningEncounter(
+            id: "bond-5-known-1",
+            skillID: MathSkills.bonds5,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .concrete,
+            operation: .numberBond,
+            initialQuantity: 1,
+            targetQuantity: 5,
+            prompt: "One crystal is here. Complete the whole of five.",
+            context: "crystalMine"
+        ),
+        LearningEncounter(
+            id: "bond-10-known-6",
+            skillID: MathSkills.bonds10,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .concrete,
+            operation: .numberBond,
+            initialQuantity: 6,
+            targetQuantity: 10,
+            prompt: "The machine needs ten. Six are glowing. Complete the bond.",
+            context: "crystalMine"
+        ),
+        LearningEncounter(
+            id: "bond-10-known-3",
+            skillID: MathSkills.bonds10,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .concrete,
+            operation: .numberBond,
+            initialQuantity: 3,
+            targetQuantity: 10,
+            prompt: "Three crystals are here. Fill the other chamber to make ten.",
+            context: "gearHall"
+        )
+    ]
+
+    public static let tenFrameGate: [LearningEncounter] = [
+        LearningEncounter(
+            id: "ten-frame-quantity-7",
+            skillID: MathSkills.numeralQuantity10,
+            mechanicID: MathMechanicID.tenFrameGate,
+            representation: .pictorial,
+            operation: .quantityMatching,
+            initialQuantity: 0,
+            targetQuantity: 7,
+            prompt: "Light seven spaces to open the gate.",
+            context: "bridgeTower"
+        ),
+        LearningEncounter(
+            id: "ten-frame-add-4-to-9",
+            skillID: MathSkills.addition,
+            mechanicID: MathMechanicID.tenFrameGate,
+            representation: .pictorial,
+            operation: .addition,
+            initialQuantity: 4,
+            targetQuantity: 9,
+            prompt: "Four lights are on. Add enough to make nine.",
+            context: "bridgeTower"
+        ),
+        LearningEncounter(
+            id: "ten-frame-make-10-from-7",
+            skillID: MathSkills.make10,
+            mechanicID: MathMechanicID.tenFrameGate,
+            representation: .pictorial,
+            operation: .missingAddend,
+            initialQuantity: 7,
+            targetQuantity: 10,
+            prompt: "Seven spaces glow. Finish the ten-frame.",
+            context: "challengeGate",
+            challengeDepth: 1
+        )
+    ]
+
+    public static let missingNumberBridge: [LearningEncounter] = [
+        LearningEncounter(
+            id: "bridge-missing-6-to-10",
+            skillID: MathSkills.missing,
+            mechanicID: MathMechanicID.missingNumberBridge,
+            representation: .symbolic,
+            operation: .missingAddend,
+            initialQuantity: 6,
+            targetQuantity: 10,
+            prompt: "Six plus what makes ten?",
+            context: "bridgeTower"
+        ),
+        LearningEncounter(
+            id: "bridge-missing-4-to-9",
+            skillID: MathSkills.missing,
+            mechanicID: MathMechanicID.missingNumberBridge,
+            representation: .symbolic,
+            operation: .missingAddend,
+            initialQuantity: 4,
+            targetQuantity: 9,
+            prompt: "Four plus what makes nine?",
+            context: "bridgeTower"
+        ),
+        LearningEncounter(
+            id: "bridge-missing-8-to-10",
+            skillID: MathSkills.missing,
+            mechanicID: MathMechanicID.missingNumberBridge,
+            representation: .symbolic,
+            operation: .missingAddend,
+            initialQuantity: 8,
+            targetQuantity: 10,
+            prompt: "Eight plus what makes ten?",
+            context: "challengeGate",
+            challengeDepth: 1
+        )
+    ]
+
+    // Minimal authored path to the prerequisites of the five supported mechanics.
+    // No placement recommendation or synthetic learner state bypasses these gates.
+    public static let prerequisites: [LearningEncounter] = [
+        LearningEncounter(id: "one-to-one-3", skillID: MathSkills.oneToOne10,
+            mechanicID: MathMechanicID.crystalCart, representation: .concrete,
+            operation: .counting, initialQuantity: 0, targetQuantity: 3,
+            prompt: "Move 3 crystals, one at a time, into the cart.", context: "countingWorkshop"),
+        LearningEncounter(id: "one-to-one-4", skillID: MathSkills.oneToOne10,
+            mechanicID: MathMechanicID.crystalCart, representation: .concrete,
+            operation: .counting, initialQuantity: 0, targetQuantity: 4,
+            prompt: "Move 4 crystals, one at a time, into the cart.", context: "countingWorkshop"),
+        LearningEncounter(id: "cardinality-6", skillID: MathSkills.cardinality10,
+            mechanicID: MathMechanicID.tenFrameGate, representation: .pictorial,
+            operation: .counting, initialQuantity: 0, targetQuantity: 6,
+            prompt: "Count and light 6 spaces. The last count tells how many.", context: "countingWorkshop"),
+        LearningEncounter(id: "cardinality-9", skillID: MathSkills.cardinality10,
+            mechanicID: MathMechanicID.tenFrameGate, representation: .pictorial,
+            operation: .counting, initialQuantity: 0, targetQuantity: 9,
+            prompt: "Count and light 9 spaces. The last count tells how many.", context: "countingWorkshop"),
+        LearningEncounter(id: "quick-look-2", skillID: MathSkills.subitizing,
+            mechanicID: MathMechanicID.tenFrameGate, representation: .pictorial,
+            operation: .quantityMatching, initialQuantity: 0, targetQuantity: 2,
+            prompt: "Look at the lights. When they hide, make the same quantity.", context: "quickLook"),
+        LearningEncounter(id: "quick-look-3", skillID: MathSkills.subitizing,
+            mechanicID: MathMechanicID.tenFrameGate, representation: .pictorial,
+            operation: .quantityMatching, initialQuantity: 0, targetQuantity: 3,
+            prompt: "Look at the lights. When they hide, make the same quantity.", context: "quickLook"),
+        LearningEncounter(id: "compose5-0", skillID: MathSkills.compose5,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 1, targetQuantity: 4,
+            prompt: "1 crystals are in one chamber. Complete the whole of 4.", context: "compose5Workshop"),
+        LearningEncounter(id: "compose5-1", skillID: MathSkills.compose5,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 2, targetQuantity: 5,
+            prompt: "2 crystals are in one chamber. Complete the whole of 5.", context: "compose5Workshop"),
+        LearningEncounter(id: "decompose5-0", skillID: MathSkills.decompose5,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 3, targetQuantity: 5,
+            prompt: "Split 5 crystals: 3 stay here. Put the rest in the other chamber.", context: "decompose5Workshop"),
+        LearningEncounter(id: "decompose5-1", skillID: MathSkills.decompose5,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 1, targetQuantity: 4,
+            prompt: "Split 4 crystals: 1 stay here. Put the rest in the other chamber.", context: "decompose5Workshop"),
+        LearningEncounter(id: "compose10-0", skillID: MathSkills.compose10,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 4, targetQuantity: 8,
+            prompt: "4 crystals are in one chamber. Complete the whole of 8.", context: "compose10Workshop"),
+        LearningEncounter(id: "compose10-1", skillID: MathSkills.compose10,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 5, targetQuantity: 10,
+            prompt: "5 crystals are in one chamber. Complete the whole of 10.", context: "compose10Workshop"),
+        LearningEncounter(id: "decompose10-0", skillID: MathSkills.decompose10,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 7, targetQuantity: 10,
+            prompt: "Split 10 crystals: 7 stay here. Put the rest in the other chamber.", context: "decompose10Workshop"),
+        LearningEncounter(id: "decompose10-1", skillID: MathSkills.decompose10,
+            mechanicID: MathMechanicID.numberBondMachine, representation: .concrete,
+            operation: .numberBond, initialQuantity: 2, targetQuantity: 8,
+            prompt: "Split 8 crystals: 2 stay here. Put the rest in the other chamber.", context: "decompose10Workshop")
+    ]
+
+    public static let all: [LearningEncounter] =
+        MathFoundation.encounters
+        + prerequisites
+        + balanceScale
+        + numberBondMachine
+        + tenFrameGate
+        + missingNumberBridge
+
+    public static func sessionPlan(
+        for profile: LearnerProfile,
+        encounterCount: Int = 12,
+        now: Date = Date(),
+        configuration: SessionPlannerConfiguration = SessionPlannerConfiguration()
+    ) throws -> SessionPlan {
+        try MathSkillCatalog
+            .sessionPlanner(configuration: configuration)
+            .plan(
+                for: profile,
+                candidates: all,
+                encounterCount: encounterCount,
+                now: now
+            )
+    }
 }
