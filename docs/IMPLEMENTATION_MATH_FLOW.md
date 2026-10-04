@@ -17,7 +17,7 @@ This pass connects the native mechanics and hidden placement foundation to the e
 - Local Swift 6.0.3 core suite: 53 tests, zero failures.
 - Static native project generation/reference checks and `git diff --check`: passed.
 - Native hosted tests added for five runtime saves, legacy upgrade, placement completion/idempotence, unsupported versions, live-scene approach/tap routing, and hidden-reference input gating.
-- Xcode/iPad Simulator CI verification is pending at initial publication. The PR records the verified head and result once complete.
+- GitHub Actions run 37199746254 verified implementation head `8a736057b6afbb255264aa0f04014dd6aacb0b17`: Linux core tests, macOS core tests and Xcode/iPad Simulator tests passed. The simulator ran 53 core and 14 hosted tests (67 total), zero failures.
 
 ## Mac and device verification
 
@@ -34,5 +34,7 @@ Choose an installed iPad Simulator if that device name is unavailable. For a phy
 On device, verify movement, drag/tap alternatives, each workshop, quick-look timing, settings/background transitions, force-quit restoration, audio and touch readability. Physical iPad usability, disk persistence across process termination, performance and final production art have not been accepted by this pass.
 
 ## Next milestone
+
+The v3.31 comparison is recorded in `V331_NATIVE_CONTINUITY.md`. This engineering integration is not acceptance of the illustrated adventure direction; existing source art and story beats still need native implementation and visual/device review.
 
 Strengthen scaffolding/alternate representations and delayed review, then add the optional prerequisite-safe Challenge Gate. Do not expand worlds or claim a complete curriculum or completed Milestone A yet.
