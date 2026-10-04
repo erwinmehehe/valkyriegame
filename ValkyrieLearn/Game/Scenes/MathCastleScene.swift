@@ -26,7 +26,12 @@ import LearningCore
     private var destinationBeacon: SKShapeNode?
     private var starlightOrb: SKShapeNode?
     private var environmentGears: [SKNode] = []
-    private let routeDestination = CGPoint(x: 1085, y: 205)
+    private var routeReady = false
+    private let routeWaypoints = [
+        CGPoint(x: 835, y: 205),
+        CGPoint(x: 1085, y: 205)
+    ]
+    private var routeDestination: CGPoint { routeWaypoints.last ?? CGPoint(x: 1085, y: 205) }
     private let routeEnergyPoints = [
         CGPoint(x: 890, y: 330),
         CGPoint(x: 965, y: 350),
@@ -233,6 +238,7 @@ import LearningCore
     }
 
     private func resetPhysicalProgression() {
+        routeReady = false
         physicalBridge?.removeAllActions()
         physicalBridge?.xScale = 0.06
         physicalBridge?.alpha = 0.18
@@ -270,6 +276,7 @@ import LearningCore
         if !animated || reducedMotion {
             bridge.xScale = 1
             bridge.alpha = 1
+            routeReady = true
             powerConduit?.strokeColor = UIColor(red: 0.73, green: 0.93, blue: 1, alpha: 0.95)
             powerConduit?.glowWidth = 6
             destinationBeacon?.alpha = 1
@@ -326,10 +333,13 @@ import LearningCore
         ]), withKey: "routeOpen")
 
         destinationBeacon?.run(.sequence([
-            .wait(forDuration: 0.62),
+            .wait(forDuration: 0.95),
             .run { [weak self] in
-                self?.destinationBeacon?.alpha = 1
-                self?.destinationBeacon?.glowWidth = 18
+                guard let self else { return }
+                self.destinationBeacon?.alpha = 1
+                self.destinationBeacon?.glowWidth = 18
+                self.routeReady = true
+                self.playStarlightBurst(at: self.routeDestination)
             },
             .scale(to: 1.12, duration: 0.18),
             .scale(to: 1, duration: 0.22)
@@ -339,6 +349,49 @@ import LearningCore
             .scale(to: 1.08, duration: 0.65),
             .scale(to: 1, duration: 0.65)
         ])), withKey: "routeReadyPulse")
+    }
+
+    private func playStarlightBurst(at point: CGPoint) {
+        guard !reducedMotion else { return }
+
+        for index in 0..<9 {
+            let spark = ArtSystem.label(index.isMultiple(of: 3) ? "✦" : "·", size: index.isMultiple(of: 3) ? 19 : 25)
+            spark.position = point
+            spark.zPosition = 900
+            spark.fontColor = UIColor(
+                red: index.isMultiple(of: 2) ? 1.0 : 0.72,
+                green: 0.88,
+                blue: 1.0,
+                alpha: 1.0
+            )
+            addChild(spark)
+
+            let angle = (CGFloat(index) / 9.0) * (.pi * 2)
+            let distance: CGFloat = index.isMultiple(of: 2) ? 54 : 38
+            spark.run(.sequence([
+                .group([
+                    .moveBy(
+                        x: cos(angle) * distance,
+                        y: sin(angle) * distance + 18,
+                        duration: 0.55
+                    ),
+                    .fadeOut(withDuration: 0.55),
+                    .scale(to: 0.55, duration: 0.55)
+                ]),
+                .removeFromParent()
+            ]))
+        }
+    }
+
+    private func followOpenedRoute(_ waypoints: ArraySlice<CGPoint>, completion: @escaping () -> Void) {
+        guard let point = waypoints.first else {
+            completion()
+            return
+        }
+
+        travel(to: point) { [weak self] in
+            self?.followOpenedRoute(waypoints.dropFirst(), completion: completion)
+        }
     }
 
     private func playMechanicSuccessReaction() {
@@ -595,11 +648,17 @@ import LearningCore
             }
 
             if state.runtime?.completed == true {
+                guard routeReady || reducedMotion else {
+                    instruction.text = "Watch the starlight finish opening the bridge."
+                    return
+                }
                 engaged = false
                 showQuestion(nil)
                 instruction.text = "The route is open. Follow the bridge to the next discovery."
-                travel(to: routeDestination) { [weak self] in
+                followOpenedRoute(routeWaypoints[...]) { [weak self] in
                     guard let self else { return }
+                    self.valkyrie.pose(.interact)
+                    self.pip.operate(reducedMotion: self.reducedMotion)
                     self.state.advanceEncounter()
                     self.openOrder()
                 }
