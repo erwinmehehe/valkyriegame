@@ -319,4 +319,261 @@ final class LearningCoreTests: XCTestCase {
         }
     }
 
+
+    private func sessionEncounter(
+        id: String,
+        skill: SkillID,
+        mechanic: String,
+        target: Int,
+        representation: Representation = .concrete,
+        depth: Int = 0
+    ) -> LearningEncounter {
+        LearningEncounter(
+            id: id,
+            skillID: skill,
+            mechanicID: mechanic,
+            representation: representation,
+            operation: .counting,
+            initialQuantity: 0,
+            targetQuantity: target,
+            prompt: "Session test \(target)",
+            context: "sessionPlanner",
+            challengeDepth: depth
+        )
+    }
+
+    func testSessionPlannerBuildsDefault6020155Mix() throws {
+        let learningSkill = SkillID(rawValue: "session.learning")
+        let reviewSkill = SkillID(rawValue: "session.review")
+        let stretchSkill = SkillID(rawValue: "session.stretch")
+        let confidenceSkill = SkillID(rawValue: "session.confidence")
+
+        let graph = try SkillGraph([
+            SkillDefinition(learningSkill),
+            SkillDefinition(reviewSkill),
+            SkillDefinition(stretchSkill),
+            SkillDefinition(confidenceSkill)
+        ])
+
+        var profile = LearnerProfile()
+        profile.skills[learningSkill.rawValue] = SkillProgress(state: .developing)
+
+        var review = SkillProgress(state: .secure)
+        review.reviewDate = epoch.addingTimeInterval(-86_400)
+        profile.skills[reviewSkill.rawValue] = review
+
+        profile.skills[stretchSkill.rawValue] = SkillProgress(state: .new)
+        profile.skills[confidenceSkill.rawValue] = SkillProgress(state: .mastered)
+
+        var candidates: [LearningEncounter] = []
+        for i in 0..<12 {
+            candidates.append(sessionEncounter(
+                id: "learn-\(String(format: "%02d", i))",
+                skill: learningSkill,
+                mechanic: "learn\(i % 3)",
+                target: 10 + i
+            ))
+        }
+        for i in 0..<4 {
+            candidates.append(sessionEncounter(
+                id: "review-\(i)",
+                skill: reviewSkill,
+                mechanic: "review\(i % 2)",
+                target: 100 + i
+            ))
+        }
+        for i in 0..<3 {
+            candidates.append(sessionEncounter(
+                id: "stretch-\(i)",
+                skill: stretchSkill,
+                mechanic: "stretch\(i % 2)",
+                target: 200 + i
+            ))
+        }
+        candidates.append(sessionEncounter(
+            id: "confidence-0",
+            skill: confidenceSkill,
+            mechanic: "confidence",
+            target: 300
+        ))
+
+        let planner = SessionPlanner(
+            graph: graph,
+            stretchSkillIDs: [stretchSkill]
+        )
+        let plan = planner.plan(
+            for: profile,
+            candidates: candidates,
+            encounterCount: 20,
+            now: epoch
+        )
+
+        XCTAssertEqual(plan.desiredLaneCounts[.learning], 12)
+        XCTAssertEqual(plan.desiredLaneCounts[.review], 4)
+        XCTAssertEqual(plan.desiredLaneCounts[.stretch], 3)
+        XCTAssertEqual(plan.desiredLaneCounts[.confidence], 1)
+
+        XCTAssertEqual(plan.actualLaneCounts, plan.desiredLaneCounts)
+        XCTAssertEqual(plan.encounterCount, 20)
+        XCTAssertEqual(plan.unfilledEncounterCount, 0)
+        XCTAssertEqual(plan.explorationBreakCount, 4)
+        XCTAssertEqual(Set(plan.encounters.map { $0.encounter.fingerprint }).count, 20)
+    }
+
+    func testSessionPlannerInsertsBreakInsteadOfUsingSameMechanicThreeTimes() throws {
+        let skill = SkillID(rawValue: "session.singleMechanic")
+        let graph = try SkillGraph([SkillDefinition(skill)])
+        var profile = LearnerProfile()
+        profile.skills[skill.rawValue] = SkillProgress(state: .developing)
+
+        let candidates = (0..<5).map {
+            sessionEncounter(
+                id: "same-mechanic-\($0)",
+                skill: skill,
+                mechanic: "crystalCart",
+                target: 20 + $0
+            )
+        }
+
+        let planner = SessionPlanner(
+            graph: graph,
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0)
+        )
+        let plan = planner.plan(for: profile, candidates: candidates, encounterCount: 5, now: epoch)
+
+        XCTAssertEqual(plan.encounterCount, 5)
+        XCTAssertGreaterThanOrEqual(plan.explorationBreakCount, 2)
+
+        var consecutive = 0
+        var previousMechanic: String?
+        for beat in plan.beats {
+            switch beat {
+            case .explorationBreak:
+                consecutive = 0
+                previousMechanic = nil
+
+            case let .encounter(item):
+                if item.encounter.mechanicID == previousMechanic {
+                    consecutive += 1
+                } else {
+                    consecutive = 1
+                    previousMechanic = item.encounter.mechanicID
+                }
+                XCTAssertLessThanOrEqual(consecutive, 2)
+            }
+        }
+    }
+
+    func testSessionPlannerReallocatesUnavailableLanesWithoutRepeatingFingerprints() throws {
+        let skill = SkillID(rawValue: "session.reallocate")
+        let graph = try SkillGraph([SkillDefinition(skill)])
+        var profile = LearnerProfile()
+        profile.skills[skill.rawValue] = SkillProgress(state: .developing)
+
+        let candidates = (0..<10).map {
+            sessionEncounter(
+                id: "reallocate-\($0)",
+                skill: skill,
+                mechanic: "mechanic\($0 % 3)",
+                target: 30 + $0
+            )
+        }
+
+        let planner = SessionPlanner(
+            graph: graph,
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0)
+        )
+        let plan = planner.plan(for: profile, candidates: candidates, encounterCount: 10, now: epoch)
+
+        XCTAssertEqual(plan.encounterCount, 10)
+        XCTAssertEqual(plan.actualLaneCounts[.learning], 10)
+        XCTAssertEqual(plan.actualLaneCounts[.review], 0)
+        XCTAssertEqual(plan.actualLaneCounts[.stretch], 0)
+        XCTAssertEqual(plan.actualLaneCounts[.confidence], 0)
+        XCTAssertEqual(Set(plan.encounters.map { $0.encounter.fingerprint }).count, 10)
+    }
+
+    func testSessionPlannerNeverUsesRelabeledExactDuplicateMath() throws {
+        let skill = SkillID(rawValue: "session.duplicate")
+        let graph = try SkillGraph([SkillDefinition(skill)])
+        var profile = LearnerProfile()
+        profile.skills[skill.rawValue] = SkillProgress(state: .developing)
+
+        let first = sessionEncounter(id: "first", skill: skill, mechanic: "cart", target: 7)
+        let relabeled = LearningEncounter(
+            id: "relabeled",
+            skillID: skill,
+            mechanicID: first.mechanicID,
+            representation: first.representation,
+            operation: first.operation,
+            initialQuantity: first.initialQuantity,
+            targetQuantity: first.targetQuantity,
+            prompt: "Different words, same math",
+            context: first.context,
+            challengeDepth: first.challengeDepth
+        )
+        let different = sessionEncounter(id: "different", skill: skill, mechanic: "scale", target: 8)
+
+        let planner = SessionPlanner(
+            graph: graph,
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0)
+        )
+        let plan = planner.plan(
+            for: profile,
+            candidates: [first, relabeled, different],
+            encounterCount: 3,
+            now: epoch
+        )
+
+        XCTAssertEqual(plan.encounterCount, 2)
+        XCTAssertEqual(plan.unfilledEncounterCount, 1)
+        XCTAssertEqual(Set(plan.encounters.map { $0.encounter.fingerprint }).count, 2)
+    }
+
+    func testSessionPlannerStretchRequiresPrerequisiteReadiness() throws {
+        let foundation = SkillID(rawValue: "session.foundation")
+        let stretch = SkillID(rawValue: "session.readyStretch")
+        let graph = try SkillGraph([
+            SkillDefinition(foundation),
+            SkillDefinition(stretch, prerequisites: [foundation])
+        ])
+        let candidate = sessionEncounter(
+            id: "stretch-ready",
+            skill: stretch,
+            mechanic: "numberBondMachine",
+            target: 10,
+            depth: 1
+        )
+        let planner = SessionPlanner(
+            graph: graph,
+            stretchSkillIDs: [stretch],
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0)
+        )
+
+        var profile = LearnerProfile()
+        var blocked = planner.plan(for: profile, candidates: [candidate], encounterCount: 1, now: epoch)
+        XCTAssertEqual(blocked.encounterCount, 0)
+
+        profile.skills[foundation.rawValue] = SkillProgress(state: .developing)
+        blocked = planner.plan(for: profile, candidates: [candidate], encounterCount: 1, now: epoch)
+        XCTAssertEqual(blocked.encounterCount, 1)
+        XCTAssertEqual(blocked.encounters.first?.lane, .stretch)
+    }
+
+    func testMathCatalogBuildsPlannerWithReadinessBasedStretchSkills() throws {
+        let planner = try MathSkillCatalog.sessionPlanner(
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0)
+        )
+
+        XCTAssertEqual(planner.graph.skills.count, MathSkillCatalog.descriptors.count)
+        XCTAssertEqual(
+            planner.stretchSkillIDs,
+            Set(MathSkillCatalog.stretchSkills.map(\.id))
+        )
+        XCTAssertEqual(planner.desiredLaneCounts(total: 20)[.learning], 12)
+        XCTAssertEqual(planner.desiredLaneCounts(total: 20)[.review], 4)
+        XCTAssertEqual(planner.desiredLaneCounts(total: 20)[.stretch], 3)
+        XCTAssertEqual(planner.desiredLaneCounts(total: 20)[.confidence], 1)
+    }
+
 }
