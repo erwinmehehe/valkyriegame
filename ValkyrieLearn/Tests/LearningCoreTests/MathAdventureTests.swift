@@ -56,7 +56,8 @@ final class MathAdventureTests: XCTestCase {
         adventure.chooseComparison(.right)
         XCTAssertEqual(adventure.submit(profile: &profile, at: epoch)?.supportLevel, .lightHint)
         XCTAssertEqual(adventure.placement, diagnostic)
-        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .learning)
+        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .new)
+        XCTAssertTrue(profile.progress(for: MathSkills.compare).evidence.isEmpty)
     }
     func testReturningToSolvedOrUnsolvedEncounterNeverAdvances() throws {
         var adventure = MathAdventure(); var profile = LearnerProfile()
@@ -145,7 +146,8 @@ final class MathAdventureTests: XCTestCase {
 
         XCTAssertEqual(try solve(&adventure, profile: &profile, at: epoch).outcome, .correct)
 
-        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .learning)
+        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .new)
+        XCTAssertTrue(profile.progress(for: MathSkills.compare).evidence.isEmpty)
         XCTAssertGreaterThanOrEqual(
             profile.readiness(for: MathSkills.compare),
             SkillState.developing.readiness
