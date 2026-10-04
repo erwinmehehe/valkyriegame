@@ -1,24 +1,35 @@
 import SpriteKit
 import LearningCore
 
-@MainActor final class CrystalCartMechanic: SKNode {
+@MainActor protocol MathCastleReactiveMechanic: AnyObject {
+    func playSuccessReaction(reducedMotion: Bool)
+}
+
+@MainActor final class CrystalCartMechanic: SKNode, MathCastleReactiveMechanic {
     let cartCenter = CGPoint(x: 830, y: 265)
     let supplyCenter = CGPoint(x: 595, y: 235)
+    private let cartAssembly = SKNode()
     private let contents = SKNode()
     override init() {
         super.init()
         zPosition = 750
-        if let cart = ArtSystem.sprite("CrystalCart", size: CGSize(width: 365, height: 255)) {
-            cart.position = CGPoint(x: 830, y: 253); cart.name = "cart"; addChild(cart)
+        addChild(cartAssembly)
+        if let cart = ArtSystem.sprite("CrystalCart", size: CGSize(width: 320, height: 225)) {
+            cart.position = CGPoint(x: 815, y: 250)
+            cart.name = "cart"
+            cartAssembly.addChild(cart)
         }
-        // A native drop surface keeps every crystal independently manipulable.
-        let cartHit = ArtSystem.box(CGSize(width: 305, height: 165), color: .clear, radius: 0)
-        cartHit.position = cartCenter; cartHit.name = "cart"; addChild(cartHit)
+        // The visual cart is closer to the reference scale, while the native drop
+        // target remains generously sized for a child's finger.
+        let cartHit = ArtSystem.box(CGSize(width: 285, height: 155), color: .clear, radius: 0)
+        cartHit.position = CGPoint(x: 815, y: 260)
+        cartHit.name = "cart"
+        cartAssembly.addChild(cartHit)
         let supply = ArtSystem.box(CGSize(width: 125, height: 100), color: .init(red: 0.26, green: 0.25, blue: 0.34, alpha: 0.9), radius: 9)
         supply.strokeColor = .init(red: 0.77, green: 0.59, blue: 0.32, alpha: 1); supply.lineWidth = 3
         supply.position = supplyCenter; supply.name = "supply"; addChild(supply)
         let crystal = Self.crystal(); crystal.position = supplyCenter; crystal.setScale(1.45); crystal.name = "supply"; addChild(crystal)
-        addChild(contents)
+        cartAssembly.addChild(contents)
     }
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
     static func crystal() -> SKShapeNode {
@@ -36,7 +47,10 @@ import LearningCore
         contents.removeAllChildren()
         for index in 0..<model.quantity {
             let crystal = Self.crystal()
-            crystal.position = CGPoint(x: 714 + (index % 5) * 58, y: 310 - (index / 5) * 61)
+            crystal.position = CGPoint(
+                x: 710 + CGFloat(index % 5) * 53,
+                y: 300 - CGFloat(index / 5) * 54
+            )
             let fixed = model.encounter.operation != .subtraction
                 && index < model.encounter.initialQuantity
             crystal.name = fixed ? "fixedCrystal" : "cartCrystal"
@@ -57,10 +71,28 @@ import LearningCore
     func returnsToSupply(_ point: CGPoint) -> Bool {
         CGRect(x: 525, y: 155, width: 135, height: 190).contains(point)
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        cartAssembly.removeAction(forKey: "successTravel")
+        contents.removeAction(forKey: "successGlow")
+
+        if reducedMotion {
+            cartAssembly.position.x = 42
+            return
+        }
+
+        let travel = SKAction.moveBy(x: 78, y: 6, duration: 0.68)
+        travel.timingMode = .easeInEaseOut
+        cartAssembly.run(travel, withKey: "successTravel")
+        contents.run(.sequence([
+            .scale(to: 1.045, duration: 0.16),
+            .scale(to: 1, duration: 0.24)
+        ]), withKey: "successGlow")
+    }
 }
 
 
-@MainActor final class BalanceScaleMechanic: SKNode {
+@MainActor final class BalanceScaleMechanic: SKNode, MathCastleReactiveMechanic {
     private let leftContents = SKNode()
     private let rightContents = SKNode()
     private let beam = ArtSystem.box(CGSize(width: 360, height: 18), color: .systemOrange, radius: 8)
@@ -157,9 +189,27 @@ import LearningCore
         node.lineWidth = 1.5
         return node
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        guard !reducedMotion else {
+            beam.alpha = 1
+            return
+        }
+
+        let angle = beam.zRotation
+        beam.run(.sequence([
+            .rotate(toAngle: angle + 0.035, duration: 0.10),
+            .rotate(toAngle: angle - 0.02, duration: 0.12),
+            .rotate(toAngle: angle, duration: 0.16)
+        ]), withKey: "successBalance")
+        run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1, duration: 0.18)
+        ]), withKey: "successPulse")
+    }
 }
 
-@MainActor final class NumberBondMachineMechanic: SKNode {
+@MainActor final class NumberBondMachineMechanic: SKNode, MathCastleReactiveMechanic {
     private let knownContents = SKNode()
     private let selectedContents = SKNode()
     private let wholeLabel = ArtSystem.label("", size: 34)
@@ -227,9 +277,24 @@ import LearningCore
             node.addChild(token)
         }
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        wholeLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        guard !reducedMotion else { return }
+
+        run(.sequence([
+            .scale(to: 1.035, duration: 0.14),
+            .scale(to: 0.99, duration: 0.12),
+            .scale(to: 1, duration: 0.16)
+        ]), withKey: "successPulse")
+        wholeLabel.run(.sequence([
+            .fadeAlpha(to: 0.45, duration: 0.10),
+            .fadeAlpha(to: 1, duration: 0.18)
+        ]), withKey: "successWhole")
+    }
 }
 
-@MainActor final class TenFrameGateMechanic: SKNode {
+@MainActor final class TenFrameGateMechanic: SKNode, MathCastleReactiveMechanic {
     private let cells = SKNode()
     private var latestModel: TenFrameModel?
     private var latestAllowsPreview = true
@@ -301,9 +366,28 @@ import LearningCore
             }]), withKey: previewActionKey)
         }
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        let active = cells.children.compactMap { $0 as? SKShapeNode }
+            .filter { $0.fillColor != UIColor(red: 0.17, green: 0.20, blue: 0.30, alpha: 1) }
+
+        for (index, cell) in active.enumerated() {
+            cell.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.38, alpha: 1)
+            cell.lineWidth = 3
+            guard !reducedMotion else { continue }
+
+            cell.run(.sequence([
+                .wait(forDuration: Double(index) * 0.055),
+                .scale(to: 1.13, duration: 0.08),
+                .scale(to: 1, duration: 0.12)
+            ]), withKey: "successCell")
+        }
+    }
 }
 
-@MainActor final class MissingNumberBridgeMechanic: SKNode {
+@MainActor final class MissingNumberBridgeMechanic: SKNode, MathCastleReactiveMechanic {
+    private var bridgeDeck: SKShapeNode?
+    private var answerBoxNode: SKShapeNode?
     private let equation = ArtSystem.label("", size: 38)
     private let answer = ArtSystem.label("", size: 44)
 
@@ -318,6 +402,7 @@ import LearningCore
         )
         bridge.strokeColor = .init(red: 0.81, green: 0.61, blue: 0.26, alpha: 1); bridge.lineWidth = 4
         bridge.name = "missingBridge"
+        bridgeDeck = bridge
         for x in stride(from: -230, through: 230, by: 46) {
             let joint = ArtSystem.box(CGSize(width: 2, height: 142), color: .init(red: 0.18, green: 0.12, blue: 0.1, alpha: 0.55), radius: 0)
             joint.position.x = CGFloat(x); bridge.addChild(joint)
@@ -333,6 +418,7 @@ import LearningCore
         )
         answerBox.position = CGPoint(x: 145, y: 20)
         answerBox.name = "missingAnswer"
+        answerBoxNode = answerBox
         addChild(answerBox)
 
         answer.position = CGPoint(x: 145, y: 5)
@@ -355,6 +441,23 @@ import LearningCore
     func render(_ model: MissingNumberBridgeModel) {
         equation.text = "\(model.encounter.initialQuantity) + ? = \(model.encounter.targetQuantity)"
         answer.text = "\(model.selectedNumber)"
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        bridgeDeck?.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.38, alpha: 1)
+        bridgeDeck?.glowWidth = 4
+        answerBoxNode?.fillColor = UIColor(red: 0.28, green: 0.62, blue: 0.64, alpha: 1)
+
+        guard !reducedMotion else { return }
+
+        bridgeDeck?.run(.sequence([
+            .moveBy(x: 0, y: 8, duration: 0.12),
+            .moveBy(x: 0, y: -8, duration: 0.18)
+        ]), withKey: "successLock")
+        answerBoxNode?.run(.sequence([
+            .scale(to: 1.12, duration: 0.10),
+            .scale(to: 1, duration: 0.16)
+        ]), withKey: "successAnswer")
     }
 }
 
