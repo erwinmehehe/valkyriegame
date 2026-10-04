@@ -131,9 +131,8 @@ import LearningCore
         supply.position = supplyCenter
         addChild(supply)
 
-        let crystal = Self.crystal()
+        let crystal = Self.crystal(name: "supply")
         crystal.position = CGPoint(x: supplyCenter.x, y: supplyCenter.y - 4)
-        crystal.name = "supply"
         addChild(crystal)
 
         let supplyLabel = ArtSystem.label("Starlight", size: 18)
@@ -148,8 +147,8 @@ import LearningCore
         fatalError("Use programmatic scenes")
     }
 
-    static func crystal() -> SKNode {
-        MathMechanicArt.crystal(size: 62, name: "crystal")
+    static func crystal(name: String = "crystal") -> SKNode {
+        MathMechanicArt.crystal(size: 62, name: name)
     }
 
     func render(_ model: CrystalCartModel) {
@@ -448,7 +447,7 @@ import LearningCore
         cells.children.enumerated().forEach { index, cell in
             guard let shape = cell as? SKShapeNode else { return }
 
-            shape.childNode(withName: "crystalVisual")?.removeFromParent()
+            shape.removeAllChildren()
 
             let filled = index < model.filled
             let fixed = index < model.encounter.initialQuantity
@@ -471,7 +470,6 @@ import LearningCore
                     name: shape.name ?? "tenFrameToken",
                     fixed: fixed
                 )
-                crystal.name = "crystalVisual"
                 crystal.position = CGPoint(x: 0, y: -1)
                 shape.addChild(crystal)
             }
