@@ -39,6 +39,17 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                         operation: .quantityMatching, initialQuantity: 0, targetQuantity: 3,
                         prompt: "Watch Pip's lights. When they hide, make the same quantity.", context: "quickLook"))
             }
+            if probe.band == 9 {
+                // Reuse the existing Number Bond machine as Pip's mistake machine so
+                // a strong learner can still demonstrate reasoning in Milestone A
+                // without pretending the not-yet-built place-value factory exists.
+                return PlacementProbe(id: probe.id, band: probe.band, encounter:
+                    LearningEncounter(id: probe.encounter.id, skillID: probe.skillID,
+                        mechanicID: MathMechanicID.numberBondMachine, representation: .reasoning,
+                        operation: .numberBond, initialQuantity: 5, targetQuantity: 8,
+                        prompt: "Pip says five plus three is nine. Fix his machine so the whole is eight.",
+                        context: "hiddenPlacement", challengeDepth: 2))
+            }
             return (try? MathMechanicRuntime(encounter: probe.encounter)) != nil ? probe : nil
         }
     }
