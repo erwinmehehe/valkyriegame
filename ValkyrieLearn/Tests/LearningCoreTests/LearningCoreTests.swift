@@ -576,4 +576,94 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(planner.desiredLaneCounts(total: 20)[.confidence], 1)
     }
 
+
+    func testSessionPlannerDeepensChallengeAfterThreeEasyIndependentSuccesses() throws {
+        let skill = SkillID(rawValue: "session.deepen")
+        let graph = try SkillGraph([SkillDefinition(skill)])
+        var profile = LearnerProfile()
+
+        for i in 0..<3 {
+            MasteryEngine().record(
+                evidence(i, skill: skill, representation: .concrete, easy: true),
+                in: &profile
+            )
+        }
+
+        let easy = sessionEncounter(
+            id: "deepen-easy",
+            skill: skill,
+            mechanic: "cart",
+            target: 8,
+            depth: 0
+        )
+        let deeper = sessionEncounter(
+            id: "deepen-reason",
+            skill: skill,
+            mechanic: "pipMistake",
+            target: 8,
+            representation: .reasoning,
+            depth: 1
+        )
+
+        let planner = SessionPlanner(
+            graph: graph,
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0)
+        )
+        let plan = planner.plan(
+            for: profile,
+            candidates: [easy, deeper],
+            encounterCount: 1,
+            now: epoch
+        )
+
+        XCTAssertEqual(plan.encounterCount, 1)
+        XCTAssertEqual(plan.encounters.first?.encounter.id, deeper.id)
+        XCTAssertEqual(plan.encounters.first?.lane, .stretch)
+    }
+
+    func testSessionPlannerChangesRepresentationAfterRepeatedStruggle() throws {
+        let skill = SkillID(rawValue: "session.represent")
+        let graph = try SkillGraph([SkillDefinition(skill)])
+        var profile = LearnerProfile()
+
+        MasteryEngine().record(
+            evidence(1, skill: skill, outcome: .incorrect, representation: .concrete),
+            in: &profile
+        )
+        MasteryEngine().record(
+            evidence(2, skill: skill, outcome: .incorrect, representation: .concrete),
+            in: &profile
+        )
+
+        let sameRepresentation = sessionEncounter(
+            id: "same-representation",
+            skill: skill,
+            mechanic: "cart",
+            target: 6,
+            representation: .concrete
+        )
+        let changedRepresentation = sessionEncounter(
+            id: "changed-representation",
+            skill: skill,
+            mechanic: "pictureGate",
+            target: 6,
+            representation: .pictorial
+        )
+
+        let planner = SessionPlanner(
+            graph: graph,
+            configuration: SessionPlannerConfiguration(explorationEveryEncounters: 0)
+        )
+        let plan = planner.plan(
+            for: profile,
+            candidates: [sameRepresentation, changedRepresentation],
+            encounterCount: 1,
+            now: epoch
+        )
+
+        XCTAssertEqual(plan.encounterCount, 1)
+        XCTAssertEqual(plan.encounters.first?.encounter.id, changedRepresentation.id)
+        XCTAssertEqual(plan.encounters.first?.lane, .learning)
+    }
+
 }
