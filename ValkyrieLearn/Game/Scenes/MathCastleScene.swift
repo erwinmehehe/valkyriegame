@@ -78,6 +78,7 @@ import LearningCore
         lever = makeLever()
         let light = SKShapeNode(circleOfRadius: 27)
         light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
+        light.name = "castlePowerLight"
         light.fillColor = .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
         light.strokeColor = .init(red: 0.95, green: 0.71, blue: 0.32, alpha: 1)
         addChild(light); powerLight = light
@@ -102,7 +103,7 @@ import LearningCore
         for index in 0..<5 {
             let lamp = SKShapeNode(circleOfRadius: 7)
             lamp.position = CGPoint(x: 1080 + index * 10, y: 390 + index * 28)
-            lamp.zPosition = 25; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
+            lamp.zPosition = 25; lamp.name = "powerRouteLamp\(index)"; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
             lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
         }
         updateChallengeGateAppearance()
