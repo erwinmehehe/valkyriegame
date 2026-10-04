@@ -199,7 +199,7 @@ import LearningCore
 
     private var completionMessage: String {
         state.workshop ? "You made it work! Try another station, or choose a new order."
-            : "The lift has power! Explore, or choose another work order."
+            : "The castle route has power! Explore, or choose another work order."
     }
 
     private func refresh() {
