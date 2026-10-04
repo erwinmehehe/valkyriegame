@@ -297,4 +297,26 @@ final class LearningCoreTests: XCTestCase {
         )
     }
 
+
+    func testEveryPrerequisiteAppearsEarlierInDevelopmentalOrder() {
+        let orderByID = Dictionary(uniqueKeysWithValues: MathSkillCatalog.descriptors.map { ($0.id, $0.developmentalOrder) })
+
+        for descriptor in MathSkillCatalog.descriptors {
+            XCTAssertFalse(descriptor.title.isEmpty)
+            XCTAssertFalse(descriptor.representations.isEmpty)
+
+            for prerequisite in descriptor.definition.prerequisites {
+                guard let prerequisiteOrder = orderByID[prerequisite] else {
+                    XCTFail("Missing descriptor for prerequisite \(prerequisite.rawValue)")
+                    continue
+                }
+                XCTAssertLessThan(
+                    prerequisiteOrder,
+                    descriptor.developmentalOrder,
+                    "\(descriptor.id.rawValue) depends on a later skill \(prerequisite.rawValue)"
+                )
+            }
+        }
+    }
+
 }
