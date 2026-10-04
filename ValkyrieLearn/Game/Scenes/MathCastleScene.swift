@@ -128,15 +128,23 @@ import LearningCore
         switch state.challengeGateStatus {
         case .locked:
             gate?.alpha = 0.45
+            (gate as? SKShapeNode)?.strokeColor = .init(red: 0.56, green: 0.87, blue: 1, alpha: 0.18)
+            (gate as? SKShapeNode)?.glowWidth = 4
             litCount = 0
         case .ready:
             gate?.alpha = 0.95
+            (gate as? SKShapeNode)?.strokeColor = .init(red: 1, green: 0.82, blue: 0.40, alpha: 0.90)
+            (gate as? SKShapeNode)?.glowWidth = 14
             litCount = 0
         case .active:
             gate?.alpha = 1.0
+            (gate as? SKShapeNode)?.strokeColor = .init(red: 0.65, green: 0.91, blue: 1, alpha: 0.95)
+            (gate as? SKShapeNode)?.glowWidth = 18
             litCount = state.challengeGateCompletedCount
         case .completed:
             gate?.alpha = 1.0
+            (gate as? SKShapeNode)?.strokeColor = .init(red: 1, green: 0.86, blue: 0.38, alpha: 1)
+            (gate as? SKShapeNode)?.glowWidth = 16
             litCount = ChallengeGateCatalog.challengeCount
         }
 
@@ -152,13 +160,12 @@ import LearningCore
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
         powerLight?.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.38, alpha: 1) : .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
         powerLight?.glowWidth = powered ? 16 : 0
-        (gate as? SKShapeNode)?.strokeColor = .init(red: 0.65, green: 0.91, blue: 1, alpha: powered ? 0.85 : 0.2)
-        (gate as? SKShapeNode)?.glowWidth = powered ? 18 : 8
         for lamp in routeLights { lamp.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.4, alpha: 1) : .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1); lamp.glowWidth = powered ? 6 : 0 }
         if powered && !wasPowered && !reducedMotion {
             lever?.run(.sequence([.rotate(toAngle: -0.18, duration: 0.16), .rotate(toAngle: 0, duration: 0.22)]), withKey: "pull")
         }
         wasPowered = powered
+        updateChallengeGateAppearance()
     }
 
     private func showQuestion(_ text: String?) {
