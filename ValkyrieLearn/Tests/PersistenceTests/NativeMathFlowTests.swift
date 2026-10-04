@@ -111,4 +111,38 @@ import LearningCore
         else { XCTFail("Expected a ten-frame runtime") }
         scene.willLeave()
     }
+
+    func testChallengeGateSessionRestoresThroughVersionedAdventureSave() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let store = try LearningStore(context: ModelContext(container))
+
+        var profile = try store.loadProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+
+        let graph = try MathSkills.graph()
+        var adventure = MathAdventure(continuingLearner: true)
+        XCTAssertTrue(adventure.beginChallengeGate(profile: profile, graph: graph))
+        XCTAssertEqual(adventure.challengeGateSession?.completedCount, 0)
+
+        try store.save(
+            profile: profile,
+            adventure: adventure,
+            sound: true,
+            reducedMotion: false,
+            world: "mathCastle"
+        )
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.challengeGateStatus, .active)
+        XCTAssertEqual(restored.challengeGateCompletedCount, 0)
+        XCTAssertFalse(restored.hasStoryReward(.moonLantern))
+
+        guard case .encounter(let encounter) = restored.prepareNext() else {
+            return XCTFail("Expected restored Challenge Gate encounter")
+        }
+        XCTAssertEqual(encounter.context, "challengeGate")
+    }
+
 }
