@@ -224,4 +224,99 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(recommendation.confidence, .high)
     }
 
+
+    func testMathSkillGraphV2HasFineGrainedUniqueCatalog() throws {
+        let descriptors = MathSkillCatalog.descriptors
+        XCTAssertGreaterThanOrEqual(descriptors.count, 60)
+        XCTAssertLessThanOrEqual(descriptors.count, 80)
+
+        let ids = Set(descriptors.map(\.id))
+        XCTAssertEqual(ids.count, descriptors.count)
+
+        let orders = descriptors.map(\.developmentalOrder)
+        XCTAssertEqual(Set(orders).count, descriptors.count)
+        XCTAssertEqual(orders.min(), 1)
+        XCTAssertEqual(orders.max(), descriptors.count)
+
+        let graph = try MathSkillCatalog.graph()
+        XCTAssertEqual(graph.skills.count, descriptors.count)
+
+        for strand in MathStrand.allCases {
+            XCTAssertFalse(MathSkillCatalog.skills(in: strand).isEmpty, "Missing skills for \(strand)")
+        }
+    }
+
+    func testMathSkillCatalogPreservesConcreteToReasoningProgression() {
+        XCTAssertEqual(MathSkillCatalog.descriptor(for: MathSkills.addition)?.strand, .addition)
+        XCTAssertTrue(MathSkillCatalog.descriptor(for: MathSkills.addition)?.representations.contains(.concrete) == true)
+        XCTAssertTrue(MathSkillCatalog.descriptor(for: MathSkills.addSymbols10)?.representations.contains(.symbolic) == true)
+        XCTAssertTrue(MathSkillCatalog.descriptor(for: MathSkills.reasoning)?.representations.contains(.reasoning) == true)
+        XCTAssertTrue(MathSkillCatalog.descriptor(for: MathSkills.multiStep)?.representations.contains(.story) == true)
+    }
+
+    func testStretchSkillsAreReadinessGatedNotAgeGated() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+
+        XCTAssertFalse(graph.isEligible(MathSkills.repeatedAddition, for: profile))
+
+        profile.skills[MathSkills.equalGroups.rawValue] = SkillProgress(state: .developing)
+        profile.skills[MathSkills.addWithin20.rawValue] = SkillProgress(state: .secure)
+
+        XCTAssertTrue(graph.isEligible(MathSkills.repeatedAddition, for: profile))
+        XCTAssertEqual(MathSkillCatalog.stretchSkills.count, 5)
+        XCTAssertTrue(MathSkillCatalog.stretchSkills.allSatisfy(\.isStretch))
+    }
+
+    func testPlacementProbeSkillsExistInV2Graph() throws {
+        let graph = try MathSkillCatalog.graph()
+        for probe in MathPlacement.probes {
+            XCTAssertNotNil(graph.skills[probe.skillID], "Placement probe references unknown skill \(probe.skillID.rawValue)")
+            XCTAssertNotNil(MathSkillCatalog.descriptor(for: probe.skillID))
+        }
+    }
+
+    func testKeyConceptualPrerequisitesMatchIntendedLearningSequence() throws {
+        let graph = try MathSkillCatalog.graph()
+
+        XCTAssertEqual(
+            Set(graph.skills[MathSkills.bonds10]?.prerequisites ?? []),
+            Set([MathSkills.compose10, MathSkills.decompose10])
+        )
+        XCTAssertEqual(
+            Set(graph.skills[MathSkills.missing]?.prerequisites ?? []),
+            Set([MathSkills.addition, MathSkills.bonds10])
+        )
+        XCTAssertEqual(
+            Set(graph.skills[MathSkills.compareTwoDigit]?.prerequisites ?? []),
+            Set([MathSkills.readTwoDigit, MathSkills.compare])
+        )
+        XCTAssertEqual(
+            Set(graph.skills[MathSkills.halves]?.prerequisites ?? []),
+            Set([MathSkills.equalSharing, MathSkills.composeShapes])
+        )
+    }
+
+
+    func testEveryPrerequisiteAppearsEarlierInDevelopmentalOrder() {
+        let orderByID = Dictionary(uniqueKeysWithValues: MathSkillCatalog.descriptors.map { ($0.id, $0.developmentalOrder) })
+
+        for descriptor in MathSkillCatalog.descriptors {
+            XCTAssertFalse(descriptor.title.isEmpty)
+            XCTAssertFalse(descriptor.representations.isEmpty)
+
+            for prerequisite in descriptor.definition.prerequisites {
+                guard let prerequisiteOrder = orderByID[prerequisite] else {
+                    XCTFail("Missing descriptor for prerequisite \(prerequisite.rawValue)")
+                    continue
+                }
+                XCTAssertLessThan(
+                    prerequisiteOrder,
+                    descriptor.developmentalOrder,
+                    "\(descriptor.id.rawValue) depends on a later skill \(prerequisite.rawValue)"
+                )
+            }
+        }
+    }
+
 }
