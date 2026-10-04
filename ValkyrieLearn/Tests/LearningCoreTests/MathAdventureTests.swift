@@ -221,7 +221,7 @@ final class MathAdventureTests: XCTestCase {
         }
 
         let evidence = try XCTUnwrap(adventure.submit(profile: &profile, at: answerTime))
-        XCTAssertEqual(evidence.responseTime, 5, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(evidence.responseTime), 5, accuracy: 0.001)
     }
 
     func testNextAdaptiveBeatUsesFreshProfileStateInsteadOfAStalePreplannedSession() throws {
