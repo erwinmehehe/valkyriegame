@@ -66,7 +66,17 @@ import LearningCore
         XCTAssertNotNil(scene.pip.action(forKey: "travel"))
 
         scene.handleTap(at: CGPoint(x: 1110, y: 430))
-        XCTAssertNotNil(scene.valkyrie.action(forKey: "travel"), "A solved work order should be followed by physical movement across the opened route.")
+        XCTAssertNil(
+            scene.valkyrie.action(forKey: "travel"),
+            "Do not let the child run onto the route while the physical bridge is still unfolding."
+        )
+
+        try await Task.sleep(nanoseconds: 1_250_000_000)
+        scene.handleTap(at: CGPoint(x: 1110, y: 430))
+        XCTAssertNotNil(
+            scene.valkyrie.action(forKey: "travel"),
+            "Once the bridge is visibly ready, the next action should become physical route traversal."
+        )
         scene.willLeave()
     }
 
