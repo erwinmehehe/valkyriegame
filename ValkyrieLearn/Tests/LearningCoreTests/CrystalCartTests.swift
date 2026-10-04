@@ -109,7 +109,19 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertGreaterThan(encounters.count, MathFoundation.encounters.count)
         XCTAssertLessThan(encounters.count, 40)
         XCTAssertEqual(Set(encounters.map(\.id)).count, encounters.count)
-        XCTAssertEqual(Set(encounters.map(\.fingerprint)).count, encounters.count)
+
+        // Legacy foundation intentionally contains a few different skill IDs that
+        // render the same math surface. EngagementDirector blocks those repeats at
+        // runtime. New native mechanics themselves must not introduce duplicates.
+        let newMechanics =
+            MathCastleEncounterCatalog.balanceScale
+            + MathCastleEncounterCatalog.numberBondMachine
+            + MathCastleEncounterCatalog.tenFrameGate
+            + MathCastleEncounterCatalog.missingNumberBridge
+        XCTAssertEqual(
+            Set(newMechanics.map(\.fingerprint)).count,
+            newMechanics.count
+        )
         XCTAssertTrue(encounters.allSatisfy(MathManipulativeSupport.supports))
         XCTAssertTrue(MathMechanicID.adaptiveSet.isSuperset(
             of: Set(encounters.map(\.mechanicID))
