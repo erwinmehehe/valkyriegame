@@ -30,13 +30,29 @@ final class CrystalCartTests: XCTestCase {
         }
         cart.apply(ScaffoldingEngine().next(after: .independent)); XCTAssertEqual(cart.support, .demonstration)
     }
-    func testCapacityCorrectionAndUnsupportedOperations() throws {
+    func testCapacityCorrectionSubtractionAndUnsupportedOperations() throws {
         var cart = try CrystalCartModel(encounter: MathFoundation.encounters[0])
-        for _ in 0..<12 { XCTAssertTrue(cart.add()) }; XCTAssertFalse(cart.add())
-        for _ in 0..<5 { cart.remove() }; XCTAssertEqual(cart.quantity, 7)
+        for _ in 0..<12 { XCTAssertTrue(cart.add()) }
+        XCTAssertFalse(cart.add())
+        for _ in 0..<5 { cart.remove() }
+        XCTAssertEqual(cart.quantity, 7)
         XCTAssertEqual(cart.submit()?.outcome, .correct)
-        let unsupported = LearningEncounter(id: "future", skillID: MathSkills.subtraction,
-            operation: .subtraction, initialQuantity: 5, targetQuantity: 2, prompt: "Future")
+
+        let subtraction = MathCastleEncounterCatalog.crystalCartSubtraction[0]
+        var subtractCart = try CrystalCartModel(encounter: subtraction)
+        XCTAssertEqual(subtractCart.quantity, 8)
+        for _ in 0..<3 { XCTAssertTrue(subtractCart.remove()) }
+        XCTAssertEqual(subtractCart.quantity, 5)
+        XCTAssertEqual(subtractCart.submit()?.outcome, .correct)
+
+        let unsupported = LearningEncounter(
+            id: "future",
+            skillID: MathSkills.bonds5,
+            operation: .numberBond,
+            initialQuantity: 2,
+            targetQuantity: 5,
+            prompt: "Future"
+        )
         XCTAssertThrowsError(try CrystalCartModel(encounter: unsupported))
     }
 
@@ -228,6 +244,61 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertTrue(cursor.isComplete)
         XCTAssertNil(cursor.current)
         XCTAssertNil(cursor.advance())
+    }
+
+
+    func testPlayablePlacementUsesOnlyNativeMathMechanics() throws {
+        let probes = MathPlacement.playableProbes
+
+        XCTAssertFalse(probes.isEmpty)
+        XCTAssertTrue(probes.allSatisfy { MathManipulativeSupport.supports($0.encounter) })
+        XCTAssertTrue(probes.contains { $0.encounter.operation == .subtraction })
+        XCTAssertFalse(probes.contains { $0.encounter.mechanicID == "quickLook" })
+        XCTAssertFalse(probes.contains { $0.encounter.mechanicID == "placeValueFactory" })
+        XCTAssertFalse(probes.contains { $0.encounter.mechanicID == "pipMistake" })
+
+        for probe in probes {
+            XCTAssertNoThrow(try MathMechanicRuntime(encounter: probe.encounter))
+        }
+    }
+
+    func testPlacementReadinessUnlocksPrerequisitesWithoutClaimingMastery() throws {
+        let graph = try MathSkillCatalog.graph()
+        var profile = LearnerProfile()
+
+        let inferred = graph.prerequisiteClosure(including: MathSkills.bonds10)
+        profile.markPlacementReady(inferred)
+
+        XCTAssertTrue(inferred.contains(MathSkills.bonds10))
+        XCTAssertTrue(inferred.contains(MathSkills.bonds5))
+        XCTAssertEqual(profile.progress(for: MathSkills.bonds10).state, .new)
+        XCTAssertEqual(profile.progress(for: MathSkills.bonds5).state, .new)
+        XCTAssertGreaterThanOrEqual(
+            profile.readiness(for: MathSkills.bonds5),
+            SkillState.developing.readiness
+        )
+        XCTAssertTrue(graph.isEligible(MathSkills.missing, for: profile))
+    }
+
+    func testMathAdventureSaveStateRoundTripsAllRuntimeKinds() throws {
+        let runtimes: [MathMechanicRuntime] = [
+            try MathMechanicRuntime(encounter: MathFoundation.encounters[0]),
+            try MathMechanicRuntime(encounter: MathCastleEncounterCatalog.balanceScale[0]),
+            try MathMechanicRuntime(encounter: MathCastleEncounterCatalog.numberBondMachine[0]),
+            try MathMechanicRuntime(encounter: MathCastleEncounterCatalog.tenFrameGate[0]),
+            try MathMechanicRuntime(encounter: MathCastleEncounterCatalog.missingNumberBridge[0])
+        ]
+
+        for runtime in runtimes {
+            let state = MathAdventureSaveState(
+                runtime: runtime,
+                placementSession: PlacementEngine(probes: MathPlacement.playableProbes).begin(),
+                placementComplete: false
+            )
+            let data = try JSONEncoder().encode(state)
+            let decoded = try JSONDecoder().decode(MathAdventureSaveState.self, from: data)
+            XCTAssertEqual(decoded, state)
+        }
     }
 
 }
