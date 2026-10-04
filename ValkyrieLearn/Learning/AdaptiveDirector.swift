@@ -242,3 +242,451 @@ public struct PlacementEngine: Sendable {
         min(max(band, minBand), maxBand)
     }
 }
+
+
+// MARK: - Adaptive session planning
+
+public enum SessionLane: String, CaseIterable, Codable, Hashable, Sendable {
+    case learning
+    case review
+    case stretch
+    case confidence
+}
+
+public struct SessionPlannerConfiguration: Equatable, Sendable {
+    public let learningWeight: Int
+    public let reviewWeight: Int
+    public let stretchWeight: Int
+    public let confidenceWeight: Int
+    public let explorationEveryEncounters: Int
+
+    public init(
+        learningWeight: Int = 60,
+        reviewWeight: Int = 20,
+        stretchWeight: Int = 15,
+        confidenceWeight: Int = 5,
+        explorationEveryEncounters: Int = 4
+    ) {
+        self.learningWeight = max(0, learningWeight)
+        self.reviewWeight = max(0, reviewWeight)
+        self.stretchWeight = max(0, stretchWeight)
+        self.confidenceWeight = max(0, confidenceWeight)
+        self.explorationEveryEncounters = max(0, explorationEveryEncounters)
+    }
+
+    public func weight(for lane: SessionLane) -> Int {
+        switch lane {
+        case .learning: return learningWeight
+        case .review: return reviewWeight
+        case .stretch: return stretchWeight
+        case .confidence: return confidenceWeight
+        }
+    }
+
+    public var totalWeight: Int {
+        max(1, SessionLane.allCases.reduce(0) { $0 + weight(for: $1) })
+    }
+}
+
+public struct PlannedSessionEncounter: Equatable, Sendable {
+    public let lane: SessionLane
+    public let encounter: LearningEncounter
+
+    public init(lane: SessionLane, encounter: LearningEncounter) {
+        self.lane = lane
+        self.encounter = encounter
+    }
+}
+
+public enum SessionBeat: Equatable, Sendable {
+    case encounter(PlannedSessionEncounter)
+    case explorationBreak
+}
+
+public struct SessionPlan: Equatable, Sendable {
+    public let beats: [SessionBeat]
+    public let requestedEncounterCount: Int
+    public let desiredLaneCounts: [SessionLane: Int]
+    public let actualLaneCounts: [SessionLane: Int]
+
+    public init(
+        beats: [SessionBeat],
+        requestedEncounterCount: Int,
+        desiredLaneCounts: [SessionLane: Int],
+        actualLaneCounts: [SessionLane: Int]
+    ) {
+        self.beats = beats
+        self.requestedEncounterCount = requestedEncounterCount
+        self.desiredLaneCounts = desiredLaneCounts
+        self.actualLaneCounts = actualLaneCounts
+    }
+
+    public var encounters: [PlannedSessionEncounter] {
+        beats.compactMap {
+            guard case let .encounter(item) = $0 else { return nil }
+            return item
+        }
+    }
+
+    public var encounterCount: Int { encounters.count }
+    public var explorationBreakCount: Int {
+        beats.reduce(0) { count, beat in
+            if case .explorationBreak = beat { return count + 1 }
+            return count
+        }
+    }
+
+    public var unfilledEncounterCount: Int {
+        max(0, requestedEncounterCount - encounterCount)
+    }
+}
+
+/// Builds a deterministic session plan from learner state and authored encounters.
+///
+/// The default target mix is 60% current learning, 20% spaced review,
+/// 15% gentle stretch and 5% confidence/fun. The mix is a target rather than
+/// a hard failure condition: if a lane lacks safe/eligible content, the planner
+/// reallocates the slot rather than repeating an exhausted activity.
+///
+/// The planner also uses EngagementDirector rules so exact activity fingerprints
+/// are not repeated and no mechanic dominates the session.
+public struct SessionPlanner: Sendable {
+    public let graph: SkillGraph
+    public let stretchSkillIDs: Set<SkillID>
+    public let configuration: SessionPlannerConfiguration
+
+    public init(
+        graph: SkillGraph,
+        stretchSkillIDs: Set<SkillID> = [],
+        configuration: SessionPlannerConfiguration = SessionPlannerConfiguration()
+    ) {
+        self.graph = graph
+        self.stretchSkillIDs = stretchSkillIDs
+        self.configuration = configuration
+    }
+
+    public func plan(
+        for profile: LearnerProfile,
+        candidates: [LearningEncounter],
+        encounterCount: Int = 20,
+        now: Date
+    ) -> SessionPlan {
+        let requested = max(0, encounterCount)
+        let desired = desiredLaneCounts(total: requested)
+        guard requested > 0, !candidates.isEmpty else {
+            return SessionPlan(
+                beats: [],
+                requestedEncounterCount: requested,
+                desiredLaneCounts: desired,
+                actualLaneCounts: emptyLaneCounts()
+            )
+        }
+
+        var shadow = profile
+        ReviewScheduler().markDue(in: &shadow, at: now)
+
+        var beats: [SessionBeat] = []
+        var actual = emptyLaneCounts()
+        var selectedCount = 0
+        var breakSerial = 0
+
+        while selectedCount < requested {
+            if configuration.explorationEveryEncounters > 0,
+               selectedCount > 0,
+               selectedCount % configuration.explorationEveryEncounters == 0,
+               beats.last != .explorationBreak {
+                appendExplorationBreak(
+                    to: &beats,
+                    profile: &shadow,
+                    now: now,
+                    serial: &breakSerial,
+                    encounterIndex: selectedCount
+                )
+            }
+
+            var selected: PlannedSessionEncounter?
+            let laneOrder = preferredLanes(
+                slot: selectedCount,
+                actual: actual,
+                desired: desired
+            )
+
+            for lane in laneOrder {
+                if let encounter = bestCandidate(
+                    in: lane,
+                    profile: shadow,
+                    candidates: candidates,
+                    now: now
+                ) {
+                    selected = PlannedSessionEncounter(lane: lane, encounter: encounter)
+                    break
+                }
+            }
+
+            if selected == nil,
+               hasUnusedEligibleContent(profile: shadow, candidates: candidates, now: now),
+               beats.last != .explorationBreak {
+                appendExplorationBreak(
+                    to: &beats,
+                    profile: &shadow,
+                    now: now,
+                    serial: &breakSerial,
+                    encounterIndex: selectedCount
+                )
+
+                for lane in laneOrder {
+                    if let encounter = bestCandidate(
+                        in: lane,
+                        profile: shadow,
+                        candidates: candidates,
+                        now: now
+                    ) {
+                        selected = PlannedSessionEncounter(lane: lane, encounter: encounter)
+                        break
+                    }
+                }
+            }
+
+            guard let selected else { break }
+
+            beats.append(.encounter(selected))
+            actual[selected.lane, default: 0] += 1
+            shadow.begin(
+                selected.encounter,
+                at: now.addingTimeInterval(Double(selectedCount + breakSerial))
+            )
+            selectedCount += 1
+        }
+
+        return SessionPlan(
+            beats: beats,
+            requestedEncounterCount: requested,
+            desiredLaneCounts: desired,
+            actualLaneCounts: actual
+        )
+    }
+
+    public func desiredLaneCounts(total: Int) -> [SessionLane: Int] {
+        let total = max(0, total)
+        guard total > 0 else { return emptyLaneCounts() }
+
+        let denominator = configuration.totalWeight
+        var counts = emptyLaneCounts()
+        var remainders: [(lane: SessionLane, remainder: Int)] = []
+        var assigned = 0
+
+        for lane in SessionLane.allCases {
+            let scaled = total * configuration.weight(for: lane)
+            let base = scaled / denominator
+            counts[lane] = base
+            assigned += base
+            remainders.append((lane, scaled % denominator))
+        }
+
+        let tieOrder: [SessionLane: Int] = [
+            .learning: 0,
+            .review: 1,
+            .stretch: 2,
+            .confidence: 3
+        ]
+
+        remainders.sort {
+            if $0.remainder == $1.remainder {
+                return tieOrder[$0.lane, default: 99] < tieOrder[$1.lane, default: 99]
+            }
+            return $0.remainder > $1.remainder
+        }
+
+        var remaining = total - assigned
+        var index = 0
+        while remaining > 0 && !remainders.isEmpty {
+            counts[remainders[index % remainders.count].lane, default: 0] += 1
+            remaining -= 1
+            index += 1
+        }
+
+        return counts
+    }
+
+    private func bestCandidate(
+        in lane: SessionLane,
+        profile: LearnerProfile,
+        candidates: [LearningEncounter],
+        now: Date
+    ) -> LearningEncounter? {
+        let engagement = EngagementDirector()
+
+        let eligible = candidates.filter {
+            graph.isEligible($0.skillID, for: profile)
+                && matches($0, lane: lane, profile: profile, now: now)
+                && engagement.allows($0, profile: profile)
+                && respectsAdjustment($0, lane: lane, profile: profile)
+        }
+
+        func score(_ encounter: LearningEncounter) -> Int {
+            let progress = profile.progress(for: encounter.skillID)
+            var value = engagement.repetitionPenalty(encounter, profile: profile) * 100
+
+            switch lane {
+            case .learning:
+                switch progress.state {
+                case .developing: value += 0
+                case .learning: value += 10
+                case .new: value += 20
+                default: value += 40
+                }
+                value += encounter.challengeDepth * 4
+
+            case .review:
+                value += encounter.challengeDepth * 5
+                if progress.state != .reviewDue { value += 5 }
+
+            case .stretch:
+                value += encounter.challengeDepth * 3
+                if stretchSkillIDs.contains(encounter.skillID) { value -= 2 }
+
+            case .confidence:
+                value += encounter.challengeDepth * 10
+                if progress.state == .mastered { value += 2 }
+            }
+
+            return value
+        }
+
+        return eligible.sorted {
+            let left = score($0)
+            let right = score($1)
+            return left == right ? $0.id < $1.id : left < right
+        }.first
+    }
+
+    private func matches(
+        _ encounter: LearningEncounter,
+        lane: SessionLane,
+        profile: LearnerProfile,
+        now: Date
+    ) -> Bool {
+        let progress = profile.progress(for: encounter.skillID)
+        let isDue = progress.state == .reviewDue || (progress.reviewDate.map { $0 <= now } ?? false)
+        let isStretch = stretchSkillIDs.contains(encounter.skillID) || encounter.challengeDepth > 0
+
+        switch lane {
+        case .review:
+            return isDue
+
+        case .stretch:
+            guard !isDue, progress.state != .mastered else { return false }
+            return isStretch
+
+        case .confidence:
+            guard !isDue, encounter.challengeDepth == 0 else { return false }
+            return progress.state == .secure || progress.state == .mastered
+
+        case .learning:
+            guard !isDue, !isStretch else { return false }
+            return progress.state == .new
+                || progress.state == .learning
+                || progress.state == .developing
+        }
+    }
+
+    private func respectsAdjustment(
+        _ encounter: LearningEncounter,
+        lane: SessionLane,
+        profile: LearnerProfile
+    ) -> Bool {
+        // The small confidence lane is intentionally allowed to stay easy.
+        if lane == .confidence { return true }
+
+        let engagement = EngagementDirector()
+        let previous = profile.progress(for: encounter.skillID).evidence.last?.representation
+
+        switch engagement.adjustment(for: encounter.skillID, profile: profile) {
+        case .none:
+            return true
+        case .deepenChallenge:
+            return encounter.challengeDepth > 0 || lane == .stretch
+        case .changeRepresentation:
+            return encounter.representation != previous
+        }
+    }
+
+    private func hasUnusedEligibleContent(
+        profile: LearnerProfile,
+        candidates: [LearningEncounter],
+        now: Date
+    ) -> Bool {
+        candidates.contains { encounter in
+            guard graph.isEligible(encounter.skillID, for: profile),
+                  !profile.usedFingerprints.contains(encounter.fingerprint) else {
+                return false
+            }
+
+            return SessionLane.allCases.contains {
+                matches(encounter, lane: $0, profile: profile, now: now)
+            }
+        }
+    }
+
+    private func preferredLanes(
+        slot: Int,
+        actual: [SessionLane: Int],
+        desired: [SessionLane: Int]
+    ) -> [SessionLane] {
+        let denominator = configuration.totalWeight
+
+        func deficit(_ lane: SessionLane) -> Int {
+            let idealScaled = (slot + 1) * configuration.weight(for: lane)
+            let actualScaled = actual[lane, default: 0] * denominator
+            return idealScaled - actualScaled
+        }
+
+        let primary = SessionLane.allCases
+            .filter { actual[$0, default: 0] < desired[$0, default: 0] }
+            .sorted {
+                let left = deficit($0)
+                let right = deficit($1)
+                if left == right {
+                    return lanePriority($0) < lanePriority($1)
+                }
+                return left > right
+            }
+
+        let fallback = SessionLane.allCases
+            .filter { !primary.contains($0) }
+            .sorted { lanePriority($0) < lanePriority($1) }
+
+        return primary + fallback
+    }
+
+    private func lanePriority(_ lane: SessionLane) -> Int {
+        switch lane {
+        case .learning: return 0
+        case .review: return 1
+        case .stretch: return 2
+        case .confidence: return 3
+        }
+    }
+
+    private func appendExplorationBreak(
+        to beats: inout [SessionBeat],
+        profile: inout LearnerProfile,
+        now: Date,
+        serial: inout Int,
+        encounterIndex: Int
+    ) {
+        serial += 1
+        beats.append(.explorationBreak)
+        profile.recordActivity(
+            ActivityRecord(
+                fingerprint: "planned-exploration-\(serial)",
+                mechanicID: "explorationBreak",
+                timestamp: now.addingTimeInterval(Double(encounterIndex + serial))
+            )
+        )
+    }
+
+    private func emptyLaneCounts() -> [SessionLane: Int] {
+        Dictionary(uniqueKeysWithValues: SessionLane.allCases.map { ($0, 0) })
+    }
+}
