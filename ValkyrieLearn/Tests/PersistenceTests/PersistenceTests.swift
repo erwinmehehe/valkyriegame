@@ -4,7 +4,7 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class PersistenceTests: XCTestCase {
-    func testSwiftDataRoundTripAcrossContexts() throws {
+    func testSwiftDataRoundTripAcrossContexts() async throws {
         let container = try LearningStore.container(inMemory: true)
         let store = try LearningStore(context: ModelContext(container))
         var profile = try store.loadProfile()
@@ -21,7 +21,7 @@ import LearningCore
         XCTAssertTrue(restored.snapshot.reducedMotion)
         XCTAssertEqual(restored.snapshot.lastWorld, "mathCastle")
     }
-    func testAppStateRestoresWorkshopWithoutAwardingMastery() throws {
+    func testAppStateRestoresWorkshopWithoutAwardingMastery() async throws {
         let container = try LearningStore.container(inMemory: true)
         let state = try AppState(context: ModelContext(container))
         state.startWorkshop(MathFoundation.workshopExamples[1])
@@ -33,7 +33,23 @@ import LearningCore
         XCTAssertTrue(restored.profile.progress(for: MathSkills.addition).evidence.isEmpty)
         XCTAssertTrue(restored.cart?.completed == true)
     }
-    func testUnsupportedProfileDoesNotResetProgress() throws {
+    func testDemonstrationCorrectsOvershootAndPreservesAssistance() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        state.startWorkshop(MathFoundation.workshopExamples[1]) // 4 + 3
+        for _ in 0..<4 { state.addCrystal() }
+        XCTAssertEqual(state.cart?.quantity, 8)
+        _ = state.scaffold(); _ = state.scaffold()
+        let demonstration = state.scaffold()
+        XCTAssertTrue(demonstration?.demonstratesStep == true)
+        XCTAssertEqual(state.cart?.quantity, 7)
+        XCTAssertEqual(state.cart?.support, .demonstration)
+        XCTAssertEqual(state.submit()?.supportLevel, .demonstration)
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.cart?.quantity, 7)
+        XCTAssertEqual(restored.cart?.support, .demonstration)
+    }
+    func testUnsupportedProfileDoesNotResetProgress() async throws {
         let container = try LearningStore.container(inMemory: true)
         let store = try LearningStore(context: ModelContext(container))
         var profile = LearnerProfile(); profile.schemaVersion = 99

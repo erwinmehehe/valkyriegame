@@ -1,6 +1,22 @@
 import SpriteKit
 
 @MainActor final class StoryTreeScene: AdventureScene {
+    private var activeTouch: UITouch?
+    private var touchStart = CGPoint.zero
+    private var moved = false
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard activeTouch == nil, let touch = touches.first else { return }
+        activeTouch = touch; touchStart = touch.location(in: self); moved = false
+    }
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = activeTouch, touches.contains(touch) else { return }
+        let point = touch.location(in: self)
+        if hypot(point.x - touchStart.x, point.y - touchStart.y) > 12 { moved = true }
+    }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let touch = activeTouch, touches.contains(touch) { activeTouch = nil; moved = false }
+    }
+    override func willLeave() { activeTouch = nil; moved = false; super.willLeave() }
     override func buildWorld() {
         super.buildWorld()
         let trunk = ArtSystem.box(CGSize(width: 145, height: 320), color: .brown)
@@ -13,8 +29,10 @@ import SpriteKit
         instruction.text = "Story Tree · Tap a path to walk. Visit Pip or the castle."
     }
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
+        guard let touch = activeTouch, touches.contains(touch) else { return }
+        defer { activeTouch = nil; moved = false }
         let point = touch.location(in: self)
+        guard !moved, hypot(point.x - touchStart.x, point.y - touchStart.y) <= 12 else { return }
         switch targetName(at: point) {
         case "castle":
             let destination = CGPoint(x: 1030, y: 220)

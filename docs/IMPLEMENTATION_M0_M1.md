@@ -25,7 +25,7 @@ There is no hidden placement, five-mechanic suite, Challenge Gate, reward system
 - `ValkyrieLearn/Parent/AdventureSettingsView.swift`: settings only, not a parent dashboard.
 - `ValkyrieLearn/Persistence/LearningStore.swift`: explicit V1 SwiftData schema/migration boundary, profile/evidence, active cart, world and settings.
 - `ValkyrieLearn/Resources/`: landscape Info.plist, four temporary SFX WAVs and atlas naming guide.
-- `ValkyrieLearn/Tests/`: 15 plain-Swift XCTest cases and 3 Apple-platform persistence/AppState cases.
+- `ValkyrieLearn/Tests/`: 15 plain-Swift XCTest cases and 4 Apple-platform persistence/AppState cases.
 - `scripts/`: deterministic checked-in Xcode project generator and static integrity validator.
 - `.github/workflows/native.yml`: learning-core and macOS iPad Simulator build/test jobs.
 - `.gitignore` and this implementation report.
@@ -94,8 +94,12 @@ Swift 6.0.3 Linux was temporarily installed for actual compilation/testing.
 - `git diff --check` passed.
 
 **Actual Xcode app build, SwiftData macros/integration tests, simulator launch and physical iPad gameplay are NOT yet verified locally.**
-CI is supplied to run the Apple build/test gate. Its observed result must be checked before calling this an installable build.
+CI is supplied to run the Apple build/test gate. LearningCore has also passed clean `swift test` runs on Linux and macOS CI. Initial Apple integration runs caught checkout-dependent project IDs, a simulator architecture mismatch and a missing SKNode initializer override; fixes are included. The final native gate result must be checked before calling this an installable build.
 No IPA or TestFlight release is claimed.
+
+## Additional source review
+
+One requested sub-agent reviewed native gameplay and persistence. Four concrete findings were fixed: general drag-release hotspot activation, stalled demonstration after crystal overshoot, invisible fallback characters with partial atlases, and stale Pip operation timers. A hosted AppState regression test checks demonstrated removal and persisted support attribution.
 
 ## Exact Mac verification
 

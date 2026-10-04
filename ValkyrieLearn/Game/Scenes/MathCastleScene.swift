@@ -56,10 +56,11 @@ import LearningCore
         if canManipulate(), name == "supply" || name == "cartCrystal" { dragOrigin = name }
     }
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = activeTouch, touches.contains(touch), dragOrigin != nil else { return }
+        guard let touch = activeTouch, touches.contains(touch) else { return }
         let point = touch.location(in: self)
         guard hypot(point.x - startPoint.x, point.y - startPoint.y) > 12 else { return }
         didDrag = true
+        guard dragOrigin != nil else { return }
         if ghost == nil {
             ghost = CrystalCartMechanic.crystal(); ghost?.zPosition = 1900
             if let ghost { addChild(ghost) }
@@ -70,6 +71,7 @@ import LearningCore
         guard let touch = activeTouch, touches.contains(touch) else { return }
         let point = touch.location(in: self)
         let origin = dragOrigin
+        if hypot(point.x - startPoint.x, point.y - startPoint.y) > 12 { didDrag = true }
         defer { clearDrag() }
         if didDrag {
             if canManipulate() {

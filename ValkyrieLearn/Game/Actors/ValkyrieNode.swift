@@ -25,6 +25,7 @@ import SpriteKit
     }
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
     func pose(_ pose: ArtSystem.Pose) {
+        removeAction(forKey: "operation")
         bodyNode.removeAction(forKey: "pose")
         atlasSprite?.removeAction(forKey: "pose")
         bodyNode.position = .zero; bodyNode.zRotation = 0; bodyNode.setScale(1)
@@ -35,6 +36,7 @@ import SpriteKit
             if !reducedMotion { sprite.run(.repeatForever(.animate(with: frames, timePerFrame: 0.12)), withKey: "pose") }
         } else {
             atlasSprite?.isHidden = true
+            bodyNode.children.filter { $0 !== atlasSprite }.forEach { $0.isHidden = false }
             guard !reducedMotion else { bodyNode.setScale(1); bodyNode.position = .zero; return }
             let action: SKAction
             switch pose {

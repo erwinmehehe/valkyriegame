@@ -52,8 +52,19 @@ import LearningCore
         guard let current = cart, !current.completed else { return nil }
         let scaffold = ScaffoldingEngine().next(after: current.support)
         cart?.apply(scaffold)
-        if scaffold.demonstratesStep && current.quantity < current.encounter.targetQuantity { _ = cart?.add() }
-        persist(); return scaffold
+        var cue = scaffold.cue
+        var demonstrates = scaffold.demonstratesStep
+        if demonstrates {
+            if current.quantity < current.encounter.targetQuantity {
+                _ = cart?.add(); cue = "Watch Pip add one crystal. Then you can try."
+            } else if current.quantity > current.encounter.targetQuantity {
+                _ = cart?.remove(); cue = "Watch Pip take one crystal back. Then you can try."
+            } else {
+                cue = "The cart is ready. Try Pip's lever."; demonstrates = false
+            }
+        }
+        persist()
+        return Scaffold(support: scaffold.support, cue: cue, demonstratesStep: demonstrates)
     }
     func submit() -> LearningEvidence? {
         guard let evidence = cart?.submit() else { return nil }

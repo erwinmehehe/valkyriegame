@@ -5,7 +5,7 @@ import LearningCore
     let cartCenter = CGPoint(x: 830, y: 265)
     let supplyCenter = CGPoint(x: 595, y: 235)
     private let contents = SKNode()
-    init() {
+    override init() {
         super.init()
         zPosition = 750
         let cart = ArtSystem.box(CGSize(width: 305, height: 165), color: .init(red: 0.50, green: 0.30, blue: 0.14, alpha: 1))

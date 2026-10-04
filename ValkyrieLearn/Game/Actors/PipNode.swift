@@ -6,6 +6,6 @@ import SpriteKit
     func operate(reducedMotion: Bool) {
         self.reducedMotion = reducedMotion
         pose(.interact)
-        run(.sequence([.wait(forDuration: reducedMotion ? 0 : 0.6), .run { [weak self] in self?.pose(.idle) }]))
+        run(.sequence([.wait(forDuration: reducedMotion ? 0 : 0.6), .run { [weak self] in self?.pose(.idle) }]), withKey: "operation")
     }
 }
