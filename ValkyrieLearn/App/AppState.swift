@@ -301,12 +301,11 @@ import LearningCore
             persist()
             return .encounter(probe.encounter)
         } catch {
-            // A probe is only child-facing when its mechanic is truly implemented.
-            session.attemptedProbeIDs.insert(probe.id)
-            mathAdventure.placementSession = session
-            saveError = "Pip skipped a machine that is still being built."
+            // `playableProbes` should guarantee this path is unreachable. Fail
+            // closed instead of mutating diagnostic state from the app layer.
+            saveError = "Pip found a castle machine that is not ready yet."
             persist()
-            return preparePlacement()
+            return .needsContent(probe.skillID)
         }
     }
 
