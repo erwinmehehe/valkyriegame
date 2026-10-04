@@ -14,6 +14,11 @@ import LearningCore
     private var lastPreviewVisible = false
     private var selection: EncounterSelection?
     private var gate: SKNode?
+    private var nextGear: SKNode?
+    private var lever: SKNode?
+    private var powerLight: SKShapeNode?
+    private var routeLights: [SKShapeNode] = []
+    private var wasPowered = false
     private let workshopGroups: [[LearningEncounter]] = [
         MathFoundation.workshopExamples,
         MathCastleEncounterCatalog.balanceScale,
@@ -25,18 +30,74 @@ import LearningCore
 
     override func buildWorld() {
         super.buildWorld()
-        _ = hotspot("Story Tree", name: "home", at: CGPoint(x: 140, y: 580), size: CGSize(width: 170, height: 68))
-        _ = hotspot("Pip's lever", name: "submit", at: CGPoint(x: 1120, y: 250), size: CGSize(width: 150, height: 80))
-        _ = hotspot("Ask Pip", name: "help", at: CGPoint(x: 395, y: 290))
-        _ = hotspot("Wind gear", name: "wind", at: CGPoint(x: 395, y: 390))
-        _ = hotspot("Next order", name: "next", at: CGPoint(x: 1100, y: 430), size: CGSize(width: 170, height: 64))
-        for (index, title) in ["Cart", "Scale", "Bonds", "Lights", "Bridge"].enumerated() {
-            _ = hotspot(title, name: "workshop\(index)", at: CGPoint(x: 450 + index * 155, y: 510), size: CGSize(width: 140, height: 64))
+        _ = worldControl("‹", name: "home", at: CGPoint(x: 52, y: 669))
+        // Native stonework connects the foreground landing to the workbench.
+        let dais = SKShapeNode(ellipseOf: CGSize(width: 640, height: 115))
+        dais.fillColor = .init(red: 0.4, green: 0.38, blue: 0.43, alpha: 0.88)
+        dais.strokeColor = .init(red: 0.89, green: 0.68, blue: 0.35, alpha: 1); dais.lineWidth = 5
+        dais.position = CGPoint(x: 830, y: 178); dais.zPosition = 5; addChild(dais)
+        for index in 0..<6 {
+            let stone = ArtSystem.box(CGSize(width: 85, height: 20), color: .init(red: 0.6, green: 0.57, blue: 0.57, alpha: 0.8), radius: 4)
+            stone.position = CGPoint(x: 240 + index * 65, y: 150 + index * 6); stone.zPosition = 6; addChild(stone)
         }
-        let workshop = ArtSystem.label("Pip's workshop · unscored examples", size: 18)
-        workshop.position = CGPoint(x: 740, y: 560); workshop.zPosition = 950; addChild(workshop)
-        gate = hotspot("Castle lift", name: "lift", at: CGPoint(x: 1130, y: 590), size: CGSize(width: 155, height: 80))
+        // The five workshop seals are mounted on one physical brass rack.
+        let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
+        rack.position = CGPoint(x: 330, y: 503); rack.zPosition = 30; addChild(rack)
+        for x in [150, 510] {
+            let post = ArtSystem.box(CGSize(width: 14, height: 142), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
+            post.position = CGPoint(x: x, y: 440); post.zPosition = 29; addChild(post)
+        }
+        for (index, symbol) in ["◆", "⚖", "◉", "▦", "↔"].enumerated() {
+            _ = worldGear(symbol, name: "workshop\(index)", at: CGPoint(x: 150 + index * 90, y: 535), radius: 31)
+        }
+        _ = worldGear("↻", name: "wind", at: CGPoint(x: 390, y: 605), radius: 32)
+        pip.name = "help"
+        nextGear = worldGear("→", name: "next", at: CGPoint(x: 1110, y: 430), radius: 34)
+        lever = makeLever()
+        let light = SKShapeNode(circleOfRadius: 27)
+        light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
+        light.fillColor = .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+        light.strokeColor = .init(red: 0.95, green: 0.71, blue: 0.32, alpha: 1)
+        addChild(light); powerLight = light
+        let portal = SKShapeNode(ellipseOf: CGSize(width: 115, height: 170))
+        portal.position = CGPoint(x: 1125, y: 567); portal.zPosition = 25; portal.name = "lift"
+        portal.fillColor = .init(red: 0.33, green: 0.73, blue: 1, alpha: 0.08)
+        portal.strokeColor = .init(red: 0.56, green: 0.87, blue: 1, alpha: 0.2); portal.glowWidth = 8
+        addChild(portal); gate = portal
+        for index in 0..<5 {
+            let lamp = SKShapeNode(circleOfRadius: 7)
+            lamp.position = CGPoint(x: 1080 + index * 10, y: 390 + index * 28)
+            lamp.zPosition = 25; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
+            lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
+        }
         openOrder()
+    }
+
+    private func makeLever() -> SKNode {
+        let node = SKNode(); node.name = "submit"; node.position = CGPoint(x: 1120, y: 250); node.zPosition = 760
+        let base = ArtSystem.box(CGSize(width: 90, height: 32), color: .init(red: 0.47, green: 0.3, blue: 0.14, alpha: 1), radius: 6)
+        base.position.y = -45; node.addChild(base)
+        let arm = ArtSystem.box(CGSize(width: 14, height: 80), color: .init(red: 0.93, green: 0.74, blue: 0.35, alpha: 1), radius: 6)
+        arm.zRotation = -.pi / 8; arm.position.y = -5; node.addChild(arm)
+        let handle = SKShapeNode(circleOfRadius: 27)
+        handle.position = CGPoint(x: 15, y: 32); handle.fillColor = .init(red: 0.38, green: 0.71, blue: 0.72, alpha: 1)
+        handle.strokeColor = .init(red: 1, green: 0.82, blue: 0.44, alpha: 1); handle.lineWidth = 3; node.addChild(handle)
+        // Touch area stays large even where the lever's silhouette is narrow.
+        let hit = ArtSystem.box(CGSize(width: 150, height: 110), color: .clear, radius: 0); hit.name = "submit"; node.addChild(hit)
+        addChild(node); return node
+    }
+
+    private func updatePower(_ powered: Bool) {
+        nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
+        powerLight?.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.38, alpha: 1) : .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+        powerLight?.glowWidth = powered ? 16 : 0
+        (gate as? SKShapeNode)?.strokeColor = .init(red: 0.65, green: 0.91, blue: 1, alpha: powered ? 0.85 : 0.2)
+        (gate as? SKShapeNode)?.glowWidth = powered ? 18 : 8
+        for lamp in routeLights { lamp.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.4, alpha: 1) : .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1); lamp.glowWidth = powered ? 6 : 0 }
+        if powered && !wasPowered && !reducedMotion {
+            lever?.run(.sequence([.rotate(toAngle: -0.18, duration: 0.16), .rotate(toAngle: 0, duration: 0.22)]), withKey: "pull")
+        }
+        wasPowered = powered
     }
 
     private func openOrder() {
@@ -62,7 +123,7 @@ import LearningCore
     private func refresh() {
         guard let runtime = state.runtime else {
             mechanic?.removeFromParent(); mechanic = nil; renderedEncounterID = nil
-            return
+            updatePower(false); return
         }
         if renderedEncounterID != runtime.encounter.id || mechanic == nil {
             mechanic?.removeAllActions(); mechanic?.removeFromParent()
@@ -72,7 +133,7 @@ import LearningCore
                 mechanic = MathCastleMechanicFactory.makeNode(for: runtime.encounter)
                 mechanic?.position = CGPoint(x: 820, y: 310)
             }
-            if let mechanic { addChild(mechanic) }
+            if let mechanic { mechanic.zPosition = 815; addChild(mechanic) }
             renderedEncounterID = runtime.encounter.id
         }
         switch runtime {
@@ -83,10 +144,10 @@ import LearningCore
         case .missingBridge(let model): (mechanic as? MissingNumberBridgeMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
-        gate?.alpha = runtime.completed ? 0.5 : 1
+        updatePower(runtime.completed)
         if engaged {
             instruction.text = state.previewVisible ? "Watch the lights. Remember how many you see."
-                : (state.workshop ? "Workshop · " : "") + runtime.encounter.prompt
+                : runtime.encounter.prompt
         }
     }
 
@@ -165,7 +226,7 @@ import LearningCore
         case "lift":
             engaged = false
             travel(to: CGPoint(x: 1110, y: 230)) { [weak self] in
-                self?.instruction.text = "The lift leads farther into the castle. That adventure is still being built."
+                self?.instruction.text = "The starlight lifts lead farther into the castle. More paths are still being built."
             }
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "scaleBeam",
              MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
@@ -227,7 +288,7 @@ import LearningCore
             if state.startWorkshop(examples[next]) {
                 workshopIndices[index] = (next + 1) % examples.count
                 clearDrag(); engaged = false; renderedEncounterID = nil; refresh()
-                instruction.text = "Unscored workshop. Tap the machine to walk over and try it."
+                instruction.text = "Tap the machine to walk over and try it."
                 return
             }
         }
@@ -239,6 +300,7 @@ import LearningCore
             instruction.text = "Choose a new order or a workshop station."; return
         }
         if isNear(station) {
+            valkyrie.face(toward: CGPoint(x: 820, y: 310))
             state.beginInteraction()
             engaged = true; refresh()
         } else {
