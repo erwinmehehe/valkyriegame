@@ -2,6 +2,10 @@ import SpriteKit
 import LearningCore
 
 @MainActor final class MathCastleScene: AdventureScene {
+    override var sourceBackdrop: ArtSystem.Backdrop? {
+        ArtSystem.Backdrop(resource: "V331_MathCastle", ext: "jpg")
+    }
+
     private var activeMechanicNode: SKNode?
     private var activeTouch: UITouch?
     private var dragOrigin: String?
