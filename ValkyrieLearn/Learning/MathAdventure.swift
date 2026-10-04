@@ -262,7 +262,8 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 else { demonstration = false }
             }
         case .missingBridge(let model):
-            cue = "Start at \(model.encounter.initialQuantity). How many steps reach \(model.encounter.targetQuantity)?"
+            cue = "The bridge needs \(model.encounter.targetQuantity) planks. \(model.encounter.initialQuantity) are fixed. Fill the gaps."
+            if demonstration { cue = "Watch Pip move one plank. Then finish the bridge." }
             if demonstration {
                 if model.selectedNumber < model.correctNumber { _ = increment(at: now) }
                 else if model.selectedNumber > model.correctNumber { _ = decrement(at: now) }

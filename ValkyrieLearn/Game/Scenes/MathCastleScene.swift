@@ -20,6 +20,21 @@ import LearningCore
     private var routeLights: [SKShapeNode] = []
     private var challengeRunes: [SKShapeNode] = []
     private var wasPowered = false
+    private let bridgeRouteNode = SKNode()
+    private(set) var crossingBridge = false
+    private var hasLeftScene = false
+    private let bridgePath = [
+        CGPoint(x: 490, y: 175), CGPoint(x: 560, y: 200),
+        CGPoint(x: 596, y: 244), CGPoint(x: 692, y: 244),
+        CGPoint(x: 788, y: 244), CGPoint(x: 884, y: 244),
+        CGPoint(x: 980, y: 244),
+        CGPoint(x: 1040, y: 244), CGPoint(x: 1080, y: 286),
+        CGPoint(x: 1110, y: 350), CGPoint(x: 1110, y: 400)
+    ]
+    private var repairedBridge: Bool {
+        state.runtime?.encounter.mechanicID == MathMechanicID.missingNumberBridge
+            && state.runtime?.completed == true
+    }
     private let questionPlate = SKShapeNode(
         rectOf: CGSize(width: 650, height: 76),
         cornerRadius: 24
@@ -106,8 +121,75 @@ import LearningCore
             lamp.zPosition = 25; lamp.name = "powerRouteLamp\(index)"; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
             lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
         }
+        buildBridgeRoute()
         updateChallengeGateAppearance()
         openOrder()
+    }
+
+    private func buildBridgeRoute() {
+        bridgeRouteNode.name = "bridgeRoute"
+        bridgeRouteNode.zPosition = 450
+        bridgeRouteNode.isHidden = true
+        // The landing joins the live plank deck to a short stair leading to the
+        // next-order gear. Actors follow these same surfaces, rather than a
+        // straight line through the painted machinery.
+        for (x, top, width) in [(550.0, 204.0, 100.0), (582, 240, 64),
+                                  (1040, 244, 140), (1060, 265, 90),
+                                  (1080, 286, 84), (1095, 318, 80),
+                                  (1110, 350, 80), (1110, 375, 80),
+                                  (1110, 400, 100)] {
+            let tread = ArtSystem.box(CGSize(width: width, height: 16),
+                color: .init(red: 0.49, green: 0.33, blue: 0.17, alpha: 1), radius: 3)
+            tread.position = CGPoint(x: x, y: top - 8)
+            tread.strokeColor = .init(red: 0.94, green: 0.73, blue: 0.32, alpha: 1)
+            tread.lineWidth = 2
+            bridgeRouteNode.addChild(tread)
+            let support = ArtSystem.box(CGSize(width: 12, height: max(20, top - 155)),
+                color: .init(red: 0.31, green: 0.23, blue: 0.17, alpha: 1), radius: 2)
+            support.position = CGPoint(x: x, y: 155 + (top - 155) / 2)
+            support.zPosition = -1
+            bridgeRouteNode.addChild(support)
+        }
+        addChild(bridgeRouteNode)
+    }
+
+    private func followBridge(_ points: [CGPoint], completion: @escaping () -> Void) {
+        guard !hasLeftScene else { return }
+        guard let first = points.first else { completion(); return }
+        let behind = valkyrie.position
+        pip.walk(to: behind) {}
+        valkyrie.walk(to: first) { [weak self] in
+            guard let self, !self.hasLeftScene else { return }
+            self.state.audio.play("footstep")
+            self.followBridge(Array(points.dropFirst()), completion: completion)
+        }
+    }
+
+    private func crossBridge() {
+        guard repairedBridge, !crossingBridge, !hasLeftScene else { return }
+        clearDrag(); engaged = false; showQuestion(nil)
+        crossingBridge = true
+        instruction.text = "The bridge is repaired! Valkyrie and Pip can cross to the next work order."
+        followBridge(bridgePath) { [weak self] in
+            guard let self else { return }
+            self.crossingBridge = false
+            self.instruction.text = "We reached Pip's work-order landing! Tap the arrow to bring the next order back."
+        }
+    }
+
+    private func returnAcrossBridge(advance: Bool) {
+        guard repairedBridge, !crossingBridge, !hasLeftScene else { return }
+        crossingBridge = true
+        instruction.text = "Pip is bringing the work order back across the bridge."
+        followBridge(Array(bridgePath.reversed())) { [weak self] in
+            guard let self else { return }
+            self.crossingBridge = false
+            if advance {
+                self.state.advanceEncounter(); self.openOrder()
+            } else {
+                self.instruction.text = "Back in the courtyard. You can explore or cross the repaired bridge again."
+            }
+        }
     }
 
     private func makeLever() -> SKNode {
@@ -166,6 +248,9 @@ import LearningCore
             lever?.run(.sequence([.rotate(toAngle: -0.18, duration: 0.16), .rotate(toAngle: 0, duration: 0.22)]), withKey: "pull")
         }
         wasPowered = powered
+        bridgeRouteNode.isHidden = !repairedBridge
+        // Keep walking actors in front of the completed deck and its equation.
+        if repairedBridge { mechanic?.zPosition = 600 }
         updateChallengeGateAppearance()
     }
 
@@ -198,7 +283,8 @@ import LearningCore
     }
 
     private var completionMessage: String {
-        state.workshop ? "You made it work! Try another station, or choose a new order."
+        if repairedBridge { return "The gaps are filled! Tap the bridge or arrow to cross with Pip." }
+        return state.workshop ? "You made it work! Try another station, or choose a new order."
             : "The castle route has power! Explore, or choose another work order."
     }
 
@@ -235,7 +321,9 @@ import LearningCore
             )
             instruction.text = state.previewVisible
                 ? "Look closely. Pip will hide the lights in a moment."
-                : "Use the machine, then pull Pip's lever to check your idea."
+                : (runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
+                    ? "Move spare planks into the gaps. Tap a loose plank to take it back. Pull Pip's lever to check."
+                    : "Use the machine, then pull Pip's lever to check your idea.")
         } else {
             showQuestion(nil)
         }
@@ -249,7 +337,7 @@ import LearningCore
         guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch; startPoint = touch.location(in: self); didDrag = false
         if canManipulate(), let name = targetName(at: startPoint),
-           ["supply", "cartCrystal", "bondSupply", "bondToken", "tenFrameSupply", "tenFrameFilled"].contains(name) {
+           ["supply", "cartCrystal", "bondSupply", "bondToken", "tenFrameSupply", "tenFrameFilled", "missingSupply", "missingPlank"].contains(name) {
             dragOrigin = name
         }
     }
@@ -261,7 +349,9 @@ import LearningCore
         didDrag = true
         guard dragOrigin != nil else { return }
         if ghost == nil {
-            ghost = CrystalCartMechanic.crystal(); ghost?.zPosition = 1900
+            ghost = dragOrigin == "missingSupply" || dragOrigin == "missingPlank"
+                ? MissingNumberBridgeMechanic.plank() : CrystalCartMechanic.crystal()
+            ghost?.zPosition = 1900
             if let ghost { addChild(ghost) }
         }
         ghost?.position = point
@@ -282,11 +372,29 @@ import LearningCore
     // Shared by native touches and hosted interaction tests.
     func handleTap(at point: CGPoint) {
         let target = targetName(at: point)
+        if crossingBridge {
+            if target == "home" {
+                valkyrie.cancelTravel(); pip.cancelTravel(); crossingBridge = false
+                state.travel(to: .storyTree)
+            }
+            return
+        }
+        if repairedBridge, ["missingFixed", "missingPlank", "missingSlot", "missingSupply",
+                            "missingBridge", "missingAnswer", "missingPlus", "missingMinus", "bridgeRoute"].contains(target ?? "") {
+            if valkyrie.position.y > 240 { returnAcrossBridge(advance: false) }
+            else { crossBridge() }
+            return
+        }
+        // An elevated destination can only be left along the repaired path.
+        if repairedBridge, valkyrie.position.y > 240, target != "home", target != "next" {
+            returnAcrossBridge(advance: false)
+            return
+        }
         switch target {
         case "home": state.travel(to: .storyTree)
-        case "supply", "bondSupply", "bondSelected", "tenFrameSupply", "tenFrameCell", "missingPlus":
+        case "supply", "bondSupply", "bondSelected", "tenFrameSupply", "tenFrameCell", "missingPlus", "missingSupply", "missingSlot":
             manipulate { self.state.addCrystal() }
-        case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus":
+        case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus", "missingPlank":
             manipulate { self.state.removeCrystal() }
         case "scaleLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight": manipulate { self.state.chooseComparison(.right) }
@@ -303,6 +411,11 @@ import LearningCore
                 self.instruction.text = "Pip's gears hum! Explore or choose a new work order."
             }
         case "next":
+            if repairedBridge {
+                if isNear(bridgePath.last!, radius: 55) { returnAcrossBridge(advance: true) }
+                else { crossBridge() }
+                return
+            }
             guard state.runtime == nil || state.runtime?.completed == true || state.workshop else {
                 instruction.text = "Finish Pip's work order first. You can explore and come back."
                 return
@@ -315,7 +428,7 @@ import LearningCore
         case "workshop4": workshop(4)
         case "challengeGate":
             openChallengeGate()
-        case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "scaleBeam",
+        case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
             engageMachine()
         default:
@@ -328,7 +441,8 @@ import LearningCore
         action(); refresh(); valkyrie.pose(.interact); state.audio.play("crystal")
     }
 
-    private func drop(origin: String, at point: CGPoint) {
+    func drop(origin: String, at point: CGPoint) {
+        guard canManipulate() else { return }
         guard let mechanic else { return }
         let local = mechanic.convert(point, from: self)
         var changed = false
@@ -345,6 +459,10 @@ import LearningCore
             if CGRect(x: -160, y: -62, width: 320, height: 128).contains(local) { state.addCrystal(); changed = true }
         case "tenFrameFilled":
             if CGRect(x: -320, y: -50, width: 100, height: 100).contains(local) { state.removeCrystal(); changed = true }
+        case "missingSupply":
+            if let bridge = mechanic as? MissingNumberBridgeMechanic, bridge.receives(local) { state.addCrystal(); changed = true }
+        case "missingPlank":
+            if let bridge = mechanic as? MissingNumberBridgeMechanic, bridge.returnsToSupply(local) { state.removeCrystal(); changed = true }
         default: break
         }
         if changed { refresh(); valkyrie.pose(.interact); state.audio.play("crystal") }
@@ -454,7 +572,14 @@ import LearningCore
     }
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
+        let height = max(0, min(1, (valkyrie.position.y - 240) / 160))
+        valkyrie.setScale(1 - height * 0.12)
+        let pipHeight = max(0, min(1, (pip.position.y - 240) / 160))
+        pip.setScale(1 - pipHeight * 0.12)
         if engaged, lastPreviewVisible != state.previewVisible { refresh() }
     }
-    override func willLeave() { clearDrag(); super.willLeave() }
+    override func willLeave() {
+        hasLeftScene = true; crossingBridge = false
+        clearDrag(); super.willLeave()
+    }
 }

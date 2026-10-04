@@ -108,6 +108,42 @@ import LearningCore
         castle.handleTap(at: CGPoint(x: 1120, y: 250))
         try await capture(castle, in: view, name: "Math-Castle-native-powered")
         castle.willLeave()
+        XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.missingNumberBridge[0]))
+        let bridge = MathCastleScene(state: state); bridge.reducedMotion = true
+        view.presentScene(bridge)
+        bridge.valkyrie.position = CGPoint(x: 490, y: 175)
+        bridge.handleTap(at: CGPoint(x: 965, y: 330))
+        try await capture(bridge, in: view, name: "Math-Castle-native-bridge-gaps")
+        for _ in 0..<4 { bridge.drop(origin: "missingSupply", at: CGPoint(x: 884, y: 220)) }
+        bridge.handleTap(at: CGPoint(x: 1120, y: 250))
+        XCTAssertTrue(state.runtime?.completed == true)
+        try await capture(bridge, in: view, name: "Math-Castle-native-bridge-repaired")
+        let repairedID = state.runtime?.encounter.id
+        bridge.handleTap(at: CGPoint(x: 1110, y: 430))
+        XCTAssertTrue(bridge.crossingBridge)
+        bridge.handleTap(at: CGPoint(x: 1110, y: 430)) // Ignore repeated taps in transit.
+        XCTAssertEqual(state.runtime?.encounter.id, repairedID)
+        try await waitForBridgeTravel(bridge)
+        XCTAssertTrue(bridge.isNear(CGPoint(x: 1110, y: 400), radius: 55))
+        XCTAssertGreaterThan(bridge.pip.position.x, 1000)
+        XCTAssertGreaterThan(bridge.pip.position.y, 240)
+        XCTAssertEqual(state.runtime?.encounter.id, repairedID, "Arrival must preserve the solved bridge")
+        try await capture(bridge, in: view, name: "Math-Castle-native-bridge-landing")
+        bridge.handleTap(at: CGPoint(x: 1110, y: 430))
+        XCTAssertTrue(bridge.crossingBridge)
+        XCTAssertEqual(state.runtime?.encounter.id, repairedID, "Keep the deck beneath the actors during the return")
+        try await waitForBridgeTravel(bridge)
+        XCTAssertTrue(bridge.isNear(CGPoint(x: 490, y: 175)))
+        XCTAssertNotEqual(state.runtime?.encounter.id, repairedID)
+        bridge.willLeave()
+    }
+
+    private func waitForBridgeTravel(_ scene: MathCastleScene) async throws {
+        let deadline = Date().addingTimeInterval(10)
+        while scene.crossingBridge && Date() < deadline {
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        XCTAssertFalse(scene.crossingBridge, "Bridge route did not finish within ten seconds")
     }
 
     private func capture(_ scene: AdventureScene, in view: SKView, name: String) async throws {
