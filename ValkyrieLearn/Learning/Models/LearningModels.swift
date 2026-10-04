@@ -112,8 +112,21 @@ public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
     public var skills: [String: SkillProgress] = [:]
     public var recentActivities: [ActivityRecord] = []
     public var usedFingerprints: Set<String> = []
+    /// Provisional readiness inferred from hidden placement. This unlocks prerequisite-safe
+    /// content without claiming the skill is mastered in the parent-facing progress model.
+    public var placementReadySkillIDs: Set<SkillID>?
     public init(id: UUID = UUID()) { self.id = id }
     public func progress(for skill: SkillID) -> SkillProgress { skills[skill.rawValue] ?? SkillProgress() }
+    public func readiness(for skill: SkillID) -> Int {
+        let observed = progress(for: skill).state.readiness
+        let placement = placementReadySkillIDs?.contains(skill) == true ? SkillState.developing.readiness : 0
+        return max(observed, placement)
+    }
+    public mutating func markPlacementReady(_ skillIDs: Set<SkillID>) {
+        var ready = placementReadySkillIDs ?? []
+        ready.formUnion(skillIDs)
+        placementReadySkillIDs = ready
+    }
     public mutating func begin(_ encounter: LearningEncounter, at date: Date) {
         usedFingerprints.insert(encounter.fingerprint)
         recordActivity(ActivityRecord(fingerprint: encounter.fingerprint, mechanicID: encounter.mechanicID,
