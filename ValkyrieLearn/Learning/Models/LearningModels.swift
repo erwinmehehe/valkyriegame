@@ -32,6 +32,10 @@ public enum Representation: String, Codable, CaseIterable, Sendable {
     case concrete, pictorial, symbolic, story, reasoning
 }
 public enum Outcome: String, Codable, Sendable { case correct, incorrect }
+
+public enum StoryRewardID: String, Codable, CaseIterable, Hashable, Sendable {
+    case moonLantern
+}
 public enum CartOperation: String, Codable, CaseIterable, Sendable {
     case counting, quantityMatching, addition, subtraction, numberBond, missingAddend, comparison, equalGroups
 }
@@ -115,6 +119,10 @@ public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
     /// Provisional readiness inferred from hidden placement. This unlocks prerequisite-safe
     /// content without claiming the skill is mastered in the parent-facing progress model.
     public var placementReadySkillIDs: Set<SkillID>?
+    /// Optional for backward-compatible decoding of profiles saved before Story Tree rewards.
+    public var storyRewardIDs: Set<StoryRewardID>?
+    /// Reward-specific placement slots so earned objects can be moved around Story Tree.
+    public var storyRewardPlacements: [String: Int]?
     public init(id: UUID = UUID()) { self.id = id }
     public func progress(for skill: SkillID) -> SkillProgress { skills[skill.rawValue] ?? SkillProgress() }
     public func readiness(for skill: SkillID) -> Int {
@@ -126,6 +134,34 @@ public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
         var ready = placementReadySkillIDs ?? []
         ready.formUnion(skillIDs)
         placementReadySkillIDs = ready
+    }
+
+    public func hasStoryReward(_ reward: StoryRewardID) -> Bool {
+        storyRewardIDs?.contains(reward) == true
+    }
+
+    @discardableResult
+    public mutating func unlockStoryReward(_ reward: StoryRewardID) -> Bool {
+        var rewards = storyRewardIDs ?? []
+        let inserted = rewards.insert(reward).inserted
+        storyRewardIDs = rewards
+        return inserted
+    }
+
+    public func storyRewardPlacement(_ reward: StoryRewardID) -> Int {
+        max(0, storyRewardPlacements?[reward.rawValue] ?? 0)
+    }
+
+    @discardableResult
+    public mutating func cycleStoryRewardPlacement(_ reward: StoryRewardID, slotCount: Int) -> Int {
+        guard hasStoryReward(reward), slotCount > 0 else {
+            return storyRewardPlacement(reward)
+        }
+        var placements = storyRewardPlacements ?? [:]
+        let next = (max(0, placements[reward.rawValue] ?? 0) + 1) % slotCount
+        placements[reward.rawValue] = next
+        storyRewardPlacements = placements
+        return next
     }
     public mutating func begin(_ encounter: LearningEncounter, at date: Date) {
         usedFingerprints.insert(encounter.fingerprint)
