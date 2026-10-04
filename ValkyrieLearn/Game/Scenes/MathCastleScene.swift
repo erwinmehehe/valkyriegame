@@ -90,7 +90,7 @@ import LearningCore
 
         for index in 0..<ChallengeGateCatalog.challengeCount {
             let rune = SKShapeNode(circleOfRadius: 10)
-            rune.position = CGPoint(x: 1090 + index * 35, y: 505)
+            rune.position = CGPoint(x: 1090 + CGFloat(index) * 35, y: 505)
             rune.zPosition = 40
             rune.fillColor = .darkGray
             rune.strokeColor = UIColor(red: 1, green: 0.78, blue: 0.35, alpha: 0.9)
