@@ -12,6 +12,9 @@ v3.31 HTML and committed as native resources:
 - `V331/V331_StoryTree.jpg`
 - `V331/V331_MathCastle.jpg`
 - `V331/V331_Valkyrie_Idle.png`
+- `V331/V331_Pip.png`
+- `V331/V331_Cart.png`
+- `V331/V331_Crystal.png`
 
 These are source-derived reference assets, not newly generated replacement art.
 
@@ -26,12 +29,16 @@ Current effect:
   adaptive mechanics.
 - Valkyrie uses her v3.31 character art while retaining native tap-to-move,
   depth sorting, interaction, celebration, and reduced-motion behavior.
+- Pip uses his v3.31 companion art while retaining native follow/scaffolding behavior.
+- Crystal Cart uses the original v3.31 cart and crystal language.
+- Balance Scale, Number Bond Machine, Ten Frame Gate, and Missing Number Bridge
+  now share the same wood / gold / violet / starlight visual language, and use
+  source-derived v3.31 crystal art for manipulatives where appropriate.
 - Existing gameplay and learning logic is unchanged.
 
-Pip and the reusable Math mechanisms still use engineering/fallback art in this
-first migration pass. Their interaction logic is already separated from presentation,
-so they can be reskinned without changing mastery, placement, session planning,
-persistence, or evidence.
+The reusable mechanics remain native SpriteKit objects with the same hit targets,
+model bindings, evidence submission, placement behavior, and persistence. This is
+a presentation migration, not a new learning implementation.
 
 ## Production atlas path
 
@@ -56,11 +63,12 @@ readability, anchor points, hit clearance, and child readability on the intended
 
 ## Next visual migration passes
 
-1. Import Pip's v3.31 visual and companion poses.
-2. Skin Crystal Cart, Balance Scale, Number Bond Machine, Ten Frame Gate, and
-   Missing Number Bridge using the v3.31 props/machinery language.
-3. Restore stronger foreground/midground parallax and scene-specific environmental
+1. Add proper Valkyrie and Pip pose/animation atlases while preserving the current
+   source-art fallback.
+2. Restore stronger foreground/midground parallax and scene-specific environmental
    reactions while preserving walkable paths and touch targets.
+3. Push the Math Castle mechanics further into the environment: bridge repair,
+   gate activation, cart travel and machine reactions should visibly change the room.
 4. Use the original Word Garden physical-progression quality as the benchmark before
    expanding Word Garden natively.
 5. Import Lumi, Milo, and Tiko only when their production worlds enter scope.
