@@ -234,6 +234,16 @@ import LearningCore
         name = MathMechanicID.tenFrameGate
         zPosition = 750
 
+        let brass = UIColor(red: 0.69, green: 0.46, blue: 0.21, alpha: 1)
+        for x in [-183,183] {
+            let pillar = ArtSystem.box(CGSize(width: 22, height: 205), color: brass, radius: 5)
+            pillar.position = CGPoint(x: x, y: -10); addChild(pillar)
+        }
+        for y in [-118,98] {
+            let crossbar = ArtSystem.box(CGSize(width: 400, height: 24), color: brass, radius: 5)
+            crossbar.position.y = CGFloat(y); addChild(crossbar)
+        }
+
         for index in 0..<10 {
             let cell = ArtSystem.box(
                 CGSize(width: 62, height: 62),

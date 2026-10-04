@@ -20,6 +20,9 @@ native scenes are imported. The math backdrop is the upper-right quadrant of
 1280×720 high-quality JPEGs (quality 92). Transparent
 actors and props remain PNGs. Corner foreground crops use feathered alpha and are separate occluders.
 Cart/crystal source props retain alpha; their hit areas and quantities are native.
+A feathered crop of the painted castle floor supplies the live foreground courtyard.
+Story Tree movement follows explicit waypoints along the illustrated stairs/bridge;
+taps in the chasm are ignored and characters scale with depth along that route.
 
 Valkyrie's supplied idle, two walk/contact and crouching reach poses share a
 370×480 atlas canvas, source scale and bottom foot anchor. Celebration/reaction use

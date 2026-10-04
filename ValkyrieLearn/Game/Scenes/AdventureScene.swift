@@ -5,7 +5,7 @@ import SpriteKit
     let valkyrie = ValkyrieNode()
     let pip = PipNode()
     let instruction = ArtSystem.label("", size: 27)
-    let walkable = CGRect(x: 85, y: 130, width: 1110, height: 110)
+    var walkable: CGRect { CGRect(x: 85, y: 130, width: 1110, height: 110) }
     var environment: ArtSystem.Environment { .castle }
     var worldTitle: String { "Math Castle" }
     private var leaving = false
@@ -53,6 +53,7 @@ import SpriteKit
         // A quiet edge vignette preserves text contrast without a floating panel.
         for (height, y) in [(CGFloat(62), CGFloat(680)), (CGFloat(96), CGFloat(42))] {
             let shade = ArtSystem.box(CGSize(width: 1280, height: height), color: .black.withAlphaComponent(0.32), radius: 0)
+            shade.strokeColor = .clear
             shade.position = CGPoint(x: 640, y: y); shade.zPosition = 1990; addChild(shade)
         }
     }

@@ -24,6 +24,13 @@
         720
       ]
     },
+    "AdventureArt.xcassets/CastleCourtyard.imageset/art.png": {
+      "sha256": "ea13883a47d664ec41a2eec16887cd56c39264bcafce26b6b07daf8026ff25ba",
+      "size": [
+        1280,
+        250
+      ]
+    },
     "Valkyrie.atlas/idle_01.png": {
       "sha256": "9c23d5bb34259368ca095ed3fc3a4d674b7197c1f1f753d09129e81b45c3ba2f",
       "size": [

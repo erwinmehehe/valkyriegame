@@ -43,6 +43,15 @@ overworld = source('adventure-art/overworld.png')
 asset(overworld.resize((1280, 720), Image.Resampling.LANCZOS), 'StarlightIsles', 'jpg')
 worlds = source('adventure-art/worlds.png')
 asset(worlds.crop((838, 0, 1672, 469)).resize((1280, 720), Image.Resampling.LANCZOS), 'MathCastle', 'jpg')
+# Extend the painted foreground courtyard into a usable native stage, with a
+# feathered upper edge. This replaces flat gray platforms over the chasm.
+math = worlds.crop((838, 0, 1672, 469)).resize((1280,720), Image.Resampling.LANCZOS)
+floor = math.crop((150,600,1130,720)).resize((1280,250), Image.Resampling.LANCZOS)
+mask = Image.new('L',floor.size)
+mask.putdata([round(255*min(1,y/70)) for y in range(250) for x in range(1280)])
+floor.putalpha(mask)
+asset(floor,'CastleCourtyard')
+
 
 # Matched canvases and one shared scale retain silhouette size and foot position.
 poses = source('adventure-art/valkyrie-poses.png')

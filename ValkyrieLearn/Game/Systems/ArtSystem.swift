@@ -54,7 +54,7 @@ import SpriteKit
     }
     static func box(_ size: CGSize, color: UIColor, radius: CGFloat = 12) -> SKShapeNode {
         let node = SKShapeNode(rectOf: size, cornerRadius: radius)
-        node.fillColor = color; node.strokeColor = color.withAlphaComponent(0.8)
+        node.fillColor = color; node.strokeColor = color.withAlphaComponent(color.cgColor.alpha * 0.8)
         return node
     }
 }

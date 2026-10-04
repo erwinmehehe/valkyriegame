@@ -59,6 +59,23 @@ import LearningCore
         scene.willLeave()
     }
 
+    func testStoryTreeIgnoresTheChasmAndRoutesCastleEntryThroughThePaintedPath() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = StoryTreeScene(state: state); scene.didMove(to: SKView())
+        XCTAssertFalse(scene.isOnPath(CGPoint(x: 1000, y: 200)))
+        scene.handleTap(at: CGPoint(x: 1000, y: 200))
+        XCTAssertNil(scene.valkyrie.action(forKey: "travel"))
+        XCTAssertTrue(scene.isOnPath(CGPoint(x: 285, y: 235)))
+        scene.handleTap(at: CGPoint(x: 795, y: 445))
+        XCTAssertNotNil(scene.valkyrie.action(forKey: "travel"))
+        XCTAssertEqual(state.world, .storyTree)
+        scene.valkyrie.cancelTravel(); scene.pip.cancelTravel()
+        scene.valkyrie.position = CGPoint(x: 795, y: 450)
+        scene.handleTap(at: CGPoint(x: 795, y: 445))
+        XCTAssertEqual(state.world, .mathCastle)
+        scene.willLeave()
+    }
+
     func testRenderedNativeSceneReviewAttachments() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
@@ -70,6 +87,11 @@ import LearningCore
         let home = StoryTreeScene(state: state); home.reducedMotion = true
         view.presentScene(home)
         try await capture(home, in: view, name: "Story-Tree-native")
+        home.handleTap(at: CGPoint(x: 795, y: 445))
+        // Exercise the real SpriteKit waypoint actions before the arrival capture.
+        try await Task.sleep(nanoseconds: 3_000_000_000)
+        XCTAssertTrue(home.isNear(CGPoint(x: 795, y: 450)))
+        try await capture(home, in: view, name: "Story-Tree-native-castle-arrival")
         home.willLeave()
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true

@@ -31,14 +31,9 @@ import LearningCore
     override func buildWorld() {
         super.buildWorld()
         _ = worldControl("‹", name: "home", at: CGPoint(x: 52, y: 669))
-        // Native stonework connects the foreground landing to the workbench.
-        let dais = SKShapeNode(ellipseOf: CGSize(width: 640, height: 115))
-        dais.fillColor = .init(red: 0.4, green: 0.38, blue: 0.43, alpha: 0.88)
-        dais.strokeColor = .init(red: 0.89, green: 0.68, blue: 0.35, alpha: 1); dais.lineWidth = 5
-        dais.position = CGPoint(x: 830, y: 178); dais.zPosition = 5; addChild(dais)
-        for index in 0..<6 {
-            let stone = ArtSystem.box(CGSize(width: 85, height: 20), color: .init(red: 0.6, green: 0.57, blue: 0.57, alpha: 0.8), radius: 4)
-            stone.position = CGPoint(x: 240 + index * 65, y: 150 + index * 6); stone.zPosition = 6; addChild(stone)
+        // A source-textured courtyard supports the live actors and machinery.
+        if let floor = ArtSystem.sprite("CastleCourtyard", size: CGSize(width: 1280, height: 250)) {
+            floor.position = CGPoint(x: 640, y: 125); floor.zPosition = -80; addChild(floor)
         }
         // The five workshop seals are mounted on one physical brass rack.
         let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
@@ -301,6 +296,7 @@ import LearningCore
         }
         if isNear(station) {
             valkyrie.face(toward: CGPoint(x: 820, y: 310))
+            pip.face(toward: CGPoint(x: 820, y: 310))
             state.beginInteraction()
             engaged = true; refresh()
         } else {
