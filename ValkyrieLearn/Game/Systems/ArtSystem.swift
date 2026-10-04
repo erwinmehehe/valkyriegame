@@ -33,11 +33,17 @@ import UIKit
     }
 
     static func v331CharacterTexture(character: String, pose: Pose) -> SKTexture? {
-        // Phase 1 imports Valkyrie's source art as a native texture rather than
-        // decoding the old HTML/base64 asset system at runtime. A future atlas pass
-        // can add pose frames without changing CharacterNode or learning logic.
-        guard character == "Valkyrie" else { return nil }
-        return sourceTexture(resource: "V331_Valkyrie_Idle", ext: "png")
+        // Phase 1 imports v3.31 source art as native textures rather than decoding
+        // the old HTML/base64 asset system at runtime. A future atlas pass can add
+        // full pose frames without changing CharacterNode or learning logic.
+        switch character {
+        case "Valkyrie":
+            return sourceTexture(resource: "V331_Valkyrie_Idle", ext: "png")
+        case "Pip":
+            return sourceTexture(resource: "V331_Pip", ext: "png")
+        default:
+            return nil
+        }
     }
 
     static func backdropNode(_ backdrop: Backdrop, size: CGSize) -> SKSpriteNode? {
