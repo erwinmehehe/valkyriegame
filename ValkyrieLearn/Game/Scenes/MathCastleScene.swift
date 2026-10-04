@@ -377,6 +377,20 @@ import LearningCore
         ]), withKey: "gentleRetry")
     }
 
+    private func playManipulationReaction() {
+        guard !reducedMotion else { return }
+
+        for (index, gear) in environmentGears.enumerated() {
+            let angle: CGFloat = index.isMultiple(of: 2) ? 0.16 : -0.13
+            gear.run(.rotate(byAngle: angle, duration: 0.16), withKey: "inputTick")
+        }
+
+        powerLight?.run(.sequence([
+            .fadeAlpha(to: 0.55, duration: 0.06),
+            .fadeAlpha(to: 1, duration: 0.14)
+        ]), withKey: "inputPulse")
+    }
+
     private func updateChallengeGateAppearance() {
         let litCount: Int
         switch state.challengeGateStatus {
@@ -610,7 +624,11 @@ import LearningCore
 
     private func manipulate(_ action: () -> Void) {
         guard canManipulate() else { engageMachine(); return }
-        action(); refresh(); valkyrie.pose(.interact); state.audio.play("crystal")
+        action()
+        refresh()
+        playManipulationReaction()
+        valkyrie.pose(.interact)
+        state.audio.play("crystal")
     }
 
     private func drop(origin: String, at point: CGPoint) {
@@ -632,7 +650,12 @@ import LearningCore
             if CGRect(x: -320, y: -50, width: 100, height: 100).contains(local) { state.removeCrystal(); changed = true }
         default: break
         }
-        if changed { refresh(); valkyrie.pose(.interact); state.audio.play("crystal") }
+        if changed {
+            refresh()
+            playManipulationReaction()
+            valkyrie.pose(.interact)
+            state.audio.play("crystal")
+        }
     }
 
     private func submit() {
