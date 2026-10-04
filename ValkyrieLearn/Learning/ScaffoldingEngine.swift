@@ -4,6 +4,9 @@ public struct Scaffold: Equatable {
     public let support: SupportLevel
     public let cue: String
     public let demonstratesStep: Bool
+    public init(support: SupportLevel, cue: String, demonstratesStep: Bool) {
+        self.support = support; self.cue = cue; self.demonstratesStep = demonstratesStep
+    }
 }
 public struct ScaffoldingEngine {
     public init() {}

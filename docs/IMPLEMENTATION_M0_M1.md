@@ -25,7 +25,7 @@ There is no hidden placement, five-mechanic suite, Challenge Gate, reward system
 - `ValkyrieLearn/Parent/AdventureSettingsView.swift`: settings only, not a parent dashboard.
 - `ValkyrieLearn/Persistence/LearningStore.swift`: explicit V1 SwiftData schema/migration boundary, profile/evidence, active cart, world and settings.
 - `ValkyrieLearn/Resources/`: landscape Info.plist, four temporary SFX WAVs and atlas naming guide.
-- `ValkyrieLearn/Tests/`: 15 plain-Swift XCTest cases and 4 Apple-platform persistence/AppState cases.
+- `ValkyrieLearn/Tests/`: 15 plain-Swift XCTest cases and 5 Apple-platform persistence/AppState cases.
 - `scripts/`: deterministic checked-in Xcode project generator and static integrity validator.
 - `.github/workflows/native.yml`: learning-core and macOS iPad Simulator build/test jobs.
 - `.gitignore` and this implementation report.
@@ -69,7 +69,7 @@ The 60/20/15/5 session policy and full placement system remain future work.
 8. Choose a fresh eligible order, wind Pip's gear as a non-academic interaction, or return home.
 9. After completing an order, the three workshop stations expose the exact counting 7,
    addition 4+3 and missing-addend 6-to-10 examples as **unscored** sandbox practice. They
-   never award evidence for locked skills. Active scored work isn't silently discarded.
+   never award evidence for locked skills. Workshop use still records activity history and obeys exact-repeat/mechanic limits. Active scored work isn't silently discarded.
 10. Settings, profile/evidence, in-progress cart/support and last world are saved locally.
 
 Valkyrie is ~205 points tall in a 1280×720 world; visible movement, interaction, reaction and celebration

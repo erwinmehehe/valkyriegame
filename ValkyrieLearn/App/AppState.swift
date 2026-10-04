@@ -41,10 +41,16 @@ import LearningCore
         }
         return selection
     }
-    func startWorkshop(_ encounter: LearningEncounter) {
+    @discardableResult func startWorkshop(_ encounter: LearningEncounter) -> Bool {
         // Unscored sandbox: no mastery, evidence or prerequisite bypass.
-        do { cart = try CrystalCartModel(encounter: encounter); workshop = true; persist() }
-        catch { saveError = "This workshop example could not be opened." }
+        guard cart == nil || cart?.completed == true || workshop else { return false }
+        let engagement = EngagementDirector()
+        guard engagement.allows(encounter, profile: profile),
+              !engagement.needsWorldChange(profile: profile, now: Date()) else { return false }
+        do {
+            cart = try CrystalCartModel(encounter: encounter); workshop = true
+            profile.begin(encounter, at: Date()); persist(); return true
+        } catch { saveError = "This workshop example could not be opened."; return false }
     }
     func addCrystal() { guard cart != nil else { return }; _ = cart?.add(); persist() }
     func removeCrystal() { guard cart != nil else { return }; _ = cart?.remove(); persist() }

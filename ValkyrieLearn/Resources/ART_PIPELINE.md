@@ -3,7 +3,9 @@
 This milestone intentionally uses labeled procedural placeholder characters and world shapes.
 Do not mistake these for the approved production art direction.
 
-Add Valkyrie.atlas and Pip.atlas to Resources. Frames use idle_01, walk_01,
+Add Valkyrie.atlas and Pip.atlas to Resources, then run
+`python3 scripts/generate_xcode_project.py` to include them in the resource build phase.
+Asset catalogs in that folder are also discovered. Frames use idle_01, walk_01,
 interact_01, celebrate_01, react_01 and zero-padded successors. ArtSystem resolves
 those atlases; actors, movement, interactions and learning remain unchanged.
 At 1280×720, Valkyrie's placeholder height is 205 points, with world-space feet

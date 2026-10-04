@@ -49,6 +49,21 @@ import LearningCore
         XCTAssertEqual(restored.cart?.quantity, 7)
         XCTAssertEqual(restored.cart?.support, .demonstration)
     }
+    func testWorkshopTracksRepetitionWithoutMasteryAndCannotDiscardScoredWork() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        let example = MathFoundation.workshopExamples[0]
+        XCTAssertTrue(state.startWorkshop(example))
+        for _ in 0..<7 { state.addCrystal() }; _ = state.submit()
+        XCTAssertFalse(state.startWorkshop(example))
+        XCTAssertEqual(state.profile.progress(for: example.skillID).state, .new)
+        XCTAssertTrue(state.profile.usedFingerprints.contains(example.fingerprint))
+        let scored = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        _ = scored.prepareNext()
+        let before = scored.cart?.encounter
+        XCTAssertFalse(scored.startWorkshop(MathFoundation.workshopExamples[1]))
+        XCTAssertEqual(scored.cart?.encounter, before)
+    }
     func testUnsupportedProfileDoesNotResetProgress() async throws {
         let container = try LearningStore.container(inMemory: true)
         let store = try LearningStore(context: ModelContext(container))

@@ -134,7 +134,9 @@ import LearningCore
         if let cart = state.cart, !cart.completed, !state.workshop {
             instruction.text = "Finish Pip's work order before opening his workshop."; return
         }
-        state.startWorkshop(MathFoundation.workshopExamples[index])
+        guard state.startWorkshop(MathFoundation.workshopExamples[index]) else {
+            instruction.text = "Choose a fresh example, or wind Pip's gear for a change of pace."; return
+        }
         engaged = false; refresh(); instruction.text = "Unscored workshop. Walk to the cart to try this example."
     }
     private func engageCart() {

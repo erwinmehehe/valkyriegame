@@ -11,7 +11,7 @@ text = project.read_text()
 assert '(,)' not in text, 'Malformed empty OpenStep array'
 ids = set(re.findall(r'^([A-F0-9]{24}) = ',text,re.M))
 for reference in re.findall(r'"([A-F0-9]{24})"',text): assert reference in ids, reference
-for path in re.findall(r'path = "(ValkyrieLearn/[^"\n]+)"',text): assert (ROOT/path).is_file(), path
+for path in re.findall(r'path = "(ValkyrieLearn/[^"\n]+)"',text): assert (ROOT/path).exists(), path
 plist = plistlib.loads((ROOT/'ValkyrieLearn/Resources/Info.plist').read_bytes())
 assert plist['UIRequiresFullScreen']
 assert set(plist['UISupportedInterfaceOrientations~ipad']) == {'UIInterfaceOrientationLandscapeLeft','UIInterfaceOrientationLandscapeRight'}

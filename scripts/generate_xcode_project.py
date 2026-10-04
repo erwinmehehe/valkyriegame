@@ -21,11 +21,12 @@ def quote(value):
 app_files = sorted(p for folder in ['App','Game','Parent','Persistence'] for p in (ROOT/'ValkyrieLearn'/folder).rglob('*.swift'))
 core_tests = sorted((ROOT/'ValkyrieLearn/Tests/LearningCoreTests').glob('*.swift'))
 store_tests = sorted((ROOT/'ValkyrieLearn/Tests/PersistenceTests').glob('*.swift'))
-resources = sorted((ROOT/'ValkyrieLearn/Resources').glob('*.wav'))
+resource_root = ROOT/'ValkyrieLearn/Resources'
+resources = sorted(list(resource_root.glob('*.wav')) + list(resource_root.glob('*.atlas')) + list(resource_root.glob('*.xcassets')))
 file_refs = {}
 for p in app_files + core_tests + store_tests + resources:
     rel = str(p.relative_to(ROOT))
-    file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType='sourcecode.swift' if p.suffix=='.swift' else 'audio.wav', path=rel, sourceTree='<group>')
+    file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType={'.swift':'sourcecode.swift', '.wav':'audio.wav', '.atlas':'folder.skatlas', '.xcassets':'folder.assetcatalog'}[p.suffix], path=rel, sourceTree='<group>')
 # Include learning sources and curriculum for browsing; package owns their compilation.
 for p in sorted((ROOT/'ValkyrieLearn/Learning').rglob('*.swift')) + sorted((ROOT/'ValkyrieLearn/Curriculum').rglob('*.swift')):
     rel = str(p.relative_to(ROOT)); file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType='sourcecode.swift', path=rel, sourceTree='<group>')
