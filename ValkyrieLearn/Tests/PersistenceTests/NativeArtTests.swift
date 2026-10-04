@@ -54,8 +54,10 @@ import LearningCore
         for _ in 0..<target { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
         scene.handleTap(at: CGPoint(x: 1120, y: 250))
         XCTAssertTrue(state.runtime?.completed == true)
-        let portal = try XCTUnwrap(scene.childNode(withName: "lift") as? SKShapeNode)
-        XCTAssertEqual(portal.glowWidth, 18)
+        let powerLight = try XCTUnwrap(scene.childNode(withName: "castlePowerLight") as? SKShapeNode)
+        XCTAssertEqual(powerLight.glowWidth, 16)
+        let portal = try XCTUnwrap(scene.childNode(withName: "challengeGate") as? SKShapeNode)
+        XCTAssertEqual(portal.glowWidth, 4, "Ordinary work powers the castle route but must not fake Challenge Gate readiness.")
         scene.willLeave()
     }
 
@@ -71,6 +73,9 @@ import LearningCore
         XCTAssertEqual(state.world, .storyTree)
         scene.valkyrie.cancelTravel(); scene.pip.cancelTravel()
         scene.valkyrie.position = CGPoint(x: 795, y: 450)
+        scene.update(0)
+        let sign = try XCTUnwrap(scene.childNode(withName: "castle"))
+        XCTAssertLessThan(sign.zPosition, scene.valkyrie.zPosition)
         scene.handleTap(at: CGPoint(x: 795, y: 445))
         XCTAssertEqual(state.world, .mathCastle)
         scene.willLeave()
@@ -88,7 +93,7 @@ import LearningCore
         view.presentScene(home)
         try await capture(home, in: view, name: "Story-Tree-native")
         home.handleTap(at: CGPoint(x: 795, y: 445))
-        // Exercise the real SpriteKit waypoint actions before the arrival capture.
+        // Exercise the painted waypoint route before the arrival capture.
         try await Task.sleep(nanoseconds: 3_000_000_000)
         XCTAssertTrue(home.isNear(CGPoint(x: 795, y: 450)))
         try await capture(home, in: view, name: "Story-Tree-native-castle-arrival")
@@ -112,4 +117,27 @@ import LearningCore
         let attachment = XCTAttachment(image: UIImage(cgImage: texture.cgImage()))
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
+
+    func testMathQuestionRendersAboveManipulativeAndFeedbackStaysBelow() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let encounter = MathCastleEncounterCatalog.numberBondMachine[0]
+        XCTAssertTrue(state.startWorkshop(encounter))
+
+        let scene = MathCastleScene(state: state)
+        scene.didMove(to: SKView())
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 925, y: 280))
+
+        let prompt = try XCTUnwrap(scene.childNode(withName: "questionPrompt") as? SKLabelNode)
+        let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+
+        XCTAssertFalse(prompt.isHidden)
+        XCTAssertTrue(prompt.text?.contains(encounter.prompt) == true)
+        XCTAssertGreaterThan(prompt.position.y, 500)
+        XCTAssertLessThan(feedback.position.y, 100)
+        XCTAssertGreaterThan(prompt.position.y, feedback.position.y)
+
+        scene.willLeave()
+    }
+
 }

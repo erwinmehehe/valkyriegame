@@ -1,6 +1,6 @@
 import Foundation
 
-public enum MathActivityMode: String, Codable, Sendable { case placement, practice, workshop }
+public enum MathActivityMode: String, Codable, Sendable { case placement, practice, challenge, workshop }
 
 /// Durable learning-side execution state. A planned activity is reselected after
 /// each response so new evidence, review deadlines and engagement affect the next beat.
@@ -14,6 +14,8 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     public private(set) var laneCounts: [SessionLane: Int] = [:]
     public private(set) var activeLane: SessionLane?
     public private(set) var encountersSinceExploration = 0
+    /// Optional so saves written before Challenge Gate continue to decode.
+    public private(set) var challengeGateSession: ChallengeGateSession?
 
     public init(legacyCart: CrystalCartModel? = nil, workshop: Bool = false, continuingLearner: Bool = false) {
         placement = Self.placementEngine.begin()
@@ -26,7 +28,9 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     }
 
     // Only actually implemented mechanics enter the native placement adventure.
-    // Place-value, subtraction and error-analysis probes remain authored future content.
+    // Unsupported probes such as place value remain authored future content until
+    // their native manipulative exists; advanced reasoning is mapped onto the
+    // existing Number Bond machine instead of being hidden behind an age ceiling.
     public static var playableProbes: [PlacementProbe] {
         MathPlacement.probes.compactMap { probe in
             if probe.band == 1 {
@@ -35,6 +39,17 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                         mechanicID: MathMechanicID.tenFrameGate, representation: .pictorial,
                         operation: .quantityMatching, initialQuantity: 0, targetQuantity: 3,
                         prompt: "Watch Pip's lights. When they hide, make the same quantity.", context: "quickLook"))
+            }
+            if probe.band == 9 {
+                // Reuse the existing Number Bond machine as Pip's mistake machine so
+                // a strong learner can still demonstrate reasoning in Milestone A
+                // without pretending the not-yet-built place-value factory exists.
+                return PlacementProbe(id: probe.id, band: probe.band, encounter:
+                    LearningEncounter(id: probe.encounter.id, skillID: probe.skillID,
+                        mechanicID: MathMechanicID.numberBondMachine, representation: .reasoning,
+                        operation: .numberBond, initialQuantity: 5, targetQuantity: 8,
+                        prompt: "Pip says five plus three is nine. Fix his machine so the whole is eight.",
+                        context: "hiddenPlacement", challengeDepth: 2))
             }
             return (try? MathMechanicRuntime(encounter: probe.encounter)) != nil ? probe : nil
         }
@@ -53,6 +68,26 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     public mutating func prepareNext(profile: inout LearnerProfile, now: Date) throws -> EncounterSelection {
         // Returning home/relaunching must not silently advance a solved or unsolved object.
         if let runtime { return .encounter(runtime.encounter) }
+
+        if let session = challengeGateSession {
+            if session.isComplete {
+                _ = profile.unlockStoryReward(session.rewardID)
+                challengeGateSession = nil
+                return .explorationBreak
+            }
+            guard let encounterID = session.nextEncounterID,
+                  let encounter = ChallengeGateCatalog.encounter(id: encounterID),
+                  MathManipulativeSupport.supports(encounter) else {
+                return .needsContent(nil)
+            }
+            let graph = try MathSkills.graph()
+            guard graph.isEligible(encounter.skillID, for: profile) else {
+                return .needsContent(encounter.skillID)
+            }
+            try open(encounter, mode: .challenge, lane: nil, profile: &profile, now: now)
+            return .encounter(encounter)
+        }
+
         if explorationPending { return .explorationBreak }
         if EngagementDirector().needsWorldChange(profile: profile, now: now) || encountersSinceExploration >= 4 {
             explorationPending = true
@@ -97,6 +132,26 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         runtime = try MathMechanicRuntime(encounter: current.encounter, at: now)
         interactionStarted = true
     }
+    @discardableResult
+    public mutating func beginChallengeGate(
+        profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> Bool {
+        guard placementComplete,
+              runtime == nil,
+              !explorationPending,
+              challengeGateSession == nil,
+              !profile.hasStoryReward(ChallengeGateCatalog.reward),
+              let session = ChallengeGateCatalog.makeSession(for: profile, graph: graph) else {
+            return false
+        }
+        challengeGateSession = session
+        mode = .challenge
+        interactionStarted = false
+        activeLane = nil
+        return true
+    }
+
     @discardableResult public mutating func startWorkshop(_ encounter: LearningEncounter, profile: inout LearnerProfile, now: Date) throws -> Bool {
         guard runtime == nil || runtime?.completed == true || workshop,
               !explorationPending,
@@ -137,13 +192,34 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     public mutating func submit(profile: inout LearnerProfile, at now: Date) -> LearningEvidence? {
         guard interactionStarted, let evidence = runtime?.submit(at: now) else { return nil }
         if !workshop {
-            MasteryEngine().record(evidence, in: &profile)
+            // Hidden placement is diagnostic. It can establish provisional readiness
+            // but must never mutate observed mastery or masquerade as practice evidence.
+            if mode != .placement {
+                MasteryEngine().record(evidence, in: &profile)
+            }
             if mode == .placement, let probe = Self.playableProbes.first(where: { $0.encounter.id == evidence.encounterID }) {
                 // A first incorrect response is diagnostic; later scaffolded retries
                 // cannot erase it or cause a second jump for the same probe.
                 Self.placementEngine.record(evidence, for: probe, in: &placement)
+                if PlacementResponse(evidence) == .independentSuccess,
+                   let graph = try? MathSkills.graph() {
+                    profile.markPlacementReady(graph.prerequisiteClosure(including: probe.skillID))
+                }
                 placementComplete = placement.isComplete
             }
+
+            if mode == .challenge,
+               evidence.outcome == .correct,
+               var session = challengeGateSession,
+               session.markCompleted(evidence.encounterID) {
+                if session.isComplete {
+                    _ = profile.unlockStoryReward(session.rewardID)
+                    challengeGateSession = nil
+                } else {
+                    challengeGateSession = session
+                }
+            }
+
             if evidence.outcome == .correct {
                 encountersSinceExploration += 1
                 if let activeLane { laneCounts[activeLane, default: 0] += 1 }

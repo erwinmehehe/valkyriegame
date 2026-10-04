@@ -30,7 +30,25 @@ public struct SkillGraph: Sendable {
     public func isEligible(_ id: SkillID, for profile: LearnerProfile) -> Bool {
         guard let skill = skills[id] else { return false }
         return skill.prerequisites.allSatisfy {
-            profile.progress(for: $0).state.readiness >= skill.requiredReadiness.readiness
+            profile.readiness(for: $0) >= skill.requiredReadiness.readiness
         }
+    }
+
+    /// Returns a skill and every transitive prerequisite supporting it.
+    /// Hidden placement can mark this closure provisionally ready without
+    /// changing observed mastery states.
+    public func prerequisiteClosure(including id: SkillID) -> Set<SkillID> {
+        guard skills[id] != nil else { return [] }
+        var result: Set<SkillID> = []
+
+        func visit(_ current: SkillID) {
+            guard result.insert(current).inserted else { return }
+            for prerequisite in skills[current]?.prerequisites ?? [] {
+                visit(prerequisite)
+            }
+        }
+
+        visit(id)
+        return result
     }
 }

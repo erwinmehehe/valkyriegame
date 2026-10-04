@@ -688,4 +688,105 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(profile.recentActivities.count, 2, "Planning must not mutate live history")
     }
 
+
+    func testParentSummaryDoesNotTurnPlacementReadinessIntoMastery() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady([
+            MathSkills.quantity,
+            MathSkills.counting,
+            MathSkills.compare
+        ])
+
+        let summary = ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: epoch
+        )
+
+        XCTAssertEqual(summary.placementReadyCount, 3)
+        XCTAssertFalse(summary.strengths.contains { $0.id == MathSkills.compare })
+        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .new)
+    }
+
+    func testStoryRewardAndPlacementRoundTrip() throws {
+        var profile = LearnerProfile()
+        XCTAssertTrue(profile.unlockStoryReward(.moonLantern))
+        XCTAssertEqual(profile.cycleStoryRewardPlacement(.moonLantern, slotCount: 3), 1)
+
+        let data = try JSONEncoder().encode(profile)
+        let restored = try JSONDecoder().decode(LearnerProfile.self, from: data)
+
+        XCTAssertTrue(restored.hasStoryReward(.moonLantern))
+        XCTAssertEqual(restored.storyRewardPlacement(.moonLantern), 1)
+    }
+
+
+    func testParentSummaryDoesNotReportHiddenPlacementAsRecentLearning() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(MathAdventure.playableProbes.first)
+        profile.begin(probe.encounter, at: epoch)
+        profile.markPlacementReady([probe.skillID])
+
+        let summary = ParentMathSummaryBuilder.build(
+            profile: profile,
+            graph: graph,
+            now: epoch.addingTimeInterval(30)
+        )
+
+        XCTAssertNil(summary.recentSession)
+        XCTAssertFalse(summary.strengths.contains { $0.id == probe.skillID })
+        XCTAssertFalse(summary.developing.contains { $0.id == probe.skillID })
+    }
+
+
+    func testCrystalCartSupportsNativeSubtraction() throws {
+        let encounter = LearningEncounter(
+            id: "cart-subtract-test",
+            skillID: MathSkills.subtraction,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .concrete,
+            operation: .subtraction,
+            initialQuantity: 8,
+            targetQuantity: 5,
+            prompt: "Eight crystals are here. Take away three."
+        )
+
+        XCTAssertTrue(MathManipulativeSupport.supports(encounter))
+        var cart = try CrystalCartModel(encounter: encounter, at: epoch)
+        XCTAssertEqual(cart.quantity, 8)
+        XCTAssertTrue(cart.remove())
+        XCTAssertTrue(cart.remove())
+        XCTAssertTrue(cart.remove())
+        XCTAssertEqual(cart.quantity, 5)
+        XCTAssertEqual(cart.submit(at: epoch.addingTimeInterval(10))?.outcome, .correct)
+    }
+
+    func testPlayablePlacementIncludesSubtractionNowThatCartSupportsIt() {
+        XCTAssertTrue(
+            MathAdventure.playableProbes.contains {
+                $0.skillID == MathSkills.subtraction
+                    && $0.encounter.operation == .subtraction
+                    && $0.encounter.mechanicID == MathMechanicID.crystalCart
+            }
+        )
+    }
+
+
+    func testPlayablePlacementReachesReasoningWithoutFakingPlaceValue() {
+        let reasoning = MathAdventure.playableProbes.first {
+            $0.skillID == MathSkills.reasoning
+        }
+        XCTAssertEqual(reasoning?.band, 9)
+        XCTAssertEqual(reasoning?.encounter.mechanicID, MathMechanicID.numberBondMachine)
+        XCTAssertEqual(reasoning?.encounter.representation, .reasoning)
+        XCTAssertEqual(reasoning?.encounter.challengeDepth, 2)
+
+        XCTAssertFalse(
+            MathAdventure.playableProbes.contains { $0.skillID == MathSkills.placeValue },
+            "Do not claim a place-value diagnostic until the native place-value manipulative exists."
+        )
+    }
+
 }

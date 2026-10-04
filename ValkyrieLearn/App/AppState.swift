@@ -5,6 +5,7 @@ import LearningCore
 
 @MainActor final class AppState: ObservableObject {
     enum World: String { case storyTree, mathCastle }
+    enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
     @Published var reducedMotion: Bool { didSet { persist() } }
@@ -18,6 +19,19 @@ import LearningCore
     }
     var workshop: Bool { adventure.workshop }
     var isPlacement: Bool { adventure.isPlacement }
+    var placementComplete: Bool { adventure.placementComplete }
+    var challengeGateStatus: ChallengeGateStatus {
+        if profile.hasStoryReward(ChallengeGateCatalog.reward) { return .completed }
+        if adventure.challengeGateSession != nil { return .active }
+        guard placementComplete else { return .locked }
+        return ChallengeGateCatalog.canStart(for: profile, graph: graph) ? .ready : .locked
+    }
+    var challengeGateCompletedCount: Int {
+        adventure.challengeGateSession?.completedCount ?? 0
+    }
+    var challengeGateTotalCount: Int {
+        adventure.challengeGateSession?.encounterIDs.count ?? ChallengeGateCatalog.challengeCount
+    }
     var previewVisible: Bool { adventure.previewVisible(at: Date()) }
     var interactionStarted: Bool { adventure.interactionStarted }
     let graph: SkillGraph
@@ -52,6 +66,36 @@ import LearningCore
     @discardableResult func advanceEncounter() -> Bool {
         let advanced = adventure.advanceEncounter(); persist(); return advanced
     }
+    @discardableResult
+    func beginChallengeGate() -> Bool {
+        if let runtime = adventure.runtime, !runtime.completed { return false }
+        if adventure.runtime?.completed == true {
+            _ = adventure.advanceEncounter()
+        }
+        let began = adventure.beginChallengeGate(profile: profile, graph: graph)
+        if began { persist() }
+        return began
+    }
+
+    func hasStoryReward(_ reward: StoryRewardID) -> Bool {
+        profile.hasStoryReward(reward)
+    }
+
+    func storyRewardPlacement(_ reward: StoryRewardID) -> Int {
+        profile.storyRewardPlacement(reward)
+    }
+
+    @discardableResult
+    func cycleStoryRewardPlacement(_ reward: StoryRewardID, slotCount: Int) -> Int {
+        let slot = profile.cycleStoryRewardPlacement(reward, slotCount: slotCount)
+        persist()
+        return slot
+    }
+
+    func parentMathSummary(now: Date = Date()) -> ParentMathSummary {
+        ParentMathSummaryBuilder.build(profile: profile, graph: graph, now: now)
+    }
+
     @discardableResult func startWorkshop(_ encounter: LearningEncounter) -> Bool {
         do {
             let opened = try adventure.startWorkshop(encounter, profile: &profile, now: Date())

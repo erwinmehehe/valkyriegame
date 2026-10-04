@@ -11,16 +11,40 @@ public struct CrystalCartModel: Codable, Equatable, Sendable {
     public private(set) var completed = false
     public let startedAt: Date
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
-        guard [.counting, .addition, .missingAddend].contains(encounter.operation) else { throw CartError.unsupportedOperation }
-        guard (0...12).contains(encounter.initialQuantity), (1...12).contains(encounter.targetQuantity),
-              encounter.initialQuantity < encounter.targetQuantity else { throw CartError.invalidQuantity }
+        guard [.counting, .addition, .subtraction, .missingAddend].contains(encounter.operation) else {
+            throw CartError.unsupportedOperation
+        }
+        guard (0...12).contains(encounter.initialQuantity),
+              (0...12).contains(encounter.targetQuantity) else {
+            throw CartError.invalidQuantity
+        }
+        if encounter.operation == .subtraction {
+            guard encounter.initialQuantity > encounter.targetQuantity else {
+                throw CartError.invalidQuantity
+            }
+        } else {
+            guard encounter.initialQuantity < encounter.targetQuantity,
+                  encounter.targetQuantity > 0 else {
+                throw CartError.invalidQuantity
+            }
+        }
         self.encounter = encounter; quantity = encounter.initialQuantity; startedAt = date
     }
     @discardableResult public mutating func add() -> Bool {
-        guard !completed, quantity < 12 else { return false }; quantity += 1; return true
+        let maximum = encounter.operation == .subtraction
+            ? encounter.initialQuantity
+            : 12
+        guard !completed, quantity < maximum else { return false }
+        quantity += 1
+        return true
     }
     @discardableResult public mutating func remove() -> Bool {
-        guard !completed, quantity > encounter.initialQuantity else { return false }; quantity -= 1; return true
+        let minimum = encounter.operation == .subtraction
+            ? 0
+            : encounter.initialQuantity
+        guard !completed, quantity > minimum else { return false }
+        quantity -= 1
+        return true
     }
     public mutating func apply(_ scaffold: Scaffold) { support = maxSupport(support, scaffold.support) }
     private func maxSupport(_ a: SupportLevel, _ b: SupportLevel) -> SupportLevel { a.rawValue >= b.rawValue ? a : b }
@@ -399,7 +423,7 @@ public enum MathManipulativeSupport {
     public static func supports(_ encounter: LearningEncounter) -> Bool {
         switch encounter.mechanicID {
         case MathMechanicID.crystalCart:
-            return [.counting, .addition, .missingAddend].contains(encounter.operation)
+            return [.counting, .addition, .subtraction, .missingAddend].contains(encounter.operation)
         case MathMechanicID.balanceScale:
             return encounter.operation == .comparison
         case MathMechanicID.numberBondMachine:

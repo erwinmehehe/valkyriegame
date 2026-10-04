@@ -8,7 +8,15 @@ final class MathAdventureTests: XCTestCase {
         let after = date.addingTimeInterval(30)
         switch try XCTUnwrap(adventure.runtime) {
         case .crystalCart(let model):
-            for _ in model.quantity..<model.encounter.targetQuantity { XCTAssertTrue(adventure.increment(at: after)) }
+            if model.quantity < model.encounter.targetQuantity {
+                for _ in model.quantity..<model.encounter.targetQuantity {
+                    XCTAssertTrue(adventure.increment(at: after))
+                }
+            } else if model.quantity > model.encounter.targetQuantity {
+                for _ in model.encounter.targetQuantity..<model.quantity {
+                    XCTAssertTrue(adventure.decrement(at: after))
+                }
+            }
         case .balanceScale(let model): adventure.chooseComparison(model.correctChoice)
         case .numberBond(let model): adventure.setNumber(model.correctMissingPart)
         case .tenFrame(let model):
@@ -48,7 +56,8 @@ final class MathAdventureTests: XCTestCase {
         adventure.chooseComparison(.right)
         XCTAssertEqual(adventure.submit(profile: &profile, at: epoch)?.supportLevel, .lightHint)
         XCTAssertEqual(adventure.placement, diagnostic)
-        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .learning)
+        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .new)
+        XCTAssertTrue(profile.progress(for: MathSkills.compare).evidence.isEmpty)
     }
     func testReturningToSolvedOrUnsolvedEncounterNeverAdvances() throws {
         var adventure = MathAdventure(); var profile = LearnerProfile()
@@ -126,4 +135,121 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(seen, MathMechanicID.adaptiveSet)
         XCTAssertGreaterThan(adventure.laneCounts.values.reduce(0, +), 0)
     }
+
+    func testPlacementSuccessCreatesProvisionalReadinessWithoutFalseMastery() throws {
+        var adventure = MathAdventure()
+        var profile = LearnerProfile()
+
+        _ = try adventure.prepareNext(profile: &profile, now: epoch)
+        let encounter = try XCTUnwrap(adventure.runtime?.encounter)
+        XCTAssertEqual(encounter.skillID, MathSkills.compare)
+
+        XCTAssertEqual(try solve(&adventure, profile: &profile, at: epoch).outcome, .correct)
+
+        XCTAssertEqual(profile.progress(for: MathSkills.compare).state, .new)
+        XCTAssertTrue(profile.progress(for: MathSkills.compare).evidence.isEmpty)
+        XCTAssertGreaterThanOrEqual(
+            profile.readiness(for: MathSkills.compare),
+            SkillState.developing.readiness
+        )
+        XCTAssertTrue(profile.placementReadySkillIDs?.contains(MathSkills.compare) == true)
+    }
+
+    func testChallengeGateRequiresObservedSecurePerformanceNotPlacementAlone() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+
+        var adventure = MathAdventure(continuingLearner: true)
+        XCTAssertFalse(adventure.beginChallengeGate(profile: profile, graph: graph))
+
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+        XCTAssertTrue(adventure.beginChallengeGate(profile: profile, graph: graph))
+        XCTAssertEqual(adventure.challengeGateSession?.encounterIDs.count, ChallengeGateCatalog.challengeCount)
+    }
+
+    func testChallengeGateCompletesThreeDifferentMechanicsAndUnlocksMoonLantern() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+        profile.skills[MathSkills.addition.rawValue] = SkillProgress(state: .secure)
+        profile.skills[MathSkills.subtraction.rawValue] = SkillProgress(state: .secure)
+
+        var adventure = MathAdventure(continuingLearner: true)
+        XCTAssertTrue(adventure.beginChallengeGate(profile: profile, graph: graph))
+
+        var mechanics: Set<String> = []
+        var date = epoch
+
+        for index in 0..<ChallengeGateCatalog.challengeCount {
+            guard case .encounter(let encounter) = try adventure.prepareNext(profile: &profile, now: date) else {
+                return XCTFail("Expected Challenge Gate encounter \(index + 1)")
+            }
+            XCTAssertEqual(encounter.context, "challengeGate")
+            mechanics.insert(encounter.mechanicID)
+            XCTAssertEqual(try solve(&adventure, profile: &profile, at: date).outcome, .correct)
+
+            if index < ChallengeGateCatalog.challengeCount - 1 {
+                XCTAssertNotNil(adventure.challengeGateSession)
+                XCTAssertTrue(adventure.advanceEncounter())
+            }
+
+            date = date.addingTimeInterval(60)
+        }
+
+        XCTAssertEqual(mechanics.count, ChallengeGateCatalog.challengeCount)
+        XCTAssertTrue(profile.hasStoryReward(.moonLantern))
+        XCTAssertNil(adventure.challengeGateSession)
+    }
+
+
+    func testResponseTimeStartsWhenChildEngagesNotWhenOrderAppears() throws {
+        var adventure = MathAdventure(continuingLearner: true)
+        var profile = LearnerProfile()
+        let encounter = MathFoundation.workshopExamples[0]
+
+        XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
+
+        // The order can be visible while Valkyrie walks over / the child looks around.
+        let interactionStart = epoch.addingTimeInterval(120)
+        try adventure.beginInteraction(at: interactionStart)
+
+        let answerTime = interactionStart.addingTimeInterval(5)
+        for _ in encounter.initialQuantity..<encounter.targetQuantity {
+            XCTAssertTrue(adventure.increment(at: answerTime))
+        }
+
+        let evidence = try XCTUnwrap(adventure.submit(profile: &profile, at: answerTime))
+        XCTAssertEqual(try XCTUnwrap(evidence.responseTime), 5, accuracy: 0.001)
+    }
+
+    func testNextAdaptiveBeatUsesFreshProfileStateInsteadOfAStalePreplannedSession() throws {
+        var adventure = MathAdventure(continuingLearner: true)
+        var profile = LearnerProfile()
+
+        // Complete the first adaptive beat normally.
+        guard case .encounter = try adventure.prepareNext(profile: &profile, now: epoch) else {
+            return XCTFail("Expected first adaptive encounter")
+        }
+        XCTAssertEqual(try solve(&adventure, profile: &profile, at: epoch).outcome, .correct)
+        XCTAssertTrue(adventure.advanceEncounter())
+
+        // A review becomes due after that response. The next slot in the running
+        // 60/20/15/5 mix should consult this current learner state.
+        var due = SkillProgress(state: .secure)
+        due.reviewDate = epoch.addingTimeInterval(-1)
+        profile.skills[MathSkills.quantity.rawValue] = due
+
+        guard case .encounter(let next) = try adventure.prepareNext(
+            profile: &profile,
+            now: epoch.addingTimeInterval(60)
+        ) else {
+            return XCTFail("Expected a freshly selected adaptive encounter")
+        }
+
+        XCTAssertEqual(adventure.activeLane, .review)
+        XCTAssertEqual(next.skillID, MathSkills.quantity)
+    }
+
 }

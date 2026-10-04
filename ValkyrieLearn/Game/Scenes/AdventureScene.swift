@@ -30,6 +30,7 @@ import SpriteKit
         valkyrie.position = CGPoint(x: 190, y: 170); pip.position = CGPoint(x: 380, y: 180)
         addChild(valkyrie); addChild(pip)
         instruction.position = CGPoint(x: 640, y: 48)
+        instruction.name = "feedbackText"
         instruction.fontSize = 23
         instruction.fontColor = UIColor(red: 1, green: 0.96, blue: 0.83, alpha: 1)
         instruction.preferredMaxLayoutWidth = 940; instruction.numberOfLines = 2
