@@ -151,4 +151,71 @@ final class CrystalCartTests: XCTestCase {
         )
     }
 
+
+    func testUnifiedMathMechanicRuntimeRoutesActions() throws {
+        let bondEncounter = MathCastleEncounterCatalog.numberBondMachine[0]
+        var bond = try MathMechanicRuntime(
+            encounter: bondEncounter,
+            at: Date(timeIntervalSince1970: 500)
+        )
+        bond.setValue(3)
+        XCTAssertEqual(
+            bond.submit(at: Date(timeIntervalSince1970: 510))?.outcome,
+            .correct
+        )
+        XCTAssertTrue(bond.completed)
+
+        let scaleEncounter = MathCastleEncounterCatalog.balanceScale[0]
+        var scale = try MathMechanicRuntime(encounter: scaleEncounter)
+        XCTAssertFalse(scale.increment())
+        scale.chooseComparison(.right)
+        XCTAssertEqual(scale.submit()?.outcome, .correct)
+
+        let frameEncounter = MathCastleEncounterCatalog.tenFrameGate[0]
+        var frame = try MathMechanicRuntime(encounter: frameEncounter)
+        for _ in 0..<7 { XCTAssertTrue(frame.increment()) }
+        XCTAssertEqual(frame.submit()?.outcome, .correct)
+
+        let bridgeEncounter = MathCastleEncounterCatalog.missingNumberBridge[0]
+        var bridge = try MathMechanicRuntime(encounter: bridgeEncounter)
+        bridge.setValue(4)
+        XCTAssertEqual(bridge.submit()?.outcome, .correct)
+    }
+
+    func testUnifiedRuntimeRejectsUnknownMechanic() {
+        let encounter = LearningEncounter(
+            id: "unknown-runtime",
+            skillID: MathSkills.quantity,
+            mechanicID: "notARealMechanic",
+            operation: .counting,
+            initialQuantity: 0,
+            targetQuantity: 4,
+            prompt: "Unsupported"
+        )
+
+        XCTAssertThrowsError(try MathMechanicRuntime(encounter: encounter))
+    }
+
+    func testSessionPlanCursorAdvancesThroughExplorationAndEncounterBeats() {
+        let encounter = MathFoundation.encounters[0]
+        let planned = PlannedSessionEncounter(lane: .learning, encounter: encounter)
+        let plan = SessionPlan(
+            beats: [.encounter(planned), .explorationBreak],
+            requestedEncounterCount: 1,
+            desiredLaneCounts: [.learning: 1, .review: 0, .stretch: 0, .confidence: 0],
+            actualLaneCounts: [.learning: 1, .review: 0, .stretch: 0, .confidence: 0]
+        )
+
+        var cursor = SessionPlanCursor(plan: plan)
+        XCTAssertEqual(cursor.remainingBeatCount, 2)
+        XCTAssertFalse(cursor.isComplete)
+
+        XCTAssertEqual(cursor.advance(), .encounter(planned))
+        XCTAssertEqual(cursor.remainingBeatCount, 1)
+        XCTAssertEqual(cursor.advance(), .explorationBreak)
+        XCTAssertTrue(cursor.isComplete)
+        XCTAssertNil(cursor.current)
+        XCTAssertNil(cursor.advance())
+    }
+
 }
