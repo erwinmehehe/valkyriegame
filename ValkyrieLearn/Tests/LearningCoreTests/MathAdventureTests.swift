@@ -203,4 +203,53 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertNil(adventure.challengeGateSession)
     }
 
+
+    func testResponseTimeStartsWhenChildEngagesNotWhenOrderAppears() throws {
+        var adventure = MathAdventure(continuingLearner: true)
+        var profile = LearnerProfile()
+        let encounter = MathFoundation.workshopExamples[0]
+
+        XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
+
+        // The order can be visible while Valkyrie walks over / the child looks around.
+        let interactionStart = epoch.addingTimeInterval(120)
+        try adventure.beginInteraction(at: interactionStart)
+
+        let answerTime = interactionStart.addingTimeInterval(5)
+        for _ in encounter.initialQuantity..<encounter.targetQuantity {
+            XCTAssertTrue(adventure.increment(at: answerTime))
+        }
+
+        let evidence = try XCTUnwrap(adventure.submit(profile: &profile, at: answerTime))
+        XCTAssertEqual(evidence.responseTime, 5, accuracy: 0.001)
+    }
+
+    func testNextAdaptiveBeatUsesFreshProfileStateInsteadOfAStalePreplannedSession() throws {
+        var adventure = MathAdventure(continuingLearner: true)
+        var profile = LearnerProfile()
+
+        // Complete the first adaptive beat normally.
+        guard case .encounter = try adventure.prepareNext(profile: &profile, now: epoch) else {
+            return XCTFail("Expected first adaptive encounter")
+        }
+        XCTAssertEqual(try solve(&adventure, profile: &profile, at: epoch).outcome, .correct)
+        XCTAssertTrue(adventure.advanceEncounter())
+
+        // A review becomes due after that response. The next slot in the running
+        // 60/20/15/5 mix should consult this current learner state.
+        var due = SkillProgress(state: .secure)
+        due.reviewDate = epoch.addingTimeInterval(-1)
+        profile.skills[MathSkills.quantity.rawValue] = due
+
+        guard case .encounter(let next) = try adventure.prepareNext(
+            profile: &profile,
+            now: epoch.addingTimeInterval(60)
+        ) else {
+            return XCTFail("Expected a freshly selected adaptive encounter")
+        }
+
+        XCTAssertEqual(adventure.activeLane, .review)
+        XCTAssertEqual(next.skillID, MathSkills.quantity)
+    }
+
 }
