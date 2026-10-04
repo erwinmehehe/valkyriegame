@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
 """Static project integrity checks. These do not replace Xcode or touch testing."""
 from pathlib import Path
-import hashlib, plistlib, re, subprocess, xml.etree.ElementTree as ET
+import difflib, hashlib, plistlib, re, subprocess, xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 project = ROOT/'ValkyrieLearn.xcodeproj/project.pbxproj'
 old = project.read_bytes()
 subprocess.run(['python3',str(ROOT/'scripts/generate_xcode_project.py')],check=True,cwd=ROOT)
-assert old == project.read_bytes(), 'Regenerate and commit the Xcode project after changing source membership.'
+generated = project.read_bytes()
+if old != generated:
+    before = old.decode('utf-8').splitlines()
+    after = generated.decode('utf-8').splitlines()
+    print('\n'.join(difflib.unified_diff(
+        before,
+        after,
+        fromfile='committed project.pbxproj',
+        tofile='generated project.pbxproj',
+        lineterm=''
+    )))
+    raise AssertionError('Regenerate and commit the Xcode project after changing source membership.')
 text = project.read_text()
 assert '(,)' not in text, 'Malformed empty OpenStep array'
 ids = set(re.findall(r'^([A-F0-9]{24}) = ',text,re.M))
