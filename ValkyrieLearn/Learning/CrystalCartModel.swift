@@ -603,14 +603,18 @@ public struct MathAdventureSaveState: Codable, Equatable, Sendable {
     public var runtime: MathMechanicRuntime?
     public var placementSession: PlacementSession?
     public var placementComplete: Bool
+    /// Optional for backward-compatible decoding of saves created before Challenge Gate.
+    public var challengeGateSession: ChallengeGateSession?
 
     public init(
         runtime: MathMechanicRuntime? = nil,
         placementSession: PlacementSession? = nil,
-        placementComplete: Bool = false
+        placementComplete: Bool = false,
+        challengeGateSession: ChallengeGateSession? = nil
     ) {
         self.runtime = runtime
         self.placementSession = placementSession
         self.placementComplete = placementComplete
+        self.challengeGateSession = challengeGateSession
     }
 }
