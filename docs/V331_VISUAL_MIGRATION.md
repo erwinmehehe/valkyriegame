@@ -86,17 +86,28 @@ native adaptive architecture
 production ValkyrieLearn
 ```
 
-## Phase 2 visual work
+## Phase 2 Math mechanic skin pass
 
-After Phase 1 is stable on the physical iPad:
+Implemented on the stacked visual-migration branch:
 
-1. extract and skin the five Math mechanics using the v3.31 props and machinery language
-2. add proper Valkyrie pose/animation atlases for walk, interact, celebrate, and react
-3. add Pip pose/animation frames
-4. improve foreground and middle-ground parallax without hiding touch targets
-5. add environment reactions to successful learning encounters
-6. tune Valkyrie's apparent scene scale toward the intended ~15–20% composition where appropriate
-7. review touch readability on the child's actual iPad
+- source-derived `V331_Cart.png` and `V331_Crystal.png` are bundled natively
+- Crystal Cart now uses the original cart and starlight crystal art
+- Balance Scale uses v3.31-style wood/gold framing and source crystal quantities
+- Number Bond Machine uses a gold/wood magical-machine shell with violet/teal chambers and source crystals
+- Ten Frame Gate is presented as a castle gate/rune frame with crystal placements rather than a plain worksheet grid
+- Missing Number Bridge is presented as a wood/gold physical bridge with a glowing answer socket
+- existing touch names, model bindings, scaffolding, evidence and persistence are retained
+
+No correctness rules moved into SpriteKit.
+
+## Remaining visual work
+
+1. add proper Valkyrie pose/animation atlases for walk, interact, celebrate, and react
+2. add Pip pose/animation frames
+3. improve foreground and middle-ground parallax without hiding touch targets
+4. add environment reactions to successful learning encounters so the room visibly changes
+5. tune Valkyrie's apparent scene scale toward the intended ~15–20% composition where appropriate
+6. review touch readability on the child's actual iPad
 
 ## Expansion rule
 
