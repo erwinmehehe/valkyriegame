@@ -4,9 +4,10 @@ import LearningCore
 // MARK: - Puzzle Palace v2 · Rune Gate
 
 @MainActor final class PuzzlePalaceScene: AdventureScene {
-    private enum Place {
+    private enum Place: Equatable {
         case runeGate
         case memoryBridge
+        case stopGoOrbs
     }
 
     private let place: Place
@@ -14,6 +15,7 @@ import LearningCore
         switch place {
         case .runeGate: return "Puzzle Palace · Rune Gate"
         case .memoryBridge: return "Puzzle Palace · Memory Bridge"
+        case .stopGoOrbs: return "Puzzle Palace · Stop/Go Orbs"
         }
     }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
@@ -27,6 +29,10 @@ import LearningCore
     private var solved = false
     private var memoryInput: [String] = []
     private var memoryAcceptingInput = false
+    private var inhibitionEncounter: PuzzleInhibitionEncounter?
+    private var stopGoIndex = 0
+    private var stopGoAcceptingTap = false
+    private var stopGoCurrentSignal: PuzzleGateSignal?
     private var runeAcceptingInput = false
     private let choicePoints = [
         CGPoint(x: 575, y: 255),
@@ -41,7 +47,14 @@ import LearningCore
     ]
 
     override init(state: AppState) {
-        place = state.world == .memoryBridge ? .memoryBridge : .runeGate
+        switch state.world {
+        case .memoryBridge:
+            place = .memoryBridge
+        case .stopGoOrbs:
+            place = .stopGoOrbs
+        default:
+            place = .runeGate
+        }
         super.init(state: state)
     }
 
@@ -59,6 +72,9 @@ import LearningCore
         case .memoryBridge:
             valkyrie.position = CGPoint(x: 175, y: 175)
             tiko.position = CGPoint(x: 295, y: 190)
+        case .stopGoOrbs:
+            valkyrie.position = CGPoint(x: 185, y: 175)
+            tiko.position = CGPoint(x: 305, y: 190)
         }
         tiko.reducedMotion = reducedMotion
         addChild(tiko)
@@ -81,6 +97,17 @@ import LearningCore
             } else {
                 memoryEncounter = state.nextPuzzleMemoryEncounter()
                 buildMemoryEncounter()
+            }
+        case .stopGoOrbs:
+            guard state.puzzleStopGoAvailable else {
+                instruction.text = "Memory Bridge must be restored before the orb chamber opens."
+                return
+            }
+            if state.puzzleStopGoComplete {
+                restoreStopGoOrbs()
+            } else {
+                inhibitionEncounter = state.nextPuzzleStopGoEncounter()
+                buildStopGoEncounter()
             }
         }
     }
@@ -121,6 +148,9 @@ import LearningCore
         case .memoryBridge:
             buildMemoryBridgeWorld()
             refreshMemoryBridgeProgress(animated: false)
+        case .stopGoOrbs:
+            buildStopGoWorld()
+            refreshStopGoProgress(animated: false)
         }
     }
 
@@ -623,7 +653,8 @@ import LearningCore
         }
 
         tiko.pose(.celebrate)
-        instruction.text = "Memory Bridge is restored. The deeper palace chamber remains sealed for the next adventure."
+        showStopGoRoute()
+        instruction.text = "Memory Bridge is restored. Cross to the Stop/Go Orb chamber."
     }
 
     private func showMemoryBridgeRoute() {
@@ -636,6 +667,338 @@ import LearningCore
             size: CGSize(width: 205, height: 58)
         )
         route.zPosition = 830
+    }
+
+
+    private func showStopGoRoute() {
+        guard state.puzzleStopGoAvailable,
+              childNode(withName: "stopGoRoute") == nil else { return }
+        let route = hotspot(
+            "Stop/Go Orbs →",
+            name: "stopGoRoute",
+            at: CGPoint(x: 1000, y: 165),
+            size: CGSize(width: 205, height: 58)
+        )
+        route.zPosition = 835
+    }
+
+    private func buildStopGoWorld() {
+        let rail = SKShapeNode(rectOf: CGSize(width: 710, height: 96), cornerRadius: 42)
+        rail.fillColor = UIColor(red: 0.11, green: 0.09, blue: 0.20, alpha: 0.80)
+        rail.strokeColor = UIColor(red: 0.53, green: 0.43, blue: 0.78, alpha: 0.84)
+        rail.lineWidth = 6
+        rail.position = CGPoint(x: 755, y: 365)
+        rail.name = "stopGoRail"
+        rail.zPosition = 180
+        addChild(rail)
+
+        for index in 0..<5 {
+            let brace = SKShapeNode(rectOf: CGSize(width: 52, height: 82), cornerRadius: 13)
+            brace.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.32, alpha: 0.95)
+            brace.strokeColor = UIColor(red: 0.55, green: 0.45, blue: 0.80, alpha: 0.72)
+            brace.lineWidth = 3
+            brace.position = CGPoint(x: 505 + CGFloat(index) * 125, y: 365)
+            brace.name = "stopGoBrace"
+            brace.zPosition = 190
+            addChild(brace)
+        }
+
+        let orbRoot = SKNode()
+        orbRoot.name = "stopGoOrb"
+        orbRoot.position = CGPoint(x: 755, y: 365)
+        orbRoot.zPosition = 620
+
+        let ring = SKShapeNode(circleOfRadius: 83)
+        ring.fillColor = UIColor(red: 0.21, green: 0.16, blue: 0.34, alpha: 0.96)
+        ring.strokeColor = UIColor(red: 0.70, green: 0.58, blue: 0.96, alpha: 1)
+        ring.lineWidth = 8
+        ring.name = "stopGoOrb"
+        orbRoot.addChild(ring)
+
+        let core = SKShapeNode(circleOfRadius: 49)
+        core.fillColor = UIColor(red: 0.32, green: 0.25, blue: 0.46, alpha: 1)
+        core.strokeColor = UIColor(red: 0.92, green: 0.82, blue: 1.0, alpha: 0.94)
+        core.lineWidth = 4
+        core.name = "stopGoOrbCore"
+        orbRoot.addChild(core)
+
+        let glyph = ArtSystem.label("Ⅱ", size: 45)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.58, alpha: 1)
+        glyph.name = "stopGoOrbGlyph"
+        orbRoot.addChild(glyph)
+
+        addChild(orbRoot)
+
+        let barrier = SKShapeNode(rectOf: CGSize(width: 105, height: 260), cornerRadius: 38)
+        barrier.fillColor = UIColor(red: 0.14, green: 0.10, blue: 0.23, alpha: 0.92)
+        barrier.strokeColor = UIColor(red: 0.58, green: 0.47, blue: 0.86, alpha: 0.90)
+        barrier.lineWidth = 7
+        barrier.position = CGPoint(x: 1095, y: 385)
+        barrier.name = "stopGoBarrier"
+        barrier.zPosition = 350
+        addChild(barrier)
+
+        for index in 0..<PuzzlePalaceEncounterCatalog.stopGoOrbs.count {
+            let light = SKShapeNode(circleOfRadius: 17)
+            light.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+            light.strokeColor = UIColor(red: 0.65, green: 0.55, blue: 0.92, alpha: 0.82)
+            light.lineWidth = 3
+            light.position = CGPoint(x: 970 + CGFloat(index) * 57, y: 555)
+            light.name = "stopGoProgress\(index)"
+            light.zPosition = 520
+            addChild(light)
+        }
+
+        let back = hotspot(
+            "← Memory Bridge",
+            name: "memoryBridgeBack",
+            at: CGPoint(x: 1090, y: 665),
+            size: CGSize(width: 210, height: 52)
+        )
+        back.zPosition = 2050
+    }
+
+    private func buildStopGoEncounter() {
+        guard let inhibitionEncounter else { return }
+        removeAction(forKey: "stopGoSignal")
+        removeAction(forKey: "stopGoRetry")
+        attempts = 0
+        support = .independent
+        startedAt = Date()
+        solved = false
+        stopGoIndex = 0
+        stopGoAcceptingTap = false
+        stopGoCurrentSignal = nil
+        instruction.text = inhibitionEncounter.prompt
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.20 : 0.55),
+            .run { [weak self] in
+                self?.presentStopGoSignal()
+            }
+        ]), withKey: "stopGoRetry")
+    }
+
+    private func presentStopGoSignal() {
+        guard let inhibitionEncounter,
+              stopGoIndex < inhibitionEncounter.signals.count else {
+            completeStopGoSequence()
+            return
+        }
+
+        let signal = inhibitionEncounter.signals[stopGoIndex]
+        stopGoCurrentSignal = signal
+        stopGoAcceptingTap = signal == .go
+        updateStopGoOrb(signal)
+
+        switch signal {
+        case .hold:
+            instruction.text = support == .independent
+                ? "HOLD — keep your hands off the orb until it changes."
+                : "HOLD — Tiko is guarding the orb. Wait for the star."
+            let duration: TimeInterval
+            switch support {
+            case .independent: duration = 0.95
+            case .lightHint: duration = 1.15
+            case .strongHint, .demonstration: duration = 1.35
+            }
+            run(.sequence([
+                .wait(forDuration: duration),
+                .run { [weak self] in
+                    guard let self,
+                          self.stopGoCurrentSignal == .hold else { return }
+                    self.stopGoIndex += 1
+                    self.presentStopGoSignal()
+                }
+            ]), withKey: "stopGoSignal")
+
+        case .go:
+            instruction.text = "GO — tap the star orb to let the palace current through."
+            tiko.pose(.interact)
+        }
+    }
+
+    private func updateStopGoOrb(_ signal: PuzzleGateSignal) {
+        guard let root = childNode(withName: "stopGoOrb"),
+              let core = root.childNode(withName: "stopGoOrbCore") as? SKShapeNode,
+              let glyph = root.childNode(withName: "stopGoOrbGlyph") as? SKLabelNode else {
+            return
+        }
+
+        switch signal {
+        case .hold:
+            core.fillColor = UIColor(red: 0.43, green: 0.19, blue: 0.31, alpha: 1)
+            core.strokeColor = UIColor(red: 0.95, green: 0.65, blue: 0.73, alpha: 1)
+            core.glowWidth = 3
+            glyph.text = "Ⅱ"
+            glyph.fontColor = UIColor(red: 1.0, green: 0.87, blue: 0.72, alpha: 1)
+        case .go:
+            core.fillColor = UIColor(red: 0.24, green: 0.48, blue: 0.31, alpha: 1)
+            core.strokeColor = UIColor(red: 0.68, green: 1.0, blue: 0.72, alpha: 1)
+            core.glowWidth = 14
+            glyph.text = "✦"
+            glyph.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.48, alpha: 1)
+            if !reducedMotion {
+                root.run(.sequence([
+                    .scale(to: 1.10, duration: 0.12),
+                    .scale(to: 1.0, duration: 0.15)
+                ]))
+            }
+        }
+    }
+
+    private func handleStopGoOrbTap() {
+        guard place == .stopGoOrbs,
+              let inhibitionEncounter,
+              !solved,
+              let signal = stopGoCurrentSignal else { return }
+
+        switch signal {
+        case .hold:
+            removeAction(forKey: "stopGoSignal")
+            attempts += 1
+            let attemptSupport = support
+            _ = state.recordPuzzle(
+                inhibitionEncounter,
+                outcome: .incorrect,
+                support: attemptSupport,
+                attempts: attempts,
+                responseTime: Date().timeIntervalSince(startedAt)
+            )
+            support = support == .independent ? .lightHint : .strongHint
+            stopGoIndex = 0
+            stopGoAcceptingTap = false
+            stopGoCurrentSignal = nil
+            valkyrie.pose(.react)
+            tiko.pose(.react)
+            shakeStopGoOrb()
+            instruction.text = support == .lightHint
+                ? "That was a HOLD signal. Tiko will replay the sequence."
+                : "Wait through the double-bar signals. Touch only the star."
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0.22 : 0.65),
+                .run { [weak self] in self?.presentStopGoSignal() }
+            ]), withKey: "stopGoRetry")
+
+        case .go:
+            guard stopGoAcceptingTap else { return }
+            stopGoAcceptingTap = false
+            removeAction(forKey: "stopGoSignal")
+            valkyrie.pose(.interact)
+            tiko.pose(.interact)
+            pulseStopGoOrb()
+            stopGoIndex += 1
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0.12 : 0.30),
+                .run { [weak self] in self?.presentStopGoSignal() }
+            ]), withKey: "stopGoSignal")
+        }
+    }
+
+    private func completeStopGoSequence() {
+        guard let inhibitionEncounter else { return }
+        stopGoAcceptingTap = false
+        stopGoCurrentSignal = nil
+        attempts += 1
+        solved = true
+        let attemptSupport = support
+
+        _ = state.recordPuzzle(
+            inhibitionEncounter,
+            outcome: .correct,
+            support: attemptSupport,
+            attempts: attempts,
+            responseTime: Date().timeIntervalSince(startedAt)
+        )
+        refreshStopGoProgress(animated: true)
+        state.audio.play("success")
+        valkyrie.pose(.celebrate)
+        tiko.pose(.celebrate)
+
+        if state.puzzleStopGoComplete {
+            restoreStopGoOrbs()
+            return
+        }
+
+        instruction.text = attemptSupport == .independent
+            ? "You held back at the lock signals. The next orb rhythm is waking."
+            : "That orb is stable. Now try the rhythm independently."
+
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.24 : 0.95),
+            .run { [weak self] in
+                guard let self else { return }
+                self.inhibitionEncounter = self.state.nextPuzzleStopGoEncounter()
+                self.buildStopGoEncounter()
+            }
+        ]), withKey: "nextStopGo")
+    }
+
+    private func refreshStopGoProgress(animated: Bool) {
+        let count = PuzzlePalaceDirector.stopGoIndependentSuccessCount(
+            profile: state.profile
+        )
+        for index in 0..<PuzzlePalaceEncounterCatalog.stopGoOrbs.count {
+            guard let light = childNode(withName: "stopGoProgress\(index)") as? SKShapeNode else {
+                continue
+            }
+            let active = index < count
+            light.fillColor = active
+                ? UIColor(red: 0.95, green: 0.72, blue: 0.29, alpha: 1)
+                : UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+            light.glowWidth = active ? 10 : 0
+            if active && animated && !reducedMotion {
+                light.run(.sequence([
+                    .scale(to: 1.25, duration: 0.15),
+                    .scale(to: 1.0, duration: 0.18)
+                ]))
+            }
+        }
+    }
+
+    private func restoreStopGoOrbs() {
+        removeAction(forKey: "stopGoSignal")
+        removeAction(forKey: "stopGoRetry")
+        removeAction(forKey: "nextStopGo")
+        stopGoAcceptingTap = false
+        stopGoCurrentSignal = nil
+        refreshStopGoProgress(animated: true)
+
+        if let root = childNode(withName: "stopGoOrb"),
+           let core = root.childNode(withName: "stopGoOrbCore") as? SKShapeNode,
+           let glyph = root.childNode(withName: "stopGoOrbGlyph") as? SKLabelNode {
+            core.fillColor = UIColor(red: 0.31, green: 0.54, blue: 0.38, alpha: 1)
+            core.strokeColor = UIColor(red: 0.75, green: 1.0, blue: 0.78, alpha: 1)
+            core.glowWidth = 15
+            glyph.text = "✦"
+        }
+
+        if let barrier = childNode(withName: "stopGoBarrier") as? SKShapeNode {
+            barrier.fillColor = UIColor(red: 0.16, green: 0.12, blue: 0.25, alpha: 0.42)
+            barrier.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 1)
+            barrier.glowWidth = 12
+            barrier.xScale = 0.24
+            barrier.alpha = 0.45
+            barrier.name = "stopGoBarrierOpen"
+        }
+
+        instruction.text = "The Stop/Go chamber is stable. Tiko can sense another palace rule beyond this gate."
+    }
+
+    private func pulseStopGoOrb() {
+        guard let orb = childNode(withName: "stopGoOrb") else { return }
+        orb.run(.sequence([
+            .scale(to: reducedMotion ? 1.0 : 1.14, duration: 0.12),
+            .scale(to: 1.0, duration: reducedMotion ? 0 : 0.16)
+        ]))
+    }
+
+    private func shakeStopGoOrb() {
+        guard let orb = childNode(withName: "stopGoOrb") else { return }
+        orb.run(.sequence([
+            .moveBy(x: reducedMotion ? 0 : -10, y: 0, duration: 0.07),
+            .moveBy(x: reducedMotion ? 0 : 20, y: 0, duration: 0.10),
+            .moveBy(x: reducedMotion ? 0 : -10, y: 0, duration: 0.07)
+        ]))
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -670,6 +1033,22 @@ import LearningCore
             guard place == .memoryBridge,
                   let choice = memoryChoice(at: point) else { return }
             approachMemoryPad(choice.node, symbol: choice.symbol)
+
+        case "stopGoRoute":
+            guard place == .memoryBridge, state.puzzleStopGoAvailable else { return }
+            let destination = CGPoint(x: 1000, y: 175)
+            if isNear(destination) {
+                state.travel(to: .stopGoOrbs)
+            } else {
+                instruction.text = "Cross Memory Bridge to the orb chamber."
+                travel(to: destination)
+            }
+
+        case "memoryBridgeBack":
+            state.travel(to: .memoryBridge)
+
+        case "stopGoOrb", "stopGoOrbCore", "stopGoOrbGlyph":
+            handleStopGoOrbTap()
 
         default:
             walkIfValid(point)
@@ -893,6 +1272,9 @@ import LearningCore
     }
 
     override func willLeave() {
+        removeAction(forKey: "stopGoSignal")
+        removeAction(forKey: "stopGoRetry")
+        removeAction(forKey: "nextStopGo")
         tiko.cancelTravel()
         tiko.removeAllActions()
         super.willLeave()
