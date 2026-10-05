@@ -138,4 +138,146 @@ final class LiteracySkillGraphTests: XCTestCase {
         XCTAssertTrue(stretchIDs.contains(LiteracySkills.createStorySequence))
         XCTAssertFalse(stretchIDs.contains(LiteracySkills.decodeCVC))
     }
+
+    func testLiteracyPlacementStartsAboveTrivialSoundDiscrimination() throws {
+        let engine = LiteracyPlacementEngine()
+        let session = engine.begin()
+
+        XCTAssertEqual(session.nextBand, 3)
+        XCTAssertEqual(
+            engine.nextProbe(for: session)?.skillID,
+            LiteracySkills.beginningSoundMatch
+        )
+    }
+
+    func testEasyIndependentLiteracyPlacementJumpsForwardAndOnlyMarksProvisionalReadiness() throws {
+        let graph = try LiteracySkillCatalog.graph()
+        let engine = LiteracyPlacementEngine()
+        var session = engine.begin(startBand: 3)
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(engine.nextProbe(for: session))
+
+        engine.record(
+            LiteracyPlacementResult(
+                outcome: .correct,
+                supportLevel: .independent,
+                easySuccess: true
+            ),
+            for: probe,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        XCTAssertEqual(session.nextBand, 5)
+        XCTAssertEqual(session.highestIndependentBand, 3)
+        XCTAssertTrue(
+            profile.placementReadySkillIDs?.contains(LiteracySkills.beginningSoundMatch) == true
+        )
+        XCTAssertTrue(
+            profile.placementReadySkillIDs?.contains(LiteracySkills.sameDifferentSounds) == true
+        )
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.beginningSoundMatch).state,
+            .new,
+            "Diagnostic readiness must not masquerade as observed mastery."
+        )
+    }
+
+    func testSupportedLiteracyPlacementStepsBackWithoutGrantingReadiness() throws {
+        let graph = try LiteracySkillCatalog.graph()
+        let engine = LiteracyPlacementEngine()
+        var session = engine.begin(startBand: 5)
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(engine.nextProbe(for: session))
+
+        engine.record(
+            LiteracyPlacementResult(
+                outcome: .correct,
+                supportLevel: .strongHint
+            ),
+            for: probe,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        XCTAssertEqual(session.nextBand, 4)
+        XCTAssertEqual(session.firstSupportNeededBand, 5)
+        XCTAssertTrue(profile.placementReadySkillIDs?.isEmpty ?? true)
+    }
+
+    func testLiteracyPlacementStopsAfterBracketingIndependentCeiling() throws {
+        let graph = try LiteracySkillCatalog.graph()
+        let engine = LiteracyPlacementEngine(maxProbes: 6)
+        var session = engine.begin(startBand: 4)
+        var profile = LearnerProfile()
+
+        let independent = try XCTUnwrap(engine.nextProbe(for: session))
+        XCTAssertEqual(independent.band, 4)
+        engine.record(
+            LiteracyPlacementResult(outcome: .correct),
+            for: independent,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+        XCTAssertFalse(session.isComplete)
+
+        let support = try XCTUnwrap(engine.nextProbe(for: session))
+        XCTAssertEqual(support.band, 5)
+        engine.record(
+            LiteracyPlacementResult(
+                outcome: .incorrect,
+                supportLevel: .independent
+            ),
+            for: support,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        XCTAssertTrue(session.isComplete)
+        XCTAssertEqual(session.highestIndependentBand, 4)
+        XCTAssertEqual(session.firstSupportNeededBand, 5)
+
+        let recommendation = engine.recommendation(for: session)
+        XCTAssertEqual(recommendation.suggestedBand, 5)
+        XCTAssertEqual(recommendation.confidence, .high)
+    }
+
+    func testDuplicateLiteracyPlacementResponseCannotMoveTheCeilingTwice() throws {
+        let graph = try LiteracySkillCatalog.graph()
+        let engine = LiteracyPlacementEngine()
+        var session = engine.begin(startBand: 3)
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(engine.nextProbe(for: session))
+        let result = LiteracyPlacementResult(
+            outcome: .correct,
+            supportLevel: .independent,
+            easySuccess: true
+        )
+
+        engine.record(
+            result,
+            for: probe,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+        let count = session.completedProbeCount
+        let nextBand = session.nextBand
+
+        engine.record(
+            result,
+            for: probe,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        XCTAssertEqual(session.completedProbeCount, count)
+        XCTAssertEqual(session.nextBand, nextBand)
+    }
+
 }
