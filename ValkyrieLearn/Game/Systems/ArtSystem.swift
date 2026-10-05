@@ -8,15 +8,20 @@ import SpriteKit
     private static var atlasCache: [String: SKTextureAtlas] = [:]
     private static var textureCache: [String: SKTexture] = [:]
     static func frames(character: String, pose: Pose) -> [SKTexture] {
-        guard Bundle.main.url(forResource: character, withExtension: "atlasc") != nil
-                || Bundle.main.url(forResource: character, withExtension: "atlas") != nil else { return [] }
+        let hasAtlas = Bundle.main.url(forResource: character, withExtension: "atlasc") != nil
+            || Bundle.main.url(forResource: character, withExtension: "atlas") != nil
+        if !hasAtlas {
+            return texture(character).map { [$0] } ?? []
+        }
         let atlas = atlasCache[character] ?? SKTextureAtlas(named: character)
         atlasCache[character] = atlas
         return atlas.textureNames.filter { $0.hasPrefix(pose.rawValue + "_") }.sorted().map { atlas.textureNamed($0) }
     }
     static func texture(_ name: String) -> SKTexture? {
         if let cached = textureCache[name] { return cached }
-        guard let image = UIImage(named: name) else { return nil }
+        let image = UIImage(named: name) ?? Bundle.main.url(forResource: name, withExtension: "webp")
+            .flatMap { UIImage(contentsOfFile: $0.path) }
+        guard let image else { return nil }
         let texture = SKTexture(image: image); texture.filteringMode = .linear
         textureCache[name] = texture
         return texture

@@ -6,7 +6,7 @@ import LearningCore
 
 @MainActor final class NativeArtTests: XCTestCase {
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
-        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial"] {
+        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
         }
         for character in ["Valkyrie", "Pip"] {
@@ -15,6 +15,12 @@ import LearningCore
             }
         }
         XCTAssertEqual(ArtSystem.frames(character: "Valkyrie", pose: .walk).count, 2)
+        for pose in [ArtSystem.Pose.idle, .walk, .interact, .celebrate, .react] {
+            XCTAssertFalse(ArtSystem.frames(character: "Lumi", pose: pose).isEmpty)
+        }
+        let lumi = LumiNode()
+        lumi.pose(.interact)
+        XCTAssertFalse(lumi.bodyNode.children.compactMap { $0 as? SKSpriteNode }.first?.isHidden ?? true)
         let actor = ValkyrieNode()
         for pose in [ArtSystem.Pose.idle, .walk, .interact, .celebrate, .react] {
             actor.pose(pose)
@@ -78,6 +84,20 @@ import LearningCore
         XCTAssertLessThan(sign.zPosition, scene.valkyrie.zPosition)
         scene.handleTap(at: CGPoint(x: 795, y: 445))
         XCTAssertEqual(state.world, .mathCastle)
+        scene.willLeave()
+    }
+
+    func testWordGardenFlowerGateIsNativeAndReachableFromStoryTree() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        state.travel(to: .wordGarden)
+        let scene = WordGardenScene(state: state)
+        scene.didMove(to: SKView())
+        XCTAssertNotNil(scene.childNode(withName: "flowerGate"))
+        XCTAssertNotNil(scene.childNode(withName: "questionPrompt"))
+        XCTAssertEqual(scene.children.filter { $0.name == "flowerChoice" }.count, 4)
+        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.uppercaseLetterNames)
+        scene.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertEqual(state.world, .storyTree)
         scene.willLeave()
     }
 
