@@ -5,8 +5,25 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeArtTests: XCTestCase {
+    func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
+        let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
+        XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = WordGardenScene(state: state)
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
+        scene.update(0)
+        XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
+        let gate = try XCTUnwrap(scene.childNode(withName: "flowerGate"))
+        let gateFrame = gate.calculateAccumulatedFrame()
+        for flower in scene.children where flower.name == "flowerChoice" {
+            XCTAssertFalse(gateFrame.intersects(flower.calculateAccumulatedFrame()))
+        }
+    }
+
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
-        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial"] {
+        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "StoryBloom"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
         }
         for character in ["Valkyrie", "Pip"] {
@@ -15,6 +32,12 @@ import LearningCore
             }
         }
         XCTAssertEqual(ArtSystem.frames(character: "Valkyrie", pose: .walk).count, 2)
+        for pose in [ArtSystem.Pose.idle, .walk, .interact, .celebrate, .react] {
+            XCTAssertFalse(ArtSystem.frames(character: "Lumi", pose: pose).isEmpty)
+        }
+        let lumi = LumiNode()
+        lumi.pose(.interact)
+        XCTAssertFalse(lumi.bodyNode.children.compactMap { $0 as? SKSpriteNode }.first?.isHidden ?? true)
         let actor = ValkyrieNode()
         for pose in [ArtSystem.Pose.idle, .walk, .interact, .celebrate, .react] {
             actor.pose(pose)
@@ -132,6 +155,68 @@ import LearningCore
         scene.willLeave()
     }
 
+    func testWordGardenFlowerGateIsNativeAndReachableFromStoryTree() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+
+        let story = StoryTreeScene(state: state)
+        story.didMove(to: SKView())
+        story.valkyrie.position = CGPoint(x: 190, y: 170)
+        story.handleTap(at: CGPoint(x: 205, y: 165))
+        XCTAssertEqual(state.world, .wordGarden)
+        story.willLeave()
+
+        state.travel(to: .wordGarden)
+        let scene = WordGardenScene(state: state)
+        scene.didMove(to: SKView())
+        XCTAssertNotNil(scene.childNode(withName: "flowerGate"))
+        XCTAssertNotNil(scene.childNode(withName: "questionPrompt"))
+        XCTAssertNotNil(scene.childNode(withName: "targetRune"))
+        XCTAssertEqual(scene.children.filter { $0.name == "flowerChoice" }.count, 4)
+        XCTAssertEqual(scene.children.filter { $0.name == "soundFlower" }.count, 3)
+        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.visualLetterMatch)
+        scene.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertEqual(state.world, .storyTree)
+        scene.willLeave()
+    }
+
+    func testFlowerGateCompletionStopsPreviewOnRestore() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
+            state.recordLiteracy(encounter, outcome: .correct, support: .independent,
+                                 attempts: 1, responseTime: 1)
+        }
+        let garden = WordGardenScene(state: state)
+        garden.didMove(to: SKView())
+        XCTAssertNil(garden.action(forKey: "wordGardenPreview"))
+        XCTAssertTrue(garden.childNode(withName: "targetRune")?.isHidden == true)
+        garden.handleTap(at: CGPoint(x: 675, y: 228))
+        XCTAssertNil(garden.valkyrie.action(forKey: "travel"))
+        XCTAssertEqual(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count, 3)
+        garden.willLeave()
+    }
+
+    func testFlowerGateRepeatedTapsAndExitCannotRecordStaleEvidence() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        state.travel(to: .wordGarden)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view; window.rootViewController = controller; window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+        let garden = WordGardenScene(state: state)
+        view.presentScene(garden)
+        try await Task.sleep(for: .seconds(1.5))
+        garden.handleTap(at: CGPoint(x: 675, y: 228))
+        let firstTravel = garden.valkyrie.action(forKey: "travel")
+        XCTAssertNotNil(firstTravel)
+        garden.handleTap(at: CGPoint(x: 505, y: 193))
+        XCTAssertTrue(garden.valkyrie.action(forKey: "travel") === firstTravel)
+        garden.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertEqual(state.world, .storyTree)
+        try await Task.sleep(for: .seconds(2))
+        XCTAssertTrue(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.isEmpty)
+    }
+
     func testRenderedNativeSceneReviewAttachments() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
@@ -150,6 +235,19 @@ import LearningCore
         try await capture(home, in: view, name: "Story-Tree-native-castle-arrival")
         home.willLeave()
 
+        state.travel(to: .wordGarden)
+        let garden = WordGardenScene(state: state)
+        garden.reducedMotion = true
+        view.presentScene(garden)
+        try await capture(garden, in: view, name: "Word-Garden-native-flower-gate")
+        // Review the playable choice state as well as the brief rune preview.
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        XCTAssertTrue(garden.childNode(withName: "targetRune")?.isHidden == true)
+        try await capture(garden, in: view, name: "Word-Garden-native-flower-choices")
+        garden.willLeave()
+
+
+        state.travel(to: .scienceLab)
         let science = ScienceLabScene(state: state); science.reducedMotion = true
         view.presentScene(science)
         science.valkyrie.position = CGPoint(x: 565, y: 185)
@@ -199,6 +297,7 @@ import LearningCore
         try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-restored")
         grove.willLeave()
 
+        state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true
         view.presentScene(castle)
@@ -340,6 +439,49 @@ import LearningCore
         scene.willLeave()
     }
 
+
+    func testWordGardenVisualEvidencePersistsWithoutCreatingSpokenLetterMastery() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        state.travel(to: .wordGarden)
+
+        let encounter = state.nextLiteracyEncounter()
+        let wrong = try XCTUnwrap(encounter.choices.first { $0 != encounter.answer })
+        let first = state.recordLiteracy(
+            encounter,
+            outcome: .incorrect,
+            support: .independent,
+            attempts: 1,
+            responseTime: 1.4
+        )
+        XCTAssertEqual(first.supportLevel, .independent)
+
+        let corrected = state.recordLiteracy(
+            encounter,
+            outcome: .correct,
+            support: .lightHint,
+            attempts: 2,
+            responseTime: 2.8
+        )
+        XCTAssertEqual(corrected.outcome, .correct)
+        XCTAssertTrue(state.profile.usedFingerprints.contains(encounter.fingerprint))
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.world, .wordGarden)
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count,
+            2
+        )
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.visualLetterMatch).state,
+            .learning
+        )
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
+            .new
+        )
+        XCTAssertNotEqual(wrong, encounter.answer)
+    }
 
     func testIncorrectMathAnswerKeepsPhysicalRouteClosed() async throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))

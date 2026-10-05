@@ -60,3 +60,16 @@ for name, metadata in bridge_art['outputs'].items():
     assert data[:8] == b'\x89PNG\r\n\x1a\n', name
     assert list(struct.unpack('>II', data[16:24])) == metadata['size'], name
 print('PASS illustrated bridge prop hashes and crop dimensions.')
+
+# Word Garden reference assets are preserved exact v3.31 embedded-source blobs.
+word_garden_art = json.loads((ROOT/'ValkyrieLearn/Resources/WORD_GARDEN_ART_MANIFEST.json').read_text())
+def git_blob_sha(data):
+    return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+assert git_blob_sha((ROOT/'index.html').read_bytes()) == word_garden_art['sourceBlobSHA']
+for path, metadata in word_garden_art['assets'].items():
+    data = (ROOT/path).read_bytes()
+    assert git_blob_sha(data) == metadata['blobSHA'], path
+print('PASS Word Garden v3.31 source-blob provenance.')
+garden_source = ROOT/'ValkyrieLearn/Resources/AdventureArt.xcassets/WordGardenSourceAtlas.imageset/art.png'
+assert hashlib.sha256(garden_source.read_bytes()).hexdigest() == manifest['sources']['adventure-art/worlds.png']
+print('PASS full-resolution Word Garden source matches approved original artwork.')

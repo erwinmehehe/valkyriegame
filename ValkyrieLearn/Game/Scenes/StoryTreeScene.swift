@@ -63,6 +63,14 @@ import SpriteKit
     override func buildWorld() {
         super.buildWorld()
 
+        let gardenSign = hotspot(
+            "← Word Garden",
+            name: "wordGarden",
+            at: CGPoint(x: 205, y: 165),
+            size: CGSize(width: 210, height: 56)
+        )
+        gardenSign.zPosition = 820
+
         let sign = hotspot(
             "Math Castle →",
             name: "castle",
@@ -268,6 +276,15 @@ import SpriteKit
 
     func handleTap(at point: CGPoint) {
         switch targetName(at: point) {
+        case "wordGarden":
+            let destination = CGPoint(x: 190, y: 170)
+            if isNear(destination) {
+                state.travel(to: .wordGarden)
+            } else {
+                instruction.text = "Walk back to the garden path, then tap the sign to enter."
+                travel(to: destination)
+            }
+
         case "castle":
             let destination = CGPoint(x: 795, y: 450)
             if isNear(destination) {
