@@ -103,6 +103,8 @@ public enum LiteracySkills {
     public static let manipulateInitialPhoneme = SkillID(rawValue: "literacy.phonemic.manipulateInitialPhoneme")
 
     // Alphabetic principle
+    public static let visualLetterMatch = SkillID(rawValue: "literacy.alphabet.visualLetterMatch")
+    public static let visualCasePairing = SkillID(rawValue: "literacy.alphabet.visualCasePairing")
     public static let uppercaseLetterNames = SkillID(rawValue: "literacy.alphabet.uppercaseLetterNames")
     public static let lowercaseLetterNames = SkillID(rawValue: "literacy.alphabet.lowercaseLetterNames")
     public static let commonConsonantSounds = SkillID(rawValue: "literacy.alphabet.commonConsonantSounds")
@@ -257,15 +259,36 @@ public enum LiteracySkillCatalog {
             isStretch: true
         ),
 
-        // Connect sound to print.
+        // Visual print identity can be practiced before recorded naming/sound instruction exists.
+        .init(
+            id: LiteracySkills.visualLetterMatch,
+            strand: .alphabeticPrinciple,
+            title: "Match Printed Letter Shapes",
+            developmentalOrder: 10,
+            representations: [.letter],
+            responseModes: [.directTouch],
+            mechanicIDs: [WordGardenMechanicID.letterStones]
+        ),
+        .init(
+            id: LiteracySkills.visualCasePairing,
+            strand: .alphabeticPrinciple,
+            title: "Pair Uppercase and Lowercase Letter Shapes",
+            developmentalOrder: 11,
+            prerequisites: [LiteracySkills.visualLetterMatch],
+            representations: [.letter],
+            responseModes: [.directTouch, .arrange],
+            mechanicIDs: [WordGardenMechanicID.sunmillPair]
+        ),
         .init(
             id: LiteracySkills.uppercaseLetterNames,
             strand: .alphabeticPrinciple,
             title: "Recognize Uppercase Letter Names",
             developmentalOrder: 11,
-            representations: [.letter, .picture],
-            responseModes: [.directTouch, .pictureChoice],
-            mechanicIDs: [WordGardenMechanicID.letterStones]
+            prerequisites: [LiteracySkills.visualLetterMatch],
+            representations: [.auditory, .letter, .picture],
+            responseModes: [.listenAndChoose, .directTouch, .pictureChoice],
+            mechanicIDs: [WordGardenMechanicID.letterStones],
+            requiresRecordedAudio: true
         ),
         .init(
             id: LiteracySkills.lowercaseLetterNames,
@@ -273,9 +296,10 @@ public enum LiteracySkillCatalog {
             title: "Recognize Lowercase Letter Names",
             developmentalOrder: 12,
             prerequisites: [LiteracySkills.uppercaseLetterNames],
-            representations: [.letter, .picture],
-            responseModes: [.directTouch, .pictureChoice],
-            mechanicIDs: [WordGardenMechanicID.letterStones, WordGardenMechanicID.sunmillPair]
+            representations: [.auditory, .letter, .picture],
+            responseModes: [.listenAndChoose, .directTouch, .pictureChoice],
+            mechanicIDs: [WordGardenMechanicID.letterStones],
+            requiresRecordedAudio: true
         ),
         .init(
             id: LiteracySkills.commonConsonantSounds,
