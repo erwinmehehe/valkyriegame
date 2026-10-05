@@ -88,6 +88,22 @@ import SpriteKit
         post.zPosition = -1
         sign.addChild(post)
 
+        let scienceSign = hotspot(
+            "Science Lab →",
+            name: "scienceLab",
+            at: CGPoint(x: 580, y: 515),
+            size: CGSize(width: 205, height: 54)
+        )
+        scienceSign.zPosition = 535
+        let sciencePost = ArtSystem.box(
+            CGSize(width: 14, height: 88),
+            color: .init(red: 0.24, green: 0.39, blue: 0.25, alpha: 1),
+            radius: 3
+        )
+        sciencePost.position.y = -60
+        sciencePost.zPosition = -1
+        scienceSign.addChild(sciencePost)
+
         _ = worldGear("✦", name: "pipWind", at: CGPoint(x: 315, y: 260), radius: 34)
 
         let glow = SKShapeNode(circleOfRadius: 45)
@@ -110,8 +126,8 @@ import SpriteKit
         renderMoonLantern()
 
         instruction.text = state.hasStoryReward(.moonLantern)
-            ? "The Story Tree grew a Moon Lantern. Tap it to choose a different branch."
-            : "The Story Tree is waiting for its starlight. Let's find Pip's castle."
+            ? "The Story Tree grew a Moon Lantern. Math Castle and Science Lab paths are open."
+            : "The Story Tree is waiting for its starlight. Math Castle and Science Lab are ready to explore."
     }
 
     private func renderMoonLantern() {
@@ -275,6 +291,15 @@ import SpriteKit
                 state.travel(to: .mathCastle)
             } else {
                 instruction.text = "Walk to the castle sign, then tap it to enter."
+                travel(to: destination)
+            }
+
+        case "scienceLab":
+            let destination = CGPoint(x: 580, y: 450)
+            if isNear(destination) {
+                state.enterScienceLab()
+            } else {
+                instruction.text = "Walk to the Science Lab sign, then tap it to enter the Greenhouse."
                 travel(to: destination)
             }
 
