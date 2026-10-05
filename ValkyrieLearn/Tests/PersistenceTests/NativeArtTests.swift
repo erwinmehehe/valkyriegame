@@ -95,7 +95,7 @@ import LearningCore
         XCTAssertNotNil(scene.childNode(withName: "flowerGate"))
         XCTAssertNotNil(scene.childNode(withName: "questionPrompt"))
         XCTAssertEqual(scene.children.filter { $0.name == "flowerChoice" }.count, 4)
-        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.uppercaseLetterNames)
+        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.visualLetterMatch)
         scene.handleTap(at: CGPoint(x: 52, y: 669))
         XCTAssertEqual(state.world, .storyTree)
         scene.willLeave()
