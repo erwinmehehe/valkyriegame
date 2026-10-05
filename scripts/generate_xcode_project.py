@@ -25,11 +25,11 @@ resource_root = ROOT/'ValkyrieLearn/Resources'
 resources = sorted(list(resource_root.glob('*.wav')) + list(resource_root.glob('*.atlas')) + list(resource_root.glob('*.xcassets')))
 file_refs = {}
 for p in app_files + core_tests + store_tests + resources:
-    rel = str(p.relative_to(ROOT))
+    rel = p.relative_to(ROOT).as_posix()
     file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType={'.swift':'sourcecode.swift', '.wav':'audio.wav', '.atlas':'folder.skatlas', '.xcassets':'folder.assetcatalog'}[p.suffix], path=rel, sourceTree='<group>')
 # Include learning sources and curriculum for browsing; package owns their compilation.
 for p in sorted((ROOT/'ValkyrieLearn/Learning').rglob('*.swift')) + sorted((ROOT/'ValkyrieLearn/Curriculum').rglob('*.swift')):
-    rel = str(p.relative_to(ROOT)); file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType='sourcecode.swift', path=rel, sourceTree='<group>')
+    rel = p.relative_to(ROOT).as_posix(); file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType='sourcecode.swift', path=rel, sourceTree='<group>')
 source_group = put('Sources','PBXGroup', children=list(file_refs.values()), name='Native sources', sourceTree='<group>')
 products = []
 targets = []
@@ -39,12 +39,12 @@ for name,files,kind in [('ValkyrieLearn',app_files,'application'),('LearningCore
     product = put('Product:'+name,'PBXFileReference', explicitFileType='wrapper.application' if kind=='application' else 'wrapper.cfbundle',
                   path=name+('.app' if kind=='application' else '.xctest'), sourceTree='BUILT_PRODUCTS_DIR')
     products.append(product)
-    source_builds = [put('Build:'+name+str(p.relative_to(ROOT)),'PBXBuildFile',fileRef=file_refs[str(p.relative_to(ROOT))]) for p in files]
+    source_builds = [put('Build:'+name+p.relative_to(ROOT).as_posix(),'PBXBuildFile',fileRef=file_refs[p.relative_to(ROOT).as_posix()]) for p in files]
     sources = put('Sources:'+name,'PBXSourcesBuildPhase',buildActionMask=2147483647,files=source_builds,runOnlyForDeploymentPostprocessing=0)
     product_dependency = put('PackageProduct:'+name,'XCSwiftPackageProductDependency',package=package,productName='LearningCore')
     framework_build = put('LinkPackage:'+name,'PBXBuildFile',productRef=product_dependency)
     frameworks = put('Frameworks:'+name,'PBXFrameworksBuildPhase',buildActionMask=2147483647,files=[framework_build],runOnlyForDeploymentPostprocessing=0)
-    resource_builds = [put('Resource:'+str(p.relative_to(ROOT)),'PBXBuildFile',fileRef=file_refs[str(p.relative_to(ROOT))]) for p in resources] if kind=='application' else []
+    resource_builds = [put('Resource:'+p.relative_to(ROOT).as_posix(),'PBXBuildFile',fileRef=file_refs[p.relative_to(ROOT).as_posix()]) for p in resources] if kind=='application' else []
     resource_phase = put('Resources:'+name,'PBXResourcesBuildPhase',buildActionMask=2147483647,files=resource_builds,runOnlyForDeploymentPostprocessing=0)
     configs=[]
     for config in ['Debug','Release']:
@@ -85,7 +85,7 @@ project_id=put('Project','PBXProject',attributes={'BuildIndependentTargetsInPara
 text='// !$*UTF8*$!\n{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n'
 text+='\n'.join(f'{key} = {quote(value)};' for key,value in sorted(objects.items()))
 text+='\n}; rootObject = '+project_id+'; }\n'
-(PROJECT/'project.pbxproj').write_text(text)
+(PROJECT/'project.pbxproj').write_text(text, newline='\\n')
 
 scheme=ET.Element('Scheme',LastUpgradeVersion='1600',version='1.7')
 def reference(parent,name):
