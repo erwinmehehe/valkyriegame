@@ -594,14 +594,16 @@ import LearningCore
     private func resolveFlower(choice: String, node: SKNode) {
         guard let encounter else { return }
         attempts += 1
+        let attemptSupport = support
 
         if choice == encounter.answer {
+            acceptingFlowerChoices = false
             solved = true
             pulse(node)
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .correct,
-                support: support,
+                support: attemptSupport,
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
@@ -625,25 +627,27 @@ import LearningCore
                 }
             ]), withKey: "nextLiteracyEncounter")
         } else {
-            support = support == .independent ? .lightHint : .strongHint
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .incorrect,
-                support: support,
+                support: attemptSupport,
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
+            support = support == .independent ? .lightHint : .strongHint
             valkyrie.pose(.react)
             nudge(node)
-            instruction.text = support == .lightHint
-                ? "Look closely at the letter on each flower."
-                : "Lumi is narrowing it down. Match the shape exactly."
+            let hint = support == .lightHint
+                ? "Look closely at the shape on each flower."
+                : "Lumi is narrowing it down. Match the rune shape exactly."
+            showFlowerTargetRune(retryMessage: hint)
         }
     }
 
     private func resolveSunmill(choice: String, node: SKNode) {
         guard let encounter else { return }
         attempts += 1
+        let attemptSupport = support
 
         if choice == encounter.answer {
             solved = true
@@ -651,7 +655,7 @@ import LearningCore
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .correct,
-                support: support,
+                support: attemptSupport,
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
@@ -677,19 +681,19 @@ import LearningCore
                 }
             ]), withKey: "nextLiteracyEncounter")
         } else {
-            support = support == .independent ? .lightHint : .strongHint
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .incorrect,
-                support: support,
+                support: attemptSupport,
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
+            support = support == .independent ? .lightHint : .strongHint
             valkyrie.pose(.react)
             nudge(node)
             instruction.text = support == .lightHint
-                ? "Match the big letter in the mill to the same little-letter shape."
-                : "Compare one curve and line at a time. Lumi will stay beside you."
+                ? "Match the tall rune in the mill to its little partner shape."
+                : "Compare the partner shapes carefully. Lumi will stay beside you."
         }
     }
 
@@ -811,6 +815,8 @@ import LearningCore
     }
 
     override func willLeave() {
+        removeAction(forKey: "wordGardenPreview")
+        targetRune?.removeFromParent()
         lumi.cancelTravel()
         lumi.removeAllActions()
         super.willLeave()
