@@ -40,3 +40,16 @@ layer separation still need further art production.
 The four short WAV files remain temporary SFX. Educational narration/phonemes
 must be deliberately recorded and separately versioned. No browser speech or
 external assets are loaded at runtime.
+
+## Illustrated bridge props
+
+The six Bridge assets are generated additions, not original v3.31 artwork.
+The built-in image generator used CrystalCart as a material/style reference:
+transparent atlas, textured oak and green repair planks, brass-capped timber,
+blank work-order sign, banked water channel, blank brass dial; warm upper-left
+lighting, no labels or characters. BRIDGE_ART_MANIFEST.json records source hash,
+exact atlas crop rectangles, output hashes and dimensions. The PNGs retain alpha.
+The approved V331_ART_MANIFEST.json and original resources remain unchanged.
+
+SpriteKit keeps quantity selection, drop footprints, equation text and traversal
+native. The same timber materials cover the crossing steps and their supports.

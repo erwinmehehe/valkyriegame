@@ -152,4 +152,87 @@ import LearningCore
         XCTAssertEqual(encounter.context, "challengeGate")
     }
 
+    func testBridgePlankInputRequiresArrivalAndAllowsOvershootRecoveryAndRestore() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        let encounter = MathCastleEncounterCatalog.missingNumberBridge[0]
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state); scene.didMove(to: SKView())
+        let supply = CGPoint(x: 550, y: 335)
+        let gap = CGPoint(x: 884, y: 220) // First missing plank after six fixed planks.
+        scene.drop(origin: "missingSupply", at: gap)
+        if case .missingBridge(let model) = state.runtime { XCTAssertEqual(model.selectedNumber, 0) }
+        else { return XCTFail("Expected bridge") }
+        scene.handleTap(at: supply)
+        XCTAssertFalse(state.interactionStarted)
+        scene.valkyrie.cancelTravel(); scene.pip.cancelTravel()
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: supply) // Engage, without adding a plank on this tap.
+        XCTAssertTrue(state.interactionStarted)
+        scene.drop(origin: "missingSupply", at: CGPoint(x: 1200, y: 600))
+        for _ in 0..<5 { scene.drop(origin: "missingSupply", at: gap) }
+        scene.handleTap(at: CGPoint(x: 1120, y: 250))
+        XCTAssertFalse(state.runtime?.completed == true, "One extra plank must not be silently corrected")
+        scene.drop(origin: "missingPlank", at: supply)
+        scene.handleTap(at: CGPoint(x: 1120, y: 250))
+        XCTAssertTrue(state.runtime?.completed == true)
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.runtime, state.runtime)
+        if case .missingBridge(let model) = restored.runtime {
+            XCTAssertEqual(model.selectedNumber, 4)
+            XCTAssertEqual(model.support, .lightHint)
+        } else { XCTFail("Expected persisted bridge") }
+        scene.drop(origin: "missingSupply", at: gap)
+        XCTAssertEqual(restored.runtime, state.runtime, "Solved bridge must reject further manipulation")
+        scene.willLeave()
+    }
+
+    func testBridgeShowsFixedGapsAndOverflowWithoutCoveringFeedback() async throws {
+        let encounter = MathCastleEncounterCatalog.missingNumberBridge[0]
+        var model = try MissingNumberBridgeModel(encounter: encounter)
+        let bridge = MissingNumberBridgeMechanic(); bridge.render(model)
+        XCTAssertEqual(bridge.nodes(at: CGPoint(x: -224, y: -90)).first?.name, "missingFixed")
+        XCTAssertEqual(bridge.nodes(at: CGPoint(x: 64, y: -90)).first?.name, "missingSlot")
+        XCTAssertTrue(bridge.receives(CGPoint(x: 64, y: -90)))
+        XCTAssertFalse(bridge.receives(CGPoint(x: 0, y: 140)))
+        model.setNumber(20); bridge.render(model)
+        XCTAssertNotNil(bridge.childNode(withName: "//missingPlank"))
+        XCTAssertGreaterThanOrEqual(bridge.calculateAccumulatedFrame().minY + 310, 86)
+        model.setNumber(model.correctNumber); XCTAssertEqual(model.submit()?.outcome, .correct)
+        bridge.render(model)
+        let repaired = try XCTUnwrap(bridge.childNode(withName: "//missingPlank") as? SKShapeNode)
+        XCTAssertEqual(repaired.glowWidth, 0, "Repaired timber should settle without a persistent tile glow.")
+    }
+
+    func testBridgeRouteLocksUntilRepairAndHomeCancelsCrossingWithoutNewEvidence() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.missingNumberBridge[0]))
+        let scene = MathCastleScene(state: state); scene.didMove(to: SKView())
+        let route = try XCTUnwrap(scene.childNode(withName: "bridgeRoute"))
+        XCTAssertTrue(route.isHidden)
+        scene.handleTap(at: CGPoint(x: 1040, y: 244))
+        XCTAssertFalse(scene.crossingBridge)
+        scene.valkyrie.cancelTravel(); scene.pip.cancelTravel()
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 965, y: 330))
+        for _ in 0..<4 { scene.drop(origin: "missingSupply", at: CGPoint(x: 884, y: 220)) }
+        scene.handleTap(at: CGPoint(x: 1120, y: 250))
+        XCTAssertFalse(route.isHidden)
+        let solvedRuntime = state.runtime
+        let evidenceBefore = state.profile
+        scene.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertTrue(scene.crossingBridge)
+        XCTAssertNotNil(scene.valkyrie.action(forKey: "travel"))
+        scene.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertEqual(state.runtime, solvedRuntime)
+        scene.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertFalse(scene.crossingBridge)
+        XCTAssertNil(scene.valkyrie.action(forKey: "travel"))
+        XCTAssertNil(scene.pip.action(forKey: "travel"))
+        XCTAssertEqual(state.world, .storyTree)
+        XCTAssertEqual(state.runtime, solvedRuntime)
+        XCTAssertEqual(state.profile, evidenceBefore, "Exploration must not award extra learning evidence")
+        scene.willLeave()
+    }
+
 }

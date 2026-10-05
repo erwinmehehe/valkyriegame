@@ -27,6 +27,11 @@ import SpriteKit
     }
     static func gear(radius: CGFloat, symbol: String = "") -> SKNode {
         let node = SKNode()
+        if let face = sprite("BridgeDial", size: CGSize(width: radius * 2, height: radius * 2)) {
+            node.addChild(face)
+            if !symbol.isEmpty { node.addChild(label(symbol, size: radius * 0.75)) }
+            return node
+        }
         let path = CGMutablePath()
         for index in 0..<48 {
             let angle = CGFloat(index) * .pi / 24
@@ -51,6 +56,22 @@ import SpriteKit
         label.text = text; label.fontSize = size; label.fontColor = .white
         label.verticalAlignmentMode = .center
         return label
+    }
+    static func supplyTray(_ size: CGSize) -> SKShapeNode {
+        // Keep the full native touch surface; the raised frame is only decoration.
+        let tray = box(size, color: .init(red: 0.29, green: 0.20, blue: 0.14, alpha: 1), radius: 3)
+        guard let floor = texture("BridgeOakPlank"), let timber = texture("BridgeTimber") else { return tray }
+        tray.fillColor = .white; tray.fillTexture = floor; tray.strokeColor = .clear
+        let railWidth: CGFloat = 10
+        for x in [-size.width / 2 + railWidth / 2, size.width / 2 - railWidth / 2] {
+            let rail = SKSpriteNode(texture: timber, color: .white, size: CGSize(width: railWidth, height: size.height))
+            rail.position.x = x; tray.addChild(rail)
+        }
+        for y in [-size.height / 2 + railWidth / 2, size.height / 2 - railWidth / 2] {
+            let rail = SKSpriteNode(texture: timber, color: .white, size: CGSize(width: railWidth, height: size.width))
+            rail.zRotation = .pi / 2; rail.position.y = y; tray.addChild(rail)
+        }
+        return tray
     }
     static func box(_ size: CGSize, color: UIColor, radius: CGFloat = 12) -> SKShapeNode {
         let node = SKShapeNode(rectOf: size, cornerRadius: radius)

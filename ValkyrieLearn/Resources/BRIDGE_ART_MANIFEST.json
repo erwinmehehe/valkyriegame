@@ -1,0 +1,84 @@
+{
+  "source": "Generated transparent prop atlas, 2026-10-05, built-in image generation; CrystalCart source art used as style reference.",
+  "source_sha256": "3206a75e797bb90494cd1607d31950e5401e9a6eaf8375a3879e8e9106903452",
+  "outputs": {
+    "AdventureArt.xcassets/BridgeOakPlank.imageset/art.png": {
+      "sha256": "d14a8f5a26d10dde7c995f3688381231eeb14d70f5e854e54f0db6f6411fde5e",
+      "size": [
+        295,
+        450
+      ],
+      "crop": [
+        145,
+        100,
+        440,
+        550
+      ]
+    },
+    "AdventureArt.xcassets/BridgeGreenPlank.imageset/art.png": {
+      "sha256": "7694647c3969a4e45813085a9abec5c8466ab1102ada4617c5ac07432a12a846",
+      "size": [
+        290,
+        450
+      ],
+      "crop": [
+        625,
+        100,
+        915,
+        550
+      ]
+    },
+    "AdventureArt.xcassets/BridgeTimber.imageset/art.png": {
+      "sha256": "3b22ae46715bbead3e6f6232d6fc268cfef2a979e049b15a963b9c44bdb1c07b",
+      "size": [
+        120,
+        535
+      ],
+      "crop": [
+        1240,
+        35,
+        1360,
+        570
+      ]
+    },
+    "AdventureArt.xcassets/BridgeWorkOrder.imageset/art.png": {
+      "sha256": "9521da9b0ccf6f6b4103a1f165a34ea5188e9baec0fb986ff513d38e671b333a",
+      "size": [
+        480,
+        145
+      ],
+      "crop": [
+        30,
+        770,
+        510,
+        915
+      ]
+    },
+    "AdventureArt.xcassets/BridgeChannel.imageset/art.png": {
+      "sha256": "dfe67efb157ce4802939c6a456a80d7d1988e7263982c261177d62159f8f999f",
+      "size": [
+        620,
+        250
+      ],
+      "crop": [
+        530,
+        670,
+        1150,
+        920
+      ]
+    },
+    "AdventureArt.xcassets/BridgeDial.imageset/art.png": {
+      "sha256": "52162887c696b094f88933b43017d0d34c265e85ade2223ab94fdc5234a6ebc2",
+      "size": [
+        365,
+        365
+      ],
+      "crop": [
+        1160,
+        600,
+        1525,
+        965
+      ]
+    }
+  }
+}

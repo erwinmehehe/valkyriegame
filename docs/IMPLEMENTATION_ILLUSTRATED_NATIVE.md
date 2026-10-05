@@ -32,25 +32,26 @@ v3.31 reference without restoring the browser runtime:
   the active machine reacts, starlight travels through a conduit, route lamps wake
   in sequence, decorative gears turn, a physical bridge unfolds, and the next
   destination begins glowing
-- the child must physically follow the opened route before the next adaptive work
-  order is selected; "next" is no longer only an immediate state change
+- ordinary solved machines open a textured deck joined to the existing illustrated
+  bridge/stair waypoints; the missing-number mechanic keeps its own live plank deck
+- the child reaches the work-order landing, then returns over the same path before
+  selecting the next adaptive order; repeated taps cannot swap an order in transit
 - Pip visibly leaves Valkyrie's side to help the machinery after a successful solve
   and uses a short helper-hop/operate animation
 - Valkyrie's success and retry poses are slightly longer and more readable
-- Crystal Cart moves toward the powered route on success and is scaled closer to
-  the original reference composition while retaining a child-sized native hit area
+- Crystal Cart reacts on success while retaining the current illustrated size,
+  quantity layout and child-sized native hit area
 - Balance Scale, Number Bond Machine, Ten Frame Gate and Missing Number Bridge each
   provide their own success animation instead of only changing text
 - every valid manipulation lightly wakes nearby gears without revealing whether
   the answer is correct
 - incorrect work keeps the route closed and uses a gentle machine wobble/power flicker
   before Pip scaffolds; there is no punitive failure animation
-- reduced-motion mode applies the final environmental state immediately without
-  route, bridge, gear, helper-hop or celebration travel animation
+- reduced-motion mode applies powered scenery immediately and omits decorative
+  effects; actor travel still preserves spatial continuity
 - relaunching/re-entering an already completed work order restores the powered
   environment without replaying the success sequence
-- Math Castle character scale is reduced so Valkyrie sits inside the composition
-  rather than covering the workbench and route
+- current illustrated props and the established 15–20% protagonist scale are retained
 
 This remains presentation/game-feel work only. Correctness, hidden placement,
 mastery, review, Challenge Gate rules and persistence remain in LearningCore/AppState.

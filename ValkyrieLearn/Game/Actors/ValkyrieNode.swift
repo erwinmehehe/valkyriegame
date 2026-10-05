@@ -29,6 +29,7 @@ import SpriteKit
     func pose(_ pose: ArtSystem.Pose) {
         removeAction(forKey: "operation")
         bodyNode.removeAction(forKey: "pose")
+        bodyNode.removeAction(forKey: "helperHop")
         atlasSprite?.removeAction(forKey: "pose")
         bodyNode.position = .zero; bodyNode.zRotation = 0; bodyNode.setScale(1)
         bodyNode.xScale = facing

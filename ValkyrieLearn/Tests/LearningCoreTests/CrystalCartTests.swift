@@ -102,7 +102,9 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.correctNumber, 4)
         for _ in 0..<4 { XCTAssertTrue(model.increment()) }
         XCTAssertEqual(model.selectedNumber, 4)
-        XCTAssertEqual(model.submit()?.outcome, .correct)
+        let evidence = try XCTUnwrap(model.submit())
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.representation, .concrete, "Building a visible span must not claim symbolic-only transfer")
         XCTAssertFalse(model.increment())
         XCTAssertFalse(model.decrement())
     }

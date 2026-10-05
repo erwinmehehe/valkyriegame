@@ -27,20 +27,31 @@ import LearningCore
     private var starlightOrb: SKShapeNode?
     private var environmentGears: [SKNode] = []
     private var routeReady = false
-    private let routeWaypoints = [
-        CGPoint(x: 835, y: 205),
-        CGPoint(x: 1085, y: 205)
-    ]
-    private var routeDestination: CGPoint { routeWaypoints.last ?? CGPoint(x: 1085, y: 205) }
+    private var routeDestination: CGPoint { bridgePath.last! }
     private let routeEnergyPoints = [
         CGPoint(x: 890, y: 330),
         CGPoint(x: 965, y: 350),
         CGPoint(x: 1035, y: 380),
         CGPoint(x: 1090, y: 420)
     ]
+    private let bridgeRouteNode = SKNode()
+    private(set) var crossingBridge = false
+    private var hasLeftScene = false
+    private let bridgePath = [
+        CGPoint(x: 490, y: 175), CGPoint(x: 560, y: 200),
+        CGPoint(x: 596, y: 244), CGPoint(x: 692, y: 244),
+        CGPoint(x: 788, y: 244), CGPoint(x: 884, y: 244),
+        CGPoint(x: 980, y: 244),
+        CGPoint(x: 1040, y: 244), CGPoint(x: 1080, y: 286),
+        CGPoint(x: 1110, y: 350), CGPoint(x: 1110, y: 400)
+    ]
+    private var repairedBridge: Bool {
+        state.runtime?.encounter.mechanicID == MathMechanicID.missingNumberBridge
+            && state.runtime?.completed == true
+    }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 650, height: 76),
-        cornerRadius: 24
+        rectOf: CGSize(width: 560, height: 92),
+        cornerRadius: 10
     )
     private let questionLabel = ArtSystem.label("", size: 23)
     private let workshopGroups: [[LearningEncounter]] = [
@@ -56,8 +67,8 @@ import LearningCore
         super.didMove(to: view)
         // The v3.31 reference keeps the protagonist inside the world composition
         // instead of letting the character dominate the learning object.
-        valkyrie.setScale(0.68)
-        pip.setScale(0.88)
+        valkyrie.setScale(0.5)
+        pip.setScale(0.65)
         initialBuildComplete = true
     }
 
@@ -70,11 +81,13 @@ import LearningCore
             floor.zPosition = -80
             addChild(floor)
         }
-        // The five workshop seals are mounted on one physical brass rack.
+        // The five workshop seals are mounted on one physical timber rack.
         let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
+        if let texture = ArtSystem.texture("BridgeOakPlank") { rack.fillColor = .white; rack.fillTexture = texture }
         rack.position = CGPoint(x: 330, y: 503); rack.zPosition = 30; addChild(rack)
         for x in [150, 510] {
             let post = ArtSystem.box(CGSize(width: 14, height: 142), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
+            if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture }
             post.position = CGPoint(x: x, y: 440); post.zPosition = 29; addChild(post)
         }
         for (index, symbol) in ["◆", "⚖", "◉", "▦", "↔"].enumerated() {
@@ -82,26 +95,51 @@ import LearningCore
         }
         _ = worldGear("↻", name: "wind", at: CGPoint(x: 390, y: 605), radius: 32)
 
-        questionPlate.position = CGPoint(x: 790, y: 607)
-        questionPlate.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.20, alpha: 0.78)
-        questionPlate.strokeColor = UIColor(red: 1.0, green: 0.76, blue: 0.28, alpha: 0.95)
-        questionPlate.lineWidth = 3
+        // Present the active prompt as a castle work order instead of a HUD panel.
+        questionPlate.position = CGPoint(x: 805, y: 606)
+        if let texture = ArtSystem.texture("BridgeWorkOrder") {
+            questionPlate.fillColor = .white
+            questionPlate.fillTexture = texture
+            questionPlate.strokeColor = .clear
+        } else {
+            questionPlate.fillColor = UIColor(red: 0.34, green: 0.20, blue: 0.09, alpha: 0.96)
+            questionPlate.strokeColor = UIColor(red: 0.95, green: 0.72, blue: 0.29, alpha: 0.95)
+        }
+        questionPlate.lineWidth = 2
         questionPlate.zPosition = 1995
         questionPlate.name = "questionPromptPlate"
         questionPlate.isHidden = true
         addChild(questionPlate)
 
-        questionLabel.position = CGPoint(x: 790, y: 607)
-        questionLabel.preferredMaxLayoutWidth = 590
+        for x in [555.0, 1055.0] {
+            let hanger = ArtSystem.box(
+                CGSize(width: 10, height: 58),
+                color: .init(red: 0.39, green: 0.27, blue: 0.15, alpha: 1),
+                radius: 2
+            )
+            if let texture = ArtSystem.texture("BridgeTimber") {
+                hanger.fillColor = .white
+                hanger.fillTexture = texture
+                hanger.strokeColor = .clear
+            }
+            hanger.position = CGPoint(x: x, y: 665)
+            hanger.zPosition = 1994
+            hanger.name = "questionPromptHanger"
+            hanger.isHidden = true
+            addChild(hanger)
+        }
+
+        questionLabel.position = CGPoint(x: 805, y: 606)
+        questionLabel.preferredMaxLayoutWidth = 490
         questionLabel.numberOfLines = 2
-        questionLabel.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.86, alpha: 1)
+        questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
         questionLabel.zPosition = 2000
         questionLabel.name = "questionPrompt"
         questionLabel.isHidden = true
         addChild(questionLabel)
 
         pip.name = "help"
-        nextGear = worldGear("→", name: "next", at: CGPoint(x: 1110, y: 430), radius: 34)
+        nextGear = worldGear("→", name: "next", at: CGPoint(x: 1200, y: 430), radius: 34)
         lever = makeLever()
         let light = SKShapeNode(circleOfRadius: 27)
         light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
@@ -133,20 +171,102 @@ import LearningCore
             lamp.zPosition = 25; lamp.name = "powerRouteLamp\(index)"; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
             lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
         }
+        buildBridgeRoute()
         buildPhysicalProgression()
         updateChallengeGateAppearance()
         openOrder()
     }
 
+    private func buildBridgeRoute() {
+        bridgeRouteNode.name = "bridgeRoute"
+        bridgeRouteNode.zPosition = 450
+        bridgeRouteNode.isHidden = true
+        // The landing joins the live plank deck to a short stair leading to the
+        // next-order gear. Actors follow these same surfaces, rather than a
+        // straight line through the painted machinery.
+        for (x, top, width) in [(550.0, 204.0, 100.0), (582, 240, 64),
+                                  (1040, 244, 140), (1060, 265, 90),
+                                  (1080, 286, 84), (1095, 318, 80),
+                                  (1110, 350, 80), (1110, 375, 80),
+                                  (1110, 400, 100)] {
+            let tread = ArtSystem.box(CGSize(width: width, height: 16),
+                color: .init(red: 0.49, green: 0.33, blue: 0.17, alpha: 1), radius: 3)
+            tread.position = CGPoint(x: x, y: top - 8)
+            tread.strokeColor = .init(red: 0.94, green: 0.73, blue: 0.32, alpha: 1)
+            tread.fillColor = .white
+            tread.fillTexture = ArtSystem.texture("BridgeOakPlank")
+            tread.strokeColor = .clear
+            bridgeRouteNode.addChild(tread)
+            let support = ArtSystem.box(CGSize(width: 12, height: max(20, top - 155)),
+                color: .init(red: 0.31, green: 0.23, blue: 0.17, alpha: 1), radius: 2)
+            support.position = CGPoint(x: x, y: 155 + (top - 155) / 2)
+            support.fillColor = .white
+            support.fillTexture = ArtSystem.texture("BridgeTimber")
+            support.strokeColor = .clear
+            support.zPosition = -1
+            bridgeRouteNode.addChild(support)
+        }
+        addChild(bridgeRouteNode)
+    }
+
+    private func followBridge(_ points: [CGPoint], completion: @escaping () -> Void) {
+        guard !hasLeftScene else { return }
+        guard let first = points.first else { completion(); return }
+        let behind = valkyrie.position
+        pip.walk(to: behind) {}
+        valkyrie.walk(to: first) { [weak self] in
+            guard let self, !self.hasLeftScene else { return }
+            self.state.audio.play("footstep")
+            self.followBridge(Array(points.dropFirst()), completion: completion)
+        }
+    }
+
+    private func crossBridge() {
+        guard state.runtime?.completed == true, repairedBridge || routeReady, !crossingBridge, !hasLeftScene else { return }
+        clearDrag(); engaged = false; showQuestion(nil)
+        crossingBridge = true
+        if !repairedBridge, let machine = mechanic {
+            machine.run(.sequence([.fadeOut(withDuration: reducedMotion ? 0 : 0.2), .hide()]), withKey: "routeClear")
+        }
+        instruction.text = "The bridge is repaired! Valkyrie and Pip can cross to the next work order."
+        followBridge(bridgePath) { [weak self] in
+            guard let self else { return }
+            self.crossingBridge = false
+            self.instruction.text = "We reached Pip's work-order landing! Tap the arrow to bring the next order back."
+        }
+    }
+
+    private func returnAcrossBridge(advance: Bool) {
+        guard state.runtime?.completed == true, repairedBridge || routeReady, !crossingBridge, !hasLeftScene else { return }
+        crossingBridge = true
+        instruction.text = "Pip is bringing the work order back across the bridge."
+        followBridge(Array(bridgePath.reversed())) { [weak self] in
+            guard let self else { return }
+            self.crossingBridge = false
+            if advance {
+                self.state.advanceEncounter(); self.openOrder()
+            } else {
+                self.mechanic?.isHidden = false; self.mechanic?.alpha = 1
+                self.instruction.text = "Back in the courtyard. You can explore or cross the repaired bridge again."
+            }
+        }
+    }
+
     private func makeLever() -> SKNode {
         let node = SKNode(); node.name = "submit"; node.position = CGPoint(x: 1120, y: 250); node.zPosition = 760
         let base = ArtSystem.box(CGSize(width: 90, height: 32), color: .init(red: 0.47, green: 0.3, blue: 0.14, alpha: 1), radius: 6)
+        if let texture = ArtSystem.texture("BridgeWorkOrder") { base.fillColor = .white; base.fillTexture = texture }
         base.position.y = -45; node.addChild(base)
         let arm = ArtSystem.box(CGSize(width: 14, height: 80), color: .init(red: 0.93, green: 0.74, blue: 0.35, alpha: 1), radius: 6)
+        if let texture = ArtSystem.texture("BridgeTimber") { arm.fillColor = .white; arm.fillTexture = texture }
         arm.zRotation = -.pi / 8; arm.position.y = -5; node.addChild(arm)
         let handle = SKShapeNode(circleOfRadius: 27)
         handle.position = CGPoint(x: 15, y: 32); handle.fillColor = .init(red: 0.38, green: 0.71, blue: 0.72, alpha: 1)
         handle.strokeColor = .init(red: 1, green: 0.82, blue: 0.44, alpha: 1); handle.lineWidth = 3; node.addChild(handle)
+        if let face = ArtSystem.sprite("BridgeDial", size: CGSize(width: 54, height: 54)) {
+            handle.fillColor = .clear; handle.strokeColor = .clear
+            handle.addChild(face)
+        }
         // Touch area stays large even where the lever's silhouette is narrow.
         let hit = ArtSystem.box(CGSize(width: 150, height: 110), color: .clear, radius: 0); hit.name = "submit"; node.addChild(hit)
         addChild(node); return node
@@ -168,42 +288,26 @@ import LearningCore
         addChild(conduit)
         powerConduit = conduit
 
+        // Ordinary solved machines open a deck at the same height as the
+        // current illustrated bridge and share its tested landing/stair path.
         let bridgeRoot = SKNode()
         bridgeRoot.name = "physicalRouteBridge"
-        bridgeRoot.position = CGPoint(x: 1190, y: 192)
-        bridgeRoot.zPosition = 14
-        bridgeRoot.zRotation = -0.08
-
-        let rail = ArtSystem.box(
-            CGSize(width: 250, height: 12),
-            color: UIColor(red: 0.84, green: 0.61, blue: 0.27, alpha: 0.95),
-            radius: 4
-        )
-        rail.position = CGPoint(x: -125, y: 26)
-        rail.strokeColor = UIColor(red: 1, green: 0.83, blue: 0.42, alpha: 0.95)
-        bridgeRoot.addChild(rail)
-
-        for index in 0..<6 {
-            let plank = ArtSystem.box(
-                CGSize(width: 38, height: 42),
-                color: UIColor(red: 0.42, green: 0.25, blue: 0.12, alpha: 0.96),
-                radius: 5
-            )
-            plank.name = "physicalRoutePlank\(index)"
-            plank.strokeColor = UIColor(red: 0.88, green: 0.65, blue: 0.31, alpha: 0.92)
-            plank.lineWidth = 2
-            plank.position = CGPoint(x: -24 - CGFloat(index) * 41, y: 0)
+        bridgeRoot.position = CGPoint(x: 1040, y: 236)
+        bridgeRoot.zPosition = 450
+        for index in 0..<10 {
+            let plank = ArtSystem.box(CGSize(width: 44, height: 16), color: .brown, radius: 3)
+            if let texture = ArtSystem.texture("BridgeOakPlank") {
+                plank.fillColor = .white; plank.fillTexture = texture; plank.strokeColor = .clear
+            }
+            plank.position.x = -22 - CGFloat(index) * 44
             bridgeRoot.addChild(plank)
         }
-
-        bridgeRoot.xScale = 0.06
-        bridgeRoot.alpha = 0.18
-        addChild(bridgeRoot)
-        physicalBridge = bridgeRoot
+        bridgeRoot.xScale = 0.06; bridgeRoot.alpha = 0.18
+        addChild(bridgeRoot); physicalBridge = bridgeRoot
 
         let beacon = SKShapeNode(circleOfRadius: 54)
         beacon.name = "routeDestinationBeacon"
-        beacon.position = CGPoint(x: 1110, y: 430)
+        beacon.position = CGPoint(x: 1200, y: 430)
         beacon.zPosition = 730
         beacon.fillColor = UIColor(red: 1, green: 0.83, blue: 0.32, alpha: 0.06)
         beacon.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.38, alpha: 0.35)
@@ -242,6 +346,7 @@ import LearningCore
         physicalBridge?.removeAllActions()
         physicalBridge?.xScale = 0.06
         physicalBridge?.alpha = 0.18
+        physicalBridge?.isHidden = state.runtime?.encounter.mechanicID == MathMechanicID.missingNumberBridge
 
         powerConduit?.removeAllActions()
         powerConduit?.strokeColor = UIColor(red: 0.45, green: 0.52, blue: 0.62, alpha: 0.38)
@@ -273,7 +378,8 @@ import LearningCore
     private func openPhysicalProgression(animated: Bool = true) {
         guard let bridge = physicalBridge else { return }
 
-        if !animated || reducedMotion {
+        bridge.isHidden = repairedBridge
+        if !animated || reducedMotion || repairedBridge {
             bridge.xScale = 1
             bridge.alpha = 1
             routeReady = true
@@ -384,17 +490,6 @@ import LearningCore
                 ]),
                 .removeFromParent()
             ]))
-        }
-    }
-
-    private func followOpenedRoute(_ waypoints: ArraySlice<CGPoint>, completion: @escaping () -> Void) {
-        guard let point = waypoints.first else {
-            completion()
-            return
-        }
-
-        travel(to: point) { [weak self] in
-            self?.followOpenedRoute(waypoints.dropFirst(), completion: completion)
         }
     }
 
@@ -509,19 +604,25 @@ import LearningCore
         }
 
         wasPowered = powered
+        bridgeRouteNode.isHidden = !powered
+        // Keep walking actors in front of the completed deck and its equation.
+        if repairedBridge { mechanic?.zPosition = 600 }
         updateChallengeGateAppearance()
     }
 
     private func showQuestion(_ text: String?) {
+        let hangers = children.filter { $0.name == "questionPromptHanger" }
         guard let text, !text.isEmpty else {
             questionPlate.isHidden = true
             questionLabel.isHidden = true
+            hangers.forEach { $0.isHidden = true }
             questionLabel.text = nil
             return
         }
         questionLabel.text = "Pip asks: " + text
         questionPlate.isHidden = false
         questionLabel.isHidden = false
+        hangers.forEach { $0.isHidden = false }
     }
 
     private func openOrder() {
@@ -541,7 +642,8 @@ import LearningCore
     }
 
     private var completionMessage: String {
-        state.workshop ? "You made it work! Try another station, or choose a new order."
+        if repairedBridge { return "The gaps are filled! Tap the bridge or arrow to cross with Pip." }
+        return state.workshop ? "You made it work! Try another station, or choose a new order."
             : "The castle route has power! Explore, or choose another work order."
     }
 
@@ -571,14 +673,17 @@ import LearningCore
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
         if engaged {
-            showQuestion(
+            let isBridge = runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
+            showQuestion(isBridge ? nil : (
                 state.previewVisible
                     ? "Watch the lights. Remember how many you see."
                     : runtime.encounter.prompt
-            )
+            ))
             instruction.text = state.previewVisible
                 ? "Look closely. Pip will hide the lights in a moment."
-                : "Use the machine, then pull Pip's lever to check your idea."
+                : (runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
+                    ? "Pip needs \(runtime.encounter.targetQuantity) bridge planks. \(runtime.encounter.initialQuantity) are fixed. Fill the gaps, then pull his lever."
+                    : "Use the machine, then pull Pip's lever to check your idea.")
         } else {
             showQuestion(nil)
         }
@@ -592,7 +697,7 @@ import LearningCore
         guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch; startPoint = touch.location(in: self); didDrag = false
         if canManipulate(), let name = targetName(at: startPoint),
-           ["supply", "cartCrystal", "bondSupply", "bondToken", "tenFrameSupply", "tenFrameFilled"].contains(name) {
+           ["supply", "cartCrystal", "bondSupply", "bondToken", "tenFrameSupply", "tenFrameFilled", "missingSupply", "missingPlank"].contains(name) {
             dragOrigin = name
         }
     }
@@ -604,7 +709,9 @@ import LearningCore
         didDrag = true
         guard dragOrigin != nil else { return }
         if ghost == nil {
-            ghost = CrystalCartMechanic.crystal(); ghost?.zPosition = 1900
+            ghost = dragOrigin == "missingSupply" || dragOrigin == "missingPlank"
+                ? MissingNumberBridgeMechanic.plank() : CrystalCartMechanic.crystal()
+            ghost?.zPosition = 1900
             if let ghost { addChild(ghost) }
         }
         ghost?.position = point
@@ -625,11 +732,29 @@ import LearningCore
     // Shared by native touches and hosted interaction tests.
     func handleTap(at point: CGPoint) {
         let target = targetName(at: point)
+        if crossingBridge {
+            if target == "home" {
+                valkyrie.cancelTravel(); pip.cancelTravel(); crossingBridge = false
+                state.travel(to: .storyTree)
+            }
+            return
+        }
+        if state.runtime?.completed == true, repairedBridge || routeReady, ["physicalRouteBridge", "missingFixed", "missingPlank", "missingSlot", "missingSupply",
+                            "missingBridge", "missingAnswer", "missingPlus", "missingMinus", "bridgeRoute"].contains(target ?? "") {
+            if valkyrie.position.y > 240 { returnAcrossBridge(advance: false) }
+            else { crossBridge() }
+            return
+        }
+        // An elevated destination can only be left along the repaired path.
+        if state.runtime?.completed == true, repairedBridge || routeReady, valkyrie.position.y > 240, target != "home", target != "next", target != "routeDestinationBeacon" {
+            returnAcrossBridge(advance: false)
+            return
+        }
         switch target {
         case "home": state.travel(to: .storyTree)
-        case "supply", "bondSupply", "bondSelected", "tenFrameSupply", "tenFrameCell", "missingPlus":
+        case "supply", "bondSupply", "bondSelected", "tenFrameSupply", "tenFrameCell", "missingPlus", "missingSupply", "missingSlot":
             manipulate { self.state.addCrystal() }
-        case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus":
+        case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus", "missingPlank":
             manipulate { self.state.removeCrystal() }
         case "scaleLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight": manipulate { self.state.chooseComparison(.right) }
@@ -652,23 +777,14 @@ import LearningCore
             }
 
             if state.runtime?.completed == true {
-                guard routeReady || reducedMotion else {
+                guard routeReady || repairedBridge else {
                     instruction.text = "Watch the starlight finish opening the bridge."
                     return
                 }
-                engaged = false
-                showQuestion(nil)
-                instruction.text = "The route is open. Follow the bridge to the next discovery."
-                followOpenedRoute(routeWaypoints[...]) { [weak self] in
-                    guard let self else { return }
-                    self.valkyrie.pose(.interact)
-                    self.pip.operate(reducedMotion: self.reducedMotion)
-                    self.state.advanceEncounter()
-                    self.openOrder()
-                }
+                if isNear(bridgePath.last!, radius: 55) { returnAcrossBridge(advance: true) }
+                else { crossBridge() }
             } else {
-                state.advanceEncounter()
-                openOrder()
+                state.advanceEncounter(); openOrder()
             }
         case "workshop0": workshop(0)
         case "workshop1": workshop(1)
@@ -677,7 +793,7 @@ import LearningCore
         case "workshop4": workshop(4)
         case "challengeGate":
             openChallengeGate()
-        case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "scaleBeam",
+        case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
             engageMachine()
         default:
@@ -694,7 +810,8 @@ import LearningCore
         state.audio.play("crystal")
     }
 
-    private func drop(origin: String, at point: CGPoint) {
+    func drop(origin: String, at point: CGPoint) {
+        guard canManipulate() else { return }
         guard let mechanic else { return }
         let local = mechanic.convert(point, from: self)
         var changed = false
@@ -711,6 +828,10 @@ import LearningCore
             if CGRect(x: -160, y: -62, width: 320, height: 128).contains(local) { state.addCrystal(); changed = true }
         case "tenFrameFilled":
             if CGRect(x: -320, y: -50, width: 100, height: 100).contains(local) { state.removeCrystal(); changed = true }
+        case "missingSupply":
+            if let bridge = mechanic as? MissingNumberBridgeMechanic, bridge.receives(local) { state.addCrystal(); changed = true }
+        case "missingPlank":
+            if let bridge = mechanic as? MissingNumberBridgeMechanic, bridge.returnsToSupply(local) { state.removeCrystal(); changed = true }
         default: break
         }
         if changed {
@@ -831,7 +952,14 @@ import LearningCore
     }
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
+        let height = max(0, min(1, (valkyrie.position.y - 240) / 160))
+        valkyrie.setScale(0.5 * (1 - height * 0.12))
+        let pipHeight = max(0, min(1, (pip.position.y - 240) / 160))
+        pip.setScale(0.65 * (1 - pipHeight * 0.12))
         if engaged, lastPreviewVisible != state.previewVisible { refresh() }
     }
-    override func willLeave() { clearDrag(); super.willLeave() }
+    override func willLeave() {
+        hasLeftScene = true; crossingBridge = false
+        clearDrag(); super.willLeave()
+    }
 }
