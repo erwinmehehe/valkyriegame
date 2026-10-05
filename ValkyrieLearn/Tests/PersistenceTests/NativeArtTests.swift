@@ -767,6 +767,59 @@ import LearningCore
         XCTAssertEqual(switchEvidence.first?.supportLevel, .independent)
     }
 
+    func testMirrorHallRecordsSpatialOrientationThroughLiveMirrorChoice() async throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.reducedMotion = true
+
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(state.puzzleMirrorHallAvailable)
+        state.travel(to: .mirrorHall)
+
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let encounter = try XCTUnwrap(state.nextPuzzleMirrorHallEncounter())
+        let choice = try XCTUnwrap(
+            scene.children
+                .compactMap { $0 as? SKShapeNode }
+                .first {
+                    $0.name == "mirrorOrientationChoice"
+                        && ($0.userData?["direction"] as? String) == encounter.target.rawValue
+                }
+        )
+        scene.handleTap(at: choice.position)
+
+        let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
+        XCTAssertEqual(evidence.count, 1)
+        XCTAssertEqual(evidence.first?.encounterID, encounter.id)
+        XCTAssertEqual(evidence.first?.outcome, .correct)
+        XCTAssertEqual(evidence.first?.supportLevel, .independent)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.mentalRotation).state, .new)
+    }
+
     func testRenderedNativeSceneReviewAttachments() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
@@ -1093,6 +1146,38 @@ import LearningCore
             .new
         )
         stableSorting.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+
+        state.travel(to: .mirrorHall)
+        let mirrorHall = PuzzlePalaceScene(state: state)
+        mirrorHall.reducedMotion = true
+        view.presentScene(mirrorHall)
+        try await capture(
+            mirrorHall,
+            in: view,
+            name: "Puzzle-Palace-native-mirror-hall"
+        )
+        XCTAssertTrue(state.puzzleMirrorHallAvailable)
+        XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallChamber"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorBeacon"))
+        XCTAssertEqual(
+            mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }.count,
+            3
+        )
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.mentalRotation).state,
+            .new
+        )
+        mirrorHall.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
