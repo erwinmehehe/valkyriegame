@@ -154,6 +154,29 @@ import LearningCore
             try await capture(scale, in: view, name: name)
             scale.willLeave()
         }
+        for (capacity, name) in [(false, "Math-Castle-native-bond"), (true, "Math-Castle-native-bond-capacity")] {
+            let bondState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+            bondState.reducedMotion = true
+            let encounter = capacity ? LearningEncounter(id: "bond-visual-capacity", skillID: MathSkills.bonds10,
+                mechanicID: MathMechanicID.numberBondMachine, operation: .numberBond,
+                initialQuantity: 19, targetQuantity: 20, prompt: "Inspect the crystal chambers")
+                : MathCastleEncounterCatalog.numberBondMachine[0]
+            XCTAssertTrue(bondState.startWorkshop(encounter))
+            let bond = MathCastleScene(state: bondState); bond.reducedMotion = true
+            view.presentScene(bond)
+            bond.valkyrie.position = CGPoint(x: 490, y: 175); bond.pip.position = CGPoint(x: 385, y: 187)
+            bond.handleTap(at: CGPoint(x: 820, y: 392))
+            if !capacity { try await capture(bond, in: view, name: name + "-empty") }
+            for _ in 0..<(capacity ? 20 : encounter.targetQuantity - encounter.initialQuantity) {
+                bond.drop(origin: "bondSupply", at: CGPoint(x: 925, y: 280))
+            }
+            guard case .numberBond(let model)? = bondState.runtime else {
+                XCTFail("Bond capture must render the requested mechanic"); continue
+            }
+            XCTAssertEqual(model.selectedPart, capacity ? 20 : model.correctMissingPart)
+            try await capture(bond, in: view, name: name + "-filled")
+            bond.willLeave()
+        }
     }
 
     private func waitForBridgeTravel(_ scene: MathCastleScene) async throws {
