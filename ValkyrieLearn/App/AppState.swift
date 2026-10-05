@@ -151,6 +151,9 @@ import LearningCore
             representation: encounter.representation,
             timestamp: evidence.timestamp
         ))
+        if outcome == .correct {
+            profile.usedFingerprints.insert(encounter.fingerprint)
+        }
         persist()
         return evidence
     }
