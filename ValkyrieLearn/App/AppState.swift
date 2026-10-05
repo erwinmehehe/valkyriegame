@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle, scienceLab }
+    enum World: String { case storyTree, mathCastle, scienceLab, scienceWeatherTower }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -56,7 +56,9 @@ import LearningCore
         profile.scienceAdventure ?? ScienceAdventure()
     }
 
-    func enterScienceLab() { travel(to: .scienceLab) }
+    func enterScienceLab() {
+        travel(to: scienceAdventure.greenhouseComplete ? .scienceWeatherTower : .scienceLab)
+    }
 
     private func updateScience(_ body: (inout ScienceAdventure, inout LearnerProfile) -> Void) {
         var science = profile.scienceAdventure ?? ScienceAdventure()
@@ -129,6 +131,61 @@ import LearningCore
                 encounterID: "science-greenhouse-light-result",
                 profile: &profile
             )
+        }
+    }
+
+    func scienceObserveMorningWeather() {
+        updateScience { science, profile in
+            if science.weatherStage == .arrive { science.weatherStage = .morningObserved }
+            science.recordEvidence(
+                skillID: ScienceSkills.weatherObserve,
+                mechanicID: ScienceLabMechanicID.weatherDial,
+                outcome: .correct,
+                representation: .concrete,
+                encounterID: "science-weather-morning",
+                profile: &profile
+            )
+        }
+    }
+
+    func scienceObserveAfternoonWeather() {
+        updateScience { science, profile in
+            if science.weatherStage == .morningObserved { science.weatherStage = .afternoonObserved }
+            science.recordPlacement(
+                skillID: ScienceSkills.weatherCompare,
+                outcome: .correct,
+                easySuccess: true,
+                profile: &profile,
+                graph: scienceGraph
+            )
+            science.recordEvidence(
+                skillID: ScienceSkills.weatherCompare,
+                mechanicID: ScienceLabMechanicID.weatherDial,
+                outcome: .correct,
+                representation: .reasoning,
+                easySuccess: true,
+                encounterID: "science-weather-compare",
+                profile: &profile
+            )
+        }
+    }
+
+    func scienceChooseForecast(_ choice: ScienceForecastChoice) {
+        updateScience { science, profile in
+            science.selectedForecast = choice
+            let correct = choice == .rain
+            science.recordEvidence(
+                skillID: ScienceSkills.weatherPattern,
+                mechanicID: ScienceLabMechanicID.weatherDial,
+                outcome: correct ? .correct : .incorrect,
+                representation: .reasoning,
+                encounterID: "science-weather-forecast",
+                profile: &profile
+            )
+            if correct {
+                science.weatherStage = .complete
+                science.creatureRouteOpen = true
+            }
         }
     }
     func prepareNext() -> EncounterSelection {

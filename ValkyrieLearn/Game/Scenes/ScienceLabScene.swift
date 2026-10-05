@@ -452,9 +452,12 @@ import LearningCore
 
         case "scienceWeatherGate":
             if greenhouseComplete {
-                instruction.text = "The Greenhouse path is open. Weather Tower is the next Science Lab area."
-                valkyrie.pose(.celebrate)
-                milo.inspect(reducedMotion: reducedMotion)
+                if isNear(exitPoint, radius: 120) {
+                    state.travel(to: .scienceWeatherTower)
+                } else {
+                    instruction.text = "The Weather Tower path is open. Walk to the gate to continue."
+                    travel(to: CGPoint(x: exitPoint.x - 75, y: 180))
+                }
             } else {
                 instruction.text = "The vine gate is still closed. Finish the plant investigation first."
             }
