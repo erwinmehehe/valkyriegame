@@ -35,6 +35,7 @@ import LearningCore
     var previewVisible: Bool { adventure.previewVisible(at: Date()) }
     var interactionStarted: Bool { adventure.interactionStarted }
     let graph: SkillGraph
+    let scienceGraph: SkillGraph
     let audio = AudioSystem()
     private let store: LearningStore
     init(context: ModelContext) throws {
@@ -45,10 +46,88 @@ import LearningCore
         reducedMotion = store.snapshot.reducedMotion
         world = World(rawValue: store.snapshot.lastWorld) ?? .storyTree
         graph = try MathSkills.graph()
+        scienceGraph = try ScienceSkillCatalog.graph()
         audio.enabled = soundEnabled
         ReviewScheduler().markDue(in: &profile, at: Date())
     }
     func travel(to world: World) { self.world = world; persist() }
+
+    var scienceAdventure: ScienceAdventure {
+        profile.scienceAdventure ?? ScienceAdventure()
+    }
+
+    func enterScienceLab() { travel(to: .scienceLab) }
+
+    private func updateScience(_ body: (inout ScienceAdventure, inout LearnerProfile) -> Void) {
+        var science = profile.scienceAdventure ?? ScienceAdventure()
+        body(&science, &profile)
+        profile.scienceAdventure = science
+        persist()
+    }
+
+    func scienceInspectGreenhouse() {
+        updateScience { science, profile in
+            if science.greenhouseStage == .arrive { science.greenhouseStage = .inspected }
+            science.recordEvidence(
+                skillID: ScienceSkills.noticeDetails,
+                mechanicID: ScienceLabMechanicID.miloInspect,
+                outcome: .correct,
+                representation: .concrete,
+                encounterID: "science-greenhouse-inspect",
+                profile: &profile
+            )
+        }
+    }
+
+    func scienceRecordDrySoilMistake() {
+        updateScience { science, profile in
+            science.recordEvidence(
+                skillID: ScienceSkills.plantNeeds,
+                mechanicID: ScienceLabMechanicID.sunPrism,
+                outcome: .incorrect,
+                representation: .reasoning,
+                encounterID: "science-greenhouse-plant-needs",
+                profile: &profile
+            )
+        }
+    }
+
+    func scienceWaterGreenhouse() {
+        updateScience { science, profile in
+            science.greenhouseStage = .watered
+            science.recordPlacement(
+                skillID: ScienceSkills.plantNeeds,
+                outcome: .correct,
+                easySuccess: true,
+                profile: &profile,
+                graph: scienceGraph
+            )
+            science.recordEvidence(
+                skillID: ScienceSkills.plantNeeds,
+                mechanicID: ScienceLabMechanicID.waterChannel,
+                outcome: .correct,
+                representation: .reasoning,
+                easySuccess: true,
+                encounterID: "science-greenhouse-plant-needs",
+                profile: &profile
+            )
+        }
+    }
+
+    func scienceLightGreenhouse() {
+        updateScience { science, profile in
+            science.greenhouseStage = .lit
+            science.greenhouseComplete = true
+            science.recordEvidence(
+                skillID: ScienceSkills.comparePlantConditions,
+                mechanicID: ScienceLabMechanicID.sunPrism,
+                outcome: .correct,
+                representation: .reasoning,
+                encounterID: "science-greenhouse-light-result",
+                profile: &profile
+            )
+        }
+    }
     func prepareNext() -> EncounterSelection {
         do {
             ReviewScheduler().markDue(in: &profile, at: Date())
