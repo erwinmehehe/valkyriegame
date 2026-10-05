@@ -46,8 +46,8 @@ public struct LiteracyEncounter: Identifiable, Equatable, Sendable {
 }
 
 public enum WordGardenEncounterCatalog {
-    /// These are intentionally visual-memory tasks. They can produce honest evidence
-    /// before recorded letter-name/phoneme audio is available.
+    /// Flower Gate measures visual identity only. The target rune is shown briefly
+    /// by the native scene and then hidden before the learner chooses.
     public static let visualLetterShapes: [LiteracyEncounter] = [
         .init(
             id: "flowerGate.visual.A",
@@ -78,24 +78,124 @@ public enum WordGardenEncounterCatalog {
             transferContext: true
         )
     ]
+
+    /// Sunmill teaches a visual uppercase/lowercase relationship without naming
+    /// the letters aloud. Spoken letter-name evidence remains gated on recordings.
+    public static let visualCasePairs: [LiteracyEncounter] = [
+        .init(
+            id: "sunmill.case.A-a",
+            skillID: LiteracySkills.visualCasePairing,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .symbolic,
+            prompt: "The Sunmill shows a tall rune. Find its little partner shape.",
+            answer: "a",
+            choices: ["d", "a", "o", "e"],
+            context: "sunmillCrossing"
+        ),
+        .init(
+            id: "sunmill.case.M-m",
+            skillID: LiteracySkills.visualCasePairing,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .symbolic,
+            prompt: "The Sunmill shows another tall rune. Find its little partner shape.",
+            answer: "m",
+            choices: ["n", "w", "m", "h"],
+            context: "sunmillCrossing"
+        ),
+        .init(
+            id: "sunmill.case.S-s",
+            skillID: LiteracySkills.visualCasePairing,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .pictorial,
+            prompt: "The Sunmill rune curls through the light. Find its little partner shape.",
+            answer: "s",
+            choices: ["c", "s", "g", "o"],
+            context: "sunmillCrossing",
+            transferContext: true
+        )
+    ]
+
+    public static func uppercaseTarget(for encounter: LiteracyEncounter) -> String? {
+        switch encounter.id {
+        case "sunmill.case.A-a": return "A"
+        case "sunmill.case.M-m": return "M"
+        case "sunmill.case.S-s": return "S"
+        default: return nil
+        }
+    }
 }
 
 public enum WordGardenDirector {
-    /// Flower Gate remains on visual print identity until approved recorded
-    /// letter-name/phoneme audio is bundled. Eligibility for later audio skills can
-    /// still advance in the profile, but this director will not silently substitute
-    /// a visual matching task for a spoken-language assessment.
+    public static func nextFlowerGateEncounter(profile: LearnerProfile) -> LiteracyEncounter {
+        nextCandidate(from: WordGardenEncounterCatalog.visualLetterShapes, profile: profile)
+    }
+
+    public static func flowerGateComplete(profile: LearnerProfile) -> Bool {
+        profile.progress(for: LiteracySkills.visualLetterMatch).state.readiness
+            >= SkillState.secure.readiness
+    }
+
+    public static func canEnterSunmill(profile: LearnerProfile, graph: SkillGraph) -> Bool {
+        flowerGateComplete(profile: profile)
+            && graph.isEligible(LiteracySkills.visualCasePairing, for: profile)
+    }
+
+    public static func nextSunmillEncounter(
+        profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> LiteracyEncounter? {
+        guard canEnterSunmill(profile: profile, graph: graph) else { return nil }
+        return nextCandidate(from: WordGardenEncounterCatalog.visualCasePairs, profile: profile)
+    }
+
+    public static func sunmillComplete(profile: LearnerProfile) -> Bool {
+        profile.progress(for: LiteracySkills.visualCasePairing).state.readiness
+            >= SkillState.secure.readiness
+    }
+
+    public static func independentSuccessCount(
+        for encounters: [LiteracyEncounter],
+        profile: LearnerProfile
+    ) -> Int {
+        guard let skill = encounters.first?.skillID else { return 0 }
+        let validIDs = Set(encounters.map(\.id))
+        return Set(
+            profile.progress(for: skill).evidence
+                .filter {
+                    $0.outcome == .correct
+                        && $0.supportLevel == .independent
+                        && validIDs.contains($0.encounterID)
+                }
+                .map(\.encounterID)
+        ).count
+    }
+
     public static func nextEncounter(
         profile: LearnerProfile,
         graph: SkillGraph
     ) -> LiteracyEncounter {
-        let candidates = WordGardenEncounterCatalog.visualLetterShapes
-        let completed = Set(
-            profile.progress(for: LiteracySkills.visualLetterMatch).evidence
-                .filter { $0.outcome == .correct }
+        if let sunmill = nextSunmillEncounter(profile: profile, graph: graph),
+           !sunmillComplete(profile: profile) {
+            return sunmill
+        }
+        return nextFlowerGateEncounter(profile: profile)
+    }
+
+    private static func nextCandidate(
+        from candidates: [LiteracyEncounter],
+        profile: LearnerProfile
+    ) -> LiteracyEncounter {
+        precondition(!candidates.isEmpty)
+        let skill = candidates[0].skillID
+        let independent = Set(
+            profile.progress(for: skill).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
                 .map(\.encounterID)
         )
-        return candidates.first { !completed.contains($0.id) }
-            ?? candidates[completed.count % candidates.count]
+        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
+            return unfinished
+        }
+        let attempts = profile.progress(for: skill).evidence.count
+        return candidates[attempts % candidates.count]
     }
 }

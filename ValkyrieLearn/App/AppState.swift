@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle, wordGarden }
+    enum World: String { case storyTree, mathCastle, wordGarden, sunmillCrossing }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -118,8 +118,24 @@ import LearningCore
     }
     func finishExploration() { adventure.finishExploration(profile: &profile, at: Date()); persist() }
 
+    var flowerGateComplete: Bool {
+        WordGardenDirector.flowerGateComplete(profile: profile)
+    }
+
+    var sunmillAvailable: Bool {
+        WordGardenDirector.canEnterSunmill(profile: profile, graph: literacyGraph)
+    }
+
+    var sunmillComplete: Bool {
+        WordGardenDirector.sunmillComplete(profile: profile)
+    }
+
     func nextLiteracyEncounter() -> LiteracyEncounter {
-        WordGardenDirector.nextEncounter(profile: profile, graph: literacyGraph)
+        WordGardenDirector.nextFlowerGateEncounter(profile: profile)
+    }
+
+    func nextSunmillEncounter() -> LiteracyEncounter? {
+        WordGardenDirector.nextSunmillEncounter(profile: profile, graph: literacyGraph)
     }
 
     @discardableResult
@@ -151,9 +167,6 @@ import LearningCore
             representation: encounter.representation,
             timestamp: evidence.timestamp
         ))
-        if outcome == .correct {
-            profile.usedFingerprints.insert(encounter.fingerprint)
-        }
         persist()
         return evidence
     }

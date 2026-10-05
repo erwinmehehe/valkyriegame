@@ -38,6 +38,7 @@ public enum WordGardenMechanicID {
     public static let rhymeVine = "wordGarden.rhymeVine"
     public static let syllableBells = "wordGarden.syllableBells"
     public static let letterStones = "wordGarden.letterStones"
+    public static let sunmillPair = "wordGarden.sunmillPair"
     public static let seedBlendPath = "wordGarden.seedBlendPath"
     public static let wordBloom = "wordGarden.wordBloom"
     public static let storyLantern = "wordGarden.storyLantern"
@@ -103,6 +104,7 @@ public enum LiteracySkills {
 
     // Alphabetic principle
     public static let visualLetterMatch = SkillID(rawValue: "literacy.alphabet.visualLetterMatch")
+    public static let visualCasePairing = SkillID(rawValue: "literacy.alphabet.visualCasePairing")
     public static let uppercaseLetterNames = SkillID(rawValue: "literacy.alphabet.uppercaseLetterNames")
     public static let lowercaseLetterNames = SkillID(rawValue: "literacy.alphabet.lowercaseLetterNames")
     public static let commonConsonantSounds = SkillID(rawValue: "literacy.alphabet.commonConsonantSounds")
@@ -257,7 +259,7 @@ public enum LiteracySkillCatalog {
             isStretch: true
         ),
 
-        // Visual shape identity can be practiced honestly before recorded letter-name audio exists.
+        // Visual print identity can be practiced before recorded naming/sound instruction exists.
         .init(
             id: LiteracySkills.visualLetterMatch,
             strand: .alphabeticPrinciple,
@@ -266,6 +268,16 @@ public enum LiteracySkillCatalog {
             representations: [.letter],
             responseModes: [.directTouch],
             mechanicIDs: [WordGardenMechanicID.letterStones]
+        ),
+        .init(
+            id: LiteracySkills.visualCasePairing,
+            strand: .alphabeticPrinciple,
+            title: "Pair Uppercase and Lowercase Letter Shapes",
+            developmentalOrder: 11,
+            prerequisites: [LiteracySkills.visualLetterMatch],
+            representations: [.letter],
+            responseModes: [.directTouch, .arrange],
+            mechanicIDs: [WordGardenMechanicID.sunmillPair]
         ),
         .init(
             id: LiteracySkills.uppercaseLetterNames,

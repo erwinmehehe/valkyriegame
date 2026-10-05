@@ -106,6 +106,7 @@ final class LiteracySkillGraphTests: XCTestCase {
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.rhymeVine))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.syllableBells))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.letterStones))
+        XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.sunmillPair))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.seedBlendPath))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.wordBloom))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.storyLantern))
@@ -278,6 +279,29 @@ final class LiteracySkillGraphTests: XCTestCase {
 
         XCTAssertEqual(session.completedProbeCount, count)
         XCTAssertEqual(session.nextBand, nextBand)
+    }
+
+
+    func testVisualLetterAndCasePairingRemainSeparateFromRecordedLetterNames() throws {
+        let graph = try LiteracySkillCatalog.graph()
+
+        XCTAssertNotNil(graph.skills[LiteracySkills.visualLetterMatch])
+        XCTAssertEqual(
+            graph.skills[LiteracySkills.visualCasePairing]?.prerequisites,
+            [LiteracySkills.visualLetterMatch]
+        )
+        XCTAssertFalse(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.visualLetterMatch)?.requiresRecordedAudio ?? true
+        )
+        XCTAssertFalse(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.visualCasePairing)?.requiresRecordedAudio ?? true
+        )
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.uppercaseLetterNames)?.requiresRecordedAudio == true
+        )
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.lowercaseLetterNames)?.requiresRecordedAudio == true
+        )
     }
 
 }

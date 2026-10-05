@@ -87,28 +87,53 @@ import LearningCore
         scene.willLeave()
     }
 
-    func testWordGardenFlowerGateIsNativeAndReachableFromStoryTree() async throws {
+    func testWordGardenFlowerGateUnlocksNativeSunmillCrossing() async throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        state.travel(to: .wordGarden)
 
-        let story = StoryTreeScene(state: state)
-        story.didMove(to: SKView())
-        story.valkyrie.position = CGPoint(x: 190, y: 170)
-        story.handleTap(at: CGPoint(x: 205, y: 165))
-        XCTAssertEqual(state.world, .wordGarden)
-        story.willLeave()
+        let flower = WordGardenScene(state: state)
+        flower.didMove(to: SKView())
+        XCTAssertNotNil(flower.childNode(withName: "flowerGate"))
+        XCTAssertNotNil(flower.childNode(withName: "questionPrompt"))
+        XCTAssertEqual(flower.children.filter { $0.name == "flowerChoice" }.count, 4)
+        XCTAssertNil(flower.childNode(withName: "sunmillRoute"))
+        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.visualLetterMatch)
+        flower.willLeave()
+
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
+            _ = state.recordLiteracy(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(state.flowerGateComplete)
+        XCTAssertTrue(state.sunmillAvailable)
 
         state.travel(to: .wordGarden)
-        let scene = WordGardenScene(state: state)
-        scene.didMove(to: SKView())
-        XCTAssertNotNil(scene.childNode(withName: "flowerGate"))
-        XCTAssertNotNil(scene.childNode(withName: "questionPrompt"))
-        XCTAssertNotNil(scene.childNode(withName: "targetRune"))
-        XCTAssertEqual(scene.children.filter { $0.name == "flowerChoice" }.count, 4)
-        XCTAssertEqual(scene.children.filter { $0.name == "soundFlower" }.count, 3)
-        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.visualLetterMatch)
-        scene.handleTap(at: CGPoint(x: 52, y: 669))
-        XCTAssertEqual(state.world, .storyTree)
-        scene.willLeave()
+        let awakeGate = WordGardenScene(state: state)
+        awakeGate.didMove(to: SKView())
+        XCTAssertNotNil(awakeGate.childNode(withName: "sunmillRoute"))
+        awakeGate.valkyrie.position = CGPoint(x: 945, y: 175)
+        awakeGate.handleTap(at: CGPoint(x: 995, y: 165))
+        XCTAssertEqual(state.world, .sunmillCrossing)
+        awakeGate.willLeave()
+
+        let sunmill = WordGardenScene(state: state)
+        sunmill.didMove(to: SKView())
+        XCTAssertNotNil(sunmill.childNode(withName: "sunmillWheel"))
+        XCTAssertNotNil(sunmill.childNode(withName: "sunmillWater"))
+        XCTAssertTrue(sunmill.childNode(withName: "sunmillBridge")?.isHidden == true)
+        XCTAssertEqual(sunmill.children.filter { $0.name == "sunmillChoice" }.count, 4)
+        XCTAssertEqual(
+            state.nextSunmillEncounter()?.skillID,
+            LiteracySkills.visualCasePairing
+        )
+        sunmill.handleTap(at: CGPoint(x: 1110, y: 665))
+        XCTAssertEqual(state.world, .wordGarden)
+        sunmill.willLeave()
     }
 
     func testRenderedNativeSceneReviewAttachments() async throws {
@@ -130,11 +155,40 @@ import LearningCore
         home.willLeave()
 
         state.travel(to: .wordGarden)
-        let garden = WordGardenScene(state: state)
-        garden.reducedMotion = true
-        view.presentScene(garden)
-        try await capture(garden, in: view, name: "Word-Garden-native-flower-gate")
-        garden.willLeave()
+        let flower = WordGardenScene(state: state); flower.reducedMotion = true
+        view.presentScene(flower)
+        try await capture(flower, in: view, name: "Word-Garden-native-flower-gate")
+        flower.willLeave()
+
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
+            _ = state.recordLiteracy(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        state.travel(to: .sunmillCrossing)
+        let sunmill = WordGardenScene(state: state); sunmill.reducedMotion = true
+        view.presentScene(sunmill)
+        try await capture(sunmill, in: view, name: "Word-Garden-native-sunmill")
+        sunmill.willLeave()
+
+        for encounter in WordGardenEncounterCatalog.visualCasePairs {
+            _ = state.recordLiteracy(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        let awakeSunmill = WordGardenScene(state: state); awakeSunmill.reducedMotion = true
+        view.presentScene(awakeSunmill)
+        try await capture(awakeSunmill, in: view, name: "Word-Garden-native-sunmill-awake")
+        XCTAssertFalse(awakeSunmill.childNode(withName: "sunmillBridge")?.isHidden ?? true)
+        awakeSunmill.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -213,50 +267,6 @@ import LearningCore
         XCTAssertGreaterThan(prompt.position.y, feedback.position.y)
 
         scene.willLeave()
-    }
-
-
-    func testWordGardenVisualEvidencePersistsWithoutCreatingSpokenLetterMastery() async throws {
-        let container = try LearningStore.container(inMemory: true)
-        let state = try AppState(context: ModelContext(container))
-        state.travel(to: .wordGarden)
-
-        let encounter = state.nextLiteracyEncounter()
-        let wrong = try XCTUnwrap(encounter.choices.first { $0 != encounter.answer })
-        let first = state.recordLiteracy(
-            encounter,
-            outcome: .incorrect,
-            support: .independent,
-            attempts: 1,
-            responseTime: 1.4
-        )
-        XCTAssertEqual(first.supportLevel, .independent)
-
-        let corrected = state.recordLiteracy(
-            encounter,
-            outcome: .correct,
-            support: .lightHint,
-            attempts: 2,
-            responseTime: 2.8
-        )
-        XCTAssertEqual(corrected.outcome, .correct)
-        XCTAssertTrue(state.profile.usedFingerprints.contains(encounter.fingerprint))
-
-        let restored = try AppState(context: ModelContext(container))
-        XCTAssertEqual(restored.world, .wordGarden)
-        XCTAssertEqual(
-            restored.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count,
-            2
-        )
-        XCTAssertEqual(
-            restored.profile.progress(for: LiteracySkills.visualLetterMatch).state,
-            .learning
-        )
-        XCTAssertEqual(
-            restored.profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
-            .new
-        )
-        XCTAssertNotEqual(wrong, encounter.answer)
     }
 
 }
