@@ -34,53 +34,68 @@ public struct LiteracyEncounter: Identifiable, Equatable, Sendable {
     }
 
     public var fingerprint: String {
-        "\(mechanicID)|\(skillID.rawValue)|\(representation.rawValue)|\(answer)|\(context)"
+        [
+            mechanicID,
+            skillID.rawValue,
+            representation.rawValue,
+            choices.joined(separator: ","),
+            answer,
+            context
+        ].joined(separator: "|")
     }
 }
 
 public enum WordGardenEncounterCatalog {
-    public static let uppercaseLetters: [LiteracyEncounter] = [
-        .init(id: "flowerGate.upper.A", skillID: LiteracySkills.uppercaseLetterNames,
-              mechanicID: WordGardenMechanicID.letterStones, representation: .symbolic,
-              prompt: "The gate needs A. Touch the flower carrying A.", answer: "A",
-              choices: ["M", "A", "S", "T"]),
-        .init(id: "flowerGate.upper.M", skillID: LiteracySkills.uppercaseLetterNames,
-              mechanicID: WordGardenMechanicID.letterStones, representation: .symbolic,
-              prompt: "The gate needs M. Touch the flower carrying M.", answer: "M",
-              choices: ["N", "W", "M", "H"]),
-        .init(id: "flowerGate.upper.S", skillID: LiteracySkills.uppercaseLetterNames,
-              mechanicID: WordGardenMechanicID.letterStones, representation: .pictorial,
-              prompt: "Lumi found an S-shaped vine. Touch the matching flower.", answer: "S",
-              choices: ["C", "S", "G", "O"], transferContext: true)
-    ]
-
-    public static let lowercaseLetters: [LiteracyEncounter] = [
-        .init(id: "flowerGate.lower.a", skillID: LiteracySkills.lowercaseLetterNames,
-              mechanicID: WordGardenMechanicID.letterStones, representation: .symbolic,
-              prompt: "Find the little letter that matches A.", answer: "a",
-              choices: ["d", "a", "o", "e"]),
-        .init(id: "flowerGate.lower.m", skillID: LiteracySkills.lowercaseLetterNames,
-              mechanicID: WordGardenMechanicID.letterStones, representation: .symbolic,
-              prompt: "Find the little letter that matches M.", answer: "m",
-              choices: ["n", "w", "m", "h"]),
-        .init(id: "flowerGate.lower.s", skillID: LiteracySkills.lowercaseLetterNames,
-              mechanicID: WordGardenMechanicID.letterStones, representation: .pictorial,
-              prompt: "The vine curls like S. Which little letter matches it?", answer: "s",
-              choices: ["c", "s", "g", "o"], transferContext: true)
+    /// These are intentionally visual-memory tasks. They can produce honest evidence
+    /// before recorded letter-name/phoneme audio is available.
+    public static let visualLetterShapes: [LiteracyEncounter] = [
+        .init(
+            id: "flowerGate.visual.A",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .symbolic,
+            prompt: "Remember the glowing rune. Then touch the flower carrying the same shape.",
+            answer: "A",
+            choices: ["M", "A", "S", "T"]
+        ),
+        .init(
+            id: "flowerGate.visual.M",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .symbolic,
+            prompt: "Remember the glowing rune. Then touch the flower carrying the same shape.",
+            answer: "M",
+            choices: ["N", "W", "M", "H"]
+        ),
+        .init(
+            id: "flowerGate.visual.S",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .pictorial,
+            prompt: "Remember the glowing vine-rune. Then find the matching flower.",
+            answer: "S",
+            choices: ["C", "S", "G", "O"],
+            transferContext: true
+        )
     ]
 }
 
 public enum WordGardenDirector {
-    public static func nextEncounter(profile: LearnerProfile, graph: SkillGraph) -> LiteracyEncounter {
-        let lowerEligible = graph.isEligible(LiteracySkills.lowercaseLetterNames, for: profile)
-        let candidates = lowerEligible
-            ? WordGardenEncounterCatalog.lowercaseLetters
-            : WordGardenEncounterCatalog.uppercaseLetters
+    /// Flower Gate remains on visual print identity until approved recorded
+    /// letter-name/phoneme audio is bundled. Eligibility for later audio skills can
+    /// still advance in the profile, but this director will not silently substitute
+    /// a visual matching task for a spoken-language assessment.
+    public static func nextEncounter(
+        profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> LiteracyEncounter {
+        let candidates = WordGardenEncounterCatalog.visualLetterShapes
         let completed = Set(
-            profile.progress(for: candidates[0].skillID).evidence
+            profile.progress(for: LiteracySkills.visualLetterMatch).evidence
                 .filter { $0.outcome == .correct }
                 .map(\.encounterID)
         )
-        return candidates.first { !completed.contains($0.id) } ?? candidates[completed.count % candidates.count]
+        return candidates.first { !completed.contains($0.id) }
+            ?? candidates[completed.count % candidates.count]
     }
 }
