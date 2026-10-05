@@ -280,7 +280,7 @@ import SpriteKit
         case "scienceLab":
             let destination = CGPoint(x: 580, y: 450)
             if isNear(destination) {
-                state.travel(to: .scienceLab)
+                state.enterScienceLab()
             } else {
                 instruction.text = "Walk to the Science Lab sign, then tap it to enter the Greenhouse."
                 travel(to: destination)
