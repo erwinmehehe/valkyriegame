@@ -24,6 +24,8 @@ import LearningCore
         super.didMove(to: view)
         pip.removeFromParent()
         encounter = state.nextLiteracyEncounter()
+        valkyrie.setScale(0.5)
+        lumi.setScale(0.65)
         valkyrie.position = CGPoint(x: 220, y: 175)
         lumi.position = CGPoint(x: 335, y: 190)
         lumi.reducedMotion = reducedMotion
@@ -53,16 +55,16 @@ import LearningCore
             addChild(shade)
         }
 
-        let gate = SKShapeNode(rectOf: CGSize(width: 220, height: 310), cornerRadius: 100)
+        let gate = SKShapeNode(rectOf: CGSize(width: 150, height: 260), cornerRadius: 65)
         gate.fillColor = UIColor(red: 0.18, green: 0.34, blue: 0.18, alpha: 0.22)
         gate.strokeColor = UIColor(red: 0.62, green: 0.42, blue: 0.22, alpha: 0.95)
         gate.lineWidth = 10
-        gate.position = CGPoint(x: 1090, y: 370)
+        gate.position = CGPoint(x: 1160, y: 400)
         gate.name = "flowerGate"
         gate.zPosition = 300
         addChild(gate)
 
-        let vineOffsets: [CGFloat] = [-55, 55]
+        let vineOffsets: [CGFloat] = [-40, 40]
         for x in vineOffsets {
             let vine = SKShapeNode(rectOf: CGSize(width: 18, height: 210), cornerRadius: 9)
             vine.fillColor = UIColor(red: 0.22, green: 0.48, blue: 0.22, alpha: 1)
