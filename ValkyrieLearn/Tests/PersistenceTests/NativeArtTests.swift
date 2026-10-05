@@ -89,6 +89,14 @@ import LearningCore
 
     func testWordGardenFlowerGateIsNativeAndReachableFromStoryTree() async throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+
+        let story = StoryTreeScene(state: state)
+        story.didMove(to: SKView())
+        story.valkyrie.position = CGPoint(x: 190, y: 170)
+        story.handleTap(at: CGPoint(x: 205, y: 165))
+        XCTAssertEqual(state.world, .wordGarden)
+        story.willLeave()
+
         state.travel(to: .wordGarden)
         let scene = WordGardenScene(state: state)
         scene.didMove(to: SKView())
