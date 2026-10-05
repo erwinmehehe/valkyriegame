@@ -688,13 +688,40 @@ import LearningCore
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
-            support = support == .independent ? .lightHint : .strongHint
+
+            switch support {
+            case .independent:
+                support = .lightHint
+                instruction.text = "Match the tall rune in the mill to its little partner shape."
+            case .lightHint:
+                support = .strongHint
+                instruction.text = "Compare the partner shapes carefully. Lumi will stay beside you."
+            case .strongHint, .demonstration:
+                support = .demonstration
+                showSunmillDemonstration(for: encounter.answer)
+            }
+
             valkyrie.pose(.react)
             nudge(node)
-            instruction.text = support == .lightHint
-                ? "Match the tall rune in the mill to its little partner shape."
-                : "Compare the partner shapes carefully. Lumi will stay beside you."
         }
+    }
+
+    private func showSunmillDemonstration(for answer: String) {
+        guard let correct = children.first(where: {
+            $0.name == "sunmillChoice"
+                && ($0.userData?["choice"] as? String) == answer
+        }) else {
+            instruction.text = "Lumi traces the partner shape. Try that leaf."
+            return
+        }
+
+        lumi.pose(.interact)
+        correct.run(.sequence([
+            .scale(to: reducedMotion ? 1.0 : 1.18, duration: 0.18),
+            .wait(forDuration: reducedMotion ? 0 : 0.25),
+            .scale(to: 1.0, duration: 0.20)
+        ]))
+        instruction.text = "Lumi traces the matching partner leaf. Try that one."
     }
 
     private func refreshFlowerGateProgress() {
