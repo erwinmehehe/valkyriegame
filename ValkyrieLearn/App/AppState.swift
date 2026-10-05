@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle, wordGarden, sunmillCrossing, storyHollow, scienceLab, scienceWeatherTower, scienceCreatureGrove, puzzlePalace, memoryBridge, stopGoOrbs }
+    enum World: String { case storyTree, mathCastle, wordGarden, sunmillCrossing, storyHollow, scienceLab, scienceWeatherTower, scienceCreatureGrove, puzzlePalace, memoryBridge, stopGoOrbs, sortingPedestal }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -386,6 +386,22 @@ import LearningCore
         PuzzlePalaceDirector.stopGoComplete(profile: profile)
     }
 
+    var puzzleSortingAvailable: Bool {
+        PuzzlePalaceDirector.canEnterSortingPedestal(profile: profile)
+    }
+
+    var puzzleSortingFoundationComplete: Bool {
+        PuzzlePalaceDirector.sortingFoundationComplete(profile: profile)
+    }
+
+    var puzzleRuleSwitchingComplete: Bool {
+        PuzzlePalaceDirector.ruleSwitchingComplete(profile: profile)
+    }
+
+    var puzzleSortingPedestalComplete: Bool {
+        PuzzlePalaceDirector.sortingPedestalComplete(profile: profile)
+    }
+
     func nextPuzzleEncounter() -> PuzzleEncounter {
         PuzzlePalaceDirector.nextRuneGateEncounter(profile: profile)
     }
@@ -396,6 +412,13 @@ import LearningCore
 
     func nextPuzzleStopGoEncounter() -> PuzzleInhibitionEncounter? {
         PuzzlePalaceDirector.nextStopGoEncounter(profile: profile)
+    }
+
+    func nextPuzzleSortingEncounter() -> PuzzleSortEncounter? {
+        if puzzleSortingFoundationComplete {
+            return PuzzlePalaceDirector.nextRuleSwitchingEncounter(profile: profile)
+        }
+        return PuzzlePalaceDirector.nextSortingFoundationEncounter(profile: profile)
     }
 
     @discardableResult
@@ -473,6 +496,42 @@ import LearningCore
     @discardableResult
     func recordPuzzle(
         _ encounter: PuzzleInhibitionEncounter,
+        outcome: Outcome,
+        support: SupportLevel,
+        attempts: Int,
+        responseTime: TimeInterval?
+    ) -> LearningEvidence {
+        let evidence = LearningEvidence(
+            encounterID: encounter.id,
+            skillID: encounter.skillID,
+            outcome: outcome,
+            supportLevel: support,
+            representation: encounter.representation,
+            mechanicID: encounter.mechanicID,
+            attempts: attempts,
+            responseTime: responseTime,
+            timestamp: Date(),
+            transferContext: encounter.transferContext,
+            easySuccess: outcome == .correct && support == .independent && attempts == 1
+        )
+        MasteryEngine().record(evidence, in: &profile)
+        profile.recordActivity(ActivityRecord(
+            fingerprint: encounter.fingerprint,
+            mechanicID: encounter.mechanicID,
+            skillID: encounter.skillID,
+            representation: encounter.representation,
+            timestamp: evidence.timestamp
+        ))
+        if outcome == .correct {
+            profile.usedFingerprints.insert(encounter.fingerprint)
+        }
+        persist()
+        return evidence
+    }
+
+    @discardableResult
+    func recordPuzzle(
+        _ encounter: PuzzleSortEncounter,
         outcome: Outcome,
         support: SupportLevel,
         attempts: Int,
