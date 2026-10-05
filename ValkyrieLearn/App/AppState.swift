@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle, wordGarden, sunmillCrossing, storyHollow }
+    enum World: String { case storyTree, mathCastle, wordGarden, sunmillCrossing, storyHollow, puzzlePalace }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -36,6 +36,7 @@ import LearningCore
     var interactionStarted: Bool { adventure.interactionStarted }
     let graph: SkillGraph
     let literacyGraph: SkillGraph
+    let puzzleGraph: SkillGraph
     let audio = AudioSystem()
     private let store: LearningStore
     init(context: ModelContext) throws {
@@ -47,6 +48,7 @@ import LearningCore
         world = World(rawValue: store.snapshot.lastWorld) ?? .storyTree
         graph = try MathSkills.graph()
         literacyGraph = try LiteracySkillCatalog.graph()
+        puzzleGraph = try PuzzleSkillCatalog.graph()
         audio.enabled = soundEnabled
         ReviewScheduler().markDue(in: &profile, at: Date())
     }
@@ -148,6 +150,50 @@ import LearningCore
 
     func nextStoryHollowEncounter() -> LiteracyEncounter? {
         WordGardenDirector.nextStoryHollowEncounter(profile: profile)
+    }
+
+    var puzzleRuneGateComplete: Bool {
+        PuzzlePalaceDirector.runeGateComplete(profile: profile)
+    }
+
+    func nextPuzzleEncounter() -> PuzzleEncounter {
+        PuzzlePalaceDirector.nextRuneGateEncounter(profile: profile)
+    }
+
+    @discardableResult
+    func recordPuzzle(
+        _ encounter: PuzzleEncounter,
+        outcome: Outcome,
+        support: SupportLevel,
+        attempts: Int,
+        responseTime: TimeInterval?
+    ) -> LearningEvidence {
+        let evidence = LearningEvidence(
+            encounterID: encounter.id,
+            skillID: encounter.skillID,
+            outcome: outcome,
+            supportLevel: support,
+            representation: encounter.representation,
+            mechanicID: encounter.mechanicID,
+            attempts: attempts,
+            responseTime: responseTime,
+            timestamp: Date(),
+            transferContext: encounter.transferContext,
+            easySuccess: outcome == .correct && support == .independent && attempts == 1
+        )
+        MasteryEngine().record(evidence, in: &profile)
+        profile.recordActivity(ActivityRecord(
+            fingerprint: encounter.fingerprint,
+            mechanicID: encounter.mechanicID,
+            skillID: encounter.skillID,
+            representation: encounter.representation,
+            timestamp: evidence.timestamp
+        ))
+        if outcome == .correct {
+            profile.usedFingerprints.insert(encounter.fingerprint)
+        }
+        persist()
+        return evidence
     }
 
     @discardableResult
