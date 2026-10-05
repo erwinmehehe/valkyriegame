@@ -72,4 +72,101 @@ final class ScienceSkillGraphTests: XCTestCase {
         XCTAssertTrue(used.contains(ScienceLabMechanicID.causeEffectMachine))
         XCTAssertTrue(used.contains(ScienceLabMechanicID.miloInspect))
     }
+
+    func testSciencePlacementStartsAtPlantNeedsRatherThanTrivialObservation() throws {
+        let engine = SciencePlacementEngine()
+        let session = engine.begin()
+        XCTAssertEqual(session.nextBand, 3)
+        XCTAssertEqual(engine.nextProbe(for: session)?.skillID, ScienceSkills.plantNeeds)
+    }
+
+    func testEasyScienceSuccessJumpsForwardAndMarksOnlyProvisionalReadiness() throws {
+        let graph = try ScienceSkillCatalog.graph()
+        let engine = SciencePlacementEngine()
+        var session = engine.begin(startBand: 3)
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(engine.nextProbe(for: session))
+
+        engine.record(
+            SciencePlacementResult(outcome: .correct, supportLevel: .independent, easySuccess: true),
+            for: probe,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        XCTAssertEqual(session.nextBand, 5)
+        XCTAssertEqual(session.highestIndependentBand, 3)
+        XCTAssertTrue(profile.placementReadySkillIDs?.contains(ScienceSkills.plantNeeds) == true)
+        XCTAssertTrue(profile.placementReadySkillIDs?.contains(ScienceSkills.plantParts) == true)
+        XCTAssertEqual(profile.progress(for: ScienceSkills.plantNeeds).state, .new)
+    }
+
+    func testScienceStruggleStepsBackWithoutGrantingReadiness() throws {
+        let graph = try ScienceSkillCatalog.graph()
+        let engine = SciencePlacementEngine()
+        var session = engine.begin(startBand: 5)
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(engine.nextProbe(for: session))
+
+        engine.record(
+            SciencePlacementResult(outcome: .incorrect),
+            for: probe,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        XCTAssertEqual(session.nextBand, 4)
+        XCTAssertEqual(session.firstSupportNeededBand, 5)
+        XCTAssertTrue(profile.placementReadySkillIDs?.isEmpty ?? true)
+    }
+
+    func testSciencePlacementBracketsIndependentCeiling() throws {
+        let graph = try ScienceSkillCatalog.graph()
+        let engine = SciencePlacementEngine(maxProbes: 6)
+        var session = engine.begin(startBand: 4)
+        var profile = LearnerProfile()
+
+        let first = try XCTUnwrap(engine.nextProbe(for: session))
+        engine.record(
+            SciencePlacementResult(outcome: .correct),
+            for: first,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        let second = try XCTUnwrap(engine.nextProbe(for: session))
+        engine.record(
+            SciencePlacementResult(outcome: .incorrect),
+            for: second,
+            in: &session,
+            profile: &profile,
+            graph: graph
+        )
+
+        XCTAssertTrue(session.isComplete)
+        XCTAssertEqual(session.highestIndependentBand, 4)
+        XCTAssertEqual(session.firstSupportNeededBand, 5)
+        XCTAssertEqual(engine.recommendation(for: session).confidence, .high)
+    }
+
+    func testDuplicateSciencePlacementResponseIsIgnored() throws {
+        let graph = try ScienceSkillCatalog.graph()
+        let engine = SciencePlacementEngine()
+        var session = engine.begin()
+        var profile = LearnerProfile()
+        let probe = try XCTUnwrap(engine.nextProbe(for: session))
+        let result = SciencePlacementResult(outcome: .correct, easySuccess: true)
+
+        engine.record(result, for: probe, in: &session, profile: &profile, graph: graph)
+        let count = session.completedProbeCount
+        let next = session.nextBand
+        engine.record(result, for: probe, in: &session, profile: &profile, graph: graph)
+
+        XCTAssertEqual(session.completedProbeCount, count)
+        XCTAssertEqual(session.nextBand, next)
+    }
+
 }
