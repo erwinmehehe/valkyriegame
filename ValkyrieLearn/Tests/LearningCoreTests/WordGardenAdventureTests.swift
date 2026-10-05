@@ -2,26 +2,26 @@ import XCTest
 @testable import LearningCore
 
 final class WordGardenAdventureTests: XCTestCase {
-    func testFlowerGateStartsWithNonAudioUppercaseRecognition() throws {
+    func testFlowerGateStartsWithNonAudioVisualIdentity() throws {
         let graph = try LiteracySkillCatalog.graph()
         let profile = LearnerProfile()
         let encounter = WordGardenDirector.nextFlowerGateEncounter(profile: profile)
 
-        XCTAssertEqual(encounter.skillID, LiteracySkills.uppercaseLetterNames)
+        XCTAssertEqual(encounter.skillID, LiteracySkills.visualLetterMatch)
         XCTAssertEqual(encounter.mechanicID, WordGardenMechanicID.letterStones)
-        XCTAssertNotNil(LiteracySkillCatalog.descriptor(for: encounter.skillID))
         XCTAssertFalse(
-            LiteracySkillCatalog.descriptor(for: encounter.skillID)?.requiresRecordedAudio == true
+            LiteracySkillCatalog.descriptor(for: encounter.skillID)?.requiresRecordedAudio ?? true
         )
+        XCTAssertFalse(encounter.prompt.contains(encounter.answer))
         XCTAssertFalse(WordGardenDirector.canEnterSunmill(profile: profile, graph: graph))
     }
 
-    func testThreeDistinctUppercaseSuccessesWakeFlowerGateAndUnlockSunmill() throws {
+    func testThreeDistinctVisualMatchesWakeFlowerGateAndUnlockSunmill() throws {
         let graph = try LiteracySkillCatalog.graph()
         var profile = LearnerProfile()
         let mastery = MasteryEngine()
 
-        for encounter in WordGardenEncounterCatalog.uppercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
             mastery.record(
                 LearningEvidence(
                     encounterID: encounter.id,
@@ -36,7 +36,7 @@ final class WordGardenAdventureTests: XCTestCase {
         }
 
         XCTAssertEqual(
-            profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
+            profile.progress(for: LiteracySkills.visualLetterMatch).state,
             .secure
         )
         XCTAssertTrue(WordGardenDirector.flowerGateComplete(profile: profile))
@@ -45,7 +45,7 @@ final class WordGardenAdventureTests: XCTestCase {
         let sunmill = try XCTUnwrap(
             WordGardenDirector.nextSunmillEncounter(profile: profile, graph: graph)
         )
-        XCTAssertEqual(sunmill.skillID, LiteracySkills.lowercaseLetterNames)
+        XCTAssertEqual(sunmill.skillID, LiteracySkills.visualCasePairing)
         XCTAssertEqual(sunmill.mechanicID, WordGardenMechanicID.sunmillPair)
         XCTAssertEqual(sunmill.context, "sunmillCrossing")
     }
@@ -55,7 +55,7 @@ final class WordGardenAdventureTests: XCTestCase {
         var profile = LearnerProfile()
         let mastery = MasteryEngine()
 
-        for encounter in WordGardenEncounterCatalog.uppercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
             mastery.record(
                 LearningEvidence(
                     encounterID: encounter.id,
@@ -74,12 +74,12 @@ final class WordGardenAdventureTests: XCTestCase {
         XCTAssertNil(WordGardenDirector.nextSunmillEncounter(profile: profile, graph: graph))
     }
 
-    func testSunmillCompletesAfterThreeIndependentLowercaseMatches() throws {
+    func testSunmillCompletesAfterThreeIndependentVisualCasePairs() throws {
         let graph = try LiteracySkillCatalog.graph()
         var profile = LearnerProfile()
         let mastery = MasteryEngine()
 
-        for encounter in WordGardenEncounterCatalog.uppercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
             mastery.record(
                 LearningEvidence(
                     encounterID: encounter.id,
@@ -93,7 +93,7 @@ final class WordGardenAdventureTests: XCTestCase {
             )
         }
 
-        for encounter in WordGardenEncounterCatalog.lowercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualCasePairs {
             mastery.record(
                 LearningEvidence(
                     encounterID: encounter.id,
@@ -108,29 +108,40 @@ final class WordGardenAdventureTests: XCTestCase {
         }
 
         XCTAssertEqual(
-            profile.progress(for: LiteracySkills.lowercaseLetterNames).state,
+            profile.progress(for: LiteracySkills.visualCasePairing).state,
             .secure
         )
         XCTAssertEqual(
             WordGardenDirector.independentSuccessCount(
-                for: WordGardenEncounterCatalog.lowercaseLetters,
+                for: WordGardenEncounterCatalog.visualCasePairs,
                 profile: profile
             ),
             3
         )
         XCTAssertTrue(WordGardenDirector.sunmillComplete(profile: profile))
-        XCTAssertTrue(WordGardenDirector.canEnterSunmill(profile: profile, graph: graph))
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
+            .new
+        )
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.lowercaseLetterNames).state,
+            .new
+        )
     }
 
-    func testWordGardenNativePlacesDoNotUsePhonemeTasksWithoutRecordedAudio() throws {
+    func testSpokenLetterNamesAndPhonemesRemainAudioGatedAcrossNativePlaces() throws {
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.uppercaseLetterNames)?.requiresRecordedAudio == true
+        )
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.lowercaseLetterNames)?.requiresRecordedAudio == true
+        )
+
         let graph = try LiteracySkillCatalog.graph()
         var profile = LearnerProfile()
+        let mastery = MasteryEngine()
 
-        let flower = WordGardenDirector.nextFlowerGateEncounter(profile: profile)
-        XCTAssertFalse(isRecordedAudioSkill(flower.skillID))
-
-        var mastery = MasteryEngine()
-        for encounter in WordGardenEncounterCatalog.uppercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
             mastery.record(
                 LearningEvidence(
                     encounterID: encounter.id,
@@ -144,10 +155,28 @@ final class WordGardenAdventureTests: XCTestCase {
             )
         }
 
+        let flower = WordGardenDirector.nextFlowerGateEncounter(profile: LearnerProfile())
         let sunmill = try XCTUnwrap(
             WordGardenDirector.nextSunmillEncounter(profile: profile, graph: graph)
         )
+
+        XCTAssertFalse(isRecordedAudioSkill(flower.skillID))
         XCTAssertFalse(isRecordedAudioSkill(sunmill.skillID))
+        XCTAssertFalse([
+            LiteracySkills.uppercaseLetterNames,
+            LiteracySkills.lowercaseLetterNames,
+            LiteracySkills.sameDifferentSounds,
+            LiteracySkills.beginningSoundMatch,
+            LiteracySkills.commonConsonantSounds,
+            LiteracySkills.shortVowelSounds
+        ].contains(sunmill.skillID))
+    }
+
+    func testSunmillTargetMapsToUppercasePartnerWithoutChangingSkillMeaning() {
+        for encounter in WordGardenEncounterCatalog.visualCasePairs {
+            XCTAssertNotNil(WordGardenEncounterCatalog.uppercaseTarget(for: encounter))
+            XCTAssertEqual(encounter.skillID, LiteracySkills.visualCasePairing)
+        }
     }
 
     private func isRecordedAudioSkill(_ skill: SkillID) -> Bool {
