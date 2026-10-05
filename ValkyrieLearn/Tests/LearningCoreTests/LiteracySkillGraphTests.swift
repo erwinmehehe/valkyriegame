@@ -106,6 +106,7 @@ final class LiteracySkillGraphTests: XCTestCase {
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.rhymeVine))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.syllableBells))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.letterStones))
+        XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.sunmillPair))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.seedBlendPath))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.wordBloom))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.storyLantern))
