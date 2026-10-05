@@ -41,7 +41,14 @@ import SpriteKit
     }
     private func rebuild() {
         scene?.willLeave()
-        scene = state.world == .storyTree ? StoryTreeScene(state: state) : MathCastleScene(state: state)
+        switch state.world {
+        case .storyTree:
+            scene = StoryTreeScene(state: state)
+        case .mathCastle:
+            scene = MathCastleScene(state: state)
+        case .scienceLab:
+            scene = ScienceLabScene(state: state)
+        }
         scene?.reducedMotion = state.reducedMotion || systemReducedMotion
     }
 }
