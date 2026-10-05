@@ -220,10 +220,10 @@ import LearningCore
         XCTAssertFalse(route.isHidden)
         let solvedRuntime = state.runtime
         let evidenceBefore = state.profile
-        scene.handleTap(at: CGPoint(x: 1110, y: 430))
+        scene.handleTap(at: CGPoint(x: 1200, y: 430))
         XCTAssertTrue(scene.crossingBridge)
         XCTAssertNotNil(scene.valkyrie.action(forKey: "travel"))
-        scene.handleTap(at: CGPoint(x: 1110, y: 430))
+        scene.handleTap(at: CGPoint(x: 1200, y: 430))
         XCTAssertEqual(state.runtime, solvedRuntime)
         scene.handleTap(at: CGPoint(x: 52, y: 669))
         XCTAssertFalse(scene.crossingBridge)

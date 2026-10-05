@@ -89,7 +89,7 @@ import LearningCore
         addChild(questionLabel)
 
         pip.name = "help"
-        nextGear = worldGear("→", name: "next", at: CGPoint(x: 1110, y: 430), radius: 34)
+        nextGear = worldGear("→", name: "next", at: CGPoint(x: 1200, y: 430), radius: 34)
         lever = makeLever()
         let light = SKShapeNode(circleOfRadius: 27)
         light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
@@ -574,9 +574,9 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         let height = max(0, min(1, (valkyrie.position.y - 240) / 160))
-        valkyrie.setScale(1 - height * 0.12)
+        valkyrie.setScale(0.5 * (1 - height * 0.12))
         let pipHeight = max(0, min(1, (pip.position.y - 240) / 160))
-        pip.setScale(1 - pipHeight * 0.12)
+        pip.setScale(0.65 * (1 - pipHeight * 0.12))
         if engaged, lastPreviewVisible != state.previewVisible { refresh() }
     }
     override func willLeave() {
