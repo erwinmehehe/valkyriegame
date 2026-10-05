@@ -196,4 +196,48 @@ import LearningCore
         scene.willLeave()
     }
 
+
+    func testWordGardenVisualEvidencePersistsWithoutCreatingSpokenLetterMastery() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        state.travel(to: .wordGarden)
+
+        let encounter = state.nextLiteracyEncounter()
+        let wrong = try XCTUnwrap(encounter.choices.first { $0 != encounter.answer })
+        let first = state.recordLiteracy(
+            encounter,
+            outcome: .incorrect,
+            support: .independent,
+            attempts: 1,
+            responseTime: 1.4
+        )
+        XCTAssertEqual(first.supportLevel, .independent)
+
+        let corrected = state.recordLiteracy(
+            encounter,
+            outcome: .correct,
+            support: .lightHint,
+            attempts: 2,
+            responseTime: 2.8
+        )
+        XCTAssertEqual(corrected.outcome, .correct)
+        XCTAssertTrue(state.profile.usedFingerprints.contains(encounter.fingerprint))
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.world, .wordGarden)
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count,
+            2
+        )
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.visualLetterMatch).state,
+            .learning
+        )
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
+            .new
+        )
+        XCTAssertNotEqual(wrong, encounter.answer)
+    }
+
 }
