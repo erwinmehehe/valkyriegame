@@ -59,8 +59,8 @@ import LearningCore
         }
 
         let gate = SKShapeNode(rectOf: CGSize(width: 150, height: 260), cornerRadius: 65)
-        gate.fillColor = UIColor(red: 0.18, green: 0.34, blue: 0.18, alpha: 0.22)
-        gate.strokeColor = UIColor(red: 0.62, green: 0.42, blue: 0.22, alpha: 0.95)
+        gate.fillColor = .clear
+        gate.strokeColor = .clear
         gate.lineWidth = 10
         gate.position = CGPoint(x: 1160, y: 400)
         gate.name = "flowerGate"
@@ -91,6 +91,11 @@ import LearningCore
                 leaf.zRotation = x < 0 ? 0.65 : -0.65
                 gate.addChild(leaf)
             }
+        }
+        if let beam = ArtSystem.sprite("BridgeTimber", size: CGSize(width: 18, height: 150)) {
+            beam.zRotation = .pi / 2
+            beam.position.y = 108
+            gate.addChild(beam)
         }
         let star = ArtSystem.label("✦", size: 42)
         star.name = "gateStar"
@@ -154,7 +159,7 @@ import LearningCore
         acceptingChoices = false
         targetRune?.removeFromParent()
 
-        let rune = SKShapeNode(rectOf: CGSize(width: 82, height: 76), cornerRadius: 8)
+        let rune = SKShapeNode(rectOf: CGSize(width: 100, height: 42), cornerRadius: 8)
         rune.fillColor = .white
         rune.fillTexture = ArtSystem.texture("BridgeWorkOrder")
         rune.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.35, alpha: 1)
@@ -164,9 +169,18 @@ import LearningCore
         rune.zPosition = 2010
         rune.name = "targetRune"
 
-        let glyph = ArtSystem.label(encounter.answer, size: 40)
+        let glyph = ArtSystem.label(encounter.answer, size: 30)
         glyph.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1)
         rune.addChild(glyph)
+        for x in [CGFloat(-35), CGFloat(35)] {
+            let ropePath = CGMutablePath()
+            ropePath.move(to: CGPoint(x: x, y: 20))
+            ropePath.addLine(to: CGPoint(x: x, y: 75))
+            let rope = SKShapeNode(path: ropePath)
+            rope.strokeColor = UIColor(red: 0.56, green: 0.40, blue: 0.22, alpha: 1)
+            rope.lineWidth = 3
+            rune.addChild(rope)
+        }
         addChild(rune)
         targetRune = rune
 
@@ -188,63 +202,16 @@ import LearningCore
     private func flowerNode(letter: String, index: Int) -> SKNode {
         let node = SKNode()
 
-        let stone = SKShapeNode(rectOf: CGSize(width: 96, height: 58), cornerRadius: 8)
-        stone.fillColor = .white
-        stone.fillTexture = ArtSystem.texture("BridgeOakPlank")
-        stone.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.39, alpha: 0.95)
-        stone.lineWidth = 2
-        stone.position.y = -52
-        stone.name = "flowerChoice"
-        node.addChild(stone)
-
+        if let bloom = ArtSystem.sprite("StoryBloom", size: CGSize(width: 130, height: 130)) {
+            bloom.name = "flowerChoice"
+            node.addChild(bloom)
+        }
+        // The rune belongs to the illuminated flower, not a floating answer tile.
         let label = ArtSystem.label(letter, size: 36)
-        label.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1)
-        label.position.y = -52
+        label.fontColor = UIColor(red: 0.27, green: 0.14, blue: 0.07, alpha: 1)
+        label.position.y = 30
         label.name = "flowerChoice"
         node.addChild(label)
-
-        let hit = SKShapeNode(circleOfRadius: 22)
-        hit.fillColor = UIColor(red: 0.83, green: 0.61, blue: 0.25, alpha: 1)
-        hit.zPosition = 2
-        hit.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.50, alpha: 1)
-        hit.lineWidth = 3
-        hit.position.y = 28
-        hit.name = "flowerChoice"
-        node.addChild(hit)
-
-        for angle in stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 4) {
-            let petal = SKShapeNode(ellipseOf: CGSize(width: 48, height: 28))
-            petal.fillColor = UIColor(red: 0.83, green: 0.43 + CGFloat(index) * 0.04, blue: 0.59, alpha: 1)
-            petal.strokeColor = UIColor(red: 0.60, green: 0.29, blue: 0.40, alpha: 0.65)
-            petal.lineWidth = 1
-            petal.position = CGPoint(
-                x: CGFloat(cos(angle)) * 37,
-                y: 28 + CGFloat(sin(angle)) * 37
-            )
-            petal.zRotation = CGFloat(angle)
-            petal.name = "flowerChoice"
-            node.addChild(petal)
-        }
-
-        let stemPath = CGMutablePath()
-        stemPath.move(to: CGPoint(x: 0, y: -45))
-        stemPath.addQuadCurve(to: CGPoint(x: 0, y: 28), control: CGPoint(x: -12, y: -2))
-        let stem = SKShapeNode(path: stemPath)
-        stem.strokeColor = UIColor(red: 0.19, green: 0.38, blue: 0.19, alpha: 1)
-        stem.lineWidth = 7
-        stem.zPosition = -1
-        stem.name = "flowerChoice"
-        node.addChild(stem)
-        for side in [CGFloat(-1), CGFloat(1)] {
-            let leaf = SKShapeNode(ellipseOf: CGSize(width: 38, height: 15))
-            leaf.fillColor = UIColor(red: 0.34, green: 0.49, blue: 0.22, alpha: 1)
-            leaf.strokeColor = stem.strokeColor
-            leaf.lineWidth = 1
-            leaf.position = CGPoint(x: side * 15, y: -18)
-            leaf.zRotation = side * 0.45
-            leaf.name = "flowerChoice"
-            node.addChild(leaf)
-        }
         return node
     }
 
@@ -262,28 +229,9 @@ import LearningCore
             flower.zPosition = 340
             flower.userData = NSMutableDictionary(dictionary: ["soundIndex": index])
 
-            let center = SKShapeNode(circleOfRadius: 19)
-            center.fillColor = UIColor(red: 1.0, green: 0.82, blue: 0.32, alpha: 0.95)
-            center.strokeColor = .clear
-            center.name = "soundFlower"
-            flower.addChild(center)
-
-            for angle in stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 3) {
-                let petal = SKShapeNode(ellipseOf: CGSize(width: 50, height: 28))
-                petal.fillColor = UIColor(
-                    red: 0.86,
-                    green: 0.42 + CGFloat(index) * 0.08,
-                    blue: 0.78,
-                    alpha: 0.94
-                )
-                petal.strokeColor = .clear
-                petal.position = CGPoint(
-                    x: CGFloat(cos(angle)) * 34,
-                    y: CGFloat(sin(angle)) * 34
-                )
-                petal.zRotation = CGFloat(angle)
-                petal.name = "soundFlower"
-                flower.addChild(petal)
+            if let bloom = ArtSystem.sprite("StoryBloom", size: CGSize(width: 88, height: 88)) {
+                bloom.name = "soundFlower"
+                flower.addChild(bloom)
             }
 
             addChild(flower)
