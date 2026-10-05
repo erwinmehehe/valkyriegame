@@ -65,13 +65,14 @@ import LearningCore
     private let beam = ArtSystem.box(CGSize(width: 360, height: 18), color: .systemOrange, radius: 8)
     private var leftPan: SKNode?
     private var rightPan: SKNode?
-    private var equalGear: SKShapeNode?
+    private let equalSelection = SKShapeNode(circleOfRadius: 40)
 
     override init() {
         super.init()
         name = MathMechanicID.balanceScale
         zPosition = 750
 
+        if let texture = ArtSystem.texture("BridgeOakPlank") { beam.fillColor = .white; beam.fillTexture = texture; beam.strokeColor = .clear }
         beam.name = "scaleBeam"
         beam.position = CGPoint(x: 0, y: 40)
         addChild(beam)
@@ -81,11 +82,17 @@ import LearningCore
             color: .init(red: 0.73, green: 0.51, blue: 0.24, alpha: 1),
             radius: 8
         )
+        if let texture = ArtSystem.texture("BridgeTimber") { stand.fillColor = .white; stand.fillTexture = texture; stand.strokeColor = .clear }
         stand.position = CGPoint(x: 0, y: -40)
         addChild(stand)
         let equal = ArtSystem.gear(radius: 36, symbol: "=")
         equal.position = CGPoint(x: 0, y: -115); equal.name = "scaleEqual"
-        addChild(equal); equalGear = equal.children.first as? SKShapeNode
+        equalSelection.userData = ["selectionIndicator": true]
+        equalSelection.fillColor = .clear; equalSelection.strokeColor = .systemYellow
+        equalSelection.lineWidth = 4; equalSelection.isHidden = true
+        // Keep the selectable gear as the ancestor of its decorative ring.
+        equal.addChild(equalSelection)
+        addChild(equal)
 
         leftPan = addPan(name: "scaleLeft", x: -150)
         rightPan = addPan(name: "scaleRight", x: 150)
@@ -99,10 +106,7 @@ import LearningCore
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
 
     private func addPan(name: String, x: CGFloat) -> SKNode {
-        let pan = ArtSystem.box(
-            CGSize(width: 180, height: 72),
-            color: .init(red: 0.35, green: 0.5, blue: 0.53, alpha: 1)
-        )
+        let pan = ArtSystem.supplyTray(CGSize(width: 180, height: 72))
         pan.position = CGPoint(x: x, y: -45)
         pan.name = name
         let chains = CGMutablePath()
@@ -129,7 +133,7 @@ import LearningCore
             (pan as? SKShapeNode)?.strokeColor = model.selected == choice ? .systemYellow : .white
             (pan as? SKShapeNode)?.lineWidth = model.selected == choice ? 5 : 1.5
         }
-        equalGear?.fillColor = model.selected == .equal ? .systemOrange : .darkGray
+        equalSelection.isHidden = model.selected != .equal
         renderQuantity(model.leftQuantity, in: leftContents, centerX: -150, targetName: "scaleLeft")
         renderQuantity(model.rightQuantity, in: rightContents, centerX: 150, targetName: "scaleRight")
     }
@@ -154,6 +158,9 @@ import LearningCore
         node.fillColor = .cyan
         node.strokeColor = .white
         node.lineWidth = 1.5
+        if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: 20, height: 27)) {
+            node.fillColor = .clear; node.strokeColor = .clear; node.addChild(crystal)
+        }
         return node
     }
 }

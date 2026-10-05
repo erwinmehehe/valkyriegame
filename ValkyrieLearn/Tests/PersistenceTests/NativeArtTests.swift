@@ -136,6 +136,16 @@ import LearningCore
         XCTAssertTrue(bridge.isNear(CGPoint(x: 490, y: 175)))
         XCTAssertNotEqual(state.runtime?.encounter.id, repairedID)
         bridge.willLeave()
+        for (index, name) in [(0, "Math-Castle-native-scale-unequal"), (2, "Math-Castle-native-scale-equal-selected")] {
+            XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.balanceScale[index]))
+            let scale = MathCastleScene(state: state); scale.reducedMotion = true
+            view.presentScene(scale)
+            scale.valkyrie.position = CGPoint(x: 490, y: 175); scale.pip.position = CGPoint(x: 385, y: 187)
+            scale.handleTap(at: CGPoint(x: 820, y: 350))
+            if index == 2 { scale.handleTap(at: CGPoint(x: 820, y: 195)) }
+            try await capture(scale, in: view, name: name)
+            scale.willLeave()
+        }
     }
 
     private func waitForBridgeTravel(_ scene: MathCastleScene) async throws {
