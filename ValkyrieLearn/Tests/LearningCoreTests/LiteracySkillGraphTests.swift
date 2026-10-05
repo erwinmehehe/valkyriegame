@@ -110,6 +110,7 @@ final class LiteracySkillGraphTests: XCTestCase {
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.seedBlendPath))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.wordBloom))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.storyLantern))
+        XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.storySeedSequence))
         XCTAssertTrue(usedMechanics.contains(WordGardenMechanicID.lumiReach))
     }
 
@@ -279,6 +280,23 @@ final class LiteracySkillGraphTests: XCTestCase {
 
         XCTAssertEqual(session.completedProbeCount, count)
         XCTAssertEqual(session.nextBand, nextBand)
+    }
+
+    func testVisualPrintSequenceIsNonAudioAndBuildsOnlyOnObservedVisualMatching() throws {
+        let graph = try LiteracySkillCatalog.graph()
+        let descriptor = try XCTUnwrap(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.visualPrintSequence)
+        )
+
+        XCTAssertFalse(descriptor.requiresRecordedAudio)
+        XCTAssertEqual(
+            graph.skills[LiteracySkills.visualPrintSequence]?.prerequisites,
+            [LiteracySkills.visualLetterMatch]
+        )
+        XCTAssertTrue(
+            descriptor.mechanicIDs.contains(WordGardenMechanicID.storySeedSequence)
+        )
+        XCTAssertEqual(descriptor.responseModes, [.arrange, .directTouch])
     }
 
 }

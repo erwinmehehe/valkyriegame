@@ -21,10 +21,16 @@ import SpriteKit
     private var touchStart = CGPoint.zero
     private var moved = false
     private var moonLanternNode: SKNode?
+    private var wordGardenLanternNode: SKNode?
     private let moonLanternSlots = [
         CGPoint(x: 295, y: 500),
         CGPoint(x: 390, y: 555),
         CGPoint(x: 485, y: 500)
+    ]
+    private let wordGardenLanternSlots = [
+        CGPoint(x: 535, y: 535),
+        CGPoint(x: 625, y: 505),
+        CGPoint(x: 710, y: 540)
     ]
 
     override func didMove(to view: SKView) {
@@ -108,10 +114,17 @@ import SpriteKit
 
         pip.name = "pipWind"
         renderMoonLantern()
+        renderWordGardenLantern()
 
-        instruction.text = state.hasStoryReward(.moonLantern)
-            ? "The Story Tree grew a Moon Lantern. Tap it to choose a different branch."
-            : "The Story Tree is waiting for its starlight. Let's find Pip's castle."
+        if state.hasStoryReward(.moonLantern) && state.hasStoryReward(.wordGardenLantern) {
+            instruction.text = "Two earned lights are growing on the Story Tree. Tap either lantern to move it."
+        } else if state.hasStoryReward(.wordGardenLantern) {
+            instruction.text = "Word Garden sent home a Flower Lantern. Tap it to choose a different branch."
+        } else if state.hasStoryReward(.moonLantern) {
+            instruction.text = "The Story Tree grew a Moon Lantern. Tap it to choose a different branch."
+        } else {
+            instruction.text = "The Story Tree is waiting for its starlight. Choose a path to explore."
+        }
     }
 
     private func renderMoonLantern() {
@@ -161,6 +174,57 @@ import SpriteKit
 
         addChild(lantern)
         moonLanternNode = lantern
+    }
+
+    private func renderWordGardenLantern() {
+        wordGardenLanternNode?.removeFromParent()
+        wordGardenLanternNode = nil
+
+        guard state.hasStoryReward(.wordGardenLantern),
+              !wordGardenLanternSlots.isEmpty else { return }
+
+        let slot = state.storyRewardPlacement(.wordGardenLantern)
+            % wordGardenLanternSlots.count
+        let lantern = SKNode()
+        lantern.name = "wordGardenLantern"
+        lantern.position = wordGardenLanternSlots[slot]
+        lantern.zPosition = 900
+
+        let glow = SKShapeNode(circleOfRadius: 48)
+        glow.fillColor = UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 0.17)
+        glow.strokeColor = .clear
+        glow.glowWidth = 10
+        glow.name = "wordGardenLantern"
+        lantern.addChild(glow)
+
+        let hanger = SKShapeNode(rectOf: CGSize(width: 5, height: 28), cornerRadius: 2)
+        hanger.fillColor = UIColor(red: 0.34, green: 0.55, blue: 0.28, alpha: 1)
+        hanger.strokeColor = .clear
+        hanger.position = CGPoint(x: 0, y: 38)
+        hanger.name = "wordGardenLantern"
+        lantern.addChild(hanger)
+
+        let body = SKShapeNode(rectOf: CGSize(width: 56, height: 66), cornerRadius: 18)
+        body.fillColor = UIColor(red: 0.22, green: 0.34, blue: 0.21, alpha: 0.96)
+        body.strokeColor = UIColor(red: 1.0, green: 0.64, blue: 0.80, alpha: 1)
+        body.lineWidth = 3
+        body.name = "wordGardenLantern"
+        lantern.addChild(body)
+
+        let flower = ArtSystem.label("✿", size: 32)
+        flower.fontColor = UIColor(red: 1.0, green: 0.76, blue: 0.88, alpha: 1)
+        flower.name = "wordGardenLantern"
+        lantern.addChild(flower)
+
+        if !reducedMotion {
+            glow.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.45, duration: 1.0),
+                .fadeAlpha(to: 1.0, duration: 1.0)
+            ])))
+        }
+
+        addChild(lantern)
+        wordGardenLanternNode = lantern
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -303,6 +367,17 @@ import SpriteKit
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "The Moon Lantern found a new branch."
+
+        case "wordGardenLantern":
+            guard state.hasStoryReward(.wordGardenLantern) else { return }
+            _ = state.cycleStoryRewardPlacement(
+                .wordGardenLantern,
+                slotCount: wordGardenLanternSlots.count
+            )
+            renderWordGardenLantern()
+            state.audio.play("success")
+            valkyrie.pose(.interact)
+            instruction.text = "The Flower Lantern found a new branch."
 
         default:
             walkIfValid(point)

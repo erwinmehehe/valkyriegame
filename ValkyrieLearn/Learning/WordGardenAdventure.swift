@@ -116,6 +116,45 @@ public enum WordGardenEncounterCatalog {
             transferContext: true
         )
     ]
+
+
+    public static let storyHollowPattern = ["m", "a", "p"]
+
+    /// Story Hollow does not claim that the learner can decode "map".
+    /// It asks the child to remember and rebuild a short printed pattern by position.
+    public static let storyHollowSequence: [LiteracyEncounter] = [
+        .init(
+            id: "storyHollow.sequence.first",
+            skillID: LiteracySkills.visualPrintSequence,
+            mechanicID: WordGardenMechanicID.storySeedSequence,
+            representation: .symbolic,
+            prompt: "Remember the three glowing seed-runes. Restore the first shape.",
+            answer: "m",
+            choices: ["m", "n", "w", "h"],
+            context: "storyHollow"
+        ),
+        .init(
+            id: "storyHollow.sequence.middle",
+            skillID: LiteracySkills.visualPrintSequence,
+            mechanicID: WordGardenMechanicID.storySeedSequence,
+            representation: .symbolic,
+            prompt: "Remember the seed-runes. Restore the middle shape.",
+            answer: "a",
+            choices: ["a", "d", "o", "e"],
+            context: "storyHollow"
+        ),
+        .init(
+            id: "storyHollow.sequence.last",
+            skillID: LiteracySkills.visualPrintSequence,
+            mechanicID: WordGardenMechanicID.storySeedSequence,
+            representation: .symbolic,
+            prompt: "Remember the seed-runes. Restore the last shape.",
+            answer: "p",
+            choices: ["p", "q", "b", "d"],
+            context: "storyHollow",
+            transferContext: true
+        )
+    ]
 }
 
 public enum WordGardenDirector {
@@ -144,6 +183,25 @@ public enum WordGardenDirector {
             for: WordGardenEncounterCatalog.sunmillVisualShapes,
             profile: profile
         ) == WordGardenEncounterCatalog.sunmillVisualShapes.count
+    }
+
+    public static func canEnterStoryHollow(profile: LearnerProfile) -> Bool {
+        sunmillComplete(profile: profile)
+    }
+
+    public static func nextStoryHollowEncounter(profile: LearnerProfile) -> LiteracyEncounter? {
+        guard canEnterStoryHollow(profile: profile) else { return nil }
+        return nextCandidate(
+            from: WordGardenEncounterCatalog.storyHollowSequence,
+            profile: profile
+        )
+    }
+
+    public static func storyHollowComplete(profile: LearnerProfile) -> Bool {
+        independentSuccessCount(
+            for: WordGardenEncounterCatalog.storyHollowSequence,
+            profile: profile
+        ) == WordGardenEncounterCatalog.storyHollowSequence.count
     }
 
     public static func independentSuccessCount(

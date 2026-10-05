@@ -87,8 +87,9 @@ import LearningCore
         scene.willLeave()
     }
 
-    func testWordGardenFlowerGateUnlocksNativeSunmillWithoutSpokenLetterClaims() async throws {
-        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+    func testWordGardenProgressesFlowerGateToSunmillToStoryHollowWithDistinctReward() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
 
         let story = StoryTreeScene(state: state)
         story.didMove(to: SKView())
@@ -119,10 +120,6 @@ import LearningCore
         }
         XCTAssertTrue(state.flowerGateComplete)
         XCTAssertTrue(state.sunmillAvailable)
-        XCTAssertEqual(
-            state.profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
-            .new
-        )
 
         state.travel(to: .wordGarden)
         let awakeGate = WordGardenScene(state: state)
@@ -140,19 +137,89 @@ import LearningCore
         XCTAssertNotNil(sunmill.childNode(withName: "targetRune"))
         XCTAssertTrue(sunmill.childNode(withName: "sunmillBridge")?.isHidden == true)
         XCTAssertEqual(sunmill.children.filter { $0.name == "sunmillChoice" }.count, 4)
-        XCTAssertEqual(sunmill.children.filter { $0.name == "soundFlower" }.count, 0)
         XCTAssertEqual(
             state.nextSunmillEncounter()?.mechanicID,
             WordGardenMechanicID.sunmillPair
+        )
+        sunmill.willLeave()
+
+        for encounter in WordGardenEncounterCatalog.sunmillVisualShapes {
+            _ = state.recordLiteracy(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(state.sunmillComplete)
+        XCTAssertTrue(state.storyHollowAvailable)
+
+        let awakeSunmill = WordGardenScene(state: state)
+        awakeSunmill.didMove(to: SKView())
+        XCTAssertFalse(awakeSunmill.childNode(withName: "sunmillBridge")?.isHidden ?? true)
+        XCTAssertNotNil(awakeSunmill.childNode(withName: "storyHollowRoute"))
+        awakeSunmill.valkyrie.position = CGPoint(x: 1015, y: 175)
+        awakeSunmill.handleTap(at: CGPoint(x: 1010, y: 165))
+        XCTAssertEqual(state.world, .storyHollow)
+        awakeSunmill.willLeave()
+
+        let hollow = WordGardenScene(state: state)
+        hollow.didMove(to: SKView())
+        XCTAssertNotNil(hollow.childNode(withName: "storyHollow"))
+        XCTAssertNotNil(hollow.childNode(withName: "wordSeed"))
+        XCTAssertNotNil(hollow.childNode(withName: "storySequencePreview"))
+        XCTAssertEqual(hollow.children.filter { $0.name == "storyHollowChoice" }.count, 4)
+        XCTAssertEqual(
+            state.nextStoryHollowEncounter()?.skillID,
+            LiteracySkills.visualPrintSequence
+        )
+        hollow.willLeave()
+
+        for encounter in WordGardenEncounterCatalog.storyHollowSequence {
+            _ = state.recordLiteracy(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+
+        XCTAssertTrue(state.storyHollowComplete)
+        XCTAssertTrue(state.hasStoryReward(.wordGardenLantern))
+        XCTAssertFalse(
+            state.hasStoryReward(.moonLantern),
+            "Word Garden completion must not unlock Math Castle's reward."
+        )
+        XCTAssertEqual(
+            state.profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
+            .new
         )
         XCTAssertEqual(
             state.profile.progress(for: LiteracySkills.lowercaseLetterNames).state,
             .new
         )
+        XCTAssertEqual(state.profile.progress(for: LiteracySkills.decodeCVC).state, .new)
 
-        sunmill.handleTap(at: CGPoint(x: 1110, y: 665))
-        XCTAssertEqual(state.world, .wordGarden)
-        sunmill.willLeave()
+        let restoredHollow = WordGardenScene(state: state)
+        restoredHollow.didMove(to: SKView())
+        XCTAssertNotNil(restoredHollow.childNode(withName: "storyBloom"))
+        XCTAssertNotNil(restoredHollow.childNode(withName: "storyTreeReturn"))
+        restoredHollow.handleTap(at: CGPoint(x: 1005, y: 165))
+        XCTAssertEqual(state.world, .storyTree)
+        restoredHollow.willLeave()
+
+        let restoredState = try AppState(context: ModelContext(container))
+        XCTAssertTrue(restoredState.hasStoryReward(.wordGardenLantern))
+        XCTAssertFalse(restoredState.hasStoryReward(.moonLantern))
+        XCTAssertEqual(restoredState.world, .storyTree)
+
+        let restoredTree = StoryTreeScene(state: restoredState)
+        restoredTree.didMove(to: SKView())
+        XCTAssertNotNil(restoredTree.childNode(withName: "wordGardenLantern"))
+        XCTAssertNil(restoredTree.childNode(withName: "moonLantern"))
+        restoredTree.willLeave()
     }
 
     func testRenderedNativeSceneReviewAttachments() async throws {
@@ -212,11 +279,53 @@ import LearningCore
         view.presentScene(awakeSunmill)
         try await capture(awakeSunmill, in: view, name: "Word-Garden-native-sunmill-awake")
         XCTAssertFalse(awakeSunmill.childNode(withName: "sunmillBridge")?.isHidden ?? true)
+        XCTAssertNotNil(awakeSunmill.childNode(withName: "storyHollowRoute"))
         XCTAssertEqual(
             state.profile.progress(for: LiteracySkills.lowercaseLetterNames).state,
             .new
         )
         awakeSunmill.willLeave()
+
+        state.travel(to: .storyHollow)
+        let hollow = WordGardenScene(state: state)
+        hollow.reducedMotion = true
+        view.presentScene(hollow)
+        try await capture(hollow, in: view, name: "Word-Garden-native-story-hollow")
+        hollow.willLeave()
+
+        for encounter in WordGardenEncounterCatalog.storyHollowSequence {
+            _ = state.recordLiteracy(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+
+        let restoredHollow = WordGardenScene(state: state)
+        restoredHollow.reducedMotion = true
+        view.presentScene(restoredHollow)
+        try await capture(
+            restoredHollow,
+            in: view,
+            name: "Word-Garden-native-story-hollow-restored"
+        )
+        XCTAssertNotNil(restoredHollow.childNode(withName: "storyBloom"))
+        XCTAssertTrue(state.hasStoryReward(.wordGardenLantern))
+        restoredHollow.willLeave()
+
+        state.travel(to: .storyTree)
+        let rewardTree = StoryTreeScene(state: state)
+        rewardTree.reducedMotion = true
+        view.presentScene(rewardTree)
+        try await capture(
+            rewardTree,
+            in: view,
+            name: "Story-Tree-native-word-garden-lantern"
+        )
+        XCTAssertNotNil(rewardTree.childNode(withName: "wordGardenLantern"))
+        rewardTree.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))

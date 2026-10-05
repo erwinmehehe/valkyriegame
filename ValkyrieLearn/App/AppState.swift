@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle, wordGarden, sunmillCrossing }
+    enum World: String { case storyTree, mathCastle, wordGarden, sunmillCrossing, storyHollow }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -130,12 +130,24 @@ import LearningCore
         WordGardenDirector.sunmillComplete(profile: profile)
     }
 
+    var storyHollowAvailable: Bool {
+        WordGardenDirector.canEnterStoryHollow(profile: profile)
+    }
+
+    var storyHollowComplete: Bool {
+        WordGardenDirector.storyHollowComplete(profile: profile)
+    }
+
     func nextLiteracyEncounter() -> LiteracyEncounter {
         WordGardenDirector.nextFlowerGateEncounter(profile: profile)
     }
 
     func nextSunmillEncounter() -> LiteracyEncounter? {
         WordGardenDirector.nextSunmillEncounter(profile: profile)
+    }
+
+    func nextStoryHollowEncounter() -> LiteracyEncounter? {
+        WordGardenDirector.nextStoryHollowEncounter(profile: profile)
     }
 
     @discardableResult
@@ -169,6 +181,9 @@ import LearningCore
         ))
         if outcome == .correct {
             profile.usedFingerprints.insert(encounter.fingerprint)
+        }
+        if WordGardenDirector.storyHollowComplete(profile: profile) {
+            _ = profile.unlockStoryReward(.wordGardenLantern)
         }
         persist()
         return evidence
