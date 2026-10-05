@@ -34,90 +34,110 @@ public struct LiteracyEncounter: Identifiable, Equatable, Sendable {
     }
 
     public var fingerprint: String {
-        "\(mechanicID)|\(skillID.rawValue)|\(representation.rawValue)|\(answer)|\(context)"
+        [
+            mechanicID,
+            skillID.rawValue,
+            representation.rawValue,
+            choices.joined(separator: ","),
+            answer,
+            context
+        ].joined(separator: "|")
     }
 }
 
 public enum WordGardenEncounterCatalog {
-    public static let uppercaseLetters: [LiteracyEncounter] = [
+    /// Flower Gate measures visual identity only. The target rune is shown briefly
+    /// by the native scene and then hidden before the learner chooses.
+    public static let visualLetterShapes: [LiteracyEncounter] = [
         .init(
-            id: "flowerGate.upper.A",
-            skillID: LiteracySkills.uppercaseLetterNames,
+            id: "flowerGate.visual.A",
+            skillID: LiteracySkills.visualLetterMatch,
             mechanicID: WordGardenMechanicID.letterStones,
             representation: .symbolic,
-            prompt: "The gate needs A. Touch the flower carrying A.",
+            prompt: "Remember the glowing rune. Then touch the flower carrying the same shape.",
             answer: "A",
             choices: ["M", "A", "S", "T"]
         ),
         .init(
-            id: "flowerGate.upper.M",
-            skillID: LiteracySkills.uppercaseLetterNames,
+            id: "flowerGate.visual.M",
+            skillID: LiteracySkills.visualLetterMatch,
             mechanicID: WordGardenMechanicID.letterStones,
             representation: .symbolic,
-            prompt: "The gate needs M. Touch the flower carrying M.",
+            prompt: "Remember the glowing rune. Then touch the flower carrying the same shape.",
             answer: "M",
             choices: ["N", "W", "M", "H"]
         ),
         .init(
-            id: "flowerGate.upper.S",
-            skillID: LiteracySkills.uppercaseLetterNames,
+            id: "flowerGate.visual.S",
+            skillID: LiteracySkills.visualLetterMatch,
             mechanicID: WordGardenMechanicID.letterStones,
-            representation: .symbolic,
-            prompt: "Lumi found an S-shaped vine. Touch the matching flower.",
+            representation: .pictorial,
+            prompt: "Remember the glowing vine-rune. Then find the matching flower.",
             answer: "S",
             choices: ["C", "S", "G", "O"],
             transferContext: true
         )
     ]
 
-    public static let lowercaseLetters: [LiteracyEncounter] = [
+    /// Sunmill teaches a visual uppercase/lowercase relationship without naming
+    /// the letters aloud. Spoken letter-name evidence remains gated on recordings.
+    public static let visualCasePairs: [LiteracyEncounter] = [
         .init(
-            id: "sunmill.lower.a",
-            skillID: LiteracySkills.lowercaseLetterNames,
+            id: "sunmill.case.A-a",
+            skillID: LiteracySkills.visualCasePairing,
             mechanicID: WordGardenMechanicID.sunmillPair,
             representation: .symbolic,
-            prompt: "The Sunmill shows A. Touch the little letter that matches.",
+            prompt: "The Sunmill shows a tall rune. Find its little partner shape.",
             answer: "a",
             choices: ["d", "a", "o", "e"],
             context: "sunmillCrossing"
         ),
         .init(
-            id: "sunmill.lower.m",
-            skillID: LiteracySkills.lowercaseLetterNames,
+            id: "sunmill.case.M-m",
+            skillID: LiteracySkills.visualCasePairing,
             mechanicID: WordGardenMechanicID.sunmillPair,
             representation: .symbolic,
-            prompt: "The Sunmill shows M. Touch the little letter that matches.",
+            prompt: "The Sunmill shows another tall rune. Find its little partner shape.",
             answer: "m",
             choices: ["n", "w", "m", "h"],
             context: "sunmillCrossing"
         ),
         .init(
-            id: "sunmill.lower.s",
-            skillID: LiteracySkills.lowercaseLetterNames,
+            id: "sunmill.case.S-s",
+            skillID: LiteracySkills.visualCasePairing,
             mechanicID: WordGardenMechanicID.sunmillPair,
-            representation: .symbolic,
-            prompt: "The Sunmill shows S. Find its little-letter match.",
+            representation: .pictorial,
+            prompt: "The Sunmill rune curls through the light. Find its little partner shape.",
             answer: "s",
             choices: ["c", "s", "g", "o"],
             context: "sunmillCrossing",
             transferContext: true
         )
     ]
+
+    public static func uppercaseTarget(for encounter: LiteracyEncounter) -> String? {
+        switch encounter.id {
+        case "sunmill.case.A-a": return "A"
+        case "sunmill.case.M-m": return "M"
+        case "sunmill.case.S-s": return "S"
+        default: return nil
+        }
+    }
 }
 
 public enum WordGardenDirector {
     public static func nextFlowerGateEncounter(profile: LearnerProfile) -> LiteracyEncounter {
-        nextCandidate(from: WordGardenEncounterCatalog.uppercaseLetters, profile: profile)
+        nextCandidate(from: WordGardenEncounterCatalog.visualLetterShapes, profile: profile)
     }
 
     public static func flowerGateComplete(profile: LearnerProfile) -> Bool {
-        profile.progress(for: LiteracySkills.uppercaseLetterNames).state.readiness
+        profile.progress(for: LiteracySkills.visualLetterMatch).state.readiness
             >= SkillState.secure.readiness
     }
 
     public static func canEnterSunmill(profile: LearnerProfile, graph: SkillGraph) -> Bool {
         flowerGateComplete(profile: profile)
-            && graph.isEligible(LiteracySkills.lowercaseLetterNames, for: profile)
+            && graph.isEligible(LiteracySkills.visualCasePairing, for: profile)
     }
 
     public static func nextSunmillEncounter(
@@ -125,11 +145,11 @@ public enum WordGardenDirector {
         graph: SkillGraph
     ) -> LiteracyEncounter? {
         guard canEnterSunmill(profile: profile, graph: graph) else { return nil }
-        return nextCandidate(from: WordGardenEncounterCatalog.lowercaseLetters, profile: profile)
+        return nextCandidate(from: WordGardenEncounterCatalog.visualCasePairs, profile: profile)
     }
 
     public static func sunmillComplete(profile: LearnerProfile) -> Bool {
-        profile.progress(for: LiteracySkills.lowercaseLetterNames).state.readiness
+        profile.progress(for: LiteracySkills.visualCasePairing).state.readiness
             >= SkillState.secure.readiness
     }
 
@@ -139,7 +159,7 @@ public enum WordGardenDirector {
     ) -> Int {
         guard let skill = encounters.first?.skillID else { return 0 }
         let validIDs = Set(encounters.map(\.id))
-        let independent = Set(
+        return Set(
             profile.progress(for: skill).evidence
                 .filter {
                     $0.outcome == .correct
@@ -147,13 +167,13 @@ public enum WordGardenDirector {
                         && validIDs.contains($0.encounterID)
                 }
                 .map(\.encounterID)
-        )
-        return independent.count
+        ).count
     }
 
-    /// Compatibility entry point for callers that only know they are in Word Garden.
-    /// The native scenes use the place-specific selectors above.
-    public static func nextEncounter(profile: LearnerProfile, graph: SkillGraph) -> LiteracyEncounter {
+    public static func nextEncounter(
+        profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> LiteracyEncounter {
         if let sunmill = nextSunmillEncounter(profile: profile, graph: graph),
            !sunmillComplete(profile: profile) {
             return sunmill
@@ -175,7 +195,6 @@ public enum WordGardenDirector {
         if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
             return unfinished
         }
-
         let attempts = profile.progress(for: skill).evidence.count
         return candidates[attempts % candidates.count]
     }
