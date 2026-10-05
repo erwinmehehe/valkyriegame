@@ -1,9 +1,17 @@
 name: Native foundation
 on:
   push:
+    branches:
+      - main
   pull_request:
+
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+
 jobs:
   learning-core:
     runs-on: ubuntu-latest
@@ -11,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: swift test -j 2
+
   ipad-build-and-tests:
     runs-on: macos-15
     steps:
