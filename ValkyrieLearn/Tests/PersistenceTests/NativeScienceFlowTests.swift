@@ -125,13 +125,15 @@ import LearningCore
         scene.willLeave()
     }
 
-    func testGreenhouseUsesV331ReferenceArtAndAdventureScale() throws {
+    func testGreenhouseUsesNativeVectorEnvironmentAndAdventureScale() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let scene = ScienceLabScene(state: state)
         scene.reducedMotion = true
         scene.didMove(to: SKView())
 
-        XCTAssertNotNil(scene.childNode(withName: "scienceReferenceBackdrop"))
+        XCTAssertNotNil(scene.childNode(withName: "scienceNativeBackdrop"))
+        XCTAssertNotNil(scene.childNode(withName: "scienceGreenhouseHouse"))
+        XCTAssertNil(scene.childNode(withName: "scienceReferenceBackdrop"))
         XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
         XCTAssertEqual(scene.valkyrie.yScale, 0.5, accuracy: 0.001)
         XCTAssertFalse(ArtSystem.frames(character: "Milo", pose: .idle).isEmpty)
