@@ -150,4 +150,138 @@ final class WordGardenAdventureTests: XCTestCase {
             LiteracySkills.shortVowelSounds
         ].contains(flower.skillID))
     }
+    func testStoryHollowStaysLockedUntilSunmillHasThreeIndependentTransferMatches() throws {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertFalse(WordGardenDirector.canEnterStoryHollow(profile: profile))
+        XCTAssertNil(WordGardenDirector.nextStoryHollowEncounter(profile: profile))
+
+        for encounter in WordGardenEncounterCatalog.sunmillVisualShapes {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID,
+                    transferContext: true
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertTrue(WordGardenDirector.canEnterStoryHollow(profile: profile))
+        let hollow = try XCTUnwrap(
+            WordGardenDirector.nextStoryHollowEncounter(profile: profile)
+        )
+        XCTAssertEqual(hollow.skillID, LiteracySkills.visualPrintSequence)
+        XCTAssertEqual(hollow.mechanicID, WordGardenMechanicID.storySeedSequence)
+        XCTAssertEqual(hollow.context, "storyHollow")
+        let promptTokens = hollow.prompt
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { String($0).lowercased() }
+        XCTAssertFalse(
+            promptTokens.contains(hollow.answer.lowercased()),
+            "Story Hollow instructions must not reveal the target as a standalone glyph."
+        )
+    }
+
+    func testStoryHollowCompletionIsVisualSequenceEvidenceNotReadingMastery() throws {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes
+            + WordGardenEncounterCatalog.sunmillVisualShapes
+            + WordGardenEncounterCatalog.storyHollowSequence {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID,
+                    transferContext: encounter.transferContext
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertTrue(WordGardenDirector.storyHollowComplete(profile: profile))
+        XCTAssertEqual(
+            WordGardenDirector.independentSuccessCount(
+                for: WordGardenEncounterCatalog.storyHollowSequence,
+                profile: profile
+            ),
+            3
+        )
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.visualPrintSequence).state,
+            .secure
+        )
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
+            .new
+        )
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.lowercaseLetterNames).state,
+            .new
+        )
+        XCTAssertEqual(profile.progress(for: LiteracySkills.decodeCVC).state, .new)
+    }
+
+    func testSupportedStoryHollowRestorationsDoNotFakeIndependentCompletion() throws {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes
+            + WordGardenEncounterCatalog.sunmillVisualShapes {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID,
+                    transferContext: encounter.transferContext
+                ),
+                in: &profile
+            )
+        }
+
+        for encounter in WordGardenEncounterCatalog.storyHollowSequence {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .lightHint,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertFalse(WordGardenDirector.storyHollowComplete(profile: profile))
+        XCTAssertNotNil(WordGardenDirector.nextStoryHollowEncounter(profile: profile))
+    }
+
 }

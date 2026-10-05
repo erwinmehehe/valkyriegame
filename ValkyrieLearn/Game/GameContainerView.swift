@@ -46,7 +46,7 @@ import SpriteKit
             scene = StoryTreeScene(state: state)
         case .mathCastle:
             scene = MathCastleScene(state: state)
-        case .wordGarden, .sunmillCrossing:
+        case .wordGarden, .sunmillCrossing, .storyHollow:
             scene = WordGardenScene(state: state)
         case .scienceLab:
             scene = ScienceLabScene(state: state)

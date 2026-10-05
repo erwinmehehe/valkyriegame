@@ -42,6 +42,7 @@ public enum WordGardenMechanicID {
     public static let seedBlendPath = "wordGarden.seedBlendPath"
     public static let wordBloom = "wordGarden.wordBloom"
     public static let storyLantern = "wordGarden.storyLantern"
+    public static let storySeedSequence = "wordGarden.storySeedSequence"
     public static let lumiReach = "wordGarden.lumiReach"
 }
 
@@ -104,6 +105,7 @@ public enum LiteracySkills {
 
     // Alphabetic principle
     public static let visualLetterMatch = SkillID(rawValue: "literacy.alphabet.visualLetterMatch")
+    public static let visualPrintSequence = SkillID(rawValue: "literacy.alphabet.visualPrintSequence")
     public static let uppercaseLetterNames = SkillID(rawValue: "literacy.alphabet.uppercaseLetterNames")
     public static let lowercaseLetterNames = SkillID(rawValue: "literacy.alphabet.lowercaseLetterNames")
     public static let commonConsonantSounds = SkillID(rawValue: "literacy.alphabet.commonConsonantSounds")
@@ -267,6 +269,16 @@ public enum LiteracySkillCatalog {
             representations: [.letter],
             responseModes: [.directTouch],
             mechanicIDs: [WordGardenMechanicID.letterStones, WordGardenMechanicID.sunmillPair]
+        ),
+        .init(
+            id: LiteracySkills.visualPrintSequence,
+            strand: .alphabeticPrinciple,
+            title: "Remember and Rebuild Short Printed Patterns",
+            developmentalOrder: 11,
+            prerequisites: [LiteracySkills.visualLetterMatch],
+            representations: [.letter],
+            responseModes: [.arrange, .directTouch],
+            mechanicIDs: [WordGardenMechanicID.storySeedSequence]
         ),
         .init(
             id: LiteracySkills.uppercaseLetterNames,
