@@ -1,0 +1,24 @@
+{
+  "reference": "index.html embedded v3.31 reference-art integration",
+  "sourceBlobSHA": "1f4432fa3c9a82156abb733a61d211c58aea9fba",
+  "assets": {
+    "ValkyrieLearn/Resources/V331WorldAtlas.webp": {
+      "sourceKey": "env_atlas",
+      "blobSHA": "e3d772e270092c739b53f1764c89ea2cc6640eb4",
+      "sourceDimensions": [
+        320,
+        180
+      ],
+      "note": "2x2 v3.31 preview atlas; native Word Garden crops the top-left quadrant"
+    },
+    "ValkyrieLearn/Resources/Lumi.webp": {
+      "sourceKey": "comp_lumi",
+      "blobSHA": "f7683bcefa496a7321e3a9b4040247d7d0f24d17",
+      "sourceDimensions": [
+        84,
+        84
+      ]
+    }
+  },
+  "note": "Preserved embedded v3.31 reference pixels, not newly generated art. These preview-resolution assets are an interim native migration source until the original high-resolution Word Garden source sheets are available."
+}
