@@ -157,6 +157,8 @@ public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
     public var storyRewardIDs: Set<StoryRewardID>?
     /// Reward-specific branch slots for child-directed Story Tree decoration.
     public var storyRewardPlacements: [String: Int]?
+    /// Optional to preserve decoding of profiles saved before Science Lab.
+    public var scienceAdventure: ScienceAdventure?
 
     public init(id: UUID = UUID()) { self.id = id }
     public func progress(for skill: SkillID) -> SkillProgress { skills[skill.rawValue] ?? SkillProgress() }

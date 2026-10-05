@@ -203,6 +203,9 @@ import LearningCore
                 color: UIColor(red: 0.73, green: 0.50, blue: 0.25, alpha: 1),
                 radius: 8
             )
+            if let texture = ArtSystem.texture("BridgeTimber") {
+                paddle.fillColor = .white; paddle.fillTexture = texture; paddle.strokeColor = .clear
+            }
             paddle.position.y = 75
             paddle.name = "sunmillWheel"
             arm.addChild(paddle)
@@ -213,6 +216,9 @@ import LearningCore
         hub.fillColor = UIColor(red: 0.97, green: 0.72, blue: 0.22, alpha: 1)
         hub.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.52, alpha: 1)
         hub.lineWidth = 5
+        if let texture = ArtSystem.texture("BridgeDial") {
+            hub.fillColor = .white; hub.fillTexture = texture; hub.strokeColor = .clear
+        }
         hub.name = "sunmillWheel"
         wheel.addChild(hub)
 
@@ -230,14 +236,33 @@ import LearningCore
         bridge.zPosition = 350
         for index in 0..<7 {
             let plank = ArtSystem.box(
-                CGSize(width: 62, height: 58),
+                CGSize(width: 52, height: 22),
                 color: UIColor(red: 0.48, green: 0.31, blue: 0.16, alpha: 1),
                 radius: 7
             )
+            if let texture = ArtSystem.texture("BridgeOakPlank") {
+                plank.fillColor = .white; plank.fillTexture = texture; plank.strokeColor = .clear
+            }
             plank.position.x = CGFloat(index - 3) * 55
             plank.name = "sunmillBridge"
             bridge.addChild(plank)
         }
+        for x in [CGFloat(-180), CGFloat(180)] {
+            let support = ArtSystem.box(CGSize(width: 16, height: 64), color: .brown, radius: 3)
+            support.position = CGPoint(x: x, y: -28)
+            support.zPosition = -1
+            if let texture = ArtSystem.texture("BridgeTimber") {
+                support.fillColor = .white; support.fillTexture = texture; support.strokeColor = .clear
+            }
+            bridge.addChild(support)
+        }
+        let railPath = CGMutablePath()
+        railPath.move(to: CGPoint(x: -180, y: 24))
+        railPath.addQuadCurve(to: CGPoint(x: 180, y: 24), control: CGPoint(x: 0, y: 8))
+        let rail = SKShapeNode(path: railPath)
+        rail.strokeColor = UIColor(red: 0.78, green: 0.66, blue: 0.39, alpha: 1)
+        rail.lineWidth = 4
+        bridge.addChild(rail)
         bridge.isHidden = true
         addChild(bridge)
     }
@@ -597,7 +622,12 @@ import LearningCore
     private func sunmillChoiceNode(letter: String, index: Int) -> SKNode {
         let node = SKNode()
 
-        let leaf = SKShapeNode(ellipseOf: CGSize(width: 108, height: 76))
+        let leafPath = CGMutablePath()
+        leafPath.move(to: CGPoint(x: -54, y: -18))
+        leafPath.addCurve(to: CGPoint(x: 54, y: 18), control1: CGPoint(x: -44, y: 46), control2: CGPoint(x: 30, y: 46))
+        leafPath.addCurve(to: CGPoint(x: -54, y: -18), control1: CGPoint(x: 44, y: -46), control2: CGPoint(x: -30, y: -46))
+        leafPath.closeSubpath()
+        let leaf = SKShapeNode(path: leafPath)
         leaf.fillColor = UIColor(
             red: 0.52,
             green: 0.72 + CGFloat(index) * 0.035,
