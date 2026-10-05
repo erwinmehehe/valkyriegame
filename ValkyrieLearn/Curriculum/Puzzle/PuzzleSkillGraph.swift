@@ -112,7 +112,7 @@ public enum PuzzleSkillCatalog {
             developmentalOrder: 1,
             representations: [.rune, .object],
             responseModes: [.directTouch, .arrange],
-            mechanicIDs: [PuzzlePalaceMechanicID.memoryBridge, PuzzlePalaceMechanicID.runeGate]
+            mechanicIDs: [PuzzlePalaceMechanicID.memoryBridge]
         ),
         .init(
             id: PuzzleSkills.responseInhibition,
@@ -149,17 +149,17 @@ public enum PuzzleSkillCatalog {
             prerequisites: [PuzzleSkills.visualPatternContinue],
             representations: [.rune, .object],
             responseModes: [.directTouch, .arrange],
-            mechanicIDs: [PuzzlePalaceMechanicID.runeGate, PuzzlePalaceMechanicID.memoryBridge]
+            mechanicIDs: [PuzzlePalaceMechanicID.runeGate]
         ),
         .init(
             id: PuzzleSkills.ruleSwitching,
             strand: .cognitiveFlexibility,
             title: "Switch to a New Rule When the World Changes",
             developmentalOrder: 6,
-            prerequisites: [PuzzleSkills.responseInhibition],
+            prerequisites: [PuzzleSkills.responseInhibition, PuzzleSkills.singleRuleSort],
             representations: [.object],
             responseModes: [.switchRule, .directTouch],
-            mechanicIDs: [PuzzlePalaceMechanicID.stopGoOrbs, PuzzlePalaceMechanicID.sortingPedestal]
+            mechanicIDs: [PuzzlePalaceMechanicID.sortingPedestal]
         ),
         .init(
             id: PuzzleSkills.changedRuleSort,

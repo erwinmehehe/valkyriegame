@@ -361,4 +361,31 @@ final class PuzzlePalaceSkillGraphTests: XCTestCase {
         XCTAssertTrue(stretch.contains(PuzzleSkills.debugSequence))
         XCTAssertFalse(stretch.contains(PuzzleSkills.visualPatternContinue))
     }
+
+    func testPuzzleMechanicMappingsMatchTheSkillsTheyActuallyMeasure() throws {
+        let memory = try XCTUnwrap(
+            PuzzleSkillCatalog.descriptor(for: PuzzleSkills.visualSequenceMemory)
+        )
+        let transfer = try XCTUnwrap(
+            PuzzleSkillCatalog.descriptor(for: PuzzleSkills.patternRuleTransfer)
+        )
+        let switching = try XCTUnwrap(
+            PuzzleSkillCatalog.descriptor(for: PuzzleSkills.ruleSwitching)
+        )
+
+        XCTAssertEqual(memory.mechanicIDs, [PuzzlePalaceMechanicID.memoryBridge])
+        XCTAssertEqual(transfer.mechanicIDs, [PuzzlePalaceMechanicID.runeGate])
+        XCTAssertEqual(switching.mechanicIDs, [PuzzlePalaceMechanicID.sortingPedestal])
+    }
+
+    func testRuleSwitchingRequiresBothInhibitionAndStableSorting() throws {
+        let switching = try XCTUnwrap(
+            PuzzleSkillCatalog.descriptor(for: PuzzleSkills.ruleSwitching)
+        )
+        XCTAssertEqual(
+            Set(switching.definition.prerequisites),
+            Set([PuzzleSkills.responseInhibition, PuzzleSkills.singleRuleSort])
+        )
+    }
+
 }
