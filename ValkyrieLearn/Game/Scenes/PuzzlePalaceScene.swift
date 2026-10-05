@@ -10,6 +10,7 @@ import LearningCore
         case stopGoOrbs
         case sortingPedestal
         case resortVault
+        case mirrorHall
     }
 
     private let place: Place
@@ -20,6 +21,7 @@ import LearningCore
         case .stopGoOrbs: return "Puzzle Palace · Stop/Go Orbs"
         case .sortingPedestal: return "Puzzle Palace · Sorting Pedestal"
         case .resortVault: return "Puzzle Palace · Re-sort Vault"
+        case .mirrorHall: return "Puzzle Palace · Mirror Hall"
         }
     }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
@@ -45,6 +47,13 @@ import LearningCore
     private var resortPass = 0
     private var resortObjectIndex = 0
     private var resortAcceptingInput = false
+    private var orientationEncounter: PuzzleOrientationEncounter?
+    private var mirrorAcceptingInput = false
+    private let mirrorChoicePoints = [
+        CGPoint(x: 520, y: 335),
+        CGPoint(x: 760, y: 335),
+        CGPoint(x: 1000, y: 335)
+    ]
     private let resortStartPositions = [
         CGPoint(x: 535, y: 395),
         CGPoint(x: 680, y: 410),
@@ -73,6 +82,8 @@ import LearningCore
             place = .sortingPedestal
         case .resortVault:
             place = .resortVault
+        case .mirrorHall:
+            place = .mirrorHall
         default:
             place = .runeGate
         }
@@ -102,6 +113,9 @@ import LearningCore
         case .resortVault:
             valkyrie.position = CGPoint(x: 180, y: 175)
             tiko.position = CGPoint(x: 295, y: 190)
+        case .mirrorHall:
+            valkyrie.position = CGPoint(x: 180, y: 175)
+            tiko.position = CGPoint(x: 305, y: 190)
         }
         tiko.reducedMotion = reducedMotion
         addChild(tiko)
@@ -158,6 +172,17 @@ import LearningCore
                 resortEncounter = state.nextPuzzleResortEncounter()
                 buildResortEncounter()
             }
+        case .mirrorHall:
+            guard state.puzzleMirrorHallAvailable else {
+                instruction.text = "The Re-sort Vault must be stable before Mirror Hall opens."
+                return
+            }
+            if state.puzzleMirrorHallComplete {
+                restoreMirrorHall()
+            } else {
+                orientationEncounter = state.nextPuzzleMirrorHallEncounter()
+                buildMirrorHallEncounter()
+            }
         }
     }
 
@@ -206,6 +231,9 @@ import LearningCore
         case .resortVault:
             buildResortWorld()
             refreshResortProgress(animated: false)
+        case .mirrorHall:
+            buildMirrorHallWorld()
+            refreshMirrorHallProgress(animated: false)
         }
     }
 
@@ -1793,7 +1821,229 @@ import LearningCore
             door.name = "resortDoorOpen"
         }
 
-        instruction.text = "Re-sort Vault is stable. The next palace challenge will move into spatial reasoning."
+        showMirrorHallRoute()
+        instruction.text = "Re-sort Vault is stable. Tiko found the Mirror Hall."
+    }
+
+    private func showMirrorHallRoute() {
+        guard state.puzzleMirrorHallAvailable,
+              childNode(withName: "mirrorHallRoute") == nil else { return }
+        let route = hotspot(
+            "Mirror Hall →",
+            name: "mirrorHallRoute",
+            at: CGPoint(x: 1000, y: 165),
+            size: CGSize(width: 190, height: 58)
+        )
+        route.zPosition = 845
+    }
+
+    private func buildMirrorHallWorld() {
+        let hall = SKShapeNode(rectOf: CGSize(width: 860, height: 330), cornerRadius: 62)
+        hall.fillColor = UIColor(red: 0.08, green: 0.10, blue: 0.20, alpha: 0.82)
+        hall.strokeColor = UIColor(red: 0.55, green: 0.70, blue: 0.96, alpha: 0.88)
+        hall.lineWidth = 6
+        hall.position = CGPoint(x: 760, y: 390)
+        hall.name = "mirrorHallChamber"
+        hall.zPosition = 110
+        addChild(hall)
+
+        let beacon = SKShapeNode(circleOfRadius: 70)
+        beacon.fillColor = UIColor(red: 0.16, green: 0.19, blue: 0.34, alpha: 0.98)
+        beacon.strokeColor = UIColor(red: 0.64, green: 0.82, blue: 1.0, alpha: 1)
+        beacon.lineWidth = 7
+        beacon.position = CGPoint(x: 760, y: 535)
+        beacon.name = "mirrorBeacon"
+        beacon.zPosition = 600
+        addChild(beacon)
+
+        let glyph = ArtSystem.label("↑", size: 62)
+        glyph.name = "mirrorBeaconGlyph"
+        glyph.fontColor = UIColor(red: 0.92, green: 0.97, blue: 1.0, alpha: 1)
+        beacon.addChild(glyph)
+
+        let title = ArtSystem.label("MATCH TIKO'S DIRECTION", size: 19)
+        title.fontColor = UIColor(red: 0.83, green: 0.90, blue: 1.0, alpha: 1)
+        title.position = CGPoint(x: 760, y: 625)
+        title.name = "mirrorHallTitle"
+        title.zPosition = 610
+        addChild(title)
+
+        for index in 0..<PuzzlePalaceEncounterCatalog.mirrorHallOrientation.count {
+            let light = SKShapeNode(circleOfRadius: 16)
+            light.fillColor = UIColor(red: 0.20, green: 0.24, blue: 0.38, alpha: 0.96)
+            light.strokeColor = UIColor(red: 0.58, green: 0.73, blue: 0.96, alpha: 0.84)
+            light.lineWidth = 3
+            light.position = CGPoint(x: 990 + CGFloat(index) * 54, y: 575)
+            light.name = "mirrorProgress\(index)"
+            light.zPosition = 620
+            addChild(light)
+        }
+
+        let back = hotspot(
+            "← Re-sort Vault",
+            name: "resortVaultBack",
+            at: CGPoint(x: 1080, y: 665),
+            size: CGSize(width: 205, height: 52)
+        )
+        back.zPosition = 2050
+    }
+
+    private func buildMirrorHallEncounter() {
+        guard let orientationEncounter else { return }
+        removeAction(forKey: "nextMirrorOrientation")
+        clearMirrorChoices()
+        attempts = 0
+        support = .independent
+        startedAt = Date()
+        solved = false
+        mirrorAcceptingInput = true
+
+        if let glyph = childNode(withName: "//mirrorBeaconGlyph") as? SKLabelNode {
+            glyph.text = orientationEncounter.target.glyph
+        }
+
+        for (index, direction) in orientationEncounter.choices.enumerated() {
+            let mirror = SKShapeNode(rectOf: CGSize(width: 150, height: 150), cornerRadius: 30)
+            mirror.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.36, alpha: 0.98)
+            mirror.strokeColor = UIColor(red: 0.62, green: 0.78, blue: 0.98, alpha: 0.94)
+            mirror.lineWidth = 6
+            mirror.position = mirrorChoicePoints[index]
+            mirror.name = "mirrorOrientationChoice"
+            mirror.userData = NSMutableDictionary(dictionary: ["direction": direction.rawValue])
+            mirror.zPosition = 650
+
+            let arrow = ArtSystem.label(direction.glyph, size: 58)
+            arrow.fontColor = UIColor(red: 0.94, green: 0.97, blue: 1.0, alpha: 1)
+            mirror.addChild(arrow)
+            addChild(mirror)
+        }
+
+        instruction.text = orientationEncounter.prompt
+        tiko.pose(.interact)
+    }
+
+    private func clearMirrorChoices() {
+        children.filter { $0.name == "mirrorOrientationChoice" }.forEach { $0.removeFromParent() }
+    }
+
+    private func mirrorChoice(at point: CGPoint) -> (node: SKShapeNode, direction: PuzzleOrientation)? {
+        for hit in nodes(at: point) {
+            var node: SKNode? = hit
+            while let current = node {
+                if current.name == "mirrorOrientationChoice",
+                   let raw = current.userData?["direction"] as? String,
+                   let direction = PuzzleOrientation(rawValue: raw),
+                   let shape = current as? SKShapeNode {
+                    return (shape, direction)
+                }
+                node = current.parent
+            }
+        }
+        return nil
+    }
+
+    private func resolveMirrorChoice(_ direction: PuzzleOrientation, node: SKShapeNode) {
+        guard place == .mirrorHall,
+              mirrorAcceptingInput,
+              let orientationEncounter else { return }
+
+        mirrorAcceptingInput = false
+        attempts += 1
+        let attemptSupport = support
+
+        guard direction == orientationEncounter.target else {
+            _ = state.recordPuzzle(
+                orientationEncounter,
+                outcome: .incorrect,
+                support: attemptSupport,
+                attempts: attempts,
+                responseTime: Date().timeIntervalSince(startedAt)
+            )
+            support = support == .independent ? .lightHint : .strongHint
+            node.strokeColor = .systemRed
+            nudge(node)
+            valkyrie.pose(.react)
+            tiko.pose(.react)
+            if let beacon = childNode(withName: "mirrorBeacon") as? SKShapeNode {
+                beacon.glowWidth = support == .lightHint ? 10 : 18
+            }
+            instruction.text = support == .lightHint
+                ? "Keep Tiko's arrow direction fixed. Find the mirror pointing exactly the same way."
+                : "Ignore where the mirror sits. Compare only the arrow direction, then try again."
+            mirrorAcceptingInput = true
+            return
+        }
+
+        solved = true
+        _ = state.recordPuzzle(
+            orientationEncounter,
+            outcome: .correct,
+            support: attemptSupport,
+            attempts: attempts,
+            responseTime: Date().timeIntervalSince(startedAt)
+        )
+        node.strokeColor = .systemGreen
+        node.glowWidth = 16
+        refreshMirrorHallProgress(animated: true)
+        state.audio.play("success")
+        valkyrie.pose(.celebrate)
+        tiko.pose(.celebrate)
+
+        if state.puzzleMirrorHallComplete {
+            restoreMirrorHall()
+            return
+        }
+
+        instruction.text = attemptSupport == .independent
+            ? "Direction matched. Tiko is turning the next mirror."
+            : "That mirror aligned. Match the next direction independently."
+
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.20 : 0.85),
+            .run { [weak self] in
+                guard let self else { return }
+                self.orientationEncounter = self.state.nextPuzzleMirrorHallEncounter()
+                self.buildMirrorHallEncounter()
+            }
+        ]), withKey: "nextMirrorOrientation")
+    }
+
+    private func refreshMirrorHallProgress(animated: Bool) {
+        let count = PuzzlePalaceDirector.mirrorHallIndependentSuccessCount(
+            profile: state.profile
+        )
+        for index in 0..<PuzzlePalaceEncounterCatalog.mirrorHallOrientation.count {
+            guard let light = childNode(withName: "mirrorProgress\(index)") as? SKShapeNode else {
+                continue
+            }
+            let active = index < count
+            light.fillColor = active
+                ? UIColor(red: 0.39, green: 0.84, blue: 0.98, alpha: 1)
+                : UIColor(red: 0.20, green: 0.24, blue: 0.38, alpha: 0.96)
+            light.glowWidth = active ? 10 : 0
+            if active && animated && !reducedMotion {
+                light.run(.sequence([
+                    .scale(to: 1.24, duration: 0.14),
+                    .scale(to: 1.0, duration: 0.18)
+                ]))
+            }
+        }
+    }
+
+    private func restoreMirrorHall() {
+        removeAction(forKey: "nextMirrorOrientation")
+        mirrorAcceptingInput = false
+        clearMirrorChoices()
+        refreshMirrorHallProgress(animated: true)
+
+        if let beacon = childNode(withName: "mirrorBeacon") as? SKShapeNode {
+            beacon.strokeColor = UIColor(red: 0.38, green: 0.91, blue: 0.99, alpha: 1)
+            beacon.glowWidth = 18
+        }
+        if let glyph = childNode(withName: "//mirrorBeaconGlyph") as? SKLabelNode {
+            glyph.text = "✦"
+        }
+        instruction.text = "Mirror Hall is aligned. Tiko is ready for a true rotation challenge next."
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -1905,6 +2155,24 @@ import LearningCore
 
         case "resortRightPedestal", "resortRightPedestalGlyph":
             handleResortPedestal(.right)
+
+        case "mirrorHallRoute":
+            guard place == .resortVault, state.puzzleMirrorHallAvailable else { return }
+            let destination = CGPoint(x: 1000, y: 175)
+            if isNear(destination) {
+                state.travel(to: .mirrorHall)
+            } else {
+                instruction.text = "Follow Tiko through the stable vault into Mirror Hall."
+                travel(to: destination)
+            }
+
+        case "resortVaultBack":
+            state.travel(to: .resortVault)
+
+        case "mirrorOrientationChoice":
+            guard place == .mirrorHall,
+                  let choice = mirrorChoice(at: point) else { return }
+            resolveMirrorChoice(choice.direction, node: choice.node)
 
         default:
             walkIfValid(point)
