@@ -327,20 +327,24 @@ import LearningCore
 
         let unfold = SKAction.scaleX(to: 1, duration: 1.05)
         unfold.timingMode = .easeOut
-        bridge.run(.group([
-            unfold,
-            .fadeAlpha(to: 1, duration: 0.38)
+        // Readiness follows the actual bridge action, not an independent timer.
+        // Pausing or cancelling the unfolding must never open traversal early.
+        bridge.run(.sequence([
+            .group([
+                unfold,
+                .fadeAlpha(to: 1, duration: 0.38)
+            ]),
+            .run { [weak self] in
+                guard let self else { return }
+                self.routeReady = true
+                self.destinationBeacon?.alpha = 1
+                self.destinationBeacon?.glowWidth = 18
+                self.playStarlightBurst(at: self.routeDestination)
+            }
         ]), withKey: "routeOpen")
 
         destinationBeacon?.run(.sequence([
-            .wait(forDuration: 0.95),
-            .run { [weak self] in
-                guard let self else { return }
-                self.destinationBeacon?.alpha = 1
-                self.destinationBeacon?.glowWidth = 18
-                self.routeReady = true
-                self.playStarlightBurst(at: self.routeDestination)
-            },
+            .wait(forDuration: 1.05),
             .scale(to: 1.12, duration: 0.18),
             .scale(to: 1, duration: 0.22)
         ]), withKey: "routeReady")

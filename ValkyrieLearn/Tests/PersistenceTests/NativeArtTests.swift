@@ -42,7 +42,21 @@ import LearningCore
     func testMathArtKeepsLiveCartInputAndPowerReaction() async throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
-        let scene = MathCastleScene(state: state); scene.didMove(to: SKView())
+        // SKActions only advance while SpriteKit presents the scene. A manual
+        // didMove call on a temporary SKView cannot exercise route timing.
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = MathCastleScene(state: state)
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
         scene.update(0) // Exercise real actor depth, not the initial z = 0 state.
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 390, y: 605)), "wind")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 52, y: 669)), "home")
@@ -71,7 +85,25 @@ import LearningCore
             "Do not let the child run onto the route while the physical bridge is still unfolding."
         )
 
-        try await Task.sleep(nanoseconds: 1_250_000_000)
+        // A paused renderer must keep the route unavailable even after more
+        // wall-clock time than the normal opening duration has passed.
+        view.isPaused = true
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        XCTAssertEqual(beacon.glowWidth, 0)
+        XCTAssertLessThan(bridge.xScale, 1)
+        scene.handleTap(at: CGPoint(x: 1110, y: 430))
+        XCTAssertNil(scene.valkyrie.action(forKey: "travel"))
+        view.isPaused = false
+
+        // Wait for rendered readiness with a bounded deadline, rather than
+        // assuming the simulator delivered a fixed number of frames.
+        let deadline = Date().addingTimeInterval(5)
+        while beacon.glowWidth != 18 && Date() < deadline {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertEqual(beacon.glowWidth, 18)
+        XCTAssertEqual(bridge.xScale, 1, accuracy: 0.001)
+        XCTAssertEqual(bridge.alpha, 1, accuracy: 0.001)
         scene.handleTap(at: CGPoint(x: 1110, y: 430))
         XCTAssertNotNil(
             scene.valkyrie.action(forKey: "travel"),
