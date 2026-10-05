@@ -4,34 +4,83 @@ import LearningCore
 // MARK: - Puzzle Palace v2 · Rune Gate
 
 @MainActor final class PuzzlePalaceScene: AdventureScene {
-    override var worldTitle: String { "Puzzle Palace · Rune Gate" }
+    private enum Place {
+        case runeGate
+        case memoryBridge
+    }
+
+    private let place: Place
+    override var worldTitle: String {
+        switch place {
+        case .runeGate: return "Puzzle Palace · Rune Gate"
+        case .memoryBridge: return "Puzzle Palace · Memory Bridge"
+        }
+    }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
 
     let tiko = TikoNode()
     private var encounter: PuzzleEncounter?
+    private var memoryEncounter: PuzzleMemoryEncounter?
     private var attempts = 0
     private var support: SupportLevel = .independent
     private var startedAt = Date()
     private var solved = false
+    private var memoryInput: [String] = []
+    private var memoryAcceptingInput = false
     private let choicePoints = [
         CGPoint(x: 575, y: 255),
         CGPoint(x: 770, y: 235),
         CGPoint(x: 965, y: 255)
     ]
+    private let memoryPadPoints = [
+        CGPoint(x: 505, y: 210),
+        CGPoint(x: 665, y: 250),
+        CGPoint(x: 825, y: 210),
+        CGPoint(x: 985, y: 250)
+    ]
+
+    override init(state: AppState) {
+        place = state.world == .memoryBridge ? .memoryBridge : .runeGate
+        super.init(state: state)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("Use programmatic scenes")
+    }
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
         pip.removeFromParent()
-        valkyrie.position = CGPoint(x: 190, y: 175)
-        tiko.position = CGPoint(x: 325, y: 190)
+        switch place {
+        case .runeGate:
+            valkyrie.position = CGPoint(x: 190, y: 175)
+            tiko.position = CGPoint(x: 325, y: 190)
+        case .memoryBridge:
+            valkyrie.position = CGPoint(x: 175, y: 175)
+            tiko.position = CGPoint(x: 295, y: 190)
+        }
         tiko.reducedMotion = reducedMotion
         addChild(tiko)
 
-        if state.puzzleRuneGateComplete {
-            openRuneGate()
-        } else {
-            encounter = state.nextPuzzleEncounter()
-            buildRuneEncounter()
+        switch place {
+        case .runeGate:
+            if state.puzzleRuneGateComplete {
+                openRuneGate()
+            } else {
+                encounter = state.nextPuzzleEncounter()
+                buildRuneEncounter()
+            }
+        case .memoryBridge:
+            guard state.puzzleMemoryBridgeAvailable else {
+                instruction.text = "The Rune Gate must open before Memory Bridge."
+                return
+            }
+            if state.puzzleMemoryBridgeComplete {
+                restoreMemoryBridge()
+            } else {
+                memoryEncounter = state.nextPuzzleMemoryEncounter()
+                buildMemoryEncounter()
+            }
         }
     }
 
@@ -63,9 +112,15 @@ import LearningCore
         let home = worldControl("⌂", name: "home", at: CGPoint(x: 52, y: 669), radius: 26)
         home.zPosition = 2100
 
-        buildRuneGate()
-        buildRunePath()
-        refreshRuneGateProgress(animated: false)
+        switch place {
+        case .runeGate:
+            buildRuneGate()
+            buildRunePath()
+            refreshRuneGateProgress(animated: false)
+        case .memoryBridge:
+            buildMemoryBridgeWorld()
+            refreshMemoryBridgeProgress(animated: false)
+        }
     }
 
     private func buildRuneGate() {
@@ -228,6 +283,359 @@ import LearningCore
         children.filter { $0.name == "runeChoice" }.forEach { $0.removeFromParent() }
     }
 
+    private func buildMemoryBridgeWorld() {
+        let chasm = SKShapeNode(rectOf: CGSize(width: 720, height: 235), cornerRadius: 62)
+        chasm.fillColor = UIColor(red: 0.035, green: 0.025, blue: 0.085, alpha: 0.88)
+        chasm.strokeColor = UIColor(red: 0.35, green: 0.28, blue: 0.56, alpha: 0.72)
+        chasm.lineWidth = 6
+        chasm.position = CGPoint(x: 760, y: 405)
+        chasm.name = "memoryChasm"
+        chasm.zPosition = 110
+        addChild(chasm)
+
+        let mist = ArtSystem.label("✦    ·    ✦    ·    ✦", size: 31)
+        mist.fontColor = UIColor(red: 0.58, green: 0.48, blue: 0.82, alpha: 0.42)
+        mist.position = CGPoint(x: 760, y: 405)
+        mist.name = "memoryChasmMist"
+        mist.zPosition = 120
+        addChild(mist)
+
+        for index in 0..<4 {
+            let plank = SKShapeNode(rectOf: CGSize(width: 118, height: 66), cornerRadius: 16)
+            plank.fillColor = UIColor(red: 0.24, green: 0.18, blue: 0.36, alpha: 0.68)
+            plank.strokeColor = UIColor(red: 0.48, green: 0.39, blue: 0.70, alpha: 0.62)
+            plank.lineWidth = 4
+            plank.position = CGPoint(x: 545 + CGFloat(index) * 145, y: 375)
+            plank.yScale = 0.58
+            plank.alpha = 0.48
+            plank.name = "memoryBridgePlank\(index)"
+            plank.zPosition = 270
+            addChild(plank)
+        }
+
+        for index in 0..<PuzzlePalaceEncounterCatalog.memoryBridge.count {
+            let light = SKShapeNode(circleOfRadius: 17)
+            light.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+            light.strokeColor = UIColor(red: 0.65, green: 0.55, blue: 0.92, alpha: 0.82)
+            light.lineWidth = 3
+            light.position = CGPoint(x: 1010 + CGFloat(index) * 58, y: 555)
+            light.name = "memoryProgress\(index)"
+            light.zPosition = 520
+            addChild(light)
+        }
+
+        let startMarker = ArtSystem.label("Tiko", size: 20)
+        startMarker.fontColor = UIColor(red: 0.88, green: 0.80, blue: 1.0, alpha: 1)
+        startMarker.position = CGPoint(x: 345, y: 355)
+        startMarker.zPosition = 320
+        addChild(startMarker)
+    }
+
+    private func buildMemoryEncounter() {
+        guard let memoryEncounter else { return }
+        removeAction(forKey: "memoryPreview")
+        clearMemoryPads()
+        attempts = 0
+        support = .independent
+        startedAt = Date()
+        solved = false
+        memoryInput = []
+        memoryAcceptingInput = false
+        resetAttemptPlanks()
+
+        for (index, symbol) in memoryEncounter.choices.enumerated() {
+            let pad = memoryPad(symbol, index: index)
+            pad.position = memoryPadPoints[index]
+            addChild(pad)
+        }
+
+        instruction.text = memoryEncounter.prompt
+        previewMemorySequence()
+    }
+
+    private func memoryPad(_ symbol: String, index: Int) -> SKNode {
+        let root = SKNode()
+        root.name = "memoryPad"
+        root.userData = NSMutableDictionary(dictionary: ["symbol": symbol])
+
+        let stone = SKShapeNode(circleOfRadius: 47)
+        stone.fillColor = UIColor(
+            red: 0.24 + CGFloat(index) * 0.025,
+            green: 0.18,
+            blue: 0.37,
+            alpha: 0.98
+        )
+        stone.strokeColor = UIColor(red: 0.70, green: 0.60, blue: 0.96, alpha: 1)
+        stone.lineWidth = 4
+        stone.name = "memoryPad"
+        root.addChild(stone)
+
+        let glyph = ArtSystem.label(symbol, size: 39)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.48, alpha: 1)
+        glyph.name = "memoryPad"
+        root.addChild(glyph)
+
+        let foot = ArtSystem.box(
+            CGSize(width: 72, height: 18),
+            color: UIColor(red: 0.18, green: 0.13, blue: 0.28, alpha: 1),
+            radius: 7
+        )
+        foot.position.y = -56
+        foot.name = "memoryPad"
+        foot.zPosition = -1
+        root.addChild(foot)
+        return root
+    }
+
+    private func clearMemoryPads() {
+        children.filter { $0.name == "memoryPad" }.forEach { $0.removeFromParent() }
+    }
+
+    private func previewMemorySequence() {
+        guard let memoryEncounter else { return }
+        memoryAcceptingInput = false
+        instruction.text = "Watch Tiko wake the bridge runes. Hold the order in your mind."
+
+        let onDuration = reducedMotion ? 0.42 : 0.56
+        let gap = reducedMotion ? 0.16 : 0.22
+        var actions: [SKAction] = [.wait(forDuration: 0.18)]
+
+        for symbol in memoryEncounter.sequence {
+            actions.append(.run { [weak self] in
+                guard let self else { return }
+                self.setMemoryPad(symbol, highlighted: true)
+                self.tiko.pose(.interact)
+            })
+            actions.append(.wait(forDuration: onDuration))
+            actions.append(.run { [weak self] in
+                self?.setMemoryPad(symbol, highlighted: false)
+            })
+            actions.append(.wait(forDuration: gap))
+        }
+
+        actions.append(.run { [weak self] in
+            guard let self else { return }
+            self.memoryAcceptingInput = true
+            self.startedAt = Date()
+            self.instruction.text = "Now repeat Tiko's rune order to raise the bridge."
+        })
+        run(.sequence(actions), withKey: "memoryPreview")
+    }
+
+    private func setMemoryPad(_ symbol: String, highlighted: Bool) {
+        guard let pad = children.first(where: {
+            $0.name == "memoryPad" && ($0.userData?["symbol"] as? String) == symbol
+        }) else { return }
+        guard let stone = pad.children.compactMap({ $0 as? SKShapeNode }).first else { return }
+        stone.fillColor = highlighted
+            ? UIColor(red: 0.91, green: 0.66, blue: 0.24, alpha: 1)
+            : UIColor(red: 0.26, green: 0.19, blue: 0.39, alpha: 0.98)
+        stone.glowWidth = highlighted ? 16 : 0
+        if highlighted && !reducedMotion {
+            pad.run(.sequence([
+                .scale(to: 1.12, duration: 0.10),
+                .scale(to: 1.0, duration: 0.14)
+            ]))
+        }
+    }
+
+    private func memoryChoice(at point: CGPoint) -> (node: SKNode, symbol: String)? {
+        for hit in nodes(at: point) {
+            var node: SKNode? = hit
+            while let current = node {
+                if current.name == "memoryPad",
+                   let symbol = current.userData?["symbol"] as? String {
+                    return (current, symbol)
+                }
+                node = current.parent
+            }
+        }
+        return nil
+    }
+
+    private func approachMemoryPad(_ node: SKNode, symbol: String) {
+        guard memoryAcceptingInput else { return }
+        memoryAcceptingInput = false
+        let destination = CGPoint(x: max(165, node.position.x - 80), y: 175)
+        valkyrie.walk(to: destination) { [weak self] in
+            guard let self else { return }
+            self.state.audio.play("footstep")
+            self.valkyrie.pose(.interact)
+            self.resolveMemoryTap(symbol, node: node)
+        }
+        tiko.walk(to: CGPoint(x: max(100, destination.x - 82), y: 190)) {}
+    }
+
+    private func resolveMemoryTap(_ symbol: String, node: SKNode) {
+        guard let memoryEncounter, memoryInput.count < memoryEncounter.sequence.count else {
+            memoryAcceptingInput = true
+            return
+        }
+
+        let expected = memoryEncounter.sequence[memoryInput.count]
+        guard symbol == expected else {
+            attempts += 1
+            let attemptSupport = support
+            _ = state.recordPuzzle(
+                memoryEncounter,
+                outcome: .incorrect,
+                support: attemptSupport,
+                attempts: attempts,
+                responseTime: Date().timeIntervalSince(startedAt)
+            )
+            support = support == .independent ? .lightHint : .strongHint
+            memoryInput = []
+            resetAttemptPlanks()
+            valkyrie.pose(.react)
+            nudge(node)
+            tiko.pose(.react)
+            instruction.text = support == .lightHint
+                ? "The bridge forgot that order. Tiko will replay it once."
+                : "Tiko will replay the sequence slowly. Watch each rune, then try again."
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0.18 : 0.55),
+                .run { [weak self] in self?.previewMemorySequence() }
+            ]), withKey: "memoryRetry")
+            return
+        }
+
+        memoryInput.append(symbol)
+        setMemoryPad(symbol, highlighted: true)
+        run(.sequence([
+            .wait(forDuration: 0.14),
+            .run { [weak self] in self?.setMemoryPad(symbol, highlighted: false) }
+        ]))
+        raiseMemoryPlank(memoryInput.count - 1)
+
+        guard memoryInput.count == memoryEncounter.sequence.count else {
+            memoryAcceptingInput = true
+            return
+        }
+
+        attempts += 1
+        solved = true
+        let attemptSupport = support
+        _ = state.recordPuzzle(
+            memoryEncounter,
+            outcome: .correct,
+            support: attemptSupport,
+            attempts: attempts,
+            responseTime: Date().timeIntervalSince(startedAt)
+        )
+        refreshMemoryBridgeProgress(animated: true)
+        state.audio.play("success")
+        valkyrie.pose(.celebrate)
+        tiko.pose(.celebrate)
+
+        if state.puzzleMemoryBridgeComplete {
+            restoreMemoryBridge()
+            return
+        }
+
+        instruction.text = attemptSupport == .independent
+            ? "The bridge remembered that path. Tiko found another memory lock."
+            : "That bridge path is stable. Try the next memory independently."
+
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .run { [weak self] in
+                guard let self else { return }
+                self.memoryEncounter = self.state.nextPuzzleMemoryEncounter()
+                self.buildMemoryEncounter()
+            }
+        ]), withKey: "nextMemoryBridge")
+    }
+
+    private func resetAttemptPlanks() {
+        for index in 0..<4 {
+            guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
+                continue
+            }
+            plank.removeAllActions()
+            plank.yScale = 0.58
+            plank.alpha = 0.48
+            plank.strokeColor = UIColor(red: 0.48, green: 0.39, blue: 0.70, alpha: 0.62)
+            plank.glowWidth = 0
+        }
+    }
+
+    private func raiseMemoryPlank(_ index: Int) {
+        guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
+            return
+        }
+        plank.alpha = 1
+        plank.strokeColor = UIColor(red: 0.96, green: 0.75, blue: 0.34, alpha: 1)
+        plank.glowWidth = 8
+        if reducedMotion {
+            plank.yScale = 1
+        } else {
+            plank.run(.scaleY(to: 1, duration: 0.22))
+        }
+    }
+
+    private func refreshMemoryBridgeProgress(animated: Bool) {
+        let count = PuzzlePalaceDirector.memoryBridgeIndependentSuccessCount(
+            profile: state.profile
+        )
+        for index in 0..<PuzzlePalaceEncounterCatalog.memoryBridge.count {
+            guard let light = childNode(withName: "memoryProgress\(index)") as? SKShapeNode else {
+                continue
+            }
+            let active = index < count
+            light.fillColor = active
+                ? UIColor(red: 0.97, green: 0.74, blue: 0.31, alpha: 1)
+                : UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+            light.glowWidth = active ? 10 : 0
+            if active && animated && !reducedMotion {
+                light.run(.sequence([
+                    .scale(to: 1.25, duration: 0.15),
+                    .scale(to: 1.0, duration: 0.18)
+                ]))
+            }
+        }
+    }
+
+    private func restoreMemoryBridge() {
+        removeAction(forKey: "memoryPreview")
+        removeAction(forKey: "memoryRetry")
+        removeAction(forKey: "nextMemoryBridge")
+        memoryAcceptingInput = false
+        clearMemoryPads()
+        refreshMemoryBridgeProgress(animated: true)
+
+        for index in 0..<4 {
+            guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
+                continue
+            }
+            plank.yScale = 1
+            plank.alpha = 1
+            plank.fillColor = UIColor(red: 0.34, green: 0.27, blue: 0.45, alpha: 0.98)
+            plank.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.36, alpha: 1)
+            plank.glowWidth = 8
+        }
+
+        if let chasm = childNode(withName: "memoryChasm") as? SKShapeNode {
+            chasm.strokeColor = UIColor(red: 0.72, green: 0.62, blue: 0.96, alpha: 0.92)
+            chasm.glowWidth = 9
+            chasm.name = "memoryBridgeRestored"
+        }
+
+        tiko.pose(.celebrate)
+        instruction.text = "Memory Bridge is restored. The deeper palace chamber remains sealed for the next adventure."
+    }
+
+    private func showMemoryBridgeRoute() {
+        guard state.puzzleMemoryBridgeAvailable,
+              childNode(withName: "memoryBridgeRoute") == nil else { return }
+        let route = hotspot(
+            "Memory Bridge →",
+            name: "memoryBridgeRoute",
+            at: CGPoint(x: 1005, y: 165),
+            size: CGSize(width: 205, height: 58)
+        )
+        route.zPosition = 830
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let point = touches.first?.location(in: self) else { return }
         handleTap(at: point)
@@ -239,10 +647,26 @@ import LearningCore
             state.travel(to: .storyTree)
 
         case "runeChoice":
-            guard !solved,
+            guard place == .runeGate,
+                  !solved,
                   let choice = choice(at: point),
                   let node = choice.node else { return }
             approachRune(node, value: choice.value)
+
+        case "memoryBridgeRoute":
+            guard place == .runeGate, state.puzzleMemoryBridgeAvailable else { return }
+            let destination = CGPoint(x: 1005, y: 175)
+            if isNear(destination) {
+                state.travel(to: .memoryBridge)
+            } else {
+                instruction.text = "Walk through the opened Rune Gate to Memory Bridge."
+                travel(to: destination)
+            }
+
+        case "memoryPad":
+            guard place == .memoryBridge,
+                  let choice = memoryChoice(at: point) else { return }
+            approachMemoryPad(choice.node, symbol: choice.symbol)
 
         default:
             walkIfValid(point)
@@ -419,7 +843,8 @@ import LearningCore
         }
 
         tiko.pose(.celebrate)
-        instruction.text = "The Rune Gate is open. Tiko revealed the deeper Puzzle Palace path."
+        showMemoryBridgeRoute()
+        instruction.text = "The Rune Gate is open. Follow Tiko to Memory Bridge."
     }
 
     private func pulse(_ node: SKNode) {

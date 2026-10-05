@@ -345,9 +345,43 @@ import LearningCore
         XCTAssertEqual(openPalace.children.filter { $0.name == "runeChoice" }.count, 0)
         let gate = try XCTUnwrap(openPalace.childNode(withName: "puzzleGate") as? SKShapeNode)
         XCTAssertEqual(gate.glowWidth, 16)
-        openPalace.handleTap(at: CGPoint(x: 52, y: 669))
-        XCTAssertEqual(restored.world, .storyTree)
+        XCTAssertNotNil(openPalace.childNode(withName: "memoryBridgeRoute"))
+        openPalace.valkyrie.position = CGPoint(x: 1005, y: 175)
+        openPalace.handleTap(at: CGPoint(x: 1005, y: 165))
+        XCTAssertEqual(restored.world, .memoryBridge)
         openPalace.willLeave()
+
+        let memory = PuzzlePalaceScene(state: restored)
+        memory.reducedMotion = true
+        memory.didMove(to: SKView())
+        XCTAssertNotNil(memory.childNode(withName: "memoryChasm"))
+        XCTAssertEqual(memory.children.filter { $0.name == "memoryPad" }.count, 4)
+        XCTAssertEqual(
+            restored.nextPuzzleMemoryEncounter()?.skillID,
+            PuzzleSkills.visualSequenceMemory
+        )
+        XCTAssertFalse(restored.puzzleMemoryBridgeComplete)
+        memory.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = restored.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(restored.puzzleMemoryBridgeComplete)
+
+        let restoredMemory = PuzzlePalaceScene(state: restored)
+        restoredMemory.reducedMotion = true
+        restoredMemory.didMove(to: SKView())
+        XCTAssertNotNil(restoredMemory.childNode(withName: "memoryBridgeRestored"))
+        XCTAssertEqual(restoredMemory.children.filter { $0.name == "memoryPad" }.count, 0)
+        restoredMemory.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertEqual(restored.world, .storyTree)
+        restoredMemory.willLeave()
     }
 
     func testRenderedNativeSceneReviewAttachments() async throws {
@@ -482,7 +516,43 @@ import LearningCore
         )
         XCTAssertTrue(state.puzzleRuneGateComplete)
         XCTAssertEqual(openPalace.children.filter { $0.name == "runeChoice" }.count, 0)
+        XCTAssertNotNil(openPalace.childNode(withName: "memoryBridgeRoute"))
         openPalace.willLeave()
+
+        state.travel(to: .memoryBridge)
+        let memoryBridge = PuzzlePalaceScene(state: state)
+        memoryBridge.reducedMotion = true
+        view.presentScene(memoryBridge)
+        try await capture(
+            memoryBridge,
+            in: view,
+            name: "Puzzle-Palace-native-memory-bridge"
+        )
+        XCTAssertNotNil(memoryBridge.childNode(withName: "memoryChasm"))
+        XCTAssertEqual(memoryBridge.children.filter { $0.name == "memoryPad" }.count, 4)
+        memoryBridge.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = state.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+
+        let restoredMemoryBridge = PuzzlePalaceScene(state: state)
+        restoredMemoryBridge.reducedMotion = true
+        view.presentScene(restoredMemoryBridge)
+        try await capture(
+            restoredMemoryBridge,
+            in: view,
+            name: "Puzzle-Palace-native-memory-bridge-restored"
+        )
+        XCTAssertTrue(state.puzzleMemoryBridgeComplete)
+        XCTAssertNotNil(restoredMemoryBridge.childNode(withName: "memoryBridgeRestored"))
+        restoredMemoryBridge.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))

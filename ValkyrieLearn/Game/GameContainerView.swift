@@ -48,7 +48,7 @@ import SpriteKit
             scene = MathCastleScene(state: state)
         case .wordGarden, .sunmillCrossing, .storyHollow:
             scene = WordGardenScene(state: state)
-        case .puzzlePalace:
+        case .puzzlePalace, .memoryBridge:
             scene = PuzzlePalaceScene(state: state)
         }
         scene?.reducedMotion = state.reducedMotion || systemReducedMotion
