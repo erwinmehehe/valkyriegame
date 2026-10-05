@@ -810,6 +810,7 @@ import LearningCore
                         && ($0.userData?["direction"] as? String) == encounter.target.rawValue
                 }
         )
+        scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
         scene.handleTap(at: choice.position)
 
         let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
@@ -818,6 +819,201 @@ import LearningCore
         XCTAssertEqual(evidence.first?.outcome, .correct)
         XCTAssertEqual(evidence.first?.supportLevel, .independent)
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.mentalRotation).state, .new)
+    }
+
+    private func finishMirrorPracticeIfNeeded(_ scene: PuzzlePalaceScene) throws {
+        if let dial = scene.childNode(withName: "mirrorPracticeDial") {
+            scene.valkyrie.position = CGPoint(x: 580, y: 175)
+            scene.handleTap(at: dial.position)
+            let ready = try XCTUnwrap(scene.childNode(withName: "mirrorPracticeContinue"))
+            scene.handleTap(at: ready.position)
+        }
+    }
+
+    func testMirrorApproachSurvivesStrayFloorAndRepeatedTaps() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        state.reducedMotion = true
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        state.travel(to: .mirrorHall)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer { scene.willLeave(); view.presentScene(nil); window.isHidden = true }
+        let dial = try XCTUnwrap(scene.childNode(withName: "mirrorPracticeDial"))
+        scene.handleTap(at: dial.position)
+        scene.handleTap(at: CGPoint(x: 140, y: 145))
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        let ready = try XCTUnwrap(scene.childNode(withName: "mirrorPracticeContinue"))
+        XCTAssertTrue(state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.isEmpty)
+        scene.handleTap(at: ready.position)
+        let encounter = try XCTUnwrap(state.nextPuzzleMirrorRotationEncounter())
+        let index = try XCTUnwrap(encounter.choices.firstIndex(of: encounter.answer))
+        let choice = try XCTUnwrap(scene.children.compactMap { $0 as? SKShapeNode }.first {
+            $0.name == "mirrorRotationChoice" && ($0.userData?["choiceIndex"] as? Int) == index
+        })
+        scene.handleTap(at: choice.position)
+        scene.handleTap(at: CGPoint(x: 140, y: 145))
+        scene.handleTap(at: choice.position)
+        XCTAssertTrue(state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.isEmpty)
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count, 1)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.first?.outcome, .correct)
+        XCTAssertNotNil(scene.childNode(withName: "mirrorNext"))
+    }
+
+    func testMirrorPracticeIsUnscoredAndSuccessWaitsForChild() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        state.reducedMotion = true
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        state.travel(to: .mirrorHall)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer { scene.willLeave(); view.presentScene(nil); window.isHidden = true }
+        XCTAssertNotNil(scene.childNode(withName: "mirrorPracticeDial"))
+        XCTAssertFalse(scene.children.contains { $0.name == "mirrorRotationChoice" })
+        try finishMirrorPracticeIfNeeded(scene)
+        XCTAssertTrue(state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.isEmpty)
+        let encounter = try XCTUnwrap(state.nextPuzzleMirrorRotationEncounter())
+        let index = try XCTUnwrap(encounter.choices.firstIndex(of: encounter.answer))
+        let choice = try XCTUnwrap(scene.children.compactMap { $0 as? SKShapeNode }.first {
+            $0.name == "mirrorRotationChoice" && ($0.userData?["choiceIndex"] as? Int) == index
+        })
+        scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
+        scene.handleTap(at: choice.position)
+        let next = try XCTUnwrap(scene.childNode(withName: "mirrorNext"))
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count, 1)
+        XCTAssertEqual(scene.childNode(withName: "mirrorBeam0")?.alpha, 1)
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        XCTAssertNotNil(scene.childNode(withName: "mirrorNext"))
+        XCTAssertEqual(choice.parent, scene)
+        scene.handleTap(at: next.position)
+        XCTAssertNil(scene.childNode(withName: "mirrorNext"))
+        XCTAssertNil(choice.parent)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count, 1)
+    }
+
+    func testMirrorRotationLiveChoicesKeepHintedEvidenceSeparate() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        state.reducedMotion = true
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        state.travel(to: .mirrorHall)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer { scene.willLeave(); view.presentScene(nil); window.isHidden = true }
+        try finishMirrorPracticeIfNeeded(scene)
+        let encounter = try XCTUnwrap(state.nextPuzzleMirrorRotationEncounter())
+        let options = scene.children.compactMap { $0 as? SKShapeNode }
+            .filter { $0.name == "mirrorRotationChoice" }
+        XCTAssertEqual(options.count, 3)
+        XCTAssertNotNil(scene.childNode(withName: "mirrorRotationSource"))
+        let correctIndex = try XCTUnwrap(encounter.choices.firstIndex(of: encounter.answer))
+        let wrong = try XCTUnwrap(options.first { ($0.userData?["choiceIndex"] as? Int) != correctIndex })
+        scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
+        scene.handleTap(at: wrong.position)
+        scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
+        scene.handleTap(at: wrong.position)
+        let correct = try XCTUnwrap(options.first { ($0.userData?["choiceIndex"] as? Int) == correctIndex })
+        scene.valkyrie.position = CGPoint(x: correct.position.x - 180, y: 175)
+        scene.handleTap(at: correct.position)
+        let evidence = state.profile.progress(for: PuzzleSkills.mentalRotation).evidence
+        XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .incorrect, .correct])
+        XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint, .demonstration])
+        XCTAssertEqual(evidence.last?.attempts, 3)
+        let retry = try XCTUnwrap(state.nextPuzzleMirrorRotationEncounter())
+        XCTAssertNotEqual(retry.id, encounter.id)
+        XCTAssertNotEqual(retry.answer, encounter.answer)
+        XCTAssertNotEqual(retry.choices.firstIndex(of: retry.answer), correctIndex)
+        XCTAssertEqual(PuzzlePalaceDirector.mirrorRotationIndependentSuccessCount(profile: state.profile), 0)
+        XCTAssertFalse(state.puzzleMirrorRotationComplete)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count, 3)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+    }
+
+    func testMirrorRotationIndependentCompletionRestoresFromLocalSave() async throws {
+        let context = ModelContext(try LearningStore.container(inMemory: true))
+        let state = try AppState(context: context)
+        state.reducedMotion = true
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        state.travel(to: .mirrorHall)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            view.presentScene(scene)
+            try finishMirrorPracticeIfNeeded(scene)
+            XCTAssertEqual(state.nextPuzzleMirrorRotationEncounter()?.id, encounter.id)
+            let correctIndex = try XCTUnwrap(encounter.choices.firstIndex(of: encounter.answer))
+            let choice = try XCTUnwrap(scene.children.compactMap { $0 as? SKShapeNode }.first {
+                $0.name == "mirrorRotationChoice" && ($0.userData?["choiceIndex"] as? Int) == correctIndex
+            })
+            scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
+            scene.handleTap(at: choice.position)
+            scene.willLeave()
+        }
+        XCTAssertTrue(state.puzzleMirrorRotationComplete)
+        let restored = try AppState(context: context)
+        XCTAssertTrue(restored.puzzleMirrorRotationComplete)
+        XCTAssertEqual(restored.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count, 3)
+        XCTAssertEqual(restored.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        restored.travel(to: .mirrorHall)
+        let completeScene = PuzzlePalaceScene(state: restored)
+        view.presentScene(completeScene)
+        XCTAssertFalse(completeScene.children.contains { $0.name == "mirrorRotationChoice" })
+        completeScene.willLeave()
     }
 
     func testRenderedNativeSceneReviewAttachments() async throws {
@@ -1178,6 +1374,20 @@ import LearningCore
             .new
         )
         mirrorHall.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        let rotationHall = PuzzlePalaceScene(state: state)
+        rotationHall.reducedMotion = true
+        view.presentScene(rotationHall)
+        try await capture(rotationHall, in: view, name: "Puzzle-Palace-native-turn-practice")
+        try finishMirrorPracticeIfNeeded(rotationHall)
+        try await capture(rotationHall, in: view, name: "Puzzle-Palace-native-mental-rotation")
+        XCTAssertEqual(rotationHall.children.filter { $0.name == "mirrorRotationChoice" }.count, 3)
+        rotationHall.willLeave()
+
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))

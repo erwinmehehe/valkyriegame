@@ -48,7 +48,11 @@ import LearningCore
     private var resortObjectIndex = 0
     private var resortAcceptingInput = false
     private var orientationEncounter: PuzzleOrientationEncounter?
+    private var rotationEncounter: PuzzleRotationEncounter?
     private var mirrorAcceptingInput = false
+    private var mirrorPracticeReady = false
+    private var mirrorPracticeBusy = false
+    private var mirrorApproaching = false
     private let mirrorChoicePoints = [
         CGPoint(x: 520, y: 335),
         CGPoint(x: 760, y: 335),
@@ -173,6 +177,7 @@ import LearningCore
                 buildResortEncounter()
             }
         case .mirrorHall:
+            state.audio.play("palace_ambience", channel: .ambience, looping: true)
             guard state.puzzleMirrorHallAvailable else {
                 instruction.text = "The Re-sort Vault must be stable before Mirror Hall opens."
                 return
@@ -1802,6 +1807,8 @@ import LearningCore
         removeAction(forKey: "resortRetry")
         removeAction(forKey: "resortNext")
         removeAction(forKey: "nextResortEncounter")
+        removeAction(forKey: "nextMirrorOrientation")
+        removeAction(forKey: "nextMirrorRotation")
         resortAcceptingInput = false
         refreshResortProgress(animated: true)
 
@@ -1837,15 +1844,222 @@ import LearningCore
         route.zPosition = 845
     }
 
+    private func decorateMirrorGlass(_ mirror: SKShapeNode) {
+        let shine = SKShapeNode(rectOf: CGSize(width: 8, height: 84), cornerRadius: 4)
+        shine.fillColor = .white.withAlphaComponent(0.16)
+        shine.strokeColor = .clear
+        shine.position = CGPoint(x: -54, y: 8)
+        shine.zRotation = -0.15
+        mirror.addChild(shine)
+        let finial = SKShapeNode(circleOfRadius: 8)
+        finial.fillColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
+        finial.strokeColor = .clear
+        finial.position.y = 88
+        mirror.addChild(finial)
+    }
+
+    private func buildMirrorMachinery() {
+        for (index, point) in mirrorChoicePoints.enumerated() {
+            let pedestal = SKShapeNode(rectOf: CGSize(width: 165, height: 32), cornerRadius: 8)
+            pedestal.fillColor = UIColor(red: 0.33, green: 0.29, blue: 0.27, alpha: 1)
+            pedestal.strokeColor = UIColor(red: 0.69, green: 0.58, blue: 0.38, alpha: 1)
+            pedestal.lineWidth = 3
+            pedestal.position = CGPoint(x: point.x, y: 231)
+            pedestal.zPosition = 130
+            pedestal.name = "mirrorPedestal\(index)"
+            addChild(pedestal)
+            let stem = SKShapeNode(rectOf: CGSize(width: 24, height: 62), cornerRadius: 5)
+            stem.fillColor = pedestal.strokeColor
+            stem.strokeColor = .clear
+            stem.position = CGPoint(x: point.x, y: 260)
+            stem.zPosition = 130
+            addChild(stem)
+            let receiver = SKShapeNode(circleOfRadius: 12)
+            receiver.position = CGPoint(x: point.x, y: 230)
+            receiver.fillColor = .darkGray
+            receiver.strokeColor = .white.withAlphaComponent(0.6)
+            receiver.name = "mirrorReceiver\(index)"
+            receiver.zPosition = 140
+            addChild(receiver)
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 760, y: 470))
+            path.addLine(to: CGPoint(x: point.x, y: 420))
+            path.addLine(to: CGPoint(x: point.x, y: 245))
+            let beam = SKShapeNode(path: path)
+            beam.strokeColor = UIColor(red: 0.59, green: 0.93, blue: 1, alpha: 1)
+            beam.lineWidth = 6
+            beam.glowWidth = 8
+            beam.name = "mirrorBeam\(index)"
+            beam.zPosition = 120
+            beam.alpha = 0.08
+            addChild(beam)
+        }
+        let gear = ArtSystem.gear(radius: 37, symbol: "✦")
+        gear.position = CGPoint(x: 1170, y: 485)
+        gear.name = "mirrorRestorationGear"
+        gear.zPosition = 150
+        addChild(gear)
+        powerMirrorMachinery(count: PuzzlePalaceDirector.mirrorRotationIndependentSuccessCount(profile: state.profile))
+    }
+
+    private func powerMirrorMachinery(count: Int) {
+        for index in 0..<3 {
+            let powered = index < count
+            childNode(withName: "mirrorBeam\(index)")?.alpha = powered ? 1 : 0.08
+            if let receiver = childNode(withName: "mirrorReceiver\(index)") as? SKShapeNode {
+                receiver.fillColor = powered ? .systemTeal : .darkGray
+                receiver.glowWidth = powered ? 10 : 0
+            }
+        }
+        if count == 3, let gear = childNode(withName: "mirrorRestorationGear"),
+           gear.action(forKey: "restoredSpin") == nil, !reducedMotion {
+            gear.run(.repeatForever(.rotate(byAngle: .pi * 2, duration: 15)), withKey: "restoredSpin")
+        }
+    }
+
+    /// The curved track communicates magnitude without showing a scored shape's answer.
+    private func buildVisualTurnCue(quarterTurns: Int) {
+        childNode(withName: "mirrorTurnCue")?.removeFromParent()
+        let cue = SKNode()
+        cue.name = "mirrorTurnCue"
+        cue.position = CGPoint(x: 760, y: 535)
+        cue.zPosition = 625
+        let end = CGFloat.pi / 2 - CGFloat(quarterTurns) * .pi / 2
+        let path = CGMutablePath()
+        path.addArc(center: .zero, radius: 87, startAngle: .pi / 2, endAngle: end, clockwise: true)
+        let arc = SKShapeNode(path: path)
+        arc.strokeColor = .systemYellow
+        arc.lineWidth = 5
+        cue.addChild(arc)
+        let endpoint = CGPoint(x: cos(end) * 87, y: sin(end) * 87)
+        let tangent = CGPoint(x: sin(end), y: -cos(end))
+        let arrowPath = CGMutablePath()
+        arrowPath.move(to: endpoint)
+        arrowPath.addLine(to: CGPoint(x: endpoint.x - tangent.x * 17 - tangent.y * 8,
+                                     y: endpoint.y - tangent.y * 17 + tangent.x * 8))
+        arrowPath.addLine(to: CGPoint(x: endpoint.x - tangent.x * 17 + tangent.y * 8,
+                                     y: endpoint.y - tangent.y * 17 - tangent.x * 8))
+        arrowPath.closeSubpath()
+        let arrow = SKShapeNode(path: arrowPath)
+        arrow.fillColor = .systemYellow
+        arrow.strokeColor = .clear
+        cue.addChild(arrow)
+        addChild(cue)
+    }
+
+    private func buildMirrorTurnPractice() {
+        guard childNode(withName: "mirrorPracticeDial") == nil else { return }
+        clearMirrorChoices()
+        mirrorAcceptingInput = false
+        childNode(withName: "//mirrorBeaconGlyph")?.isHidden = true
+        if let title = childNode(withName: "mirrorHallTitle") as? SKLabelNode { title.text = "TRY A TURN WITH TIKO" }
+        let arrow = ArtSystem.label("↑", size: 68)
+        arrow.name = "mirrorPracticeArrow"
+        arrow.position = CGPoint(x: 760, y: 535)
+        arrow.zPosition = 610
+        addChild(arrow)
+        buildVisualTurnCue(quarterTurns: 1)
+        let dial = worldGear("↻", name: "mirrorPracticeDial", at: CGPoint(x: 760, y: 440), radius: 43)
+        dial.zPosition = 660
+        instruction.text = "Tap the turning wheel. Watch Tiko's arrow turn."
+    }
+
+    private func turnPracticeDial() {
+        guard !mirrorPracticeBusy, !mirrorPracticeReady,
+              let arrow = childNode(withName: "mirrorPracticeArrow") else { return }
+        mirrorPracticeBusy = true
+        let destination = CGPoint(x: 580, y: 175)
+        let turn = { [weak self, weak arrow] in
+            guard let self, let arrow else { return }
+            self.mirrorApproaching = false
+            self.valkyrie.pose(.interact)
+            self.tiko.face(toward: CGPoint(x: 760, y: 440))
+            self.tiko.pose(.interact)
+            self.state.audio.play("mirror_turn")
+            let ready = { [weak self] in
+                guard let self else { return }
+                self.mirrorPracticeReady = true
+                self.instruction.text = "Up became right. Tap the lantern to try the mirrors."
+                let next = self.hotspot("→", name: "mirrorPracticeContinue", at: CGPoint(x: 1135, y: 165),
+                                        size: CGSize(width: 110, height: 66))
+                next.zPosition = 1500
+            }
+            if self.reducedMotion { arrow.zRotation = -.pi / 2; ready() }
+            else { arrow.run(.sequence([.rotate(toAngle: -.pi / 2, duration: 1.1), .run(ready)])) }
+        }
+        if isNear(destination) { turn() }
+        else {
+            mirrorApproaching = true
+            travel(to: destination, then: turn)
+        }
+    }
+
+    private func clearMirrorPractice() {
+        for name in ["mirrorPracticeDial", "mirrorPracticeArrow", "mirrorPracticeContinue"] {
+            childNode(withName: name)?.removeFromParent()
+        }
+    }
+
+    private func approachMirror(_ node: SKShapeNode, then operation: @escaping () -> Void) {
+        guard mirrorAcceptingInput, !solved else { return }
+        let destination = CGPoint(x: node.position.x - 180, y: 175)
+        let operate = { [weak self, weak node] in
+            guard let self, let node, node.parent === self else { return }
+            self.mirrorApproaching = false
+            self.mirrorAcceptingInput = true
+            self.valkyrie.face(toward: node.position)
+            self.valkyrie.pose(.interact)
+            self.tiko.face(toward: node.position)
+            self.tiko.pose(.interact)
+            self.state.audio.play("mirror_click")
+            operation()
+        }
+        if isNear(destination) { operate() }
+        else {
+            mirrorAcceptingInput = false
+            mirrorApproaching = true
+            instruction.text = "Valkyrie and Tiko are checking this mirror."
+            travel(to: destination, then: operate)
+        }
+    }
+
+    private func addMirrorNextLantern() {
+        guard childNode(withName: "mirrorNext") == nil else { return }
+        let next = hotspot("→", name: "mirrorNext", at: CGPoint(x: 1135, y: 165),
+                           size: CGSize(width: 110, height: 66))
+        next.zPosition = 1500
+    }
+
+    private func finishMirrorRestoration() {
+        mirrorAcceptingInput = false
+        clearMirrorChoices()
+        childNode(withName: "mirrorRotationSource")?.removeFromParent()
+        childNode(withName: "mirrorTurnCue")?.removeFromParent()
+        for index in 0..<4 { childNode(withName: "rotationQuarterMark\(index)")?.removeFromParent() }
+        powerMirrorMachinery(count: 3)
+        if let title = childNode(withName: "mirrorHallTitle") as? SKLabelNode { title.text = "THE PALACE LIGHT SHINES AGAIN" }
+        if let glyph = childNode(withName: "//mirrorBeaconGlyph") as? SKLabelNode {
+            glyph.isHidden = false
+            glyph.text = "✦"
+        }
+        if childNode(withName: "mirrorRestoredHome") == nil {
+            let home = hotspot("⌂", name: "mirrorRestoredHome", at: CGPoint(x: 1135, y: 165),
+                               size: CGSize(width: 110, height: 66))
+            home.zPosition = 1500
+        }
+        instruction.text = "You restored the hall! Explore here, or take the home lantern to Story Tree."
+    }
+
     private func buildMirrorHallWorld() {
         let hall = SKShapeNode(rectOf: CGSize(width: 860, height: 330), cornerRadius: 62)
-        hall.fillColor = UIColor(red: 0.08, green: 0.10, blue: 0.20, alpha: 0.82)
-        hall.strokeColor = UIColor(red: 0.55, green: 0.70, blue: 0.96, alpha: 0.88)
+        hall.fillColor = UIColor(red: 0.08, green: 0.10, blue: 0.20, alpha: 0.15)
+        hall.strokeColor = UIColor(red: 0.55, green: 0.70, blue: 0.96, alpha: 0.24)
         hall.lineWidth = 6
         hall.position = CGPoint(x: 760, y: 390)
         hall.name = "mirrorHallChamber"
         hall.zPosition = 110
         addChild(hall)
+        buildMirrorMachinery()
 
         let beacon = SKShapeNode(circleOfRadius: 70)
         beacon.fillColor = UIColor(red: 0.16, green: 0.19, blue: 0.34, alpha: 0.98)
@@ -1863,7 +2077,7 @@ import LearningCore
 
         let title = ArtSystem.label("MATCH TIKO'S DIRECTION", size: 19)
         title.fontColor = UIColor(red: 0.83, green: 0.90, blue: 1.0, alpha: 1)
-        title.position = CGPoint(x: 760, y: 625)
+        title.position = CGPoint(x: 760, y: 640)
         title.name = "mirrorHallTitle"
         title.zPosition = 610
         addChild(title)
@@ -1903,10 +2117,11 @@ import LearningCore
         }
 
         for (index, direction) in orientationEncounter.choices.enumerated() {
-            let mirror = SKShapeNode(rectOf: CGSize(width: 150, height: 150), cornerRadius: 30)
-            mirror.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.36, alpha: 0.98)
-            mirror.strokeColor = UIColor(red: 0.62, green: 0.78, blue: 0.98, alpha: 0.94)
+            let mirror = SKShapeNode(rectOf: CGSize(width: 150, height: 170), cornerRadius: 66)
+            mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.72)
+            mirror.strokeColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
             mirror.lineWidth = 6
+            decorateMirrorGlass(mirror)
             mirror.position = mirrorChoicePoints[index]
             mirror.name = "mirrorOrientationChoice"
             mirror.userData = NSMutableDictionary(dictionary: ["direction": direction.rawValue])
@@ -1923,7 +2138,7 @@ import LearningCore
     }
 
     private func clearMirrorChoices() {
-        children.filter { $0.name == "mirrorOrientationChoice" }.forEach { $0.removeFromParent() }
+        children.filter { $0.name == "mirrorOrientationChoice" || $0.name == "mirrorRotationChoice" }.forEach { $0.removeFromParent() }
     }
 
     private func mirrorChoice(at point: CGPoint) -> (node: SKShapeNode, direction: PuzzleOrientation)? {
@@ -1989,23 +2204,10 @@ import LearningCore
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
-        if state.puzzleMirrorHallComplete {
-            restoreMirrorHall()
-            return
-        }
-
-        instruction.text = attemptSupport == .independent
-            ? "Direction matched. Tiko is turning the next mirror."
-            : "That mirror aligned. Match the next direction independently."
-
-        run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.20 : 0.85),
-            .run { [weak self] in
-                guard let self else { return }
-                self.orientationEncounter = self.state.nextPuzzleMirrorHallEncounter()
-                self.buildMirrorHallEncounter()
-            }
-        ]), withKey: "nextMirrorOrientation")
+        instruction.text = state.puzzleMirrorHallComplete
+            ? "The directions are aligned. Tap the lantern to try turning shapes."
+            : "That mirror aligned. Tap the next lantern when you're ready."
+        addMirrorNextLantern()
     }
 
     private func refreshMirrorHallProgress(animated: Bool) {
@@ -2034,6 +2236,7 @@ import LearningCore
         removeAction(forKey: "nextMirrorOrientation")
         mirrorAcceptingInput = false
         clearMirrorChoices()
+        childNode(withName: "mirrorNext")?.removeFromParent()
         refreshMirrorHallProgress(animated: true)
 
         if let beacon = childNode(withName: "mirrorBeacon") as? SKShapeNode {
@@ -2043,7 +2246,150 @@ import LearningCore
         if let glyph = childNode(withName: "//mirrorBeaconGlyph") as? SKLabelNode {
             glyph.text = "✦"
         }
-        instruction.text = "Mirror Hall is aligned. Tiko is ready for a true rotation challenge next."
+        if state.puzzleMirrorRotationComplete {
+            finishMirrorRestoration()
+        } else {
+            rotationEncounter = state.nextPuzzleMirrorRotationEncounter()
+            buildMirrorRotationEncounter()
+        }
+    }
+
+    private func tileShapeNode(_ shape: PuzzleTileShape, tileSize: CGFloat) -> SKNode {
+        let group = SKNode()
+        let width = CGFloat(shape.cells.map(\.x).max()! + 1) * tileSize
+        let height = CGFloat(shape.cells.map(\.y).max()! + 1) * tileSize
+        for cell in shape.cells {
+            let tile = SKShapeNode(rectOf: CGSize(width: tileSize - 2, height: tileSize - 2), cornerRadius: 3)
+            tile.fillColor = UIColor(red: 0.84, green: 0.94, blue: 1, alpha: 1)
+            tile.strokeColor = UIColor(red: 0.38, green: 0.72, blue: 0.98, alpha: 1)
+            tile.lineWidth = 2
+            tile.position = CGPoint(x: (CGFloat(cell.x) + 0.5) * tileSize - width / 2,
+                                    y: (CGFloat(cell.y) + 0.5) * tileSize - height / 2)
+            group.addChild(tile)
+        }
+        return group
+    }
+
+    private func buildMirrorRotationEncounter() {
+        guard let rotationEncounter else { return }
+        if !mirrorPracticeReady && state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.isEmpty {
+            buildMirrorTurnPractice()
+            return
+        }
+        childNode(withName: "mirrorNext")?.removeFromParent()
+        clearMirrorChoices()
+        childNode(withName: "mirrorRotationSource")?.removeFromParent()
+        childNode(withName: "//mirrorBeaconGlyph")?.isHidden = true
+        if let beacon = childNode(withName: "mirrorBeacon") as? SKShapeNode {
+            beacon.glowWidth = 0
+        }
+        attempts = 0
+        support = .independent
+        startedAt = Date()
+        mirrorAcceptingInput = true
+        solved = false
+        let source = tileShapeNode(rotationEncounter.source, tileSize: 28)
+        source.position = CGPoint(x: 760, y: 535)
+        source.zPosition = 610
+        source.name = "mirrorRotationSource"
+        addChild(source)
+        if let title = childNode(withName: "mirrorHallTitle") as? SKLabelNode {
+            title.text = "TURN THIS WAY ↻"
+        }
+        // Four fixed marks make the turn's magnitude visible without previewing the answer.
+        if childNode(withName: "rotationQuarterMark0") == nil {
+            for index in 0..<4 {
+                let mark = SKShapeNode(circleOfRadius: 5)
+                let angle = CGFloat(index) * .pi / 2
+                mark.position = CGPoint(x: 760 + sin(angle) * 61, y: 535 + cos(angle) * 61)
+                mark.fillColor = .white
+                mark.strokeColor = .clear
+                mark.name = "rotationQuarterMark\(index)"
+                mark.zPosition = 620
+                addChild(mark)
+            }
+        }
+        for index in 0..<4 {
+            if let mark = childNode(withName: "rotationQuarterMark\(index)") as? SKShapeNode {
+                mark.fillColor = index <= rotationEncounter.quarterTurns ? .systemYellow : .darkGray
+                mark.glowWidth = index == rotationEncounter.quarterTurns ? 5 : 0
+            }
+        }
+        for (index, shape) in rotationEncounter.choices.enumerated() {
+            let mirror = SKShapeNode(rectOf: CGSize(width: 150, height: 170), cornerRadius: 66)
+            mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.72)
+            mirror.strokeColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
+            mirror.lineWidth = 6
+            decorateMirrorGlass(mirror)
+            mirror.position = mirrorChoicePoints[index]
+            mirror.zPosition = 650
+            mirror.name = "mirrorRotationChoice"
+            mirror.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
+            mirror.addChild(tileShapeNode(shape, tileSize: 30))
+            addChild(mirror)
+        }
+        instruction.text = "Imagine this turn. Tap the mirror with the matching shape."
+        buildVisualTurnCue(quarterTurns: rotationEncounter.quarterTurns)
+        refreshMirrorRotationProgress()
+        tiko.pose(.interact)
+    }
+
+    private func resolveMirrorRotationChoice(_ index: Int, node: SKShapeNode) {
+        guard place == .mirrorHall, mirrorAcceptingInput, let rotationEncounter,
+              rotationEncounter.choices.indices.contains(index) else { return }
+        mirrorAcceptingInput = false
+        attempts += 1
+        let attemptSupport = support
+        let correct = rotationEncounter.choices[index] == rotationEncounter.answer
+        _ = state.recordPuzzle(rotationEncounter, outcome: correct ? .correct : .incorrect,
+                               support: attemptSupport, attempts: attempts,
+                               responseTime: Date().timeIntervalSince(startedAt))
+        guard correct else {
+            support = support == .independent ? .lightHint : .demonstration
+            node.strokeColor = .systemRed
+            nudge(node)
+            tiko.pose(.react)
+            valkyrie.pose(.react)
+            if support == .lightHint {
+                instruction.text = "Follow the curved arrow. Turn the whole shape; keep its arms joined."
+            } else {
+                instruction.text = "Watch Tiko turn it. Now find that shape in a mirror."
+                state.audio.play("mirror_turn")
+                if let source = childNode(withName: "mirrorRotationSource") {
+                    source.removeAllActions()
+                    source.zRotation = 0
+                    source.run(.rotate(toAngle: -CGFloat(rotationEncounter.quarterTurns) * .pi / 2,
+                                       duration: reducedMotion ? 0 : 1.1))
+                }
+            }
+            mirrorAcceptingInput = true
+            return
+        }
+        solved = true
+        node.strokeColor = .systemGreen
+        node.glowWidth = 16
+        refreshMirrorRotationProgress()
+        state.audio.play("success")
+        valkyrie.pose(.celebrate)
+        tiko.pose(.celebrate)
+        if state.puzzleMirrorRotationComplete {
+            finishMirrorRestoration()
+        } else {
+            instruction.text = attemptSupport == .independent
+                ? "A beam is shining! Tap the next lantern when you're ready."
+                : "You did it together. Tap the lantern to try a different turn."
+            addMirrorNextLantern()
+        }
+    }
+
+    private func refreshMirrorRotationProgress() {
+        let count = PuzzlePalaceDirector.mirrorRotationIndependentSuccessCount(profile: state.profile)
+        powerMirrorMachinery(count: count)
+        for index in 0..<PuzzlePalaceEncounterCatalog.mirrorHallRotation.count {
+            guard let light = childNode(withName: "mirrorProgress\(index)") as? SKShapeNode else { continue }
+            light.fillColor = index < count ? .systemGreen : UIColor(red: 0.20, green: 0.24, blue: 0.38, alpha: 1)
+            light.glowWidth = index < count ? 10 : 0
+        }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -2074,6 +2420,10 @@ import LearningCore
         let target = place == .resortVault
             ? (resortPedestalTarget(at: point) ?? targetName(at: point))
             : targetName(at: point)
+
+        // A stray floor tap must not cancel the walk that will unlock this interaction.
+        if place == .mirrorHall && mirrorApproaching
+            && target != "home" && target != "resortVaultBack" { return }
 
         switch target {
         case "home":
@@ -2169,10 +2519,54 @@ import LearningCore
         case "resortVaultBack":
             state.travel(to: .resortVault)
 
+        case "mirrorPracticeDial":
+            turnPracticeDial()
+
+        case "mirrorPracticeContinue":
+            guard mirrorPracticeReady else { return }
+            clearMirrorPractice()
+            buildMirrorRotationEncounter()
+
+        case "mirrorNext":
+            guard solved, !state.puzzleMirrorRotationComplete else { return }
+            childNode(withName: "mirrorNext")?.removeFromParent()
+            if rotationEncounter != nil {
+                rotationEncounter = state.nextPuzzleMirrorRotationEncounter()
+                buildMirrorRotationEncounter()
+            } else if state.puzzleMirrorHallComplete {
+                restoreMirrorHall()
+            } else {
+                orientationEncounter = state.nextPuzzleMirrorHallEncounter()
+                buildMirrorHallEncounter()
+            }
+
+        case "mirrorRestoredHome":
+            state.travel(to: .storyTree)
+
+        case "mirrorRotationChoice":
+            guard place == .mirrorHall else { return }
+            for hit in nodes(at: point) {
+                var candidate: SKNode? = hit
+                while let current = candidate {
+                    if current.name == "mirrorRotationChoice",
+                       let index = current.userData?["choiceIndex"] as? Int,
+                       let shape = current as? SKShapeNode {
+                        approachMirror(shape) { [weak self, weak shape] in
+                            guard let self, let shape else { return }
+                            self.resolveMirrorRotationChoice(index, node: shape)
+                        }
+                        return
+                    }
+                    candidate = current.parent
+                }
+            }
+
         case "mirrorOrientationChoice":
             guard place == .mirrorHall,
                   let choice = mirrorChoice(at: point) else { return }
-            resolveMirrorChoice(choice.direction, node: choice.node)
+            approachMirror(choice.node) { [weak self] in
+                self?.resolveMirrorChoice(choice.direction, node: choice.node)
+            }
 
         default:
             walkIfValid(point)
@@ -2396,6 +2790,7 @@ import LearningCore
     }
 
     override func willLeave() {
+        if place == .mirrorHall { state.audio.stop(channel: .ambience) }
         removeAction(forKey: "stopGoSignal")
         removeAction(forKey: "stopGoRetry")
         removeAction(forKey: "nextStopGo")
@@ -2406,6 +2801,8 @@ import LearningCore
         removeAction(forKey: "resortRetry")
         removeAction(forKey: "resortNext")
         removeAction(forKey: "nextResortEncounter")
+        removeAction(forKey: "nextMirrorOrientation")
+        removeAction(forKey: "nextMirrorRotation")
         tiko.cancelTravel()
         tiko.removeAllActions()
         super.willLeave()

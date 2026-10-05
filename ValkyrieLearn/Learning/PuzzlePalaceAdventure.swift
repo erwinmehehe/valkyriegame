@@ -347,6 +347,78 @@ public struct PuzzleOrientationEncounter: Identifiable, Equatable, Sendable {
 }
 
 
+/// Integer tiles keep the reasoning task independent of SpriteKit geometry.
+public struct PuzzleTile: Equatable, Hashable, Sendable {
+    public let x: Int
+    public let y: Int
+    public init(x: Int, y: Int) { self.x = x; self.y = y }
+}
+
+public struct PuzzleTileShape: Equatable, Sendable {
+    public let cells: [PuzzleTile]
+
+    public init(cells: [PuzzleTile]) {
+        precondition(!cells.isEmpty && Set(cells).count == cells.count)
+        let minX = cells.map(\.x).min()!
+        let minY = cells.map(\.y).min()!
+        self.cells = cells.map { PuzzleTile(x: $0.x - minX, y: $0.y - minY) }
+            .sorted { $0.y == $1.y ? $0.x < $1.x : $0.y < $1.y }
+    }
+
+    public func rotated(quarterTurns: Int) -> PuzzleTileShape {
+        var result = self
+        for _ in 0..<((quarterTurns % 4 + 4) % 4) {
+            result = PuzzleTileShape(cells: result.cells.map { PuzzleTile(x: $0.y, y: -$0.x) })
+        }
+        return result
+    }
+
+    public func reflected() -> PuzzleTileShape {
+        PuzzleTileShape(cells: cells.map { PuzzleTile(x: -$0.x, y: $0.y) })
+    }
+
+    public var signature: String { cells.map { "\($0.x),\($0.y)" }.joined(separator: ";") }
+}
+
+public struct PuzzleRotationEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let source: PuzzleTileShape
+    public let quarterTurns: Int
+    public let choices: [PuzzleTileShape]
+    public let transferContext: Bool
+    public let skillID = PuzzleSkills.mentalRotation
+    public let mechanicID = PuzzlePalaceMechanicID.mirrorHall
+    public let representation = Representation.pictorial
+    public var answer: PuzzleTileShape { source.rotated(quarterTurns: quarterTurns) }
+    public var prompt: String { "Turn Tiko's shape clockwise in your mind. Touch the shape it becomes." }
+    public var turnCue: String {
+        switch quarterTurns {
+        case 1: return "↻ ¼ TURN"
+        case 2: return "↻ ½ TURN"
+        default: return "↻ ¾ TURN"
+        }
+    }
+    public var fingerprint: String {
+        [mechanicID, skillID.rawValue, source.signature, String(quarterTurns),
+         choices.map(\.signature).joined(separator: "|"), "mirrorRotation"].joined(separator: "|")
+    }
+
+    public init(id: String, source: PuzzleTileShape, quarterTurns: Int, answerIndex: Int,
+                transferContext: Bool = false) {
+        precondition((1...3).contains(quarterTurns) && (0...2).contains(answerIndex))
+        let target = source.rotated(quarterTurns: quarterTurns)
+        let reflection = target.reflected()
+        precondition(target != source && target != reflection && source != reflection)
+        var options = [source, reflection]
+        options.insert(target, at: answerIndex)
+        self.id = id
+        self.source = source
+        self.quarterTurns = quarterTurns
+        self.choices = options
+        self.transferContext = transferContext
+    }
+}
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -512,6 +584,30 @@ public enum PuzzlePalaceEncounterCatalog {
         )
     ]
 
+
+    public static let mirrorHallRotation: [PuzzleRotationEncounter] = [
+        .init(id: "puzzle.mirrorRotation.elbow", source: PuzzleTileShape(cells: [
+            .init(x: 0, y: 0), .init(x: 0, y: 1), .init(x: 0, y: 2), .init(x: 1, y: 0)
+        ]), quarterTurns: 1, answerIndex: 2),
+        .init(id: "puzzle.mirrorRotation.flag", source: PuzzleTileShape(cells: [
+            .init(x: 0, y: 0), .init(x: 0, y: 1), .init(x: 0, y: 2),
+            .init(x: 1, y: 0), .init(x: 1, y: 1)
+        ]), quarterTurns: 2, answerIndex: 0, transferContext: true),
+        .init(id: "puzzle.mirrorRotation.branch", source: PuzzleTileShape(cells: [
+            .init(x: 0, y: 1), .init(x: 1, y: 0), .init(x: 1, y: 1),
+            .init(x: 1, y: 2), .init(x: 2, y: 2)
+        ]), quarterTurns: 3, answerIndex: 1, transferContext: true)
+    ]
+
+    /// Alternate turns prevent an immediate assisted retry from copying the same answer.
+    public static let mirrorHallRotationVariants: [[PuzzleRotationEncounter]] = mirrorHallRotation.map { base in
+        let answerIndex = base.choices.firstIndex(of: base.answer)!
+        return [base] + (1...2).map { offset in
+            PuzzleRotationEncounter(id: base.id + ".variant\(offset)", source: base.source,
+                quarterTurns: (base.quarterTurns - 1 + offset) % 3 + 1,
+                answerIndex: (answerIndex + offset) % 3, transferContext: true)
+        }
+    }
 
     public static let mirrorHallOrientation: [PuzzleOrientationEncounter] = [
         .init(
@@ -769,6 +865,35 @@ public enum PuzzlePalaceDirector {
     public static func mirrorHallComplete(profile: LearnerProfile) -> Bool {
         mirrorHallIndependentSuccessCount(profile: profile)
             == PuzzlePalaceEncounterCatalog.mirrorHallOrientation.count
+    }
+
+    public static func nextMirrorRotationEncounter(profile: LearnerProfile) -> PuzzleRotationEncounter? {
+        guard canEnterMirrorHall(profile: profile), mirrorHallComplete(profile: profile),
+              !mirrorRotationComplete(profile: profile) else { return nil }
+        let evidence = profile.progress(for: PuzzleSkills.mentalRotation).evidence
+        let independent = Set(evidence.filter { $0.outcome == .correct && $0.supportLevel == .independent }
+            .map(\.encounterID))
+        let seen = Set(evidence.map(\.encounterID))
+        for variants in PuzzlePalaceEncounterCatalog.mirrorHallRotationVariants {
+            guard !variants.contains(where: { independent.contains($0.id) }) else { continue }
+            if let fresh = variants.first(where: { !seen.contains($0.id) }) { return fresh }
+            // Exhausted variants revisit a different turn, never the just-demonstrated answer.
+            return variants.first { $0.id != evidence.last?.encounterID }
+        }
+        return nil
+    }
+
+    public static func mirrorRotationIndependentSuccessCount(profile: LearnerProfile) -> Int {
+        let independent = Set(profile.progress(for: PuzzleSkills.mentalRotation).evidence
+            .filter { $0.outcome == .correct && $0.supportLevel == .independent }.map(\.encounterID))
+        return PuzzlePalaceEncounterCatalog.mirrorHallRotationVariants.filter { variants in
+            variants.contains { independent.contains($0.id) }
+        }.count
+    }
+
+    public static func mirrorRotationComplete(profile: LearnerProfile) -> Bool {
+        mirrorRotationIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.mirrorHallRotation.count
     }
 
     public static func independentSortSuccessCount(
