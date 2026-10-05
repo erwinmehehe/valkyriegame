@@ -41,6 +41,7 @@ public enum PuzzlePalaceMechanicID {
     public static let memoryBridge = "puzzlePalace.memoryBridge"
     public static let stopGoOrbs = "puzzlePalace.stopGoOrbs"
     public static let sortingPedestal = "puzzlePalace.sortingPedestal"
+    public static let changedRuleResort = "puzzlePalace.changedRuleResort"
     public static let mirrorHall = "puzzlePalace.mirrorHall"
     public static let pathTiles = "puzzlePalace.pathTiles"
     public static let commandGears = "puzzlePalace.commandGears"
@@ -169,7 +170,7 @@ public enum PuzzleSkillCatalog {
             prerequisites: [PuzzleSkills.singleRuleSort, PuzzleSkills.ruleSwitching],
             representations: [.object],
             responseModes: [.switchRule, .arrange],
-            mechanicIDs: [PuzzlePalaceMechanicID.sortingPedestal]
+            mechanicIDs: [PuzzlePalaceMechanicID.changedRuleResort]
         ),
         .init(
             id: PuzzleSkills.spatialOrientation,

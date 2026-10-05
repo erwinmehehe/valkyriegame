@@ -9,6 +9,7 @@ import LearningCore
         case memoryBridge
         case stopGoOrbs
         case sortingPedestal
+        case resortVault
     }
 
     private let place: Place
@@ -18,6 +19,7 @@ import LearningCore
         case .memoryBridge: return "Puzzle Palace · Memory Bridge"
         case .stopGoOrbs: return "Puzzle Palace · Stop/Go Orbs"
         case .sortingPedestal: return "Puzzle Palace · Sorting Pedestal"
+        case .resortVault: return "Puzzle Palace · Re-sort Vault"
         }
     }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
@@ -29,6 +31,7 @@ import LearningCore
     private var support: SupportLevel = .independent
     private var startedAt = Date()
     private var solved = false
+    private var runeAcceptingInput = false
     private var memoryInput: [String] = []
     private var memoryAcceptingInput = false
     private var inhibitionEncounter: PuzzleInhibitionEncounter?
@@ -38,7 +41,16 @@ import LearningCore
     private var sortEncounter: PuzzleSortEncounter?
     private var sortTrialIndex = 0
     private var sortAcceptingInput = false
-    private var runeAcceptingInput = false
+    private var resortEncounter: PuzzleResortEncounter?
+    private var resortPass = 0
+    private var resortObjectIndex = 0
+    private var resortAcceptingInput = false
+    private let resortStartPositions = [
+        CGPoint(x: 535, y: 395),
+        CGPoint(x: 680, y: 410),
+        CGPoint(x: 825, y: 395),
+        CGPoint(x: 970, y: 410)
+    ]
     private let choicePoints = [
         CGPoint(x: 575, y: 255),
         CGPoint(x: 770, y: 235),
@@ -59,6 +71,8 @@ import LearningCore
             place = .stopGoOrbs
         case .sortingPedestal:
             place = .sortingPedestal
+        case .resortVault:
+            place = .resortVault
         default:
             place = .runeGate
         }
@@ -85,6 +99,9 @@ import LearningCore
         case .sortingPedestal:
             valkyrie.position = CGPoint(x: 185, y: 175)
             tiko.position = CGPoint(x: 300, y: 190)
+        case .resortVault:
+            valkyrie.position = CGPoint(x: 180, y: 175)
+            tiko.position = CGPoint(x: 295, y: 190)
         }
         tiko.reducedMotion = reducedMotion
         addChild(tiko)
@@ -129,6 +146,17 @@ import LearningCore
             } else {
                 sortEncounter = state.nextPuzzleSortingEncounter()
                 buildSortingEncounter()
+            }
+        case .resortVault:
+            guard state.puzzleResortAvailable else {
+                instruction.text = "Sorting Pedestal must be stable before the Re-sort Vault opens."
+                return
+            }
+            if state.puzzleResortComplete {
+                restoreResortVault()
+            } else {
+                resortEncounter = state.nextPuzzleResortEncounter()
+                buildResortEncounter()
             }
         }
     }
@@ -175,6 +203,9 @@ import LearningCore
         case .sortingPedestal:
             buildSortingWorld()
             refreshSortingProgress(animated: false)
+        case .resortVault:
+            buildResortWorld()
+            refreshResortProgress(animated: false)
         }
     }
 
@@ -1422,7 +1453,347 @@ import LearningCore
             }
         }
 
-        instruction.text = "Sorting Pedestal is stable. Tiko can feel the palace rules getting more flexible."
+        showResortVaultRoute()
+        instruction.text = "Sorting Pedestal is stable. Tiko found the Re-sort Vault."
+    }
+
+    private func showResortVaultRoute() {
+        guard state.puzzleResortAvailable,
+              childNode(withName: "resortVaultRoute") == nil else { return }
+        let route = hotspot(
+            "Re-sort Vault →",
+            name: "resortVaultRoute",
+            at: CGPoint(x: 1000, y: 165),
+            size: CGSize(width: 205, height: 58)
+        )
+        route.zPosition = 845
+    }
+
+    private func buildResortWorld() {
+        let vault = SKShapeNode(rectOf: CGSize(width: 830, height: 285), cornerRadius: 58)
+        vault.fillColor = UIColor(red: 0.09, green: 0.07, blue: 0.17, alpha: 0.78)
+        vault.strokeColor = UIColor(red: 0.50, green: 0.41, blue: 0.76, alpha: 0.78)
+        vault.lineWidth = 6
+        vault.position = CGPoint(x: 755, y: 395)
+        vault.name = "resortVault"
+        vault.zPosition = 115
+        addChild(vault)
+
+        buildSortPedestal(at: CGPoint(x: 475, y: 300), name: "resortLeftPedestal")
+        buildSortPedestal(at: CGPoint(x: 1035, y: 300), name: "resortRightPedestal")
+
+        let dial = SKShapeNode(circleOfRadius: 76)
+        dial.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.31, alpha: 0.98)
+        dial.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+        dial.lineWidth = 7
+        dial.position = CGPoint(x: 755, y: 535)
+        dial.name = "resortRuleDial"
+        dial.zPosition = 580
+        addChild(dial)
+
+        let glyph = ArtSystem.label("●  ▲", size: 29)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.50, alpha: 1)
+        glyph.name = "resortRuleGlyph"
+        dial.addChild(glyph)
+
+        let passLabel = ArtSystem.label("FIRST SORT", size: 19)
+        passLabel.fontColor = UIColor(red: 0.88, green: 0.81, blue: 1.0, alpha: 1)
+        passLabel.position = CGPoint(x: 755, y: 615)
+        passLabel.name = "resortPassLabel"
+        passLabel.zPosition = 590
+        addChild(passLabel)
+
+        let door = SKShapeNode(rectOf: CGSize(width: 105, height: 245), cornerRadius: 34)
+        door.fillColor = UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.94)
+        door.strokeColor = UIColor(red: 0.56, green: 0.46, blue: 0.82, alpha: 0.90)
+        door.lineWidth = 7
+        door.position = CGPoint(x: 1135, y: 415)
+        door.name = "resortDoor"
+        door.zPosition = 360
+        addChild(door)
+
+        for index in 0..<PuzzlePalaceEncounterCatalog.changedRuleResort.count {
+            let light = SKShapeNode(circleOfRadius: 17)
+            light.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+            light.strokeColor = UIColor(red: 0.65, green: 0.55, blue: 0.92, alpha: 0.82)
+            light.lineWidth = 3
+            light.position = CGPoint(x: 970 + CGFloat(index) * 58, y: 575)
+            light.name = "resortProgress\(index)"
+            light.zPosition = 600
+            addChild(light)
+        }
+
+        let back = hotspot(
+            "← Sorting Pedestal",
+            name: "sortingBack",
+            at: CGPoint(x: 1080, y: 665),
+            size: CGSize(width: 220, height: 52)
+        )
+        back.zPosition = 2050
+    }
+
+    private func buildResortEncounter() {
+        guard let resortEncounter else { return }
+        removeAction(forKey: "resortNext")
+        attempts = 0
+        support = .independent
+        startedAt = Date()
+        solved = false
+        resortPass = 0
+        resortObjectIndex = 0
+        resortAcceptingInput = false
+        clearResortTokens()
+
+        for (index, object) in resortEncounter.objects.enumerated() {
+            let token = sortingObjectNode(object)
+            token.name = "resortToken\(index)"
+            token.position = resortStartPositions[index]
+            token.zPosition = 650
+            addChild(token)
+        }
+
+        updateResortRule(resortEncounter.initialRule)
+        instruction.text = resortEncounter.prompt
+        presentResortObject()
+    }
+
+    private func clearResortTokens() {
+        for index in 0..<8 {
+            childNode(withName: "resortToken\(index)")?.removeFromParent()
+        }
+    }
+
+    private func currentResortRule() -> PuzzleSortRule? {
+        guard let resortEncounter else { return nil }
+        return resortPass == 0 ? resortEncounter.initialRule : resortEncounter.changedRule
+    }
+
+    private func updateResortRule(_ rule: PuzzleSortRule) {
+        guard let left = childNode(withName: "resortLeftPedestal"),
+              let right = childNode(withName: "resortRightPedestal"),
+              let dial = childNode(withName: "resortRuleDial"),
+              let dialGlyph = dial.childNode(withName: "resortRuleGlyph") as? SKLabelNode,
+              let leftGlyph = left.childNode(withName: "resortLeftPedestalGlyph") as? SKLabelNode,
+              let rightGlyph = right.childNode(withName: "resortRightPedestalGlyph") as? SKLabelNode else {
+            return
+        }
+
+        switch rule {
+        case .shape:
+            dialGlyph.text = "●  ▲"
+            leftGlyph.text = "●"
+            rightGlyph.text = "▲"
+        case .marks:
+            dialGlyph.text = "•  ••"
+            leftGlyph.text = "•"
+            rightGlyph.text = "••"
+        }
+
+        if let label = childNode(withName: "resortPassLabel") as? SKLabelNode {
+            label.text = resortPass == 0 ? "FIRST SORT" : "SAME SET · NEW RULE"
+        }
+        if !reducedMotion {
+            dial.run(.sequence([
+                .rotate(byAngle: .pi / 8, duration: 0.14),
+                .rotate(byAngle: -.pi / 8, duration: 0.14)
+            ]))
+        }
+        tiko.pose(.interact)
+    }
+
+    private func presentResortObject() {
+        guard let resortEncounter,
+              resortObjectIndex < resortEncounter.objects.count else {
+            finishResortPass()
+            return
+        }
+
+        resortAcceptingInput = true
+        for index in 0..<resortEncounter.objects.count {
+            guard let token = childNode(withName: "resortToken\(index)") else { continue }
+            let active = index == resortObjectIndex
+            token.alpha = active ? 1.0 : max(token.alpha, 0.48)
+            token.setScale(active ? 1.12 : 0.82)
+        }
+
+        instruction.text = resortPass == 0
+            ? "Sort the highlighted stone using the first rule."
+            : "The rule changed. Re-sort this SAME stone set using the new rule."
+    }
+
+    private func handleResortPedestal(_ bucket: PuzzleSortBucket) {
+        guard place == .resortVault,
+              resortAcceptingInput,
+              let resortEncounter,
+              let rule = currentResortRule(),
+              resortObjectIndex < resortEncounter.objects.count else { return }
+
+        resortAcceptingInput = false
+        let object = resortEncounter.objects[resortObjectIndex]
+        let expected = object.bucket(for: rule)
+
+        guard bucket == expected else {
+            attempts += 1
+            let attemptSupport = support
+            _ = state.recordPuzzle(
+                resortEncounter,
+                outcome: .incorrect,
+                support: attemptSupport,
+                attempts: attempts,
+                responseTime: Date().timeIntervalSince(startedAt)
+            )
+            support = support == .independent ? .lightHint : .strongHint
+            valkyrie.pose(.react)
+            tiko.pose(.react)
+            highlightResortRule(rule)
+            instruction.text = support == .lightHint
+                ? sortingHint(for: rule)
+                : "The set stayed the same, but the RULE changed. Follow only the glowing rule."
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0.16 : 0.55),
+                .run { [weak self] in self?.resortAcceptingInput = true }
+            ]), withKey: "resortRetry")
+            return
+        }
+
+        guard let token = childNode(withName: "resortToken\(resortObjectIndex)") else {
+            resortAcceptingInput = true
+            return
+        }
+        let sideX: CGFloat = bucket == .left ? 475 : 1035
+        let offset = CGFloat(resortObjectIndex % 2) * 34 - 17
+        let destination = CGPoint(x: sideX + offset, y: 335 + CGFloat(resortObjectIndex / 2) * 38)
+        valkyrie.pose(.interact)
+        tiko.pose(.interact)
+        token.run(.move(to: destination, duration: reducedMotion ? 0 : 0.24))
+        token.setScale(0.72)
+
+        resortObjectIndex += 1
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.10 : 0.30),
+            .run { [weak self] in self?.presentResortObject() }
+        ]), withKey: "resortNext")
+    }
+
+    private func finishResortPass() {
+        guard let resortEncounter else { return }
+        resortAcceptingInput = false
+
+        if resortPass == 0 {
+            resortPass = 1
+            resortObjectIndex = 0
+            updateResortRule(resortEncounter.changedRule)
+            instruction.text = "The vault flipped the rule. Tiko is returning the SAME stones to center."
+
+            for index in 0..<resortEncounter.objects.count {
+                guard let token = childNode(withName: "resortToken\(index)") else { continue }
+                token.run(.move(to: resortStartPositions[index], duration: reducedMotion ? 0 : 0.38))
+                token.setScale(0.82)
+                token.alpha = 1
+            }
+
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0.16 : 0.62),
+                .run { [weak self] in self?.presentResortObject() }
+            ]), withKey: "resortNext")
+            return
+        }
+
+        attempts += 1
+        solved = true
+        let attemptSupport = support
+        _ = state.recordPuzzle(
+            resortEncounter,
+            outcome: .correct,
+            support: attemptSupport,
+            attempts: attempts,
+            responseTime: Date().timeIntervalSince(startedAt)
+        )
+        refreshResortProgress(animated: true)
+        state.audio.play("success")
+        valkyrie.pose(.celebrate)
+        tiko.pose(.celebrate)
+
+        if state.puzzleResortComplete {
+            restoreResortVault()
+            return
+        }
+
+        instruction.text = attemptSupport == .independent
+            ? "Same stones, new rule—both sorts held. Another vault set is waking."
+            : "That re-sort is stable. Repeat this same-set rule change independently."
+
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .run { [weak self] in
+                guard let self else { return }
+                self.resortEncounter = self.state.nextPuzzleResortEncounter()
+                self.buildResortEncounter()
+            }
+        ]), withKey: "nextResortEncounter")
+    }
+
+    private func highlightResortRule(_ rule: PuzzleSortRule) {
+        guard let dial = childNode(withName: "resortRuleDial") as? SKShapeNode else { return }
+        dial.glowWidth = 17
+        dial.strokeColor = rule == .shape
+            ? UIColor(red: 0.96, green: 0.76, blue: 0.35, alpha: 1)
+            : UIColor(red: 0.66, green: 0.85, blue: 1.0, alpha: 1)
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.12 : 0.55),
+            .run { [weak dial] in
+                dial?.glowWidth = 0
+                dial?.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+            }
+        ]), withKey: "resortHintGlow")
+    }
+
+    private func refreshResortProgress(animated: Bool) {
+        let count = PuzzlePalaceDirector.changedRuleResortIndependentSuccessCount(
+            profile: state.profile
+        )
+        for index in 0..<PuzzlePalaceEncounterCatalog.changedRuleResort.count {
+            guard let light = childNode(withName: "resortProgress\(index)") as? SKShapeNode else {
+                continue
+            }
+            let active = index < count
+            light.fillColor = active
+                ? UIColor(red: 0.95, green: 0.72, blue: 0.29, alpha: 1)
+                : UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+            light.glowWidth = active ? 10 : 0
+            if active && animated && !reducedMotion {
+                light.run(.sequence([
+                    .scale(to: 1.22, duration: 0.14),
+                    .scale(to: 1.0, duration: 0.18)
+                ]))
+            }
+        }
+    }
+
+    private func restoreResortVault() {
+        removeAction(forKey: "resortRetry")
+        removeAction(forKey: "resortNext")
+        removeAction(forKey: "nextResortEncounter")
+        resortAcceptingInput = false
+        refreshResortProgress(animated: true)
+
+        if let label = childNode(withName: "resortPassLabel") as? SKLabelNode {
+            label.text = "VAULT STABLE"
+        }
+        if let dial = childNode(withName: "resortRuleDial") as? SKShapeNode {
+            dial.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 1)
+            dial.glowWidth = 15
+        }
+        if let door = childNode(withName: "resortDoor") as? SKShapeNode {
+            door.fillColor = UIColor(red: 0.15, green: 0.12, blue: 0.25, alpha: 0.42)
+            door.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 1)
+            door.glowWidth = 12
+            door.xScale = 0.24
+            door.alpha = 0.45
+            door.name = "resortDoorOpen"
+        }
+
+        instruction.text = "Re-sort Vault is stable. The next palace challenge will move into spatial reasoning."
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -1430,8 +1801,31 @@ import LearningCore
         handleTap(at: point)
     }
 
+    private func resortPedestalTarget(at point: CGPoint) -> String? {
+        let pedestalNames: Set<String> = [
+            "resortLeftPedestal",
+            "resortLeftPedestalGlyph",
+            "resortRightPedestal",
+            "resortRightPedestalGlyph"
+        ]
+        for hit in nodes(at: point) {
+            var node: SKNode? = hit
+            while let current = node {
+                if let name = current.name, pedestalNames.contains(name) {
+                    return name
+                }
+                node = current.parent
+            }
+        }
+        return nil
+    }
+
     func handleTap(at point: CGPoint) {
-        switch targetName(at: point) {
+        let target = place == .resortVault
+            ? (resortPedestalTarget(at: point) ?? targetName(at: point))
+            : targetName(at: point)
+
+        switch target {
         case "home":
             state.travel(to: .storyTree)
 
@@ -1492,6 +1886,25 @@ import LearningCore
 
         case "sortRightPedestal", "sortRightPedestalGlyph":
             handleSortPedestal(.right)
+
+        case "resortVaultRoute":
+            guard place == .sortingPedestal, state.puzzleResortAvailable else { return }
+            let destination = CGPoint(x: 1000, y: 175)
+            if isNear(destination) {
+                state.travel(to: .resortVault)
+            } else {
+                instruction.text = "Follow Tiko through the stable pedestals to the Re-sort Vault."
+                travel(to: destination)
+            }
+
+        case "sortingBack":
+            state.travel(to: .sortingPedestal)
+
+        case "resortLeftPedestal", "resortLeftPedestalGlyph":
+            handleResortPedestal(.left)
+
+        case "resortRightPedestal", "resortRightPedestalGlyph":
+            handleResortPedestal(.right)
 
         default:
             walkIfValid(point)
@@ -1722,6 +2135,9 @@ import LearningCore
         removeAction(forKey: "sortRetry")
         removeAction(forKey: "sortNext")
         removeAction(forKey: "nextSortEncounter")
+        removeAction(forKey: "resortRetry")
+        removeAction(forKey: "resortNext")
+        removeAction(forKey: "nextResortEncounter")
         tiko.cancelTravel()
         tiko.removeAllActions()
         super.willLeave()
