@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle }
+    enum World: String { case storyTree, wordGarden, mathCastle }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -35,6 +35,7 @@ import LearningCore
     var previewVisible: Bool { adventure.previewVisible(at: Date()) }
     var interactionStarted: Bool { adventure.interactionStarted }
     let graph: SkillGraph
+    let literacyGraph: SkillGraph
     let audio = AudioSystem()
     private let store: LearningStore
     init(context: ModelContext) throws {
@@ -45,6 +46,7 @@ import LearningCore
         reducedMotion = store.snapshot.reducedMotion
         world = World(rawValue: store.snapshot.lastWorld) ?? .storyTree
         graph = try MathSkills.graph()
+        literacyGraph = try LiteracySkillCatalog.graph()
         audio.enabled = soundEnabled
         ReviewScheduler().markDue(in: &profile, at: Date())
     }
@@ -94,6 +96,58 @@ import LearningCore
 
     func parentMathSummary(now: Date = Date()) -> ParentMathSummary {
         ParentMathSummaryBuilder.build(profile: profile, graph: graph, now: now)
+    }
+
+    func nextWordGardenEncounter() -> WordGardenEncounter? {
+        let eligible = WordGardenEncounterCatalog.flowerGateLetterStones.filter {
+            literacyGraph.isEligible($0.skillID, for: profile)
+        }
+        guard !eligible.isEmpty else { return nil }
+
+        if let fresh = eligible.first(where: { !profile.usedFingerprints.contains($0.fingerprint) }) {
+            return fresh
+        }
+
+        return eligible.sorted { $0.id < $1.id }.first
+    }
+
+    @discardableResult
+    func recordWordGardenAttempt(
+        encounter: WordGardenEncounter,
+        choice: String,
+        attempts: Int
+    ) -> LearningEvidence {
+        let outcome: Outcome = choice == encounter.correctChoice ? .correct : .incorrect
+        let support: SupportLevel = attempts <= 1 ? .independent : .lightHint
+        let evidence = LearningEvidence(
+            encounterID: encounter.id,
+            skillID: encounter.skillID,
+            outcome: outcome,
+            supportLevel: support,
+            representation: encounter.representation,
+            mechanicID: encounter.mechanicID,
+            attempts: max(1, attempts),
+            responseTime: nil,
+            timestamp: Date(),
+            transferContext: false,
+            easySuccess: outcome == .correct && attempts == 1
+        )
+
+        MasteryEngine().record(evidence, in: &profile)
+        profile.recordActivity(
+            ActivityRecord(
+                fingerprint: encounter.fingerprint,
+                mechanicID: encounter.mechanicID,
+                skillID: encounter.skillID,
+                representation: encounter.representation,
+                timestamp: evidence.timestamp
+            )
+        )
+        if outcome == .correct {
+            profile.usedFingerprints.insert(encounter.fingerprint)
+        }
+        persist()
+        return evidence
     }
 
     @discardableResult func startWorkshop(_ encounter: LearningEncounter) -> Bool {
