@@ -9,6 +9,8 @@ import LearningCore
 
     private let place: Place
     private let lumi = LumiNode()
+    private var hasLeftScene = false
+    private var interactionInFlight = false
     private var encounter: LiteracyEncounter?
     private var attempts = 0
     private var support: SupportLevel = .independent
@@ -49,6 +51,8 @@ import LearningCore
     override func didMove(to view: SKView) {
         super.didMove(to: view)
         pip.removeFromParent()
+        valkyrie.setScale(0.5)
+        lumi.setScale(0.65)
 
         switch place {
         case .flowerGate:
@@ -112,16 +116,16 @@ import LearningCore
     }
 
     private func buildFlowerGateLandmark() {
-        let gate = SKShapeNode(rectOf: CGSize(width: 220, height: 310), cornerRadius: 100)
+        let gate = SKShapeNode(rectOf: CGSize(width: 150, height: 260), cornerRadius: 65)
         gate.fillColor = UIColor(red: 0.18, green: 0.34, blue: 0.18, alpha: 0.22)
         gate.strokeColor = UIColor(red: 0.62, green: 0.42, blue: 0.22, alpha: 0.95)
         gate.lineWidth = 10
-        gate.position = CGPoint(x: 1090, y: 370)
+        gate.position = CGPoint(x: 1160, y: 400)
         gate.name = "flowerGate"
         gate.zPosition = 300
         addChild(gate)
 
-        for (index, x) in [CGFloat(-55), CGFloat(55)].enumerated() {
+        for (index, x) in [CGFloat(-40), CGFloat(40)].enumerated() {
             let vine = SKShapeNode(rectOf: CGSize(width: 18, height: 210), cornerRadius: 9)
             vine.fillColor = UIColor(red: 0.22, green: 0.48, blue: 0.22, alpha: 1)
             vine.strokeColor = .clear
@@ -330,7 +334,7 @@ import LearningCore
             .sequence([
                 .wait(forDuration: 1.15),
                 .run { [weak self, weak rune] in
-                    guard let self else { return }
+                    guard let self, !self.hasLeftScene else { return }
                     rune?.isHidden = true
                     self.acceptingChoices = true
                     self.instruction.text = self.place == .flowerGate
@@ -495,10 +499,13 @@ import LearningCore
     }
 
     func handleTap(at point: CGPoint) {
+        guard !hasLeftScene else { return }
+        if interactionInFlight && targetName(at: point) != "home" { return }
         let name = targetName(at: point)
 
         switch name {
         case "home":
+            willLeave()
             state.travel(to: .storyTree)
 
         case "flowerGateBack":
@@ -573,15 +580,16 @@ import LearningCore
     }
 
     private func approachChoice(_ node: SKNode, value: String, sunmill: Bool) {
+        interactionInFlight = true
         let destination = CGPoint(x: max(170, node.position.x - 105), y: 175)
         valkyrie.walk(to: destination) { [weak self] in
-            guard let self else { return }
+            guard let self, !self.hasLeftScene else { return }
             self.state.audio.play("footstep")
             self.valkyrie.pose(.interact)
             self.lumi.walk(
                 to: CGPoint(x: destination.x - 60, y: destination.y + 15)
             ) { [weak self] in
-                guard let self else { return }
+                guard let self, !self.hasLeftScene else { return }
                 self.lumi.reach(to: node.position, reducedMotion: self.reducedMotion) {
                     if sunmill {
                         self.resolveSunmill(choice: value, node: node)
@@ -594,6 +602,8 @@ import LearningCore
     }
 
     private func resolveFlower(choice: String, node: SKNode) {
+        guard !hasLeftScene, interactionInFlight, !solved else { return }
+        interactionInFlight = false
         guard let encounter else { return }
         attempts += 1
         let attemptSupport = support
@@ -626,7 +636,7 @@ import LearningCore
             run(.sequence([
                 .wait(forDuration: reducedMotion ? 0.2 : 1.0),
                 .run { [weak self] in
-                    guard let self else { return }
+                    guard let self, !self.hasLeftScene else { return }
                     self.encounter = self.state.nextLiteracyEncounter()
                     self.buildFlowerEncounter()
                 }
@@ -650,6 +660,8 @@ import LearningCore
     }
 
     private func resolveSunmill(choice: String, node: SKNode) {
+        guard !hasLeftScene, interactionInFlight, !solved else { return }
+        interactionInFlight = false
         guard let encounter else { return }
         attempts += 1
         let attemptSupport = support
@@ -681,7 +693,7 @@ import LearningCore
             run(.sequence([
                 .wait(forDuration: reducedMotion ? 0.2 : 1.0),
                 .run { [weak self] in
-                    guard let self else { return }
+                    guard let self, !self.hasLeftScene else { return }
                     self.encounter = self.state.nextSunmillEncounter()
                     self.buildSunmillEncounter()
                 }
@@ -806,7 +818,7 @@ import LearningCore
             y: min(walkable.maxY, max(walkable.minY, destination.y))
         )
         valkyrie.walk(to: point) { [weak self] in
-            guard let self else { return }
+            guard let self, !self.hasLeftScene else { return }
             self.state.audio.play("footstep")
             action?()
         }
@@ -824,6 +836,10 @@ import LearningCore
     }
 
     override func willLeave() {
+        hasLeftScene = true
+        interactionInFlight = false
+        removeAction(forKey: "nextLiteracyEncounter")
+        removeAction(forKey: "nextSunmillEncounter")
         removeAction(forKey: "wordGardenPreview")
         targetRune?.removeFromParent()
         lumi.cancelTravel()

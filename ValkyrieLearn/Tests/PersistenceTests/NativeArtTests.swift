@@ -206,6 +206,44 @@ import LearningCore
         sunmill.willLeave()
     }
 
+    func testFlowerGateCompletionStopsPreviewOnRestore() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
+            state.recordLiteracy(encounter, outcome: .correct, support: .independent,
+                                 attempts: 1, responseTime: 1)
+        }
+        let garden = WordGardenScene(state: state)
+        garden.didMove(to: SKView())
+        XCTAssertNil(garden.action(forKey: "wordGardenPreview"))
+        XCTAssertTrue(garden.childNode(withName: "targetRune") == nil || garden.childNode(withName: "targetRune")?.isHidden == true)
+        garden.handleTap(at: CGPoint(x: 675, y: 228))
+        XCTAssertNil(garden.valkyrie.action(forKey: "travel"))
+        XCTAssertEqual(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count, 3)
+        garden.willLeave()
+    }
+
+    func testFlowerGateRepeatedTapsAndExitCannotRecordStaleEvidence() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        state.travel(to: .wordGarden)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view; window.rootViewController = controller; window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+        let garden = WordGardenScene(state: state)
+        view.presentScene(garden)
+        try await Task.sleep(for: .seconds(1.5))
+        garden.handleTap(at: CGPoint(x: 675, y: 228))
+        let firstTravel = garden.valkyrie.action(forKey: "travel")
+        XCTAssertNotNil(firstTravel)
+        garden.handleTap(at: CGPoint(x: 505, y: 193))
+        XCTAssertTrue(garden.valkyrie.action(forKey: "travel") === firstTravel)
+        garden.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertEqual(state.world, .storyTree)
+        try await Task.sleep(for: .seconds(2))
+        XCTAssertTrue(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.isEmpty)
+    }
+
     func testRenderedNativeSceneReviewAttachments() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
