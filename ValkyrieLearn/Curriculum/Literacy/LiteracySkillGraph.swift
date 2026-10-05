@@ -663,3 +663,224 @@ public enum LiteracyPlacement {
         )
     ]
 }
+
+
+// MARK: - Hidden literacy placement
+
+public struct LiteracyPlacementResult: Equatable, Sendable {
+    public let outcome: Outcome
+    public let supportLevel: SupportLevel
+    public let easySuccess: Bool
+
+    public init(
+        outcome: Outcome,
+        supportLevel: SupportLevel = .independent,
+        easySuccess: Bool = false
+    ) {
+        self.outcome = outcome
+        self.supportLevel = supportLevel
+        self.easySuccess = easySuccess
+    }
+}
+
+public enum LiteracyPlacementResponse: Equatable, Sendable {
+    case independentSuccess
+    case supportedSuccess
+    case struggle
+
+    public init(_ result: LiteracyPlacementResult) {
+        if result.outcome == .correct && result.supportLevel == .independent {
+            self = .independentSuccess
+        } else if result.outcome == .correct {
+            self = .supportedSuccess
+        } else {
+            self = .struggle
+        }
+    }
+}
+
+public struct LiteracyPlacementSession: Codable, Equatable, Sendable {
+    public fileprivate(set) var nextBand: Int
+    public fileprivate(set) var attemptedProbeIDs: Set<String>
+    public fileprivate(set) var highestIndependentBand: Int?
+    public fileprivate(set) var firstSupportNeededBand: Int?
+    public fileprivate(set) var completedProbeCount: Int
+    public fileprivate(set) var isComplete: Bool
+
+    public init(startBand: Int = 3) {
+        nextBand = max(0, startBand)
+        attemptedProbeIDs = []
+        highestIndependentBand = nil
+        firstSupportNeededBand = nil
+        completedProbeCount = 0
+        isComplete = false
+    }
+}
+
+public struct LiteracyPlacementRecommendation: Equatable, Sendable {
+    public let suggestedBand: Int
+    public let suggestedSkillID: SkillID?
+    public let confidence: PlacementConfidence
+    public let highestIndependentBand: Int?
+    public let firstSupportNeededBand: Int?
+
+    public init(
+        suggestedBand: Int,
+        suggestedSkillID: SkillID?,
+        confidence: PlacementConfidence,
+        highestIndependentBand: Int?,
+        firstSupportNeededBand: Int?
+    ) {
+        self.suggestedBand = suggestedBand
+        self.suggestedSkillID = suggestedSkillID
+        self.confidence = confidence
+        self.highestIndependentBand = highestIndependentBand
+        self.firstSupportNeededBand = firstSupportNeededBand
+    }
+}
+
+/// Adaptive diagnostic controller for Word Garden.
+///
+/// Placement remains separate from mastery:
+/// - begins above the most basic sound discrimination by default
+/// - jumps two bands after an easy independent success
+/// - advances one band after other independent success
+/// - steps back after support or an incorrect response
+/// - marks prerequisite closure only as provisional placement readiness
+/// - stops once the learner's independent ceiling is bracketed or the probe budget is used
+public struct LiteracyPlacementEngine: Sendable {
+    public let probes: [LiteracyPlacementProbe]
+    public let maxProbes: Int
+
+    private let minBand: Int
+    private let maxBand: Int
+
+    public init(
+        probes: [LiteracyPlacementProbe] = LiteracyPlacement.probes,
+        maxProbes: Int = 6
+    ) {
+        self.probes = probes.sorted {
+            $0.band == $1.band ? $0.id < $1.id : $0.band < $1.band
+        }
+        self.maxProbes = max(1, maxProbes)
+        minBand = self.probes.map(\.band).min() ?? 0
+        maxBand = self.probes.map(\.band).max() ?? 0
+    }
+
+    public func begin(startBand: Int = 3) -> LiteracyPlacementSession {
+        LiteracyPlacementSession(startBand: clamped(startBand))
+    }
+
+    public func nextProbe(for session: LiteracyPlacementSession) -> LiteracyPlacementProbe? {
+        guard !session.isComplete else { return nil }
+
+        let remaining = probes.filter { !session.attemptedProbeIDs.contains($0.id) }
+        guard !remaining.isEmpty else { return nil }
+
+        let desired = clamped(session.nextBand)
+        return remaining.min {
+            let leftDistance = abs($0.band - desired)
+            let rightDistance = abs($1.band - desired)
+            if leftDistance == rightDistance { return $0.band < $1.band }
+            return leftDistance < rightDistance
+        }
+    }
+
+    public func record(
+        _ result: LiteracyPlacementResult,
+        for probe: LiteracyPlacementProbe,
+        in session: inout LiteracyPlacementSession,
+        profile: inout LearnerProfile,
+        graph: SkillGraph
+    ) {
+        guard !session.isComplete,
+              !session.attemptedProbeIDs.contains(probe.id),
+              probes.contains(where: { $0.id == probe.id && $0.skillID == probe.skillID }) else {
+            return
+        }
+
+        session.attemptedProbeIDs.insert(probe.id)
+        session.completedProbeCount += 1
+
+        switch LiteracyPlacementResponse(result) {
+        case .independentSuccess:
+            session.highestIndependentBand = max(
+                session.highestIndependentBand ?? probe.band,
+                probe.band
+            )
+            session.nextBand = probe.band + (result.easySuccess ? 2 : 1)
+            profile.markPlacementReady(
+                graph.prerequisiteClosure(including: probe.skillID)
+            )
+
+        case .supportedSuccess, .struggle:
+            session.firstSupportNeededBand = min(
+                session.firstSupportNeededBand ?? probe.band,
+                probe.band
+            )
+            session.nextBand = probe.band - 1
+        }
+
+        session.nextBand = clamped(session.nextBand)
+        session.isComplete = shouldComplete(session)
+    }
+
+    public func recommendation(
+        for session: LiteracyPlacementSession
+    ) -> LiteracyPlacementRecommendation {
+        let suggestedBand: Int
+        if let supportBand = session.firstSupportNeededBand {
+            suggestedBand = clamped(supportBand)
+        } else if let independentBand = session.highestIndependentBand {
+            suggestedBand = clamped(independentBand + 1)
+        } else {
+            suggestedBand = minBand
+        }
+
+        let nearestSkill = probes.min {
+            let leftDistance = abs($0.band - suggestedBand)
+            let rightDistance = abs($1.band - suggestedBand)
+            if leftDistance == rightDistance { return $0.band < $1.band }
+            return leftDistance < rightDistance
+        }?.skillID
+
+        let bracketed = session.highestIndependentBand.flatMap { high in
+            session.firstSupportNeededBand.map { $0 <= high + 1 }
+        } ?? false
+
+        let confidence: PlacementConfidence
+        if bracketed
+            || session.highestIndependentBand == maxBand
+            || session.completedProbeCount >= maxProbes {
+            confidence = .high
+        } else if session.completedProbeCount >= 3 {
+            confidence = .medium
+        } else {
+            confidence = .low
+        }
+
+        return LiteracyPlacementRecommendation(
+            suggestedBand: suggestedBand,
+            suggestedSkillID: nearestSkill,
+            confidence: confidence,
+            highestIndependentBand: session.highestIndependentBand,
+            firstSupportNeededBand: session.firstSupportNeededBand
+        )
+    }
+
+    private func shouldComplete(_ session: LiteracyPlacementSession) -> Bool {
+        if session.completedProbeCount >= maxProbes { return true }
+        if session.highestIndependentBand == maxBand { return true }
+        if let high = session.highestIndependentBand,
+           let support = session.firstSupportNeededBand,
+           support <= high + 1,
+           session.completedProbeCount >= 2 {
+            return true
+        }
+        return session.attemptedProbeIDs.count >= probes.count
+    }
+
+    private func clamped(_ band: Int) -> Int {
+        min(max(band, minBand), maxBand)
+    }
+}
