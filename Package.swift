@@ -8,7 +8,7 @@ let package = Package(
     targets: [
         .target(name: "LearningCore", path: "ValkyrieLearn",
                 exclude: ["App", "Game", "Parent", "Persistence", "Resources", "Tests"],
-                sources: ["Learning", "Curriculum/Math"]),
+                sources: ["Learning", "Curriculum/Math", "Curriculum/Literacy"]),
         .testTarget(name: "LearningCoreTests", dependencies: ["LearningCore"],
                     path: "ValkyrieLearn/Tests/LearningCoreTests")
     ]
