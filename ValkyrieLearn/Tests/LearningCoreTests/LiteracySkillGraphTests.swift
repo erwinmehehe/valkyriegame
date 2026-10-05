@@ -280,4 +280,30 @@ final class LiteracySkillGraphTests: XCTestCase {
         XCTAssertEqual(session.nextBand, nextBand)
     }
 
+
+    func testVisualLetterMatchingPrecedesSpokenLetterNameWork() throws {
+        let graph = try LiteracySkillCatalog.graph()
+
+        XCTAssertNotNil(graph.skills[LiteracySkills.visualLetterMatch])
+        XCTAssertEqual(
+            graph.skills[LiteracySkills.uppercaseLetterNames]?.prerequisites,
+            [LiteracySkills.visualLetterMatch]
+        )
+        XCTAssertFalse(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.visualLetterMatch)?.requiresRecordedAudio ?? true
+        )
+    }
+
+    func testFlowerGateLetterCatalogMeasuresVisualMatchingOnly() {
+        let encounters = WordGardenEncounterCatalog.flowerGateLetterStones
+
+        XCTAssertEqual(encounters.count, 3)
+        XCTAssertEqual(Set(encounters.map(\.id)).count, encounters.count)
+        XCTAssertTrue(encounters.allSatisfy { $0.skillID == LiteracySkills.visualLetterMatch })
+        XCTAssertTrue(encounters.allSatisfy { $0.mechanicID == WordGardenMechanicID.letterStones })
+        XCTAssertTrue(encounters.allSatisfy { $0.representation == .symbolic })
+        XCTAssertTrue(encounters.allSatisfy { $0.choices.contains($0.correctChoice) })
+        XCTAssertEqual(Set(encounters.map(\.fingerprint)).count, encounters.count)
+    }
+
 }
