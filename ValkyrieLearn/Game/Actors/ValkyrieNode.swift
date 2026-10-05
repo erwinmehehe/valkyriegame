@@ -119,7 +119,8 @@ import SpriteKit
         head.position.y = 102
         body.addChild(head)
 
-        for x in [-20.0, 20.0] {
+        let eyeOffsets: [CGFloat] = [-20, 20]
+        for x in eyeOffsets {
             let eye = SKShapeNode(circleOfRadius: 15)
             eye.fillColor = UIColor(red: 0.10, green: 0.08, blue: 0.13, alpha: 1)
             eye.strokeColor = UIColor(red: 0.96, green: 0.78, blue: 0.34, alpha: 1)
