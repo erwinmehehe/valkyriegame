@@ -301,8 +301,13 @@ import LearningCore
         XCTAssertNil(garden.action(forKey: "wordGardenPreview"))
         XCTAssertTrue(garden.childNode(withName: "targetRune") == nil || garden.childNode(withName: "targetRune")?.isHidden == true)
         garden.handleTap(at: CGPoint(x: 675, y: 228))
-        XCTAssertNil(garden.valkyrie.action(forKey: "travel"))
-        XCTAssertEqual(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count, 3)
+        XCTAssertNil(garden.action(forKey: "wordGardenPreview"))
+        XCTAssertNotEqual(garden.targetName(at: CGPoint(x: 675, y: 228)), "flowerChoice")
+        XCTAssertEqual(
+            state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count,
+            3,
+            "A completed gate may allow normal walking, but an old flower location must never record stale evidence."
+        )
         garden.willLeave()
     }
 
