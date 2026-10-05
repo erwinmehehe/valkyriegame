@@ -1,6 +1,7 @@
 import XCTest
 import SwiftData
 import SpriteKit
+import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeScienceFlowTests: XCTestCase {
