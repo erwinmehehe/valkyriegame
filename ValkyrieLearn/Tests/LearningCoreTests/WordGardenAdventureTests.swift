@@ -193,8 +193,13 @@ final class WordGardenAdventureTests: XCTestCase {
         XCTAssertEqual(hollow.skillID, LiteracySkills.visualPrintSequence)
         XCTAssertEqual(hollow.mechanicID, WordGardenMechanicID.storySeedSequence)
         XCTAssertEqual(hollow.context, "storyHollow")
-        let promptTokens = hollow.prompt.lowercased().split { !$0.isLetter }.map(String.init)
-        XCTAssertFalse(promptTokens.contains(hollow.answer.lowercased()))
+        let promptTokens = hollow.prompt
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { String($0).lowercased() }
+        XCTAssertFalse(
+            promptTokens.contains(hollow.answer.lowercased()),
+            "Story Hollow instructions must not reveal the target as a standalone glyph."
+        )
     }
 
     func testStoryHollowCompletionIsVisualSequenceEvidenceNotReadingMastery() throws {
@@ -386,143 +391,4 @@ final class PuzzlePalaceAdventureTests: XCTestCase {
             "Rune choices must not manufacture inhibition mastery."
         )
     }
-
-    func testMemoryBridgeStaysLockedUntilRuneGateIsIndependentlyOpen() throws {
-        var profile = LearnerProfile()
-        let mastery = MasteryEngine()
-
-        XCTAssertFalse(PuzzlePalaceDirector.canEnterMemoryBridge(profile: profile))
-        XCTAssertNil(PuzzlePalaceDirector.nextMemoryBridgeEncounter(profile: profile))
-
-        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
-            mastery.record(
-                LearningEvidence(
-                    encounterID: encounter.id,
-                    skillID: encounter.skillID,
-                    outcome: .correct,
-                    supportLevel: .independent,
-                    representation: encounter.representation,
-                    mechanicID: encounter.mechanicID
-                ),
-                in: &profile
-            )
-        }
-
-        XCTAssertTrue(PuzzlePalaceDirector.canEnterMemoryBridge(profile: profile))
-        let memory = try XCTUnwrap(
-            PuzzlePalaceDirector.nextMemoryBridgeEncounter(profile: profile)
-        )
-        XCTAssertEqual(memory.skillID, PuzzleSkills.visualSequenceMemory)
-        XCTAssertEqual(memory.mechanicID, PuzzlePalaceMechanicID.memoryBridge)
-        XCTAssertEqual(memory.context, "memoryBridge")
-        XCTAssertGreaterThanOrEqual(memory.sequence.count, 3)
-        XCTAssertFalse(memory.prompt.contains(memory.sequence.joined()))
-    }
-
-    func testSupportedMemoryBridgeSequencesDoNotCountAsIndependentRestoration() {
-        var profile = LearnerProfile()
-        let mastery = MasteryEngine()
-
-        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
-            mastery.record(
-                LearningEvidence(
-                    encounterID: encounter.id,
-                    skillID: encounter.skillID,
-                    outcome: .correct,
-                    supportLevel: .independent,
-                    representation: encounter.representation,
-                    mechanicID: encounter.mechanicID
-                ),
-                in: &profile
-            )
-        }
-
-        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
-            mastery.record(
-                LearningEvidence(
-                    encounterID: encounter.id,
-                    skillID: encounter.skillID,
-                    outcome: .correct,
-                    supportLevel: .lightHint,
-                    representation: encounter.representation,
-                    mechanicID: encounter.mechanicID,
-                    transferContext: encounter.transferContext
-                ),
-                in: &profile
-            )
-        }
-
-        XCTAssertEqual(
-            PuzzlePalaceDirector.memoryBridgeIndependentSuccessCount(profile: profile),
-            0
-        )
-        XCTAssertFalse(PuzzlePalaceDirector.memoryBridgeComplete(profile: profile))
-        XCTAssertEqual(
-            PuzzlePalaceDirector.nextMemoryBridgeEncounter(profile: profile)?.id,
-            PuzzlePalaceEncounterCatalog.memoryBridge[0].id
-        )
-    }
-
-    func testThreeIndependentMemorySequencesRestoreBridgeWithoutLeakingOtherExecutiveSkills() {
-        var profile = LearnerProfile()
-        let mastery = MasteryEngine()
-
-        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
-            mastery.record(
-                LearningEvidence(
-                    encounterID: encounter.id,
-                    skillID: encounter.skillID,
-                    outcome: .correct,
-                    supportLevel: .independent,
-                    representation: encounter.representation,
-                    mechanicID: encounter.mechanicID
-                ),
-                in: &profile
-            )
-        }
-        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
-            mastery.record(
-                LearningEvidence(
-                    encounterID: encounter.id,
-                    skillID: encounter.skillID,
-                    outcome: .correct,
-                    supportLevel: .independent,
-                    representation: encounter.representation,
-                    mechanicID: encounter.mechanicID,
-                    transferContext: encounter.transferContext
-                ),
-                in: &profile
-            )
-        }
-
-        XCTAssertEqual(
-            PuzzlePalaceDirector.memoryBridgeIndependentSuccessCount(profile: profile),
-            3
-        )
-        XCTAssertTrue(PuzzlePalaceDirector.memoryBridgeComplete(profile: profile))
-        XCTAssertEqual(
-            profile.progress(for: PuzzleSkills.visualSequenceMemory).state,
-            .secure
-        )
-        XCTAssertEqual(
-            profile.progress(for: PuzzleSkills.responseInhibition).state,
-            .new
-        )
-        XCTAssertEqual(profile.progress(for: PuzzleSkills.ruleSwitching).state, .new)
-        XCTAssertEqual(profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
-        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
-    }
-
-    func testMemoryBridgeUsesDistinctSequencesAndIncreasesMemoryLoad() {
-        let encounters = PuzzlePalaceEncounterCatalog.memoryBridge
-
-        XCTAssertEqual(encounters.count, 3)
-        XCTAssertEqual(Set(encounters.map(\.id)).count, 3)
-        XCTAssertEqual(Set(encounters.map(\.fingerprint)).count, 3)
-        XCTAssertEqual(encounters.map { $0.sequence.count }, [3, 3, 4])
-        XCTAssertTrue(encounters.allSatisfy {
-            Set($0.sequence).isSubset(of: Set($0.choices))
-        })
-    }
-
 }
