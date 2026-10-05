@@ -2,7 +2,7 @@ import SpriteKit
 
 @MainActor final class MiloNode: CharacterNode {
     init() {
-        super.init(character: "Milo", color: .systemGreen, height: 150)
+        super.init(character: "Milo", color: .systemGreen, height: 112)
     }
 
     required init?(coder: NSCoder) {
