@@ -377,9 +377,12 @@ import LearningCore
 
         case "scienceCreatureGate":
             if creatureRouteOpen {
-                instruction.text = "The weather lock released. Creature Grove is the next Science Lab area."
-                valkyrie.pose(.celebrate)
-                milo.inspect(reducedMotion: reducedMotion)
+                if isNear(creatureGatePoint, radius: 120) {
+                    state.travel(to: .scienceCreatureGrove)
+                } else {
+                    instruction.text = "The Creature Grove route is open. Walk to the gate to continue."
+                    travel(to: CGPoint(x: creatureGatePoint.x - 75, y: 180))
+                }
             } else {
                 instruction.text = "The cloud lock is still closed. Compare both observations and set the forecast vane."
             }

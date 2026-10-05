@@ -81,7 +81,7 @@ import SpriteKit
         sign.addChild(post)
 
         let scienceSign = hotspot(
-            "Science Lab →",
+            state.scienceAdventure.groveRestored ? "Science Lab ✦" : "Science Lab →",
             name: "scienceLab",
             at: CGPoint(x: 580, y: 515),
             size: CGSize(width: 205, height: 54)
