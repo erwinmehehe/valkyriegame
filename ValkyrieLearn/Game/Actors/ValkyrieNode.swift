@@ -88,3 +88,149 @@ import SpriteKit
     init() { super.init(character: "Valkyrie", color: .systemPink, height: 300) }
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
 }
+
+
+@MainActor final class LumiNode: SKNode {
+    private let body = SKNode()
+    private let glow = SKShapeNode(circleOfRadius: 56)
+    var reducedMotion = false
+
+    override init() {
+        super.init()
+        name = "lumi"
+
+        glow.fillColor = UIColor(red: 0.76, green: 0.56, blue: 1.0, alpha: 0.10)
+        glow.strokeColor = .clear
+        glow.glowWidth = 12
+        glow.zPosition = -2
+        addChild(glow)
+
+        let torso = SKShapeNode(ellipseOf: CGSize(width: 92, height: 110))
+        torso.fillColor = UIColor(red: 0.88, green: 0.74, blue: 0.56, alpha: 1)
+        torso.strokeColor = UIColor(red: 0.47, green: 0.29, blue: 0.52, alpha: 1)
+        torso.lineWidth = 3
+        torso.position.y = 36
+        body.addChild(torso)
+
+        let head = SKShapeNode(circleOfRadius: 46)
+        head.fillColor = UIColor(red: 0.95, green: 0.83, blue: 0.66, alpha: 1)
+        head.strokeColor = UIColor(red: 0.47, green: 0.29, blue: 0.52, alpha: 1)
+        head.lineWidth = 3
+        head.position.y = 102
+        body.addChild(head)
+
+        for x in [-20.0, 20.0] {
+            let eye = SKShapeNode(circleOfRadius: 15)
+            eye.fillColor = UIColor(red: 0.10, green: 0.08, blue: 0.13, alpha: 1)
+            eye.strokeColor = UIColor(red: 0.96, green: 0.78, blue: 0.34, alpha: 1)
+            eye.lineWidth = 3
+            eye.position = CGPoint(x: x, y: 105)
+            body.addChild(eye)
+
+            let shine = SKShapeNode(circleOfRadius: 4)
+            shine.fillColor = .white
+            shine.strokeColor = .clear
+            shine.position = CGPoint(x: x - 4, y: 110)
+            body.addChild(shine)
+        }
+
+        let beak = SKShapeNode(path: {
+            let p = CGMutablePath()
+            p.move(to: CGPoint(x: -9, y: 88))
+            p.addLine(to: CGPoint(x: 9, y: 88))
+            p.addLine(to: CGPoint(x: 0, y: 74))
+            p.closeSubpath()
+            return p
+        }())
+        beak.fillColor = UIColor(red: 0.93, green: 0.55, blue: 0.18, alpha: 1)
+        beak.strokeColor = .clear
+        body.addChild(beak)
+
+        let cap = SKShapeNode(path: {
+            let p = CGMutablePath()
+            p.move(to: CGPoint(x: -50, y: 142))
+            p.addLine(to: CGPoint(x: 0, y: 166))
+            p.addLine(to: CGPoint(x: 54, y: 142))
+            p.addLine(to: CGPoint(x: 0, y: 126))
+            p.closeSubpath()
+            return p
+        }())
+        cap.fillColor = UIColor(red: 0.40, green: 0.24, blue: 0.58, alpha: 1)
+        cap.strokeColor = UIColor(red: 0.89, green: 0.70, blue: 1.0, alpha: 1)
+        cap.lineWidth = 2
+        body.addChild(cap)
+
+        let book = SKShapeNode(rectOf: CGSize(width: 76, height: 48), cornerRadius: 8)
+        book.fillColor = UIColor(red: 0.12, green: 0.62, blue: 0.67, alpha: 1)
+        book.strokeColor = UIColor(red: 0.87, green: 0.91, blue: 0.65, alpha: 1)
+        book.lineWidth = 2
+        book.position = CGPoint(x: 0, y: 34)
+        book.zRotation = -0.08
+        body.addChild(book)
+
+        addChild(body)
+        setScale(0.62)
+        hover()
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic Lumi") }
+
+    func hover() {
+        removeAction(forKey: "hover")
+        body.removeAction(forKey: "hover")
+        body.position = .zero
+        guard !reducedMotion else { return }
+        body.run(
+            .repeatForever(
+                .sequence([
+                    .moveBy(x: 0, y: 5, duration: 1.0),
+                    .moveBy(x: 0, y: -5, duration: 1.0)
+                ])
+            ),
+            withKey: "hover"
+        )
+    }
+
+    func react() {
+        removeAction(forKey: "reach")
+        guard !reducedMotion else { return }
+        body.run(
+            .sequence([
+                .rotate(toAngle: -0.10, duration: 0.12),
+                .rotate(toAngle: 0.10, duration: 0.12),
+                .rotate(toAngle: 0, duration: 0.15)
+            ]),
+            withKey: "react"
+        )
+    }
+
+    func celebrate() {
+        removeAction(forKey: "reach")
+        guard !reducedMotion else { return }
+        glow.run(.sequence([.fadeAlpha(to: 1.0, duration: 0.12), .fadeAlpha(to: 0.55, duration: 0.35)]))
+        body.run(
+            .sequence([
+                .moveBy(x: 0, y: 14, duration: 0.16),
+                .moveBy(x: 0, y: -14, duration: 0.22)
+            ]),
+            withKey: "celebrate"
+        )
+    }
+
+    func reach(to destination: CGPoint, in scene: SKScene, completion: @escaping () -> Void) {
+        removeAction(forKey: "reach")
+        let localDestination = scene.convert(destination, to: parent ?? scene)
+        let start = position
+        let duration = reducedMotion ? 0.05 : 0.55
+        run(
+            .sequence([
+                .move(to: localDestination, duration: duration),
+                .run { [weak self] in self?.celebrate() },
+                .wait(forDuration: reducedMotion ? 0.05 : 0.28),
+                .move(to: start, duration: duration),
+                .run { [weak self] in self?.hover(); completion() }
+            ]),
+            withKey: "reach"
+        )
+    }
+}
