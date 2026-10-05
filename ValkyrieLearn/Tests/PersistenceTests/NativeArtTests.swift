@@ -6,7 +6,7 @@ import LearningCore
 
 @MainActor final class NativeArtTests: XCTestCase {
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
-        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi"] {
+        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
         }
         for character in ["Valkyrie", "Pip"] {
@@ -15,12 +15,17 @@ import LearningCore
             }
         }
         XCTAssertEqual(ArtSystem.frames(character: "Valkyrie", pose: .walk).count, 2)
-        for pose in [ArtSystem.Pose.idle, .walk, .interact, .celebrate, .react] {
-            XCTAssertFalse(ArtSystem.frames(character: "Lumi", pose: pose).isEmpty)
+        for character in ["Lumi", "Tiko"] {
+            for pose in [ArtSystem.Pose.idle, .walk, .interact, .celebrate, .react] {
+                XCTAssertFalse(ArtSystem.frames(character: character, pose: pose).isEmpty)
+            }
         }
         let lumi = LumiNode()
         lumi.pose(.interact)
         XCTAssertFalse(lumi.bodyNode.children.compactMap { $0 as? SKSpriteNode }.first?.isHidden ?? true)
+        let tiko = TikoNode()
+        tiko.pose(.interact)
+        XCTAssertFalse(tiko.bodyNode.children.compactMap { $0 as? SKSpriteNode }.first?.isHidden ?? true)
         let actor = ValkyrieNode()
         for pose in [ArtSystem.Pose.idle, .walk, .interact, .celebrate, .react] {
             actor.pose(pose)
@@ -273,6 +278,78 @@ import LearningCore
         restoredTree.willLeave()
     }
 
+    func testPuzzlePalaceRuneGateRoutesFromStoryTreeAndPersistsEvidence() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+
+        let story = StoryTreeScene(state: state)
+        story.didMove(to: SKView())
+        XCTAssertNotNil(story.childNode(withName: "puzzlePalace"))
+        story.valkyrie.position = CGPoint(x: 580, y: 450)
+        story.handleTap(at: CGPoint(x: 580, y: 450))
+        XCTAssertEqual(state.world, .puzzlePalace)
+        story.willLeave()
+
+        let palace = PuzzlePalaceScene(state: state)
+        palace.reducedMotion = true
+        palace.didMove(to: SKView())
+        XCTAssertNotNil(palace.childNode(withName: "puzzleGate"))
+        XCTAssertNotNil(palace.childNode(withName: "runeBoard"))
+        XCTAssertNotNil(palace.childNode(withName: "//runeSocket"))
+        XCTAssertEqual(palace.children.filter { $0.name == "runeChoice" }.count, 3)
+        XCTAssertEqual(
+            state.nextPuzzleEncounter().skillID,
+            PuzzleSkills.visualPatternContinue
+        )
+        XCTAssertFalse(state.puzzleRuneGateComplete)
+
+        let first = state.nextPuzzleEncounter()
+        _ = state.recordPuzzle(
+            first,
+            outcome: .correct,
+            support: .independent,
+            attempts: 1,
+            responseTime: 1
+        )
+        XCTAssertEqual(
+            PuzzlePalaceDirector.runeGateIndependentSuccessCount(profile: state.profile),
+            1
+        )
+        palace.willLeave()
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.world, .puzzlePalace)
+        XCTAssertEqual(
+            restored.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.count,
+            1
+        )
+        XCTAssertEqual(
+            restored.profile.progress(for: PuzzleSkills.visualSequenceMemory).state,
+            .new
+        )
+
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate.dropFirst() {
+            _ = restored.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(restored.puzzleRuneGateComplete)
+
+        let openPalace = PuzzlePalaceScene(state: restored)
+        openPalace.reducedMotion = true
+        openPalace.didMove(to: SKView())
+        XCTAssertEqual(openPalace.children.filter { $0.name == "runeChoice" }.count, 0)
+        let gate = try XCTUnwrap(openPalace.childNode(withName: "puzzleGate") as? SKShapeNode)
+        XCTAssertEqual(gate.glowWidth, 16)
+        openPalace.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertEqual(restored.world, .storyTree)
+        openPalace.willLeave()
+    }
+
     func testRenderedNativeSceneReviewAttachments() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
@@ -377,6 +454,35 @@ import LearningCore
         )
         XCTAssertNotNil(rewardTree.childNode(withName: "wordGardenLantern"))
         rewardTree.willLeave()
+
+        state.travel(to: .puzzlePalace)
+        let palace = PuzzlePalaceScene(state: state)
+        palace.reducedMotion = true
+        view.presentScene(palace)
+        try await capture(palace, in: view, name: "Puzzle-Palace-native-rune-gate")
+        palace.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+
+        let openPalace = PuzzlePalaceScene(state: state)
+        openPalace.reducedMotion = true
+        view.presentScene(openPalace)
+        try await capture(
+            openPalace,
+            in: view,
+            name: "Puzzle-Palace-native-rune-gate-open"
+        )
+        XCTAssertTrue(state.puzzleRuneGateComplete)
+        XCTAssertEqual(openPalace.children.filter { $0.name == "runeChoice" }.count, 0)
+        openPalace.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))

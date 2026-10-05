@@ -70,3 +70,11 @@ for path, metadata in word_garden_art['assets'].items():
     data = (ROOT/path).read_bytes()
     assert git_blob_sha(data) == metadata['blobSHA'], path
 print('PASS Word Garden v3.31 source-blob provenance.')
+
+# Puzzle Palace reuses the preserved world atlas and imports Tiko from the same v3.31 blob.
+puzzle_art = json.loads((ROOT/'ValkyrieLearn/Resources/PUZZLE_PALACE_ART_MANIFEST.json').read_text())
+assert git_blob_sha((ROOT/'index.html').read_bytes()) == puzzle_art['sourceBlobSHA']
+for path, metadata in puzzle_art['assets'].items():
+    data = (ROOT/path).read_bytes()
+    assert git_blob_sha(data) == metadata['blobSHA'], path
+print('PASS Puzzle Palace v3.31 source-blob provenance.')

@@ -300,3 +300,65 @@ final class LiteracySkillGraphTests: XCTestCase {
     }
 
 }
+
+
+final class PuzzlePalaceSkillGraphTests: XCTestCase {
+    func testPuzzleCatalogBuildsAcyclicGraphAndCoversRoadmapFocus() throws {
+        let graph = try PuzzleSkillCatalog.graph()
+
+        XCTAssertEqual(graph.skills.count, PuzzleSkillCatalog.descriptors.count)
+        XCTAssertEqual(
+            Set(PuzzleSkillCatalog.descriptors.map(\.strand)),
+            Set(PuzzleStrand.allCases)
+        )
+        XCTAssertGreaterThanOrEqual(
+            Set(PuzzleSkillCatalog.descriptors.flatMap(\.mechanicIDs)).count,
+            7,
+            "Puzzle Palace v2 should not collapse back to one repeated rune mechanic."
+        )
+    }
+
+    func testPuzzlePrerequisitesPointBackwardInDevelopmentalOrder() {
+        let orderByID = Dictionary(
+            uniqueKeysWithValues: PuzzleSkillCatalog.descriptors.map {
+                ($0.id, $0.developmentalOrder)
+            }
+        )
+
+        for descriptor in PuzzleSkillCatalog.descriptors {
+            XCTAssertFalse(descriptor.title.isEmpty)
+            XCTAssertFalse(descriptor.representations.isEmpty)
+            XCTAssertFalse(descriptor.responseModes.isEmpty)
+            XCTAssertFalse(descriptor.mechanicIDs.isEmpty)
+
+            for prerequisite in descriptor.definition.prerequisites {
+                guard let prerequisiteOrder = orderByID[prerequisite] else {
+                    XCTFail("Missing puzzle prerequisite \(prerequisite.rawValue)")
+                    continue
+                }
+                XCTAssertLessThan(prerequisiteOrder, descriptor.developmentalOrder)
+            }
+        }
+    }
+
+    func testRuneGateIsAnEntryPatternSkillNotFakeWorkingMemoryEvidence() throws {
+        let graph = try PuzzleSkillCatalog.graph()
+        let descriptor = try XCTUnwrap(
+            PuzzleSkillCatalog.descriptor(for: PuzzleSkills.visualPatternContinue)
+        )
+
+        XCTAssertTrue(graph.isEligible(PuzzleSkills.visualPatternContinue, for: LearnerProfile()))
+        XCTAssertTrue(descriptor.definition.prerequisites.isEmpty)
+        XCTAssertEqual(descriptor.strand, .patterns)
+        XCTAssertTrue(descriptor.mechanicIDs.contains(PuzzlePalaceMechanicID.runeGate))
+        XCTAssertNotEqual(descriptor.id, PuzzleSkills.visualSequenceMemory)
+    }
+
+    func testPuzzleStretchAddsDepthInsteadOfAnAgeCeiling() {
+        let stretch = Set(PuzzleSkillCatalog.stretchSkills.map(\.id))
+
+        XCTAssertTrue(stretch.contains(PuzzleSkills.mentalRotation))
+        XCTAssertTrue(stretch.contains(PuzzleSkills.debugSequence))
+        XCTAssertFalse(stretch.contains(PuzzleSkills.visualPatternContinue))
+    }
+}
