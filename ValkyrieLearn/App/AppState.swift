@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle, wordGarden, scienceLab, scienceWeatherTower }
+    enum World: String { case storyTree, mathCastle, wordGarden, scienceLab, scienceWeatherTower, scienceCreatureGrove }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
@@ -59,7 +59,13 @@ import LearningCore
     }
 
     func enterScienceLab() {
-        travel(to: scienceAdventure.greenhouseComplete ? .scienceWeatherTower : .scienceLab)
+        if scienceAdventure.groveRestored || scienceAdventure.creatureRouteOpen {
+            travel(to: .scienceCreatureGrove)
+        } else if scienceAdventure.greenhouseComplete {
+            travel(to: .scienceWeatherTower)
+        } else {
+            travel(to: .scienceLab)
+        }
     }
 
     private func updateScience(_ body: (inout ScienceAdventure, inout LearnerProfile) -> Void) {
@@ -187,6 +193,75 @@ import LearningCore
             if correct {
                 science.weatherStage = .complete
                 science.creatureRouteOpen = true
+            }
+        }
+    }
+
+    func scienceObserveAnimal() {
+        updateScience { science, profile in
+            if science.groveStage == .arrive { science.groveStage = .animalObserved }
+            science.recordEvidence(
+                skillID: ScienceSkills.animalNeeds,
+                mechanicID: ScienceLabMechanicID.miloInspect,
+                outcome: .correct,
+                representation: .concrete,
+                encounterID: "science-grove-animal-needs",
+                profile: &profile
+            )
+        }
+    }
+
+    func scienceChooseHabitat(_ choice: ScienceHabitatChoice) {
+        updateScience { science, profile in
+            science.selectedHabitat = choice
+            let correct = choice == .pondEdge
+            science.recordPlacement(
+                skillID: ScienceSkills.habitatMatch,
+                outcome: correct ? .correct : .incorrect,
+                easySuccess: correct,
+                profile: &profile,
+                graph: scienceGraph
+            )
+            science.recordEvidence(
+                skillID: ScienceSkills.habitatMatch,
+                mechanicID: ScienceLabMechanicID.habitatNests,
+                outcome: correct ? .correct : .incorrect,
+                representation: .reasoning,
+                encounterID: "science-grove-habitat-match",
+                profile: &profile
+            )
+            if correct { science.groveStage = .habitatMatched }
+        }
+    }
+
+    func scienceInspectBodyPart() {
+        updateScience { science, profile in
+            science.groveStage = .bodyPartObserved
+            science.recordEvidence(
+                skillID: ScienceSkills.bodyPartFunction,
+                mechanicID: ScienceLabMechanicID.miloInspect,
+                outcome: .correct,
+                representation: .reasoning,
+                encounterID: "science-grove-webbed-feet",
+                profile: &profile
+            )
+        }
+    }
+
+    func scienceCompareHabitat(_ choice: ScienceHabitatChoice) {
+        updateScience { science, profile in
+            let correct = choice == .pondEdge
+            science.recordEvidence(
+                skillID: ScienceSkills.compareHabitats,
+                mechanicID: ScienceLabMechanicID.habitatNests,
+                outcome: correct ? .correct : .incorrect,
+                representation: .reasoning,
+                encounterID: "science-grove-final-compare",
+                profile: &profile
+            )
+            if correct {
+                science.groveStage = .complete
+                science.groveRestored = true
             }
         }
     }
