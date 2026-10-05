@@ -12,6 +12,8 @@ import LearningCore
     private var startedAt = Date()
     private var solved = false
     private var acceptingChoices = false
+    private var interactionInFlight = false
+    private var hasLeftScene = false
     private var targetRune: SKNode?
     private let flowerPoints = [
         CGPoint(x: 505, y: 245), CGPoint(x: 675, y: 280),
@@ -27,6 +29,7 @@ import LearningCore
         lumi.reducedMotion = reducedMotion
         addChild(lumi)
         buildEncounter()
+        if flowerGateComplete { finishFlowerGate() }
     }
 
     override func buildWorld() {
@@ -76,6 +79,23 @@ import LearningCore
 
         let home = worldControl("⌂", name: "home", at: CGPoint(x: 52, y: 669), radius: 26)
         home.zPosition = 2100
+    }
+
+    private var flowerGateComplete: Bool {
+        let completed = Set(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence
+            .filter { $0.outcome == .correct }.map(\.encounterID))
+        return WordGardenEncounterCatalog.visualLetterShapes.allSatisfy { completed.contains($0.id) }
+    }
+
+    private func finishFlowerGate() {
+        solved = true
+        acceptingChoices = false
+        removeAction(forKey: "wordGardenPreview")
+        removeAction(forKey: "nextLiteracyEncounter")
+        targetRune?.isHidden = true
+        (childNode(withName: "flowerGate") as? SKShapeNode)?.glowWidth = 16
+        childNode(withName: "questionPrompt")?.isHidden = true
+        instruction.text = "You explored all three flower runes. Enjoy the Sound Flowers, or return to Story Tree."
     }
 
     private func buildEncounter() {
@@ -262,15 +282,20 @@ import LearningCore
     }
 
     func handleTap(at point: CGPoint) {
+        guard !hasLeftScene else { return }
         let name = targetName(at: point)
         if name == "home" {
+            willLeave()
             state.travel(to: .storyTree)
             return
         }
+        guard !interactionInFlight else { return }
         if name == "soundFlower", let flower = soundFlower(at: point) {
+            interactionInFlight = true
             let destination = CGPoint(x: max(170, flower.position.x - 80), y: 180)
             valkyrie.walk(to: destination) { [weak self, weak flower] in
-                guard let self, let flower else { return }
+                guard let self, let flower, !self.hasLeftScene else { return }
+                self.interactionInFlight = false
                 self.activateSoundFlower(flower)
             }
             return
@@ -304,12 +329,13 @@ import LearningCore
     }
 
     private func travelToFlower(_ destination: CGPoint, flower: SKNode, choice: String) {
+        interactionInFlight = true
         valkyrie.walk(to: destination) { [weak self] in
-            guard let self else { return }
+            guard let self, !self.hasLeftScene else { return }
             self.state.audio.play("footstep")
             self.valkyrie.pose(.interact)
             self.lumi.walk(to: CGPoint(x: destination.x - 60, y: destination.y + 15)) { [weak self] in
-                guard let self else { return }
+                guard let self, !self.hasLeftScene else { return }
                 self.lumi.reach(to: flower.position, reducedMotion: self.reducedMotion) {
                     self.resolve(choice: choice, flower: flower)
                 }
@@ -318,6 +344,8 @@ import LearningCore
     }
 
     private func resolve(choice: String, flower: SKNode) {
+        guard !hasLeftScene, interactionInFlight, !solved else { return }
+        interactionInFlight = false
         attempts += 1
         let attemptSupport = support
         if choice == encounter.answer {
@@ -346,10 +374,14 @@ import LearningCore
             state.audio.play("success")
             valkyrie.pose(.celebrate)
             instruction.text = "The flower answered. Lumi woke the gate!"
+            if flowerGateComplete {
+                finishFlowerGate()
+                return
+            }
             run(.sequence([
                 .wait(forDuration: reducedMotion ? 0.2 : 1.2),
                 .run { [weak self] in
-                    guard let self else { return }
+                    guard let self, !self.hasLeftScene else { return }
                     self.encounter = self.state.nextLiteracyEncounter()
                     self.buildEncounter()
                 }
@@ -382,6 +414,9 @@ import LearningCore
     }
 
     override func willLeave() {
+        hasLeftScene = true
+        interactionInFlight = false
+        removeAction(forKey: "nextLiteracyEncounter")
         removeAction(forKey: "wordGardenPreview")
         targetRune?.removeFromParent()
         lumi.cancelTravel()
