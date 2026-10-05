@@ -120,6 +120,15 @@ import LearningCore
         XCTAssertTrue(home.isNear(CGPoint(x: 795, y: 450)))
         try await capture(home, in: view, name: "Story-Tree-native-castle-arrival")
         home.willLeave()
+
+        state.travel(to: .wordGarden)
+        let garden = WordGardenScene(state: state)
+        garden.reducedMotion = true
+        view.presentScene(garden)
+        try await capture(garden, in: view, name: "Word-Garden-native-flower-gate")
+        garden.willLeave()
+
+        state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true
         view.presentScene(castle)
