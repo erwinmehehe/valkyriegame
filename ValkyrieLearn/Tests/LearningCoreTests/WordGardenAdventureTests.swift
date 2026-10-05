@@ -193,7 +193,8 @@ final class WordGardenAdventureTests: XCTestCase {
         XCTAssertEqual(hollow.skillID, LiteracySkills.visualPrintSequence)
         XCTAssertEqual(hollow.mechanicID, WordGardenMechanicID.storySeedSequence)
         XCTAssertEqual(hollow.context, "storyHollow")
-        XCTAssertFalse(hollow.prompt.contains(hollow.answer))
+        let promptTokens = hollow.prompt.lowercased().split { !$0.isLetter }.map(String.init)
+        XCTAssertFalse(promptTokens.contains(hollow.answer.lowercased()))
     }
 
     func testStoryHollowCompletionIsVisualSequenceEvidenceNotReadingMastery() throws {
