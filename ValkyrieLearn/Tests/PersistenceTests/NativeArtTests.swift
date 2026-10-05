@@ -388,6 +388,50 @@ import LearningCore
         XCTAssertTrue(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.isEmpty)
     }
 
+    func testRuneGateIgnoresRapidSecondChoiceWhileActorsResolveFirstChoice() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.reducedMotion = true
+        state.travel(to: .puzzlePalace)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let encounter = state.nextPuzzleEncounter()
+        XCTAssertEqual(encounter.answer, "☾")
+
+        scene.handleTap(at: CGPoint(x: 770, y: 235))
+        scene.handleTap(at: CGPoint(x: 575, y: 255))
+
+        try await Task.sleep(nanoseconds: 1_500_000_000)
+
+        let evidence = state.profile
+            .progress(for: PuzzleSkills.visualPatternContinue)
+            .evidence
+        XCTAssertEqual(evidence.count, 1)
+        XCTAssertEqual(evidence.first?.encounterID, encounter.id)
+        XCTAssertEqual(evidence.first?.outcome, .correct)
+        XCTAssertEqual(evidence.first?.supportLevel, .independent)
+        XCTAssertEqual(
+            PuzzlePalaceDirector.runeGateIndependentSuccessCount(profile: state.profile),
+            1
+        )
+    }
+
     func testRenderedNativeSceneReviewAttachments() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
