@@ -228,6 +228,7 @@ import LearningCore
         guard let encounter else { return }
         resetAttemptState()
         clearQuestionAndChoices()
+        acceptingFlowerChoices = false
 
         instruction.text = encounter.prompt
         addPrompt(encounter.prompt)
@@ -239,6 +240,43 @@ import LearningCore
             flower.userData = NSMutableDictionary(dictionary: ["choice": choice])
             addChild(flower)
         }
+
+        showFlowerTargetRune()
+    }
+
+    private func showFlowerTargetRune(retryMessage: String? = nil) {
+        guard let encounter else { return }
+        acceptingFlowerChoices = false
+        targetRune?.removeFromParent()
+
+        let rune = SKShapeNode(circleOfRadius: 54)
+        rune.fillColor = UIColor(red: 0.39, green: 0.25, blue: 0.56, alpha: 0.94)
+        rune.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.35, alpha: 1)
+        rune.lineWidth = 4
+        rune.glowWidth = 10
+        rune.position = CGPoint(x: 640, y: 500)
+        rune.zPosition = 2010
+        rune.name = "targetRune"
+
+        let glyph = ArtSystem.label(encounter.answer, size: 52)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1)
+        rune.addChild(glyph)
+        addChild(rune)
+        targetRune = rune
+
+        instruction.text = retryMessage ?? encounter.prompt
+        removeAction(forKey: "wordGardenPreview")
+        run(
+            .sequence([
+                .wait(forDuration: 1.15),
+                .run { [weak self, weak rune] in
+                    rune?.isHidden = true
+                    self?.acceptingFlowerChoices = true
+                    self?.instruction.text = "Which flower matches the rune you saw?"
+                }
+            ]),
+            withKey: "wordGardenPreview"
+        )
     }
 
     private func configureSunmill() {
@@ -300,47 +338,129 @@ import LearningCore
     private func clearQuestionAndChoices() {
         childNode(withName: "questionPrompt")?.removeFromParent()
         childNode(withName: "sunmillTarget")?.removeFromParent()
+        targetRune?.removeFromParent()
+        targetRune = nil
         enumerateChildNodes(withName: "flowerChoice") { node, _ in node.removeFromParent() }
         enumerateChildNodes(withName: "sunmillChoice") { node, _ in node.removeFromParent() }
     }
 
     private func flowerNode(letter: String, index: Int) -> SKNode {
         let node = SKNode()
-        let hit = SKShapeNode(circleOfRadius: 52)
+
+        let stone = SKShapeNode(rectOf: CGSize(width: 96, height: 58), cornerRadius: 22)
+        stone.fillColor = UIColor(red: 0.34, green: 0.29, blue: 0.45, alpha: 0.98)
+        stone.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.39, alpha: 0.95)
+        stone.lineWidth = 4
+        stone.position.y = -52
+        stone.name = "flowerChoice"
+        node.addChild(stone)
+
+        let label = ArtSystem.label(letter, size: 36)
+        label.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1)
+        label.position.y = -52
+        label.name = "flowerChoice"
+        node.addChild(label)
+
+        let hit = SKShapeNode(circleOfRadius: 44)
         hit.fillColor = UIColor(
             red: 0.95,
             green: 0.45 + CGFloat(index) * 0.05,
             blue: 0.70,
-            alpha: 0.95
+            alpha: 0.94
         )
         hit.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.50, alpha: 1)
-        hit.lineWidth = 4
+        hit.lineWidth = 3
+        hit.position.y = 28
         hit.name = "flowerChoice"
         node.addChild(hit)
 
         for angle in stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 4) {
-            let petal = SKShapeNode(ellipseOf: CGSize(width: 58, height: 34))
+            let petal = SKShapeNode(ellipseOf: CGSize(width: 48, height: 28))
             petal.fillColor = hit.fillColor
             petal.strokeColor = .clear
-            petal.position = CGPoint(x: cos(angle) * 44, y: sin(angle) * 44)
+            petal.position = CGPoint(
+                x: CGFloat(cos(angle)) * 37,
+                y: 28 + CGFloat(sin(angle)) * 37
+            )
             petal.zRotation = CGFloat(angle)
             petal.name = "flowerChoice"
             node.addChild(petal)
         }
 
-        let label = ArtSystem.label(letter, size: 40)
-        label.fontColor = UIColor(red: 0.34, green: 0.16, blue: 0.32, alpha: 1)
-        label.name = "flowerChoice"
-        node.addChild(label)
-
-        let stem = SKShapeNode(rectOf: CGSize(width: 10, height: 88), cornerRadius: 5)
+        let stem = SKShapeNode(rectOf: CGSize(width: 9, height: 54), cornerRadius: 4)
         stem.fillColor = UIColor(red: 0.19, green: 0.45, blue: 0.23, alpha: 1)
         stem.strokeColor = .clear
-        stem.position.y = -92
+        stem.position.y = -10
         stem.zPosition = -1
         stem.name = "flowerChoice"
         node.addChild(stem)
         return node
+    }
+
+    private func buildSoundFlowers() {
+        let points = [
+            CGPoint(x: 255, y: 340),
+            CGPoint(x: 350, y: 385),
+            CGPoint(x: 435, y: 330)
+        ]
+
+        for (index, point) in points.enumerated() {
+            let flower = SKNode()
+            flower.name = "soundFlower"
+            flower.position = point
+            flower.zPosition = 340
+            flower.userData = NSMutableDictionary(dictionary: ["soundIndex": index])
+
+            let center = SKShapeNode(circleOfRadius: 19)
+            center.fillColor = UIColor(red: 1.0, green: 0.82, blue: 0.32, alpha: 0.95)
+            center.strokeColor = .clear
+            center.name = "soundFlower"
+            flower.addChild(center)
+
+            for angle in stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 3) {
+                let petal = SKShapeNode(ellipseOf: CGSize(width: 50, height: 28))
+                petal.fillColor = UIColor(
+                    red: 0.86,
+                    green: 0.42 + CGFloat(index) * 0.08,
+                    blue: 0.78,
+                    alpha: 0.94
+                )
+                petal.strokeColor = .clear
+                petal.position = CGPoint(
+                    x: CGFloat(cos(angle)) * 34,
+                    y: CGFloat(sin(angle)) * 34
+                )
+                petal.zRotation = CGFloat(angle)
+                petal.name = "soundFlower"
+                flower.addChild(petal)
+            }
+
+            addChild(flower)
+        }
+    }
+
+    private func soundFlower(at point: CGPoint) -> SKNode? {
+        for hit in nodes(at: point) {
+            var node: SKNode? = hit
+            while let current = node {
+                if current.name == "soundFlower",
+                   current.userData?["soundIndex"] != nil {
+                    return current
+                }
+                node = current.parent
+            }
+        }
+        return nil
+    }
+
+    private func activateSoundFlower(_ flower: SKNode) {
+        flower.run(.sequence([
+            .scale(to: reducedMotion ? 1.0 : 1.12, duration: 0.16),
+            .scale(to: 1.0, duration: 0.20)
+        ]))
+        state.audio.play("crystal")
+        lumi.pose(.react)
+        instruction.text = "A Sound Flower answers with a gentle chime. Its spoken word-song is still sleeping."
     }
 
     private func sunmillChoiceNode(letter: String, index: Int) -> SKNode {
@@ -403,10 +523,23 @@ import LearningCore
                 }
             }
 
+        case "soundFlower":
+            guard place == .flowerGate, let flower = soundFlower(at: point) else { return }
+            let destination = CGPoint(x: max(170, flower.position.x - 80), y: 180)
+            valkyrie.walk(to: destination) { [weak self, weak flower] in
+                guard let self, let flower else { return }
+                self.activateSoundFlower(flower)
+            }
+
         case "flowerChoice":
-            guard place == .flowerGate, !solved,
+            guard place == .flowerGate, !solved, acceptingFlowerChoices,
                   let choice = choice(at: point, named: "flowerChoice"),
-                  let node = choice.node else { return }
+                  let node = choice.node else {
+                if place == .flowerGate && !solved && !acceptingFlowerChoices {
+                    instruction.text = "Watch the glowing rune first."
+                }
+                return
+            }
             approachChoice(node, value: choice.value, sunmill: false)
 
         case "sunmillChoice":
