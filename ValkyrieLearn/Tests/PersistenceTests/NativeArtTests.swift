@@ -98,6 +98,22 @@ import LearningCore
         XCTAssertTrue(home.isNear(CGPoint(x: 795, y: 450)))
         try await capture(home, in: view, name: "Story-Tree-native-castle-arrival")
         home.willLeave()
+
+        let science = ScienceLabScene(state: state); science.reducedMotion = true
+        view.presentScene(science)
+        science.valkyrie.position = CGPoint(x: 565, y: 185)
+        science.handleTap(at: CGPoint(x: 685, y: 235))
+        try await capture(science, in: view, name: "Science-Lab-native-greenhouse-dry")
+        science.valkyrie.position = CGPoint(x: 500, y: 180)
+        science.handleTap(at: CGPoint(x: 430, y: 220))
+        XCTAssertEqual(science.greenhouseStage, .watered)
+        try await capture(science, in: view, name: "Science-Lab-native-greenhouse-sprout")
+        science.valkyrie.position = CGPoint(x: 850, y: 185)
+        science.handleTap(at: CGPoint(x: 940, y: 245))
+        XCTAssertTrue(science.greenhouseComplete)
+        try await capture(science, in: view, name: "Science-Lab-native-greenhouse-complete")
+        science.willLeave()
+
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true
         view.presentScene(castle)
