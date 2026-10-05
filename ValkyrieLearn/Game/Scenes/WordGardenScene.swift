@@ -38,11 +38,17 @@ import LearningCore
             addChild(backdrop)
         }
 
-        let shade = ArtSystem.box(CGSize(width: 1280, height: 96), color: .black.withAlphaComponent(0.25), radius: 0)
-        shade.strokeColor = .clear
-        shade.position = CGPoint(x: 640, y: 42)
-        shade.zPosition = 1990
-        addChild(shade)
+        for (height, y) in [(CGFloat(62), CGFloat(684)), (CGFloat(96), CGFloat(42))] {
+            let shade = ArtSystem.box(
+                CGSize(width: 1280, height: height),
+                color: .black.withAlphaComponent(0.25),
+                radius: 0
+            )
+            shade.strokeColor = .clear
+            shade.position = CGPoint(x: 640, y: y)
+            shade.zPosition = 1990
+            addChild(shade)
+        }
 
         let gate = SKShapeNode(rectOf: CGSize(width: 220, height: 310), cornerRadius: 100)
         gate.fillColor = UIColor(red: 0.18, green: 0.34, blue: 0.18, alpha: 0.22)
@@ -65,6 +71,8 @@ import LearningCore
         star.name = "gateStar"
         star.position = CGPoint(x: 0, y: 55)
         gate.addChild(star)
+
+        buildSoundFlowers()
 
         let home = worldControl("⌂", name: "home", at: CGPoint(x: 52, y: 669), radius: 26)
         home.zPosition = 2100
@@ -136,36 +144,116 @@ import LearningCore
 
     private func flowerNode(letter: String, index: Int) -> SKNode {
         let node = SKNode()
-        let hit = SKShapeNode(circleOfRadius: 52)
-        hit.fillColor = UIColor(red: 0.95, green: 0.45 + CGFloat(index) * 0.05, blue: 0.70, alpha: 0.95)
+
+        let stone = SKShapeNode(rectOf: CGSize(width: 96, height: 58), cornerRadius: 22)
+        stone.fillColor = UIColor(red: 0.34, green: 0.29, blue: 0.45, alpha: 0.98)
+        stone.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.39, alpha: 0.95)
+        stone.lineWidth = 4
+        stone.position.y = -52
+        stone.name = "flowerChoice"
+        node.addChild(stone)
+
+        let label = ArtSystem.label(letter, size: 36)
+        label.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1)
+        label.position.y = -52
+        label.name = "flowerChoice"
+        node.addChild(label)
+
+        let hit = SKShapeNode(circleOfRadius: 44)
+        hit.fillColor = UIColor(red: 0.95, green: 0.45 + CGFloat(index) * 0.05, blue: 0.70, alpha: 0.94)
         hit.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.50, alpha: 1)
-        hit.lineWidth = 4
+        hit.lineWidth = 3
+        hit.position.y = 28
         hit.name = "flowerChoice"
         node.addChild(hit)
+
         for angle in stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 4) {
-            let petal = SKShapeNode(ellipseOf: CGSize(width: 58, height: 34))
+            let petal = SKShapeNode(ellipseOf: CGSize(width: 48, height: 28))
             petal.fillColor = hit.fillColor
             petal.strokeColor = .clear
             petal.position = CGPoint(
-                x: CGFloat(cos(angle)) * 44,
-                y: CGFloat(sin(angle)) * 44
+                x: CGFloat(cos(angle)) * 37,
+                y: 28 + CGFloat(sin(angle)) * 37
             )
             petal.zRotation = CGFloat(angle)
             petal.name = "flowerChoice"
             node.addChild(petal)
         }
-        let label = ArtSystem.label(letter, size: 40)
-        label.fontColor = UIColor(red: 0.34, green: 0.16, blue: 0.32, alpha: 1)
-        label.name = "flowerChoice"
-        node.addChild(label)
-        let stem = SKShapeNode(rectOf: CGSize(width: 10, height: 88), cornerRadius: 5)
+
+        let stem = SKShapeNode(rectOf: CGSize(width: 9, height: 54), cornerRadius: 4)
         stem.fillColor = UIColor(red: 0.19, green: 0.45, blue: 0.23, alpha: 1)
         stem.strokeColor = .clear
-        stem.position.y = -92
+        stem.position.y = -10
         stem.zPosition = -1
         stem.name = "flowerChoice"
         node.addChild(stem)
         return node
+    }
+
+    private func buildSoundFlowers() {
+        let points = [
+            CGPoint(x: 255, y: 340),
+            CGPoint(x: 350, y: 385),
+            CGPoint(x: 435, y: 330)
+        ]
+
+        for (index, point) in points.enumerated() {
+            let flower = SKNode()
+            flower.name = "soundFlower"
+            flower.position = point
+            flower.zPosition = 340
+            flower.userData = NSMutableDictionary(dictionary: ["soundIndex": index])
+
+            let center = SKShapeNode(circleOfRadius: 19)
+            center.fillColor = UIColor(red: 1.0, green: 0.82, blue: 0.32, alpha: 0.95)
+            center.strokeColor = .clear
+            center.name = "soundFlower"
+            flower.addChild(center)
+
+            for angle in stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 3) {
+                let petal = SKShapeNode(ellipseOf: CGSize(width: 50, height: 28))
+                petal.fillColor = UIColor(
+                    red: 0.86,
+                    green: 0.42 + CGFloat(index) * 0.08,
+                    blue: 0.78,
+                    alpha: 0.94
+                )
+                petal.strokeColor = .clear
+                petal.position = CGPoint(
+                    x: CGFloat(cos(angle)) * 34,
+                    y: CGFloat(sin(angle)) * 34
+                )
+                petal.zRotation = CGFloat(angle)
+                petal.name = "soundFlower"
+                flower.addChild(petal)
+            }
+
+            addChild(flower)
+        }
+    }
+
+    private func soundFlower(at point: CGPoint) -> SKNode? {
+        for hit in nodes(at: point) {
+            var node: SKNode? = hit
+            while let current = node {
+                if current.name == "soundFlower",
+                   current.userData?["soundIndex"] != nil {
+                    return current
+                }
+                node = current.parent
+            }
+        }
+        return nil
+    }
+
+    private func activateSoundFlower(_ flower: SKNode) {
+        flower.run(.sequence([
+            .scale(to: reducedMotion ? 1.0 : 1.12, duration: 0.16),
+            .scale(to: 1.0, duration: 0.20)
+        ]))
+        state.audio.play("crystal")
+        lumi.pose(.react)
+        instruction.text = "A Sound Flower answers with a gentle chime. Its spoken word-song is still sleeping."
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -177,6 +265,14 @@ import LearningCore
         let name = targetName(at: point)
         if name == "home" {
             state.travel(to: .storyTree)
+            return
+        }
+        if name == "soundFlower", let flower = soundFlower(at: point) {
+            let destination = CGPoint(x: max(170, flower.position.x - 80), y: 180)
+            valkyrie.walk(to: destination) { [weak self, weak flower] in
+                guard let self, let flower else { return }
+                self.activateSoundFlower(flower)
+            }
             return
         }
         if name == "flowerChoice", let choice = choice(at: point), let flower = choice.node {
