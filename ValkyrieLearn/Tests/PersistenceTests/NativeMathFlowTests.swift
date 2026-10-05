@@ -201,7 +201,7 @@ import LearningCore
         model.setNumber(model.correctNumber); XCTAssertEqual(model.submit()?.outcome, .correct)
         bridge.render(model)
         let repaired = try XCTUnwrap(bridge.childNode(withName: "//missingPlank") as? SKShapeNode)
-        XCTAssertEqual(repaired.glowWidth, 3)
+        XCTAssertEqual(repaired.glowWidth, 0, "Repaired timber should settle without a persistent tile glow.")
     }
 
     func testBridgeRouteLocksUntilRepairAndHomeCancelsCrossingWithoutNewEvidence() async throws {
@@ -236,3 +236,4 @@ import LearningCore
     }
 
 }
+
