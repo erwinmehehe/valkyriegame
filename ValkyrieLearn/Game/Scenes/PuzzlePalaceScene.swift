@@ -27,6 +27,7 @@ import LearningCore
     private var solved = false
     private var memoryInput: [String] = []
     private var memoryAcceptingInput = false
+    private var runeAcceptingInput = false
     private let choicePoints = [
         CGPoint(x: 575, y: 255),
         CGPoint(x: 770, y: 235),
@@ -177,6 +178,7 @@ import LearningCore
         support = .independent
         startedAt = Date()
         solved = false
+        runeAcceptingInput = true
         clearRuneObjects()
 
         instruction.text = encounter.prompt
@@ -648,6 +650,7 @@ import LearningCore
 
         case "runeChoice":
             guard place == .runeGate,
+                  runeAcceptingInput,
                   !solved,
                   let choice = choice(at: point),
                   let node = choice.node else { return }
@@ -688,6 +691,8 @@ import LearningCore
     }
 
     private func approachRune(_ node: SKNode, value: String) {
+        guard runeAcceptingInput, !solved else { return }
+        runeAcceptingInput = false
         let destination = CGPoint(x: max(170, node.position.x - 92), y: 175)
         valkyrie.walk(to: destination) { [weak self] in
             guard let self else { return }
@@ -711,7 +716,7 @@ import LearningCore
     }
 
     private func resolveRune(_ value: String, node: SKNode) {
-        guard let encounter else { return }
+        guard let encounter, !solved else { return }
         attempts += 1
         let attemptSupport = support
 
@@ -765,6 +770,7 @@ import LearningCore
             instruction.text = support == .lightHint
                 ? "Look for the two-rune beat that repeats."
                 : "Tiko lit matching positions. Follow the repeating pair, then try again."
+            runeAcceptingInput = true
         }
     }
 
@@ -820,6 +826,7 @@ import LearningCore
     }
 
     private func openRuneGate() {
+        runeAcceptingInput = false
         removeAction(forKey: "nextPuzzleRune")
         clearRuneObjects()
         refreshRuneGateProgress(animated: true)

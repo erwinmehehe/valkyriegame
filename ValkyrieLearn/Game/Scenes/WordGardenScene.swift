@@ -90,14 +90,15 @@ import LearningCore
     }
 
     override func buildWorld() {
-        if let atlas = ArtSystem.texture("V331WorldAtlas") {
+        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
             let crop = place == .storyHollow
-                ? CGRect(x: 0, y: 0, width: 0.5, height: 0.5)
-                : CGRect(x: 0, y: 0.5, width: 0.5, height: 0.5)
+                ? CGRect(x: 0, y: 0, width: 0.499, height: 0.498)
+                : CGRect(x: 0, y: 0.502, width: 0.499, height: 0.498)
             let wordTexture = SKTexture(
                 rect: crop,
                 in: atlas
             )
+            wordTexture.filteringMode = .linear
             let backdrop = SKSpriteNode(texture: wordTexture, color: .white, size: size)
             backdrop.position = CGPoint(x: 640, y: 360)
             backdrop.zPosition = -100
