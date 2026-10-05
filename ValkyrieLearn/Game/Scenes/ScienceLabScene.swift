@@ -226,7 +226,7 @@ import SpriteKit
             stem.name = "scienceSeedBench"
             plantNode.addChild(stem)
 
-            for x in [-18.0, 18.0] {
+            for x in [CGFloat(-18), CGFloat(18)] {
                 let leaf = SKShapeNode(ellipseOf: CGSize(width: 38, height: 22))
                 leaf.fillColor = UIColor(red: 0.47, green: 0.68, blue: 0.34, alpha: 1)
                 leaf.strokeColor = .clear
