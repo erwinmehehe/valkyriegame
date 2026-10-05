@@ -281,6 +281,72 @@ public struct PuzzleResortEncounter: Identifiable, Equatable, Sendable {
     }
 }
 
+
+public enum PuzzleOrientation: String, Codable, CaseIterable, Equatable, Hashable, Sendable {
+    case north
+    case east
+    case south
+    case west
+
+    public var glyph: String {
+        switch self {
+        case .north: return "↑"
+        case .east: return "→"
+        case .south: return "↓"
+        case .west: return "←"
+        }
+    }
+}
+
+public struct PuzzleOrientationEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let skillID: SkillID
+    public let mechanicID: String
+    public let representation: Representation
+    public let prompt: String
+    public let target: PuzzleOrientation
+    public let choices: [PuzzleOrientation]
+    public let context: String
+    public let transferContext: Bool
+
+    public init(
+        id: String,
+        skillID: SkillID = PuzzleSkills.spatialOrientation,
+        mechanicID: String = PuzzlePalaceMechanicID.mirrorHall,
+        representation: Representation = .pictorial,
+        prompt: String,
+        target: PuzzleOrientation,
+        choices: [PuzzleOrientation],
+        context: String = "mirrorHall",
+        transferContext: Bool = false
+    ) {
+        precondition(!choices.isEmpty)
+        precondition(Set(choices).count == choices.count)
+        precondition(choices.contains(target))
+        self.id = id
+        self.skillID = skillID
+        self.mechanicID = mechanicID
+        self.representation = representation
+        self.prompt = prompt
+        self.target = target
+        self.choices = choices
+        self.context = context
+        self.transferContext = transferContext
+    }
+
+    public var fingerprint: String {
+        [
+            mechanicID,
+            skillID.rawValue,
+            representation.rawValue,
+            target.rawValue,
+            choices.map(\.rawValue).joined(separator: ","),
+            context
+        ].joined(separator: "|")
+    }
+}
+
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -445,6 +511,32 @@ public enum PuzzlePalaceEncounterCatalog {
             transferContext: true
         )
     ]
+
+
+    public static let mirrorHallOrientation: [PuzzleOrientationEncounter] = [
+        .init(
+            id: "puzzle.mirrorHall.north",
+            prompt: "Tiko lights one compass beam. Touch the mirror arrow pointing the same way.",
+            target: .north,
+            choices: [.east, .north, .west]
+        ),
+        .init(
+            id: "puzzle.mirrorHall.west",
+            prompt: "The hall turns. Track Tiko's new direction and choose the matching mirror.",
+            target: .west,
+            choices: [.south, .east, .west],
+            transferContext: true
+        ),
+        .init(
+            id: "puzzle.mirrorHall.south",
+            representation: .reasoning,
+            prompt: "One final mirror shifts the viewpoint. Keep the direction stable and match it.",
+            target: .south,
+            choices: [.north, .south, .east],
+            transferContext: true
+        )
+    ]
+
 }
 
 public enum PuzzlePalaceDirector {
@@ -639,6 +731,44 @@ public enum PuzzlePalaceDirector {
     public static func changedRuleResortComplete(profile: LearnerProfile) -> Bool {
         changedRuleResortIndependentSuccessCount(profile: profile)
             == PuzzlePalaceEncounterCatalog.changedRuleResort.count
+    }
+
+
+    public static func canEnterMirrorHall(profile: LearnerProfile) -> Bool {
+        changedRuleResortComplete(profile: profile)
+    }
+
+    public static func nextMirrorHallEncounter(profile: LearnerProfile) -> PuzzleOrientationEncounter? {
+        guard canEnterMirrorHall(profile: profile) else { return nil }
+        let candidates = PuzzlePalaceEncounterCatalog.mirrorHallOrientation
+        let independent = Set(
+            profile.progress(for: PuzzleSkills.spatialOrientation).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
+            return unfinished
+        }
+        let attempts = profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count
+        return candidates[attempts % candidates.count]
+    }
+
+    public static func mirrorHallIndependentSuccessCount(profile: LearnerProfile) -> Int {
+        let ids = Set(PuzzlePalaceEncounterCatalog.mirrorHallOrientation.map(\.id))
+        return Set(
+            profile.progress(for: PuzzleSkills.spatialOrientation).evidence
+                .filter {
+                    $0.outcome == .correct
+                        && $0.supportLevel == .independent
+                        && ids.contains($0.encounterID)
+                }
+                .map(\.encounterID)
+        ).count
+    }
+
+    public static func mirrorHallComplete(profile: LearnerProfile) -> Bool {
+        mirrorHallIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.mirrorHallOrientation.count
     }
 
     public static func independentSortSuccessCount(
