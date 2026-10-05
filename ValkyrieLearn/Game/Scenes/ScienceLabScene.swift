@@ -1,19 +1,14 @@
 import SpriteKit
 
 @MainActor final class ScienceLabScene: AdventureScene {
-    enum GreenhouseStage: String {
-        case arrive
-        case inspected
-        case watered
-        case lit
-    }
+    typealias GreenhouseStage = ScienceGreenhouseStage
 
     override var worldTitle: String { "Science Lab · Greenhouse" }
     override var walkable: CGRect { CGRect(x: 90, y: 135, width: 1100, height: 170) }
 
     let milo = MiloNode()
-    private(set) var greenhouseStage: GreenhouseStage = .arrive
-    private(set) var greenhouseComplete = false
+    var greenhouseStage: GreenhouseStage { state.scienceAdventure.greenhouseStage }
+    var greenhouseComplete: Bool { state.scienceAdventure.greenhouseComplete }
 
     private let seedBenchPoint = CGPoint(x: 685, y: 235)
     private let waterValvePoint = CGPoint(x: 430, y: 220)
@@ -435,7 +430,7 @@ import SpriteKit
 
         switch greenhouseStage {
         case .arrive:
-            greenhouseStage = .inspected
+            state.scienceInspectGreenhouse()
             instruction.text = "Milo notices the soil is dry. What change should we test first?"
         case .inspected:
             instruction.text = "The soil is still dry. The water valve can test our prediction."
@@ -462,7 +457,7 @@ import SpriteKit
 
         valkyrie.pose(.interact)
         state.audio.play("crystal")
-        greenhouseStage = .watered
+        state.scienceWaterGreenhouse()
         renderPlant()
         instruction.text = "The dry soil darkened, and a sprout appeared. Our water test changed the seed tray."
     }
@@ -473,6 +468,7 @@ import SpriteKit
             return
         }
         guard greenhouseStage != .inspected else {
+            state.scienceRecordDrySoilMistake()
             instruction.text = "The soil is visibly dry. Let's test that observation before changing the light."
             return
         }
@@ -483,8 +479,7 @@ import SpriteKit
 
         valkyrie.pose(.interact)
         milo.inspect(reducedMotion: reducedMotion)
-        greenhouseStage = .lit
-        greenhouseComplete = true
+        state.scienceLightGreenhouse()
         renderPlant()
         renderGate()
         state.audio.play("success")
