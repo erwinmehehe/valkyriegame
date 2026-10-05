@@ -263,6 +263,21 @@ import LearningCore
         try await capture(science, in: view, name: "Science-Lab-native-greenhouse-complete")
         science.willLeave()
 
+        let weather = WeatherTowerScene(state: state); weather.reducedMotion = true
+        view.presentScene(weather)
+        try await capture(weather, in: view, name: "Science-Lab-native-weather-arrival")
+        weather.valkyrie.position = CGPoint(x: 370, y: 180)
+        weather.handleTap(at: CGPoint(x: 470, y: 305))
+        weather.valkyrie.position = CGPoint(x: 605, y: 180)
+        weather.handleTap(at: CGPoint(x: 700, y: 305))
+        XCTAssertEqual(weather.weatherStage, .afternoonObserved)
+        try await capture(weather, in: view, name: "Science-Lab-native-weather-compared")
+        weather.valkyrie.position = CGPoint(x: 825, y: 180)
+        weather.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertTrue(weather.creatureRouteOpen)
+        try await capture(weather, in: view, name: "Science-Lab-native-weather-route-open")
+        weather.willLeave()
+
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true
