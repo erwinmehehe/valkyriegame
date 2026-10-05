@@ -621,7 +621,7 @@ import SpriteKit
         state.audio.play("crystal")
         lumi.react()
         instruction.text = flowerTouches >= 2
-            ? "The Sound Flowers are awake. Their spoken word-songs need the recorded voice path before placement can use them."
+            ? "The Sound Flowers are awake, but their word-songs are still sleeping. Lumi can help with the high bloom."
             : "A Sound Flower answers with a gentle chime. Try another, or ask Lumi to reach the high bloom."
     }
 
