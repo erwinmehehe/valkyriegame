@@ -58,11 +58,13 @@ import LearningCore
             floor.zPosition = -80
             addChild(floor)
         }
-        // The five workshop seals are mounted on one physical brass rack.
+        // The five workshop seals are mounted on one physical timber rack.
         let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
+        if let texture = ArtSystem.texture("BridgeOakPlank") { rack.fillColor = .white; rack.fillTexture = texture }
         rack.position = CGPoint(x: 330, y: 503); rack.zPosition = 30; addChild(rack)
         for x in [150, 510] {
             let post = ArtSystem.box(CGSize(width: 14, height: 142), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
+            if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture }
             post.position = CGPoint(x: x, y: 440); post.zPosition = 29; addChild(post)
         }
         for (index, symbol) in ["◆", "⚖", "◉", "▦", "↔"].enumerated() {
@@ -200,12 +202,18 @@ import LearningCore
     private func makeLever() -> SKNode {
         let node = SKNode(); node.name = "submit"; node.position = CGPoint(x: 1120, y: 250); node.zPosition = 760
         let base = ArtSystem.box(CGSize(width: 90, height: 32), color: .init(red: 0.47, green: 0.3, blue: 0.14, alpha: 1), radius: 6)
+        if let texture = ArtSystem.texture("BridgeWorkOrder") { base.fillColor = .white; base.fillTexture = texture }
         base.position.y = -45; node.addChild(base)
         let arm = ArtSystem.box(CGSize(width: 14, height: 80), color: .init(red: 0.93, green: 0.74, blue: 0.35, alpha: 1), radius: 6)
+        if let texture = ArtSystem.texture("BridgeTimber") { arm.fillColor = .white; arm.fillTexture = texture }
         arm.zRotation = -.pi / 8; arm.position.y = -5; node.addChild(arm)
         let handle = SKShapeNode(circleOfRadius: 27)
         handle.position = CGPoint(x: 15, y: 32); handle.fillColor = .init(red: 0.38, green: 0.71, blue: 0.72, alpha: 1)
         handle.strokeColor = .init(red: 1, green: 0.82, blue: 0.44, alpha: 1); handle.lineWidth = 3; node.addChild(handle)
+        if let face = ArtSystem.sprite("BridgeDial", size: CGSize(width: 54, height: 54)) {
+            handle.fillColor = .clear; handle.strokeColor = .clear
+            handle.addChild(face)
+        }
         // Touch area stays large even where the lever's silhouette is narrow.
         let hit = ArtSystem.box(CGSize(width: 150, height: 110), color: .clear, radius: 0); hit.name = "submit"; node.addChild(hit)
         addChild(node); return node
