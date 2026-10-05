@@ -364,6 +364,25 @@ import LearningCore
         try await capture(weather, in: view, name: "Science-Lab-native-weather-route-open")
         weather.willLeave()
 
+        let grove = CreatureGroveScene(state: state); grove.reducedMotion = true
+        view.presentScene(grove)
+        try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-arrival")
+        grove.valkyrie.position = CGPoint(x: 245, y: 180)
+        grove.handleTap(at: CGPoint(x: 335, y: 270))
+        grove.valkyrie.position = CGPoint(x: 610, y: 180)
+        grove.handleTap(at: CGPoint(x: 528, y: 270))
+        XCTAssertEqual(grove.groveStage, .habitatMatched)
+        try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-habitat")
+        grove.valkyrie.position = CGPoint(x: 750, y: 180)
+        grove.handleTap(at: CGPoint(x: 840, y: 290))
+        XCTAssertEqual(grove.groveStage, .bodyPartObserved)
+        try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-body-part")
+        grove.valkyrie.position = CGPoint(x: 920, y: 180)
+        grove.handleTap(at: CGPoint(x: 975, y: 285))
+        XCTAssertTrue(grove.groveRestored)
+        try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-restored")
+        grove.willLeave()
+
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true
