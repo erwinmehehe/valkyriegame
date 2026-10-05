@@ -281,4 +281,27 @@ final class LiteracySkillGraphTests: XCTestCase {
         XCTAssertEqual(session.nextBand, nextBand)
     }
 
+
+    func testVisualLetterAndCasePairingRemainSeparateFromRecordedLetterNames() throws {
+        let graph = try LiteracySkillCatalog.graph()
+
+        XCTAssertNotNil(graph.skills[LiteracySkills.visualLetterMatch])
+        XCTAssertEqual(
+            graph.skills[LiteracySkills.visualCasePairing]?.prerequisites,
+            [LiteracySkills.visualLetterMatch]
+        )
+        XCTAssertFalse(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.visualLetterMatch)?.requiresRecordedAudio ?? true
+        )
+        XCTAssertFalse(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.visualCasePairing)?.requiresRecordedAudio ?? true
+        )
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.uppercaseLetterNames)?.requiresRecordedAudio == true
+        )
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.lowercaseLetterNames)?.requiresRecordedAudio == true
+        )
+    }
+
 }
