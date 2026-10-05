@@ -74,7 +74,7 @@ import SpriteKit
         glass.lineWidth = 7
         house.addChild(glass)
 
-        for x in stride(from: -360.0, through: 360.0, by: 120.0) {
+        for x in stride(from: CGFloat(-360), through: CGFloat(360), by: CGFloat(120)) {
             let frame = ArtSystem.box(
                 CGSize(width: 8, height: 410),
                 color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 0.9),
@@ -246,7 +246,7 @@ import SpriteKit
             stem.name = "scienceSeedBench"
             plantNode.addChild(stem)
 
-            for (x, y) in [(-26.0, 45.0), (27.0, 66.0), (-24.0, 82.0)] {
+            for (x, y) in [(CGFloat(-26), CGFloat(45)), (CGFloat(27), CGFloat(66)), (CGFloat(-24), CGFloat(82))] {
                 let leaf = SKShapeNode(ellipseOf: CGSize(width: 48, height: 26))
                 leaf.fillColor = UIColor(red: 0.25, green: 0.69, blue: 0.31, alpha: 1)
                 leaf.strokeColor = .clear
