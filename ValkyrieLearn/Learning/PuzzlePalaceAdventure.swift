@@ -229,6 +229,58 @@ public struct PuzzleSortEncounter: Identifiable, Equatable, Sendable {
     }
 }
 
+
+public struct PuzzleResortEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let skillID: SkillID
+    public let mechanicID: String
+    public let representation: Representation
+    public let prompt: String
+    public let initialRule: PuzzleSortRule
+    public let changedRule: PuzzleSortRule
+    public let objects: [PuzzleSortObject]
+    public let context: String
+    public let transferContext: Bool
+
+    public init(
+        id: String,
+        skillID: SkillID = PuzzleSkills.changedRuleSort,
+        mechanicID: String = PuzzlePalaceMechanicID.changedRuleResort,
+        representation: Representation = .concrete,
+        prompt: String,
+        initialRule: PuzzleSortRule,
+        changedRule: PuzzleSortRule,
+        objects: [PuzzleSortObject],
+        context: String = "resortVault",
+        transferContext: Bool = false
+    ) {
+        precondition(initialRule != changedRule)
+        precondition(!objects.isEmpty)
+        self.id = id
+        self.skillID = skillID
+        self.mechanicID = mechanicID
+        self.representation = representation
+        self.prompt = prompt
+        self.initialRule = initialRule
+        self.changedRule = changedRule
+        self.objects = objects
+        self.context = context
+        self.transferContext = transferContext
+    }
+
+    public var fingerprint: String {
+        [
+            mechanicID,
+            skillID.rawValue,
+            representation.rawValue,
+            initialRule.rawValue,
+            changedRule.rawValue,
+            objects.map { "\($0.id):\($0.shape)-\($0.markCount)" }.joined(separator: ","),
+            context
+        ].joined(separator: "|")
+    }
+}
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -364,6 +416,32 @@ public enum PuzzlePalaceEncounterCatalog {
             prompt: "The final dial shifts more often. Use the rule that is glowing now.",
             rules: [.shape, .marks, .marks, .shape, .marks],
             objects: [roundOne, pointedTwo, roundTwo, pointedOne, roundOne],
+            transferContext: true
+        )
+    ]
+
+    public static let changedRuleResort: [PuzzleResortEncounter] = [
+        .init(
+            id: "puzzle.resort.shapeToMarksA",
+            prompt: "Sort this exact set by SHAPE. When the vault flips, re-sort the same stones by MARKS.",
+            initialRule: .shape,
+            changedRule: .marks,
+            objects: [roundOne, pointedTwo, roundTwo, pointedOne]
+        ),
+        .init(
+            id: "puzzle.resort.marksToShapeA",
+            prompt: "Start with MARKS. Then keep the same stones and rebuild the groups by SHAPE.",
+            initialRule: .marks,
+            changedRule: .shape,
+            objects: [pointedOne, roundTwo, pointedTwo, roundOne],
+            transferContext: true
+        ),
+        .init(
+            id: "puzzle.resort.shapeToMarksB",
+            prompt: "The final vault set must survive a full rule change without swapping any stones.",
+            initialRule: .shape,
+            changedRule: .marks,
+            objects: [roundTwo, pointedOne, roundOne, pointedTwo],
             transferContext: true
         )
     ]
@@ -522,6 +600,45 @@ public enum PuzzlePalaceDirector {
     public static func sortingPedestalComplete(profile: LearnerProfile) -> Bool {
         sortingFoundationComplete(profile: profile)
             && ruleSwitchingComplete(profile: profile)
+    }
+
+    public static func canEnterChangedRuleResort(profile: LearnerProfile) -> Bool {
+        sortingPedestalComplete(profile: profile)
+    }
+
+    public static func nextChangedRuleResortEncounter(profile: LearnerProfile) -> PuzzleResortEncounter? {
+        guard canEnterChangedRuleResort(profile: profile) else { return nil }
+        let candidates = PuzzlePalaceEncounterCatalog.changedRuleResort
+        let independent = Set(
+            profile.progress(for: PuzzleSkills.changedRuleSort).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
+            return unfinished
+        }
+        let attempts = profile.progress(for: PuzzleSkills.changedRuleSort).evidence.count
+        return candidates[attempts % candidates.count]
+    }
+
+    public static func changedRuleResortIndependentSuccessCount(
+        profile: LearnerProfile
+    ) -> Int {
+        let ids = Set(PuzzlePalaceEncounterCatalog.changedRuleResort.map(\.id))
+        return Set(
+            profile.progress(for: PuzzleSkills.changedRuleSort).evidence
+                .filter {
+                    $0.outcome == .correct
+                        && $0.supportLevel == .independent
+                        && ids.contains($0.encounterID)
+                }
+                .map(\.encounterID)
+        ).count
+    }
+
+    public static func changedRuleResortComplete(profile: LearnerProfile) -> Bool {
+        changedRuleResortIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.changedRuleResort.count
     }
 
     public static func independentSortSuccessCount(
