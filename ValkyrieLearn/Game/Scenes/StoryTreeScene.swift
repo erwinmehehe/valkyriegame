@@ -395,6 +395,18 @@ import SpriteKit
         buildFlowerGate()
         buildSoundFlowers()
 
+        for (height, y) in [(CGFloat(58), CGFloat(684)), (CGFloat(92), CGFloat(42))] {
+            let shade = ArtSystem.box(
+                CGSize(width: 1280, height: height),
+                color: .black.withAlphaComponent(0.28),
+                radius: 0
+            )
+            shade.strokeColor = .clear
+            shade.position = CGPoint(x: 640, y: y)
+            shade.zPosition = 1900
+            addChild(shade)
+        }
+
         _ = worldControl("⌂", name: "home", at: CGPoint(x: 52, y: 669), radius: 31)
     }
 
