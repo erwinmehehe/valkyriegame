@@ -1,4 +1,5 @@
 import SpriteKit
+import LearningCore
 
 @MainActor final class ScienceLabScene: AdventureScene {
     typealias GreenhouseStage = ScienceGreenhouseStage
