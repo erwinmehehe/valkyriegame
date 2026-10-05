@@ -235,4 +235,68 @@ import LearningCore
         scene.willLeave()
     }
 
+
+    func testWordGardenWorldAndVisualLetterEvidencePersist() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        state.travel(to: .wordGarden)
+
+        let encounter = try XCTUnwrap(state.nextWordGardenEncounter())
+        let wrong = try XCTUnwrap(encounter.choices.first { $0 != encounter.correctChoice })
+        let first = state.recordWordGardenAttempt(
+            encounter: encounter,
+            choice: wrong,
+            attempts: 1
+        )
+        XCTAssertEqual(first.outcome, .incorrect)
+        XCTAssertEqual(first.supportLevel, .independent)
+
+        let second = state.recordWordGardenAttempt(
+            encounter: encounter,
+            choice: encounter.correctChoice,
+            attempts: 2
+        )
+        XCTAssertEqual(second.outcome, .correct)
+        XCTAssertEqual(second.supportLevel, .lightHint)
+        XCTAssertFalse(second.easySuccess)
+        XCTAssertTrue(state.profile.usedFingerprints.contains(encounter.fingerprint))
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.world, .wordGarden)
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count,
+            2
+        )
+        XCTAssertEqual(
+            restored.profile.progress(for: LiteracySkills.visualLetterMatch).state,
+            .learning
+        )
+        XCTAssertFalse(
+            restored.profile.readiness(for: LiteracySkills.visualLetterMatch)
+                >= SkillState.secure.readiness,
+            "One corrected Flower Gate task must not imply secure literacy mastery."
+        )
+    }
+
+    func testStoryTreeRoutesToWordGardenAndFlowerGateBuildsNativeControls() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+
+        let story = StoryTreeScene(state: state)
+        story.didMove(to: SKView())
+        XCTAssertEqual(story.targetName(at: CGPoint(x: 580, y: 515)), "wordGarden")
+        story.valkyrie.position = CGPoint(x: 580, y: 450)
+        story.handleTap(at: CGPoint(x: 580, y: 515))
+        XCTAssertEqual(state.world, .wordGarden)
+        story.willLeave()
+
+        let garden = WordGardenScene(state: state)
+        garden.didMove(to: SKView())
+        XCTAssertNotNil(garden.childNode(withName: "//lumi"))
+        XCTAssertEqual(garden.targetName(at: CGPoint(x: 470, y: 160)), "letterStone:A")
+        XCTAssertNotNil(garden.childNode(withName: "//soundFlower:0"))
+        XCTAssertNotNil(garden.childNode(withName: "//lumiReach"))
+        XCTAssertNotNil(garden.childNode(withName: "//wordGate"))
+        garden.willLeave()
+    }
+
 }
