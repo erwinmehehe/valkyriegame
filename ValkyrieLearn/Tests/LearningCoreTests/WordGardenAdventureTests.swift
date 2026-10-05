@@ -2,46 +2,74 @@ import XCTest
 @testable import LearningCore
 
 final class WordGardenAdventureTests: XCTestCase {
-    func testFlowerGateStartsWithNonAudioLetterRecognition() throws {
+    func testFlowerGateStartsWithNonAudioVisualLetterMatching() throws {
         let graph = try LiteracySkillCatalog.graph()
-        let profile = LearnerProfile()
-        let encounter = WordGardenDirector.nextEncounter(profile: profile, graph: graph)
+        let encounter = WordGardenDirector.nextEncounter(
+            profile: LearnerProfile(),
+            graph: graph
+        )
 
-        XCTAssertEqual(encounter.skillID, LiteracySkills.uppercaseLetterNames)
+        XCTAssertEqual(encounter.skillID, LiteracySkills.visualLetterMatch)
         XCTAssertEqual(encounter.mechanicID, WordGardenMechanicID.letterStones)
-        XCTAssertNotNil(LiteracySkillCatalog.descriptor(for: encounter.skillID))
-        XCTAssertFalse(LiteracySkillCatalog.descriptor(for: encounter.skillID)?.requiresRecordedAudio == true)
+        XCTAssertFalse(
+            LiteracySkillCatalog.descriptor(for: encounter.skillID)?.requiresRecordedAudio ?? true
+        )
+        XCTAssertFalse(encounter.prompt.contains(encounter.answer))
     }
 
-    func testThreeDistinctUppercaseSuccessesUnlockLowercaseWork() throws {
+    func testThreeDistinctVisualMatchesSecureOnlyVisualPrintIdentity() throws {
         let graph = try LiteracySkillCatalog.graph()
         var profile = LearnerProfile()
         let mastery = MasteryEngine()
 
-        for encounter in WordGardenEncounterCatalog.uppercaseLetters {
-            mastery.record(LearningEvidence(
-                encounterID: encounter.id,
-                skillID: encounter.skillID,
-                outcome: .correct,
-                supportLevel: .independent,
-                representation: encounter.representation,
-                mechanicID: encounter.mechanicID
-            ), in: &profile)
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID
+                ),
+                in: &profile
+            )
         }
 
-        XCTAssertEqual(profile.progress(for: LiteracySkills.uppercaseLetterNames).state, .secure)
-        XCTAssertTrue(graph.isEligible(LiteracySkills.lowercaseLetterNames, for: profile))
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.visualLetterMatch).state,
+            .secure
+        )
+        XCTAssertTrue(
+            graph.isEligible(LiteracySkills.uppercaseLetterNames, for: profile)
+        )
+        XCTAssertEqual(
+            profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
+            .new,
+            "Visual shape matching must not manufacture spoken letter-name mastery."
+        )
         XCTAssertEqual(
             WordGardenDirector.nextEncounter(profile: profile, graph: graph).skillID,
-            LiteracySkills.lowercaseLetterNames
+            LiteracySkills.visualLetterMatch,
+            "Flower Gate stays on honest no-audio work until recorded instruction ships."
         )
     }
 
-    func testFlowerGateDoesNotUsePhonemePlacementWithoutRecordedAudio() throws {
-        let graph = try LiteracySkillCatalog.graph()
-        let encounter = WordGardenDirector.nextEncounter(profile: LearnerProfile(), graph: graph)
+    func testSpokenLetterNamesAndPhonemesRemainAudioGated() throws {
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.uppercaseLetterNames)?.requiresRecordedAudio == true
+        )
+        XCTAssertTrue(
+            LiteracySkillCatalog.descriptor(for: LiteracySkills.lowercaseLetterNames)?.requiresRecordedAudio == true
+        )
 
+        let encounter = WordGardenDirector.nextEncounter(
+            profile: LearnerProfile(),
+            graph: try LiteracySkillCatalog.graph()
+        )
         XCTAssertFalse([
+            LiteracySkills.uppercaseLetterNames,
+            LiteracySkills.lowercaseLetterNames,
             LiteracySkills.sameDifferentSounds,
             LiteracySkills.beginningSoundMatch,
             LiteracySkills.commonConsonantSounds,
