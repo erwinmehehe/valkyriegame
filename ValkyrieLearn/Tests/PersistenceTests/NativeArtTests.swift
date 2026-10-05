@@ -23,7 +23,7 @@ import LearningCore
     }
 
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
-        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko"] {
+        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko", "StoryBloom"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
         }
         for character in ["Valkyrie", "Pip"] {
