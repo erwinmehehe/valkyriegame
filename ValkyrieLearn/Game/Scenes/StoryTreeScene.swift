@@ -108,7 +108,9 @@ import SpriteKit
             at: CGPoint(x: 580, y: 515),
             size: CGSize(width: 205, height: 54)
         )
-        scienceSign.zPosition = 535
+        // Keep the Science Lab sign below Puzzle Palace where the signpost overlaps its tap area.
+        // The Science label itself remains tappable at (580, 515), while Puzzle Palace wins at (580, 450).
+        scienceSign.zPosition = 520
         let sciencePost = ArtSystem.box(
             CGSize(width: 14, height: 88),
             color: .init(red: 0.24, green: 0.39, blue: 0.25, alpha: 1),
