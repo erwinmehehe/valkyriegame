@@ -193,7 +193,13 @@ final class WordGardenAdventureTests: XCTestCase {
         XCTAssertEqual(hollow.skillID, LiteracySkills.visualPrintSequence)
         XCTAssertEqual(hollow.mechanicID, WordGardenMechanicID.storySeedSequence)
         XCTAssertEqual(hollow.context, "storyHollow")
-        XCTAssertFalse(hollow.prompt.contains(hollow.answer))
+        let promptTokens = hollow.prompt
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { String($0).lowercased() }
+        XCTAssertFalse(
+            promptTokens.contains(hollow.answer.lowercased()),
+            "Story Hollow instructions must not reveal the target as a standalone glyph."
+        )
     }
 
     func testStoryHollowCompletionIsVisualSequenceEvidenceNotReadingMastery() throws {
