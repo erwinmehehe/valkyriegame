@@ -36,8 +36,8 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 650, height: 76),
-        cornerRadius: 24
+        rectOf: CGSize(width: 560, height: 92),
+        cornerRadius: 10
     )
     private let questionLabel = ArtSystem.label("", size: 23)
     private let workshopGroups: [[LearningEncounter]] = [
@@ -72,19 +72,44 @@ import LearningCore
         }
         _ = worldGear("↻", name: "wind", at: CGPoint(x: 390, y: 605), radius: 32)
 
-        questionPlate.position = CGPoint(x: 790, y: 607)
-        questionPlate.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.20, alpha: 0.78)
-        questionPlate.strokeColor = UIColor(red: 1.0, green: 0.76, blue: 0.28, alpha: 0.95)
-        questionPlate.lineWidth = 3
+        // Present the active prompt as a castle work order instead of a HUD panel.
+        questionPlate.position = CGPoint(x: 805, y: 606)
+        if let texture = ArtSystem.texture("BridgeWorkOrder") {
+            questionPlate.fillColor = .white
+            questionPlate.fillTexture = texture
+            questionPlate.strokeColor = .clear
+        } else {
+            questionPlate.fillColor = UIColor(red: 0.34, green: 0.20, blue: 0.09, alpha: 0.96)
+            questionPlate.strokeColor = UIColor(red: 0.95, green: 0.72, blue: 0.29, alpha: 0.95)
+        }
+        questionPlate.lineWidth = 2
         questionPlate.zPosition = 1995
         questionPlate.name = "questionPromptPlate"
         questionPlate.isHidden = true
         addChild(questionPlate)
 
-        questionLabel.position = CGPoint(x: 790, y: 607)
-        questionLabel.preferredMaxLayoutWidth = 590
+        for x in [555.0, 1055.0] {
+            let hanger = ArtSystem.box(
+                CGSize(width: 10, height: 58),
+                color: .init(red: 0.39, green: 0.27, blue: 0.15, alpha: 1),
+                radius: 2
+            )
+            if let texture = ArtSystem.texture("BridgeTimber") {
+                hanger.fillColor = .white
+                hanger.fillTexture = texture
+                hanger.strokeColor = .clear
+            }
+            hanger.position = CGPoint(x: x, y: 665)
+            hanger.zPosition = 1994
+            hanger.name = "questionPromptHanger"
+            hanger.isHidden = true
+            addChild(hanger)
+        }
+
+        questionLabel.position = CGPoint(x: 805, y: 606)
+        questionLabel.preferredMaxLayoutWidth = 490
         questionLabel.numberOfLines = 2
-        questionLabel.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.86, alpha: 1)
+        questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
         questionLabel.zPosition = 2000
         questionLabel.name = "questionPrompt"
         questionLabel.isHidden = true
@@ -268,15 +293,18 @@ import LearningCore
     }
 
     private func showQuestion(_ text: String?) {
+        let hangers = children.filter { $0.name == "questionPromptHanger" }
         guard let text, !text.isEmpty else {
             questionPlate.isHidden = true
             questionLabel.isHidden = true
+            hangers.forEach { $0.isHidden = true }
             questionLabel.text = nil
             return
         }
         questionLabel.text = "Pip asks: " + text
         questionPlate.isHidden = false
         questionLabel.isHidden = false
+        hangers.forEach { $0.isHidden = false }
     }
 
     private func openOrder() {
