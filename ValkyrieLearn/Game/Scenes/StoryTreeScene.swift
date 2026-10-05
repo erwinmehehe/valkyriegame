@@ -77,6 +77,14 @@ import SpriteKit
         )
         gardenSign.zPosition = 820
 
+        let puzzleSign = hotspot(
+            "Puzzle Palace ◈",
+            name: "puzzlePalace",
+            at: CGPoint(x: 580, y: 450),
+            size: CGSize(width: 205, height: 52)
+        )
+        puzzleSign.zPosition = 530
+
         let sign = hotspot(
             "Math Castle →",
             name: "castle",
@@ -100,7 +108,9 @@ import SpriteKit
             at: CGPoint(x: 580, y: 515),
             size: CGSize(width: 205, height: 54)
         )
-        scienceSign.zPosition = 535
+        // Keep the Science Lab sign below Puzzle Palace where the signpost overlaps its tap area.
+        // The Science label itself remains tappable at (580, 515), while Puzzle Palace wins at (580, 450).
+        scienceSign.zPosition = 520
         let sciencePost = ArtSystem.box(
             CGSize(width: 14, height: 88),
             color: .init(red: 0.24, green: 0.39, blue: 0.25, alpha: 1),
@@ -364,6 +374,15 @@ import SpriteKit
                 state.enterScienceLab()
             } else {
                 instruction.text = "Walk to the Science Lab sign, then tap it to enter the Greenhouse."
+                travel(to: destination)
+            }
+
+        case "puzzlePalace":
+            let destination = CGPoint(x: 580, y: 450)
+            if isNear(destination) {
+                state.travel(to: .puzzlePalace)
+            } else {
+                instruction.text = "Follow the upper path to Tiko's palace sign."
                 travel(to: destination)
             }
 

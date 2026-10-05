@@ -54,6 +54,8 @@ import SpriteKit
             scene = WeatherTowerScene(state: state)
         case .scienceCreatureGrove:
             scene = CreatureGroveScene(state: state)
+        case .puzzlePalace:
+            scene = PuzzlePalaceScene(state: state)
         }
         scene?.reducedMotion = state.reducedMotion || systemReducedMotion
     }

@@ -285,3 +285,110 @@ final class WordGardenAdventureTests: XCTestCase {
     }
 
 }
+
+
+final class PuzzlePalaceAdventureTests: XCTestCase {
+    func testRuneGateUsesThreeDistinctTransferSafePatterns() {
+        let encounters = PuzzlePalaceEncounterCatalog.runeGate
+
+        XCTAssertEqual(encounters.count, 3)
+        XCTAssertEqual(Set(encounters.map(\.id)).count, 3)
+        XCTAssertEqual(Set(encounters.map(\.fingerprint)).count, 3)
+
+        for encounter in encounters {
+            XCTAssertEqual(encounter.skillID, PuzzleSkills.visualPatternContinue)
+            XCTAssertEqual(encounter.mechanicID, PuzzlePalaceMechanicID.runeGate)
+            XCTAssertEqual(encounter.fixedRunes.count, 3)
+            XCTAssertEqual(Set(encounter.choices).count, encounter.choices.count)
+            XCTAssertTrue(encounter.choices.contains(encounter.answer))
+            XCTAssertFalse(encounter.prompt.contains(encounter.answer))
+        }
+    }
+
+    func testOneCorrectRuneNeverCompletesTheGate() {
+        var profile = LearnerProfile()
+        let encounter = PuzzlePalaceEncounterCatalog.runeGate[0]
+        MasteryEngine().record(
+            LearningEvidence(
+                encounterID: encounter.id,
+                skillID: encounter.skillID,
+                outcome: .correct,
+                supportLevel: .independent,
+                representation: encounter.representation,
+                mechanicID: encounter.mechanicID
+            ),
+            in: &profile
+        )
+
+        XCTAssertEqual(
+            PuzzlePalaceDirector.runeGateIndependentSuccessCount(profile: profile),
+            1
+        )
+        XCTAssertFalse(PuzzlePalaceDirector.runeGateComplete(profile: profile))
+    }
+
+    func testSupportedRuneSuccessMustBeRepeatedIndependently() {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .lightHint,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertEqual(
+            PuzzlePalaceDirector.runeGateIndependentSuccessCount(profile: profile),
+            0
+        )
+        XCTAssertFalse(PuzzlePalaceDirector.runeGateComplete(profile: profile))
+        XCTAssertEqual(
+            PuzzlePalaceDirector.nextRuneGateEncounter(profile: profile).id,
+            PuzzlePalaceEncounterCatalog.runeGate[0].id
+        )
+    }
+
+    func testThreeIndependentRunePatternsOpenTheGate() {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID,
+                    transferContext: encounter.transferContext
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertEqual(
+            PuzzlePalaceDirector.runeGateIndependentSuccessCount(profile: profile),
+            3
+        )
+        XCTAssertTrue(PuzzlePalaceDirector.runeGateComplete(profile: profile))
+        XCTAssertEqual(
+            profile.progress(for: PuzzleSkills.visualSequenceMemory).state,
+            .new,
+            "Pattern completion must not manufacture working-memory mastery."
+        )
+        XCTAssertEqual(
+            profile.progress(for: PuzzleSkills.responseInhibition).state,
+            .new,
+            "Rune choices must not manufacture inhibition mastery."
+        )
+    }
+}
