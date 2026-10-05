@@ -8,6 +8,7 @@ import LearningCore
         case runeGate
         case memoryBridge
         case stopGoOrbs
+        case sortingPedestal
     }
 
     private let place: Place
@@ -16,6 +17,7 @@ import LearningCore
         case .runeGate: return "Puzzle Palace · Rune Gate"
         case .memoryBridge: return "Puzzle Palace · Memory Bridge"
         case .stopGoOrbs: return "Puzzle Palace · Stop/Go Orbs"
+        case .sortingPedestal: return "Puzzle Palace · Sorting Pedestal"
         }
     }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
@@ -33,6 +35,9 @@ import LearningCore
     private var stopGoIndex = 0
     private var stopGoAcceptingTap = false
     private var stopGoCurrentSignal: PuzzleGateSignal?
+    private var sortEncounter: PuzzleSortEncounter?
+    private var sortTrialIndex = 0
+    private var sortAcceptingInput = false
     private var runeAcceptingInput = false
     private let choicePoints = [
         CGPoint(x: 575, y: 255),
@@ -52,6 +57,8 @@ import LearningCore
             place = .memoryBridge
         case .stopGoOrbs:
             place = .stopGoOrbs
+        case .sortingPedestal:
+            place = .sortingPedestal
         default:
             place = .runeGate
         }
@@ -75,6 +82,9 @@ import LearningCore
         case .stopGoOrbs:
             valkyrie.position = CGPoint(x: 185, y: 175)
             tiko.position = CGPoint(x: 305, y: 190)
+        case .sortingPedestal:
+            valkyrie.position = CGPoint(x: 185, y: 175)
+            tiko.position = CGPoint(x: 300, y: 190)
         }
         tiko.reducedMotion = reducedMotion
         addChild(tiko)
@@ -108,6 +118,17 @@ import LearningCore
             } else {
                 inhibitionEncounter = state.nextPuzzleStopGoEncounter()
                 buildStopGoEncounter()
+            }
+        case .sortingPedestal:
+            guard state.puzzleSortingAvailable else {
+                instruction.text = "The Stop/Go chamber must be stabilized before the Sorting Pedestal."
+                return
+            }
+            if state.puzzleSortingPedestalComplete {
+                restoreSortingPedestal()
+            } else {
+                sortEncounter = state.nextPuzzleSortingEncounter()
+                buildSortingEncounter()
             }
         }
     }
@@ -151,6 +172,9 @@ import LearningCore
         case .stopGoOrbs:
             buildStopGoWorld()
             refreshStopGoProgress(animated: false)
+        case .sortingPedestal:
+            buildSortingWorld()
+            refreshSortingProgress(animated: false)
         }
     }
 
@@ -981,7 +1005,8 @@ import LearningCore
             barrier.name = "stopGoBarrierOpen"
         }
 
-        instruction.text = "The Stop/Go chamber is stable. Tiko can sense another palace rule beyond this gate."
+        showSortingPedestalRoute()
+        instruction.text = "The Stop/Go chamber is stable. Follow Tiko to the Sorting Pedestal."
     }
 
     private func pulseStopGoOrb() {
@@ -999,6 +1024,405 @@ import LearningCore
             .moveBy(x: reducedMotion ? 0 : 20, y: 0, duration: 0.10),
             .moveBy(x: reducedMotion ? 0 : -10, y: 0, duration: 0.07)
         ]))
+    }
+
+
+    private func showSortingPedestalRoute() {
+        guard state.puzzleSortingAvailable,
+              childNode(withName: "sortingPedestalRoute") == nil else { return }
+        let route = hotspot(
+            "Sorting Pedestal →",
+            name: "sortingPedestalRoute",
+            at: CGPoint(x: 1000, y: 165),
+            size: CGSize(width: 225, height: 58)
+        )
+        route.zPosition = 840
+    }
+
+    private func buildSortingWorld() {
+        let floor = SKShapeNode(rectOf: CGSize(width: 780, height: 245), cornerRadius: 54)
+        floor.fillColor = UIColor(red: 0.10, green: 0.08, blue: 0.19, alpha: 0.70)
+        floor.strokeColor = UIColor(red: 0.50, green: 0.41, blue: 0.76, alpha: 0.72)
+        floor.lineWidth = 6
+        floor.position = CGPoint(x: 750, y: 365)
+        floor.name = "sortingFloor"
+        floor.zPosition = 120
+        addChild(floor)
+
+        buildSortPedestal(
+            at: CGPoint(x: 530, y: 355),
+            name: "sortLeftPedestal"
+        )
+        buildSortPedestal(
+            at: CGPoint(x: 970, y: 355),
+            name: "sortRightPedestal"
+        )
+
+        let dial = SKShapeNode(circleOfRadius: 72)
+        dial.fillColor = UIColor(red: 0.20, green: 0.15, blue: 0.32, alpha: 0.98)
+        dial.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+        dial.lineWidth = 6
+        dial.position = CGPoint(x: 750, y: 515)
+        dial.name = "sortingRuleDial"
+        dial.zPosition = 560
+        addChild(dial)
+
+        let ruleGlyph = ArtSystem.label("●  ▲", size: 28)
+        ruleGlyph.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.50, alpha: 1)
+        ruleGlyph.name = "sortingRuleGlyph"
+        dial.addChild(ruleGlyph)
+
+        let stage = ArtSystem.box(
+            CGSize(width: 160, height: 42),
+            color: UIColor(red: 0.18, green: 0.13, blue: 0.28, alpha: 0.90),
+            radius: 16
+        )
+        stage.position = CGPoint(x: 750, y: 430)
+        stage.name = "sortingObjectStage"
+        stage.zPosition = 430
+        addChild(stage)
+
+        for index in 0..<3 {
+            let light = SKShapeNode(circleOfRadius: 16)
+            light.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+            light.strokeColor = UIColor(red: 0.65, green: 0.55, blue: 0.92, alpha: 0.82)
+            light.lineWidth = 3
+            light.position = CGPoint(x: 1010 + CGFloat(index) * 55, y: 555)
+            light.name = "sortingProgress\(index)"
+            light.zPosition = 520
+            addChild(light)
+        }
+
+        for index in 0..<3 {
+            let light = SKShapeNode(circleOfRadius: 13)
+            light.fillColor = UIColor(red: 0.24, green: 0.18, blue: 0.36, alpha: 0.92)
+            light.strokeColor = UIColor(red: 0.56, green: 0.47, blue: 0.82, alpha: 0.78)
+            light.lineWidth = 3
+            light.position = CGPoint(x: 1010 + CGFloat(index) * 55, y: 515)
+            light.name = "switchProgress\(index)"
+            light.zPosition = 520
+            addChild(light)
+        }
+
+        let back = hotspot(
+            "← Stop/Go Orbs",
+            name: "stopGoBack",
+            at: CGPoint(x: 1090, y: 665),
+            size: CGSize(width: 205, height: 52)
+        )
+        back.zPosition = 2050
+    }
+
+    private func buildSortPedestal(at point: CGPoint, name: String) {
+        let root = SKNode()
+        root.name = name
+        root.position = point
+        root.zPosition = 420
+
+        let bowl = SKShapeNode(ellipseOf: CGSize(width: 185, height: 82))
+        bowl.fillColor = UIColor(red: 0.28, green: 0.21, blue: 0.40, alpha: 0.98)
+        bowl.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+        bowl.lineWidth = 5
+        bowl.name = name
+        root.addChild(bowl)
+
+        let stem = ArtSystem.box(
+            CGSize(width: 82, height: 100),
+            color: UIColor(red: 0.18, green: 0.13, blue: 0.28, alpha: 1),
+            radius: 16
+        )
+        stem.position.y = -80
+        stem.name = name
+        stem.zPosition = -1
+        root.addChild(stem)
+
+        let glyph = ArtSystem.label("?", size: 42)
+        glyph.name = name + "Glyph"
+        glyph.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.56, alpha: 1)
+        root.addChild(glyph)
+
+        addChild(root)
+    }
+
+    private func buildSortingEncounter() {
+        guard let sortEncounter else { return }
+        attempts = 0
+        support = .independent
+        startedAt = Date()
+        solved = false
+        sortTrialIndex = 0
+        sortAcceptingInput = false
+        childNode(withName: "sortingObject")?.removeFromParent()
+        instruction.text = sortEncounter.prompt
+
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.16 : 0.45),
+            .run { [weak self] in self?.presentSortTrial() }
+        ]), withKey: "sortStart")
+    }
+
+    private func presentSortTrial() {
+        guard let sortEncounter,
+              sortTrialIndex < sortEncounter.objects.count else {
+            completeSortingEncounter()
+            return
+        }
+
+        childNode(withName: "sortingObject")?.removeFromParent()
+        let rule = sortEncounter.rules[sortTrialIndex]
+        let object = sortEncounter.objects[sortTrialIndex]
+        updateSortingRule(rule)
+
+        let token = sortingObjectNode(object)
+        token.position = CGPoint(x: 750, y: 385)
+        token.name = "sortingObject"
+        token.zPosition = 650
+        addChild(token)
+
+        sortAcceptingInput = true
+        instruction.text = sortEncounter.skillID == PuzzleSkills.ruleSwitching
+            ? "The dial can change. Use the glowing rule for this stone."
+            : sortEncounter.prompt
+    }
+
+    private func updateSortingRule(_ rule: PuzzleSortRule) {
+        guard let left = childNode(withName: "sortLeftPedestal"),
+              let right = childNode(withName: "sortRightPedestal"),
+              let dial = childNode(withName: "sortingRuleDial"),
+              let dialGlyph = dial.childNode(withName: "sortingRuleGlyph") as? SKLabelNode,
+              let leftGlyph = left.childNode(withName: "sortLeftPedestalGlyph") as? SKLabelNode,
+              let rightGlyph = right.childNode(withName: "sortRightPedestalGlyph") as? SKLabelNode else {
+            return
+        }
+
+        switch rule {
+        case .shape:
+            dialGlyph.text = "●  ▲"
+            leftGlyph.text = "●"
+            rightGlyph.text = "▲"
+        case .marks:
+            dialGlyph.text = "•  ••"
+            leftGlyph.text = "•"
+            rightGlyph.text = "••"
+        }
+
+        if !reducedMotion {
+            dial.run(.sequence([
+                .rotate(byAngle: .pi / 10, duration: 0.12),
+                .rotate(byAngle: -.pi / 10, duration: 0.12)
+            ]))
+        }
+        tiko.pose(.interact)
+    }
+
+    private func sortingObjectNode(_ object: PuzzleSortObject) -> SKNode {
+        let root = SKNode()
+
+        let stone = SKShapeNode(circleOfRadius: 48)
+        stone.fillColor = UIColor(red: 0.34, green: 0.27, blue: 0.46, alpha: 1)
+        stone.strokeColor = UIColor(red: 0.88, green: 0.73, blue: 0.38, alpha: 1)
+        stone.lineWidth = 5
+        stone.name = "sortingObject"
+        root.addChild(stone)
+
+        let shape = ArtSystem.label(object.glyph, size: 39)
+        shape.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.60, alpha: 1)
+        shape.position.y = 8
+        shape.name = "sortingObject"
+        root.addChild(shape)
+
+        let marks = ArtSystem.label(object.marks, size: 19)
+        marks.fontColor = UIColor(red: 0.86, green: 0.78, blue: 1.0, alpha: 1)
+        marks.position.y = -27
+        marks.name = "sortingObject"
+        root.addChild(marks)
+
+        return root
+    }
+
+    private func handleSortPedestal(_ bucket: PuzzleSortBucket) {
+        guard place == .sortingPedestal,
+              sortAcceptingInput,
+              let sortEncounter,
+              sortTrialIndex < sortEncounter.objects.count else { return }
+
+        sortAcceptingInput = false
+        let object = sortEncounter.objects[sortTrialIndex]
+        let rule = sortEncounter.rules[sortTrialIndex]
+        let expected = object.bucket(for: rule)
+
+        guard bucket == expected else {
+            attempts += 1
+            let attemptSupport = support
+            _ = state.recordPuzzle(
+                sortEncounter,
+                outcome: .incorrect,
+                support: attemptSupport,
+                attempts: attempts,
+                responseTime: Date().timeIntervalSince(startedAt)
+            )
+            support = support == .independent ? .lightHint : .strongHint
+            valkyrie.pose(.react)
+            tiko.pose(.react)
+            highlightSortingDimension(rule)
+            instruction.text = support == .lightHint
+                ? sortingHint(for: rule)
+                : "Tiko is pointing to the active rule. Ignore the other feature and try again."
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0.16 : 0.55),
+                .run { [weak self] in
+                    self?.sortAcceptingInput = true
+                }
+            ]), withKey: "sortRetry")
+            return
+        }
+
+        let destination = bucket == .left
+            ? CGPoint(x: 530, y: 355)
+            : CGPoint(x: 970, y: 355)
+        valkyrie.pose(.interact)
+        tiko.pose(.interact)
+
+        if let token = childNode(withName: "sortingObject") {
+            token.run(.group([
+                .move(to: destination, duration: reducedMotion ? 0 : 0.24),
+                .scale(to: 0.72, duration: reducedMotion ? 0 : 0.24),
+                .fadeAlpha(to: 0.35, duration: reducedMotion ? 0 : 0.24)
+            ]))
+        }
+
+        sortTrialIndex += 1
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.10 : 0.32),
+            .run { [weak self] in self?.presentSortTrial() }
+        ]), withKey: "sortNext")
+    }
+
+    private func sortingHint(for rule: PuzzleSortRule) -> String {
+        switch rule {
+        case .shape:
+            return "Use only the SHAPE cue: round goes left, pointed goes right."
+        case .marks:
+            return "Use only the MARKS cue: one mark goes left, two marks go right."
+        }
+    }
+
+    private func highlightSortingDimension(_ rule: PuzzleSortRule) {
+        guard let dial = childNode(withName: "sortingRuleDial") as? SKShapeNode else { return }
+        dial.glowWidth = 16
+        dial.strokeColor = rule == .shape
+            ? UIColor(red: 0.96, green: 0.76, blue: 0.35, alpha: 1)
+            : UIColor(red: 0.70, green: 0.84, blue: 1.0, alpha: 1)
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.12 : 0.55),
+            .run { [weak dial] in
+                dial?.glowWidth = 0
+                dial?.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+            }
+        ]), withKey: "sortHintGlow")
+    }
+
+    private func completeSortingEncounter() {
+        guard let sortEncounter else { return }
+        sortAcceptingInput = false
+        attempts += 1
+        solved = true
+        let attemptSupport = support
+
+        _ = state.recordPuzzle(
+            sortEncounter,
+            outcome: .correct,
+            support: attemptSupport,
+            attempts: attempts,
+            responseTime: Date().timeIntervalSince(startedAt)
+        )
+        refreshSortingProgress(animated: true)
+        state.audio.play("success")
+        valkyrie.pose(.celebrate)
+        tiko.pose(.celebrate)
+
+        if state.puzzleSortingPedestalComplete {
+            restoreSortingPedestal()
+            return
+        }
+
+        let wasFoundation = sortEncounter.skillID == PuzzleSkills.singleRuleSort
+        if wasFoundation && state.puzzleSortingFoundationComplete {
+            instruction.text = "The stable sorts are secure. Tiko turned the dial—now the rule can change."
+        } else {
+            instruction.text = attemptSupport == .independent
+                ? "That sorting run is stable. The pedestal is preparing the next rule."
+                : "That run is stable. Try the next one independently."
+        }
+
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .run { [weak self] in
+                guard let self else { return }
+                self.sortEncounter = self.state.nextPuzzleSortingEncounter()
+                self.buildSortingEncounter()
+            }
+        ]), withKey: "nextSortEncounter")
+    }
+
+    private func refreshSortingProgress(animated: Bool) {
+        let foundation = PuzzlePalaceDirector.independentSortSuccessCount(
+            for: PuzzlePalaceEncounterCatalog.sortingFoundation,
+            skill: PuzzleSkills.singleRuleSort,
+            profile: state.profile
+        )
+        let switching = PuzzlePalaceDirector.independentSortSuccessCount(
+            for: PuzzlePalaceEncounterCatalog.ruleSwitching,
+            skill: PuzzleSkills.ruleSwitching,
+            profile: state.profile
+        )
+
+        for index in 0..<3 {
+            if let light = childNode(withName: "sortingProgress\(index)") as? SKShapeNode {
+                let active = index < foundation
+                light.fillColor = active
+                    ? UIColor(red: 0.95, green: 0.72, blue: 0.29, alpha: 1)
+                    : UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
+                light.glowWidth = active ? 9 : 0
+                if active && animated && !reducedMotion {
+                    light.run(.sequence([
+                        .scale(to: 1.20, duration: 0.14),
+                        .scale(to: 1.0, duration: 0.18)
+                    ]))
+                }
+            }
+            if let light = childNode(withName: "switchProgress\(index)") as? SKShapeNode {
+                let active = index < switching
+                light.fillColor = active
+                    ? UIColor(red: 0.58, green: 0.81, blue: 0.96, alpha: 1)
+                    : UIColor(red: 0.24, green: 0.18, blue: 0.36, alpha: 0.92)
+                light.glowWidth = active ? 8 : 0
+            }
+        }
+    }
+
+    private func restoreSortingPedestal() {
+        removeAction(forKey: "sortStart")
+        removeAction(forKey: "sortRetry")
+        removeAction(forKey: "sortNext")
+        removeAction(forKey: "nextSortEncounter")
+        sortAcceptingInput = false
+        childNode(withName: "sortingObject")?.removeFromParent()
+        refreshSortingProgress(animated: true)
+
+        if let dial = childNode(withName: "sortingRuleDial") as? SKShapeNode {
+            dial.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 1)
+            dial.glowWidth = 14
+        }
+        for name in ["sortLeftPedestal", "sortRightPedestal"] {
+            if let root = childNode(withName: name),
+               let bowl = root.children.compactMap({ $0 as? SKShapeNode }).first {
+                bowl.strokeColor = UIColor(red: 0.72, green: 0.92, blue: 0.54, alpha: 1)
+                bowl.glowWidth = 10
+            }
+        }
+
+        instruction.text = "Sorting Pedestal is stable. Tiko can feel the palace rules getting more flexible."
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -1049,6 +1473,25 @@ import LearningCore
 
         case "stopGoOrb", "stopGoOrbCore", "stopGoOrbGlyph":
             handleStopGoOrbTap()
+
+        case "sortingPedestalRoute":
+            guard place == .stopGoOrbs, state.puzzleSortingAvailable else { return }
+            let destination = CGPoint(x: 1000, y: 175)
+            if isNear(destination) {
+                state.travel(to: .sortingPedestal)
+            } else {
+                instruction.text = "Pass the stabilized orb barrier to the Sorting Pedestal."
+                travel(to: destination)
+            }
+
+        case "stopGoBack":
+            state.travel(to: .stopGoOrbs)
+
+        case "sortLeftPedestal", "sortLeftPedestalGlyph":
+            handleSortPedestal(.left)
+
+        case "sortRightPedestal", "sortRightPedestalGlyph":
+            handleSortPedestal(.right)
 
         default:
             walkIfValid(point)
@@ -1275,6 +1718,10 @@ import LearningCore
         removeAction(forKey: "stopGoSignal")
         removeAction(forKey: "stopGoRetry")
         removeAction(forKey: "nextStopGo")
+        removeAction(forKey: "sortStart")
+        removeAction(forKey: "sortRetry")
+        removeAction(forKey: "sortNext")
+        removeAction(forKey: "nextSortEncounter")
         tiko.cancelTravel()
         tiko.removeAllActions()
         super.willLeave()
