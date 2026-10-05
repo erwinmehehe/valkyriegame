@@ -48,6 +48,12 @@ import SpriteKit
             scene = MathCastleScene(state: state)
         case .wordGarden, .sunmillCrossing, .storyHollow:
             scene = WordGardenScene(state: state)
+        case .scienceLab:
+            scene = ScienceLabScene(state: state)
+        case .scienceWeatherTower:
+            scene = WeatherTowerScene(state: state)
+        case .scienceCreatureGrove:
+            scene = CreatureGroveScene(state: state)
         case .puzzlePalace:
             scene = PuzzlePalaceScene(state: state)
         }
