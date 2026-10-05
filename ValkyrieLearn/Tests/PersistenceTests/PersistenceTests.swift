@@ -101,6 +101,26 @@ import LearningCore
             }
         }
     }
+    func testNumberBondCrystalsStayInsideTraysAndRetainTouchTargetsAtCapacity() async throws {
+        let scene = AdventureScene(state: try AppState(context: ModelContext(try LearningStore.container(inMemory: true))))
+        let mechanic = NumberBondMachineMechanic(); scene.addChild(mechanic)
+        let encounter = LearningEncounter(id: "bond-capacity", skillID: MathSkills.bonds10,
+            mechanicID: MathMechanicID.numberBondMachine, operation: .numberBond,
+            initialQuantity: 19, targetQuantity: 20, prompt: "Complete the bond")
+        var model = try NumberBondMachineModel(encounter: encounter); model.setPart(20)
+        mechanic.render(model)
+        for (name, centerX, count) in [("bondFixed", CGFloat(-105), 19), ("bondToken", CGFloat(105), 20)] {
+            let tokens = mechanic.children.flatMap { $0.children }.filter { $0.name == name }
+            XCTAssertEqual(tokens.count, count)
+            let interior = CGRect(x: centerX - 65, y: -77.5, width: 130, height: 95)
+            for token in tokens {
+                XCTAssertTrue(interior.contains(token.calculateAccumulatedFrame()), "Crystal must stay inside its tray rim")
+                XCTAssertEqual(scene.targetName(at: token.convert(.zero, to: scene)), name)
+            }
+        }
+        XCTAssertEqual(scene.targetName(at: CGPoint(x: -265, y: -30)), "bondSupply")
+    }
+
     func testIllustratedScaleEqualitySelectionRemainsVisibleAndTouchable() async throws {
         let container = try LearningStore.container(inMemory: true)
         let scene = AdventureScene(state: try AppState(context: ModelContext(container)))

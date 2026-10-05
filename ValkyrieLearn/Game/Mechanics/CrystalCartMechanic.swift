@@ -188,38 +188,49 @@ import LearningCore
         name = MathMechanicID.numberBondMachine
         zPosition = 750
 
-        let shell = ArtSystem.box(
-            CGSize(width: 430, height: 250),
-            color: .init(red: 0.22, green: 0.26, blue: 0.40, alpha: 1)
-        )
-        shell.strokeColor = .init(red: 0.84, green: 0.64, blue: 0.3, alpha: 1); shell.lineWidth = 5
-        shell.name = "bondMachine"
-        addChild(shell)
+        // Preserve the machine's touch footprint while opening its frame to the world.
+        let shell = ArtSystem.box(CGSize(width: 430, height: 250), color: .clear, radius: 0)
+        shell.name = "bondMachine"; addChild(shell)
+        for x in [-205, 205] {
+            let post = ArtSystem.box(CGSize(width: 18, height: 230), color: .brown, radius: 3)
+            if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture; post.strokeColor = .clear }
+            post.position.x = CGFloat(x); shell.addChild(post)
+        }
+        for y in [-100, 100] {
+            let rail = ArtSystem.box(CGSize(width: 430, height: 14), color: .brown, radius: 3)
+            if let texture = ArtSystem.texture("BridgeOakPlank") { rail.fillColor = .white; rail.fillTexture = texture; rail.strokeColor = .clear }
+            rail.position.y = CGFloat(y); shell.addChild(rail)
+        }
+        let junction = CGMutablePath()
+        junction.move(to: CGPoint(x: 0, y: 82)); junction.addLine(to: CGPoint(x: 0, y: 45))
+        for x in [-105, 105] {
+            junction.move(to: CGPoint(x: 0, y: 45)); junction.addLine(to: CGPoint(x: CGFloat(x), y: 45))
+            junction.addLine(to: CGPoint(x: CGFloat(x), y: 27.5))
+        }
+        let pipes = SKShapeNode(path: junction)
+        pipes.strokeColor = .init(red: 0.88, green: 0.66, blue: 0.28, alpha: 1); pipes.lineWidth = 4
+        shell.addChild(pipes)
+        let totalDial = ArtSystem.gear(radius: 34)
+        totalDial.position = CGPoint(x: 0, y: 82); shell.addChild(totalDial)
 
-        let known = ArtSystem.box(
-            CGSize(width: 150, height: 115),
-            color: .init(red: 0.35, green: 0.28, blue: 0.48, alpha: 1)
-        )
+        let known = ArtSystem.supplyTray(CGSize(width: 150, height: 115))
         known.position = CGPoint(x: -105, y: -30)
         known.name = "bondKnown"
         addChild(known)
 
-        let selected = ArtSystem.box(
-            CGSize(width: 150, height: 115),
-            color: .init(red: 0.22, green: 0.45, blue: 0.50, alpha: 1)
-        )
+        let selected = ArtSystem.supplyTray(CGSize(width: 150, height: 115))
         selected.position = CGPoint(x: 105, y: -30)
         selected.name = "bondSelected"
         addChild(selected)
 
+        wholeLabel.fontSize = 30
         wholeLabel.position = CGPoint(x: 0, y: 82)
         addChild(wholeLabel)
         addChild(knownContents)
         addChild(selectedContents)
-        let supply = ArtSystem.box(CGSize(width: 100, height: 100), color: .darkGray)
+        let supply = ArtSystem.supplyTray(CGSize(width: 100, height: 100))
         supply.position = CGPoint(x: -265, y: -30); supply.name = "bondSupply"
-        let token = SKShapeNode(circleOfRadius: 18)
-        token.fillColor = .cyan; token.strokeColor = .white; supply.addChild(token)
+        supply.addChild(Self.crystalToken(radius: 18, fixed: false))
         addChild(supply)
     }
 
@@ -231,16 +242,24 @@ import LearningCore
         renderTokens(model.selectedPart, in: selectedContents, centerX: 105, fixed: false)
     }
 
+    private static func crystalToken(radius: CGFloat, fixed: Bool) -> SKShapeNode {
+        let token = SKShapeNode(circleOfRadius: radius)
+        token.fillColor = fixed ? .systemPurple : .cyan; token.strokeColor = .white; token.lineWidth = 1.5
+        if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: radius * 2, height: radius * 2.6)) {
+            if fixed { crystal.color = .systemPurple; crystal.colorBlendFactor = 0.25 }
+            token.fillColor = .clear; token.strokeColor = .clear; token.addChild(crystal)
+        }
+        return token
+    }
+
     private func renderTokens(_ count: Int, in node: SKNode, centerX: CGFloat, fixed: Bool) {
         node.removeAllChildren()
         for index in 0..<count {
-            let token = SKShapeNode(circleOfRadius: 11)
-            token.fillColor = fixed ? .systemPurple : .cyan
-            token.strokeColor = .white
-            token.lineWidth = 1.5
+            let token = Self.crystalToken(radius: 10, fixed: fixed)
+            // Five columns keep every supported quantity (up to twenty) inside its tray.
             token.position = CGPoint(
-                x: centerX - 42 + CGFloat(index % 4) * 28,
-                y: -48 + CGFloat(index / 4) * 28
+                x: centerX - 44 + CGFloat(index % 5) * 22,
+                y: -62 + CGFloat(index / 5) * 22
             )
             token.name = fixed ? "bondFixed" : "bondToken"
             node.addChild(token)
