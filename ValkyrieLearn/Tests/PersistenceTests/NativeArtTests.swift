@@ -289,6 +289,10 @@ import LearningCore
         garden.reducedMotion = true
         view.presentScene(garden)
         try await capture(garden, in: view, name: "Word-Garden-native-flower-gate")
+        // Review the playable choice state as well as the brief rune preview.
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        XCTAssertTrue(garden.childNode(withName: "targetRune")?.isHidden == true)
+        try await capture(garden, in: view, name: "Word-Garden-native-flower-choices")
         garden.willLeave()
 
         for encounter in WordGardenEncounterCatalog.visualLetterShapes {
