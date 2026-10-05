@@ -1041,4 +1041,110 @@ final class PuzzlePalaceAdventureTests: XCTestCase {
         )
     }
 
+    func testMirrorHallStaysLockedUntilChangedRuleResortIsIndependentlyStable() throws {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        XCTAssertFalse(PuzzlePalaceDirector.canEnterMirrorHall(profile: profile))
+        XCTAssertNil(PuzzlePalaceDirector.nextMirrorHallEncounter(profile: profile))
+
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID,
+                    transferContext: encounter.transferContext
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertTrue(PuzzlePalaceDirector.canEnterMirrorHall(profile: profile))
+        let orientation = try XCTUnwrap(
+            PuzzlePalaceDirector.nextMirrorHallEncounter(profile: profile)
+        )
+        XCTAssertEqual(orientation.skillID, PuzzleSkills.spatialOrientation)
+        XCTAssertEqual(orientation.mechanicID, PuzzlePalaceMechanicID.mirrorHall)
+        XCTAssertEqual(orientation.context, "mirrorHall")
+    }
+
+    func testMirrorHallUsesDistinctDirectionMatches() {
+        let encounters = PuzzlePalaceEncounterCatalog.mirrorHallOrientation
+
+        XCTAssertEqual(encounters.count, 3)
+        XCTAssertEqual(Set(encounters.map(\.id)).count, 3)
+        XCTAssertEqual(Set(encounters.map(\.fingerprint)).count, 3)
+
+        for encounter in encounters {
+            XCTAssertEqual(encounter.skillID, PuzzleSkills.spatialOrientation)
+            XCTAssertEqual(encounter.mechanicID, PuzzlePalaceMechanicID.mirrorHall)
+            XCTAssertEqual(Set(encounter.choices).count, encounter.choices.count)
+            XCTAssertTrue(encounter.choices.contains(encounter.target))
+            XCTAssertGreaterThanOrEqual(encounter.choices.count, 3)
+        }
+    }
+
+    func testSupportedMirrorHallMatchesDoNotCountAsIndependentOrientation() {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .lightHint,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID,
+                    transferContext: encounter.transferContext
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertEqual(
+            PuzzlePalaceDirector.mirrorHallIndependentSuccessCount(profile: profile),
+            0
+        )
+        XCTAssertFalse(PuzzlePalaceDirector.mirrorHallComplete(profile: profile))
+    }
+
+    func testIndependentMirrorHallAdvancesOrientationWithoutGrantingMentalRotation() {
+        var profile = LearnerProfile()
+        let mastery = MasteryEngine()
+
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            mastery.record(
+                LearningEvidence(
+                    encounterID: encounter.id,
+                    skillID: encounter.skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: encounter.representation,
+                    mechanicID: encounter.mechanicID,
+                    transferContext: encounter.transferContext
+                ),
+                in: &profile
+            )
+        }
+
+        XCTAssertTrue(PuzzlePalaceDirector.mirrorHallComplete(profile: profile))
+        XCTAssertEqual(
+            PuzzlePalaceDirector.mirrorHallIndependentSuccessCount(profile: profile),
+            3
+        )
+        XCTAssertEqual(
+            profile.progress(for: PuzzleSkills.spatialOrientation).state,
+            .secure
+        )
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.mentalRotation).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.actionSequencing).state, .new)
+    }
+
 }
