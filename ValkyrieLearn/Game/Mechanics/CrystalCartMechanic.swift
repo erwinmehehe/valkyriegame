@@ -14,8 +14,7 @@ import LearningCore
         // A native drop surface keeps every crystal independently manipulable.
         let cartHit = ArtSystem.box(CGSize(width: 305, height: 165), color: .clear, radius: 0)
         cartHit.position = cartCenter; cartHit.name = "cart"; addChild(cartHit)
-        let supply = ArtSystem.box(CGSize(width: 125, height: 100), color: .init(red: 0.26, green: 0.25, blue: 0.34, alpha: 0.9), radius: 9)
-        supply.strokeColor = .init(red: 0.77, green: 0.59, blue: 0.32, alpha: 1); supply.lineWidth = 3
+        let supply = ArtSystem.supplyTray(CGSize(width: 125, height: 100))
         supply.position = supplyCenter; supply.name = "supply"; addChild(supply)
         let crystal = Self.crystal(); crystal.position = supplyCenter; crystal.setScale(1.45); crystal.name = "supply"; addChild(crystal)
         addChild(contents)
@@ -378,7 +377,7 @@ import LearningCore
         addChild(plus)
 
         // A stack of spare planks lives beside the bridge, within reach of Pip.
-        let supply = ArtSystem.box(CGSize(width: 100, height: 84), color: .init(red: 0.29, green: 0.20, blue: 0.14, alpha: 1))
+        let supply = ArtSystem.supplyTray(CGSize(width: 100, height: 84))
         supply.position = CGPoint(x: -270, y: 25); supply.name = "missingSupply"
         for index in 0..<3 {
             let plank = Self.plank()
