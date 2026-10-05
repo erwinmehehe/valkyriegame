@@ -51,3 +51,12 @@ for character in ['Valkyrie', 'Pip']:
     for pose in ['idle','walk','interact','celebrate','react']:
         assert list(atlas.glob(pose+'_*.png')), (character, pose)
 print('PASS approved art hashes, dimensions and required atlas poses.')
+
+# Generated bridge props remain separate from the approved v3.31 import.
+bridge_art = json.loads((ROOT/'ValkyrieLearn/Resources/BRIDGE_ART_MANIFEST.json').read_text())
+for name, metadata in bridge_art['outputs'].items():
+    data = (ROOT/'ValkyrieLearn/Resources'/name).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == metadata['sha256'], name
+    assert data[:8] == b'\x89PNG\r\n\x1a\n', name
+    assert list(struct.unpack('>II', data[16:24])) == metadata['size'], name
+print('PASS illustrated bridge prop hashes and crop dimensions.')

@@ -6,7 +6,7 @@ import LearningCore
 
 @MainActor final class NativeArtTests: XCTestCase {
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
-        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight"] {
+        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
         }
         for character in ["Valkyrie", "Pip"] {

@@ -142,11 +142,16 @@ import LearningCore
                 color: .init(red: 0.49, green: 0.33, blue: 0.17, alpha: 1), radius: 3)
             tread.position = CGPoint(x: x, y: top - 8)
             tread.strokeColor = .init(red: 0.94, green: 0.73, blue: 0.32, alpha: 1)
-            tread.lineWidth = 2
+            tread.fillColor = .white
+            tread.fillTexture = ArtSystem.texture("BridgeOakPlank")
+            tread.strokeColor = .clear
             bridgeRouteNode.addChild(tread)
             let support = ArtSystem.box(CGSize(width: 12, height: max(20, top - 155)),
                 color: .init(red: 0.31, green: 0.23, blue: 0.17, alpha: 1), radius: 2)
             support.position = CGPoint(x: x, y: 155 + (top - 155) / 2)
+            support.fillColor = .white
+            support.fillTexture = ArtSystem.texture("BridgeTimber")
+            support.strokeColor = .clear
             support.zPosition = -1
             bridgeRouteNode.addChild(support)
         }
