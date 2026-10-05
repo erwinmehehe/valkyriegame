@@ -94,11 +94,14 @@ import LearningCore
 
     func scienceWaterGreenhouse() {
         updateScience { science, profile in
+            let easy = !profile.progress(for: ScienceSkills.plantNeeds).evidence.contains {
+                $0.outcome == .incorrect
+            }
             science.greenhouseStage = .watered
             science.recordPlacement(
                 skillID: ScienceSkills.plantNeeds,
                 outcome: .correct,
-                easySuccess: true,
+                easySuccess: easy,
                 profile: &profile,
                 graph: scienceGraph
             )
@@ -107,7 +110,7 @@ import LearningCore
                 mechanicID: ScienceLabMechanicID.waterChannel,
                 outcome: .correct,
                 representation: .reasoning,
-                easySuccess: true,
+                easySuccess: easy,
                 encounterID: "science-greenhouse-plant-needs",
                 profile: &profile
             )
