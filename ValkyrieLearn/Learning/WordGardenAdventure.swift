@@ -78,24 +78,119 @@ public enum WordGardenEncounterCatalog {
             transferContext: true
         )
     ]
+
+    /// Sunmill is a transfer context for the same honest visual-print skill.
+    /// Lowercase glyphs are matched by shape only; no spoken letter-name claim is made.
+    public static let sunmillVisualShapes: [LiteracyEncounter] = [
+        .init(
+            id: "sunmill.visual.a",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .symbolic,
+            prompt: "Remember the glowing mill-rune. Then touch the leaf with the same shape.",
+            answer: "a",
+            choices: ["d", "a", "o", "e"],
+            context: "sunmillCrossing",
+            transferContext: true
+        ),
+        .init(
+            id: "sunmill.visual.m",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .symbolic,
+            prompt: "Remember the glowing mill-rune. Then touch the leaf with the same shape.",
+            answer: "m",
+            choices: ["n", "w", "m", "h"],
+            context: "sunmillCrossing",
+            transferContext: true
+        ),
+        .init(
+            id: "sunmill.visual.s",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .pictorial,
+            prompt: "Remember the curling mill-rune. Then find its matching leaf.",
+            answer: "s",
+            choices: ["c", "s", "g", "o"],
+            context: "sunmillCrossing",
+            transferContext: true
+        )
+    ]
 }
 
 public enum WordGardenDirector {
-    /// Flower Gate remains on visual print identity until approved recorded
-    /// letter-name/phoneme audio is bundled. Eligibility for later audio skills can
-    /// still advance in the profile, but this director will not silently substitute
-    /// a visual matching task for a spoken-language assessment.
+    public static func nextFlowerGateEncounter(profile: LearnerProfile) -> LiteracyEncounter {
+        nextCandidate(from: WordGardenEncounterCatalog.visualLetterShapes, profile: profile)
+    }
+
+    public static func flowerGateComplete(profile: LearnerProfile) -> Bool {
+        independentSuccessCount(
+            for: WordGardenEncounterCatalog.visualLetterShapes,
+            profile: profile
+        ) == WordGardenEncounterCatalog.visualLetterShapes.count
+    }
+
+    public static func canEnterSunmill(profile: LearnerProfile) -> Bool {
+        flowerGateComplete(profile: profile)
+    }
+
+    public static func nextSunmillEncounter(profile: LearnerProfile) -> LiteracyEncounter? {
+        guard canEnterSunmill(profile: profile) else { return nil }
+        return nextCandidate(from: WordGardenEncounterCatalog.sunmillVisualShapes, profile: profile)
+    }
+
+    public static func sunmillComplete(profile: LearnerProfile) -> Bool {
+        independentSuccessCount(
+            for: WordGardenEncounterCatalog.sunmillVisualShapes,
+            profile: profile
+        ) == WordGardenEncounterCatalog.sunmillVisualShapes.count
+    }
+
+    public static func independentSuccessCount(
+        for encounters: [LiteracyEncounter],
+        profile: LearnerProfile
+    ) -> Int {
+        guard let skill = encounters.first?.skillID else { return 0 }
+        let validIDs = Set(encounters.map(\.id))
+        let independent = Set(
+            profile.progress(for: skill).evidence
+                .filter {
+                    $0.outcome == .correct
+                        && $0.supportLevel == .independent
+                        && validIDs.contains($0.encounterID)
+                }
+                .map(\.encounterID)
+        )
+        return independent.count
+    }
+
+    /// Compatibility entry point for callers that do not know the physical Word Garden place.
+    /// This intentionally remains on the Flower Gate visual task until approved audio ships.
     public static func nextEncounter(
         profile: LearnerProfile,
         graph: SkillGraph
     ) -> LiteracyEncounter {
-        let candidates = WordGardenEncounterCatalog.visualLetterShapes
-        let completed = Set(
-            profile.progress(for: LiteracySkills.visualLetterMatch).evidence
-                .filter { $0.outcome == .correct }
+        _ = graph
+        return nextFlowerGateEncounter(profile: profile)
+    }
+
+    private static func nextCandidate(
+        from candidates: [LiteracyEncounter],
+        profile: LearnerProfile
+    ) -> LiteracyEncounter {
+        precondition(!candidates.isEmpty)
+        let skill = candidates[0].skillID
+        let independent = Set(
+            profile.progress(for: skill).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
                 .map(\.encounterID)
         )
-        return candidates.first { !completed.contains($0.id) }
-            ?? candidates[completed.count % candidates.count]
+
+        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
+            return unfinished
+        }
+
+        let attempts = profile.progress(for: skill).evidence.count
+        return candidates[attempts % candidates.count]
     }
 }
