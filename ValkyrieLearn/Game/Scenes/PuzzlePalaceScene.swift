@@ -28,8 +28,6 @@ import LearningCore
     private var memoryInput: [String] = []
     private var memoryAcceptingInput = false
     private var runeAcceptingInput = false
-    private var memoryInput: [String] = []
-    private var memoryAcceptingInput = false
     private let choicePoints = [
         CGPoint(x: 575, y: 255),
         CGPoint(x: 770, y: 235),
