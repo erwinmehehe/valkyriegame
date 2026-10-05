@@ -83,6 +83,12 @@ import LearningCore
                 mechanicID: MathMechanicID.balanceScale, operation: .comparison,
                 initialQuantity: leftQuantity, targetQuantity: rightQuantity, prompt: "Compare")
             mechanic.render(try BalanceScaleModel(encounter: encounter))
+            for (pan, x) in [(left, CGFloat(-150)), (right, CGFloat(150))] {
+                let hanger = try XCTUnwrap(mechanic.children.first { $0.userData?["pan"] as? String == pan.name } as? SKShapeNode)
+                let bounds = try XCTUnwrap(hanger.path).boundingBoxOfPath
+                XCTAssertEqual(bounds.minY, pan.position.y + 36, accuracy: 0.001, "Suspension must meet the moving tray rim")
+                XCTAssertEqual(bounds.maxY, beam.position.y + x * sin(beam.zRotation), accuracy: 0.001, "Suspension must meet the tilted beam")
+            }
             if leftQuantity > rightQuantity {
                 XCTAssertLessThan(left.position.y, right.position.y)
                 XCTAssertGreaterThan(beam.zRotation, 0)
@@ -95,6 +101,40 @@ import LearningCore
             }
         }
     }
+    func testNumberBondCrystalsStayInsideTraysAndRetainTouchTargetsAtCapacity() async throws {
+        let scene = AdventureScene(state: try AppState(context: ModelContext(try LearningStore.container(inMemory: true))))
+        let mechanic = NumberBondMachineMechanic(); scene.addChild(mechanic)
+        let encounter = LearningEncounter(id: "bond-capacity", skillID: MathSkills.bonds10,
+            mechanicID: MathMechanicID.numberBondMachine, operation: .numberBond,
+            initialQuantity: 19, targetQuantity: 20, prompt: "Complete the bond")
+        var model = try NumberBondMachineModel(encounter: encounter); model.setPart(20)
+        mechanic.render(model)
+        for (name, centerX, count) in [("bondFixed", CGFloat(-105), 19), ("bondToken", CGFloat(105), 20)] {
+            let tokens = mechanic.children.flatMap { $0.children }.filter { $0.name == name }
+            XCTAssertEqual(tokens.count, count)
+            let interior = CGRect(x: centerX - 65, y: -77.5, width: 130, height: 95)
+            for token in tokens {
+                XCTAssertTrue(interior.contains(token.calculateAccumulatedFrame()), "Crystal must stay inside its tray rim")
+                XCTAssertEqual(scene.targetName(at: token.convert(.zero, to: scene)), name)
+            }
+        }
+        XCTAssertEqual(scene.targetName(at: CGPoint(x: -265, y: -30)), "bondSupply")
+    }
+
+    func testIllustratedScaleEqualitySelectionRemainsVisibleAndTouchable() async throws {
+        let container = try LearningStore.container(inMemory: true)
+        let scene = AdventureScene(state: try AppState(context: ModelContext(container)))
+        let mechanic = BalanceScaleMechanic(); scene.addChild(mechanic)
+        let equal = try XCTUnwrap(mechanic.childNode(withName: "scaleEqual"))
+        let indicator = try XCTUnwrap(equal.children.first { $0.userData?["selectionIndicator"] as? Bool == true })
+        var model = try BalanceScaleModel(encounter: MathCastleEncounterCatalog.balanceScale[2])
+        mechanic.render(model); XCTAssertTrue(indicator.isHidden)
+        model.choose(.equal); mechanic.render(model); XCTAssertFalse(indicator.isHidden)
+        // The ring is decoration, so taps on its edge still select equality.
+        XCTAssertEqual(scene.targetName(at: equal.convert(CGPoint(x: 39, y: 0), to: scene)), "scaleEqual")
+        model.choose(.left); mechanic.render(model); XCTAssertTrue(indicator.isHidden)
+    }
+
     func testBalanceScaleCrystalTapsResolveToTheirSideAfterTilt() async throws {
         let container = try LearningStore.container(inMemory: true)
         let scene = AdventureScene(state: try AppState(context: ModelContext(container)))

@@ -48,7 +48,21 @@ import LearningCore
     func testMathArtKeepsLiveCartInputAndPowerReaction() async throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
-        let scene = MathCastleScene(state: state); scene.didMove(to: SKView())
+        // SKActions only advance while SpriteKit presents the scene. A manual
+        // didMove call on a temporary SKView cannot exercise route timing.
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = MathCastleScene(state: state)
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
         scene.update(0) // Exercise real actor depth, not the initial z = 0 state.
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 390, y: 605)), "wind")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 52, y: 669)), "home")
@@ -64,6 +78,43 @@ import LearningCore
         XCTAssertEqual(powerLight.glowWidth, 16)
         let portal = try XCTUnwrap(scene.childNode(withName: "challengeGate") as? SKShapeNode)
         XCTAssertEqual(portal.glowWidth, 4, "Ordinary work powers the castle route but must not fake Challenge Gate readiness.")
+
+        let bridge = try XCTUnwrap(scene.childNode(withName: "physicalRouteBridge"))
+        XCTAssertNotNil(bridge.action(forKey: "routeOpen"))
+        let beacon = try XCTUnwrap(scene.childNode(withName: "routeDestinationBeacon") as? SKShapeNode)
+        XCTAssertNotNil(beacon.action(forKey: "routeReady"))
+        XCTAssertNotNil(scene.pip.action(forKey: "travel"))
+
+        scene.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertNil(
+            scene.valkyrie.action(forKey: "travel"),
+            "Do not let the child run onto the route while the physical bridge is still unfolding."
+        )
+
+        // A paused renderer must keep the route unavailable even after more
+        // wall-clock time than the normal opening duration has passed.
+        view.isPaused = true
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        XCTAssertEqual(beacon.glowWidth, 0)
+        XCTAssertLessThan(bridge.xScale, 1)
+        scene.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertNil(scene.valkyrie.action(forKey: "travel"))
+        view.isPaused = false
+
+        // Wait for rendered readiness with a bounded deadline, rather than
+        // assuming the simulator delivered a fixed number of frames.
+        let deadline = Date().addingTimeInterval(5)
+        while beacon.glowWidth != 18 && Date() < deadline {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertEqual(beacon.glowWidth, 18)
+        XCTAssertEqual(bridge.xScale, 1, accuracy: 0.001)
+        XCTAssertEqual(bridge.alpha, 1, accuracy: 0.001)
+        scene.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertNotNil(
+            scene.valkyrie.action(forKey: "travel"),
+            "Once the bridge is visibly ready, the next action should become physical route traversal."
+        )
         scene.willLeave()
     }
 
@@ -145,36 +196,99 @@ import LearningCore
         try await capture(castle, in: view, name: "Math-Castle-native-cart")
         for _ in 0..<(state.runtime?.encounter.targetQuantity ?? 0) { castle.handleTap(at: CGPoint(x: 595, y: 235)) }
         castle.handleTap(at: CGPoint(x: 1120, y: 250))
+        let reducedBridge = try XCTUnwrap(castle.childNode(withName: "physicalRouteBridge"))
+        XCTAssertEqual(reducedBridge.xScale, 1, accuracy: 0.001)
+        XCTAssertNil(reducedBridge.action(forKey: "routeOpen"))
+        let reducedBeacon = try XCTUnwrap(castle.childNode(withName: "routeDestinationBeacon") as? SKShapeNode)
+        XCTAssertEqual(reducedBeacon.glowWidth, 18)
         try await capture(castle, in: view, name: "Math-Castle-native-powered")
+        let cartOrder = state.runtime?.encounter.id
+        castle.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertTrue(castle.crossingBridge)
+        castle.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertEqual(state.runtime?.encounter.id, cartOrder)
+        try await waitForBridgeTravel(castle)
+        XCTAssertTrue(castle.isNear(CGPoint(x: 1110, y: 400), radius: 55))
+        XCTAssertEqual(state.runtime?.encounter.id, cartOrder)
+        try await capture(castle, in: view, name: "Math-Castle-native-cart-route-landing")
+        castle.handleTap(at: CGPoint(x: 1200, y: 430))
+        XCTAssertTrue(castle.crossingBridge)
+        XCTAssertEqual(state.runtime?.encounter.id, cartOrder)
+        try await waitForBridgeTravel(castle)
+        XCTAssertTrue(castle.isNear(CGPoint(x: 490, y: 175)))
+        XCTAssertNotEqual(state.runtime?.encounter.id, cartOrder)
         castle.willLeave()
-        XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.missingNumberBridge[0]))
-        let bridge = MathCastleScene(state: state); bridge.reducedMotion = true
+        let bridgeState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        bridgeState.reducedMotion = true
+        XCTAssertTrue(bridgeState.startWorkshop(MathCastleEncounterCatalog.missingNumberBridge[0]))
+        let bridge = MathCastleScene(state: bridgeState); bridge.reducedMotion = true
         view.presentScene(bridge)
         bridge.valkyrie.position = CGPoint(x: 490, y: 175)
         bridge.handleTap(at: CGPoint(x: 965, y: 330))
         try await capture(bridge, in: view, name: "Math-Castle-native-bridge-gaps")
         for _ in 0..<4 { bridge.drop(origin: "missingSupply", at: CGPoint(x: 884, y: 220)) }
         bridge.handleTap(at: CGPoint(x: 1120, y: 250))
-        XCTAssertTrue(state.runtime?.completed == true)
+        XCTAssertTrue(bridgeState.runtime?.completed == true)
         try await capture(bridge, in: view, name: "Math-Castle-native-bridge-repaired")
-        let repairedID = state.runtime?.encounter.id
+        let repairedID = bridgeState.runtime?.encounter.id
         bridge.handleTap(at: CGPoint(x: 1200, y: 430))
         XCTAssertTrue(bridge.crossingBridge)
         bridge.handleTap(at: CGPoint(x: 1200, y: 430)) // Ignore repeated taps in transit.
-        XCTAssertEqual(state.runtime?.encounter.id, repairedID)
+        XCTAssertEqual(bridgeState.runtime?.encounter.id, repairedID)
         try await waitForBridgeTravel(bridge)
         XCTAssertTrue(bridge.isNear(CGPoint(x: 1110, y: 400), radius: 55))
         XCTAssertGreaterThan(bridge.pip.position.x, 1000)
         XCTAssertGreaterThan(bridge.pip.position.y, 240)
-        XCTAssertEqual(state.runtime?.encounter.id, repairedID, "Arrival must preserve the solved bridge")
+        XCTAssertEqual(bridgeState.runtime?.encounter.id, repairedID, "Arrival must preserve the solved bridge")
         try await capture(bridge, in: view, name: "Math-Castle-native-bridge-landing")
         bridge.handleTap(at: CGPoint(x: 1200, y: 430))
         XCTAssertTrue(bridge.crossingBridge)
-        XCTAssertEqual(state.runtime?.encounter.id, repairedID, "Keep the deck beneath the actors during the return")
+        XCTAssertEqual(bridgeState.runtime?.encounter.id, repairedID, "Keep the deck beneath the actors during the return")
         try await waitForBridgeTravel(bridge)
         XCTAssertTrue(bridge.isNear(CGPoint(x: 490, y: 175)))
-        XCTAssertNotEqual(state.runtime?.encounter.id, repairedID)
+        XCTAssertNotEqual(bridgeState.runtime?.encounter.id, repairedID)
         bridge.willLeave()
+        for (index, name) in [(0, "Math-Castle-native-scale-unequal"), (2, "Math-Castle-native-scale-equal-selected")] {
+            // Visual fixtures use fresh sessions so engagement breaks in the preceding
+            // bridge journey cannot refuse the requested scale encounter.
+            let scaleState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+            scaleState.reducedMotion = true
+            XCTAssertTrue(scaleState.startWorkshop(MathCastleEncounterCatalog.balanceScale[index]))
+            let scale = MathCastleScene(state: scaleState); scale.reducedMotion = true
+            view.presentScene(scale)
+            scale.valkyrie.position = CGPoint(x: 490, y: 175); scale.pip.position = CGPoint(x: 385, y: 187)
+            scale.handleTap(at: CGPoint(x: 820, y: 350))
+            if index == 2 { scale.handleTap(at: CGPoint(x: 820, y: 195)) }
+            guard case .balanceScale(let model)? = scaleState.runtime else {
+                XCTFail("Scale capture must render the requested mechanic"); continue
+            }
+            XCTAssertEqual(model.selected, index == 2 ? .equal : nil)
+            try await capture(scale, in: view, name: name)
+            scale.willLeave()
+        }
+        for (capacity, name) in [(false, "Math-Castle-native-bond"), (true, "Math-Castle-native-bond-capacity")] {
+            let bondState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+            bondState.reducedMotion = true
+            let encounter = capacity ? LearningEncounter(id: "bond-visual-capacity", skillID: MathSkills.bonds10,
+                mechanicID: MathMechanicID.numberBondMachine, operation: .numberBond,
+                initialQuantity: 19, targetQuantity: 20, prompt: "Inspect the crystal chambers")
+                : MathCastleEncounterCatalog.numberBondMachine[0]
+            XCTAssertTrue(bondState.startWorkshop(encounter))
+            let bond = MathCastleScene(state: bondState); bond.reducedMotion = true
+            view.presentScene(bond)
+            bond.valkyrie.position = CGPoint(x: 490, y: 175); bond.pip.position = CGPoint(x: 385, y: 187)
+            bond.handleTap(at: CGPoint(x: 820, y: 392))
+            if !capacity { try await capture(bond, in: view, name: name + "-empty") }
+            for _ in 0..<(capacity ? 20 : encounter.targetQuantity - encounter.initialQuantity) {
+                bond.drop(origin: "bondSupply", at: CGPoint(x: 925, y: 280))
+            }
+            guard case .numberBond(let model)? = bondState.runtime else {
+                XCTFail("Bond capture must render the requested mechanic"); continue
+            }
+            XCTAssertEqual(model.selectedPart, capacity ? 20 : model.correctMissingPart)
+            try await capture(bond, in: view, name: name + "-filled")
+            bond.willLeave()
+        }
     }
 
     private func waitForBridgeTravel(_ scene: MathCastleScene) async throws {
@@ -257,6 +371,30 @@ import LearningCore
             .new
         )
         XCTAssertNotEqual(wrong, encounter.answer)
+    }
+
+    func testIncorrectMathAnswerKeepsPhysicalRouteClosed() async throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let encounter = MathCastleEncounterCatalog.balanceScale[0]
+        XCTAssertTrue(state.startWorkshop(encounter))
+
+        let scene = MathCastleScene(state: state)
+        scene.didMove(to: SKView())
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+
+        // 5 vs 8: left is deliberately incorrect.
+        scene.handleTap(at: CGPoint(x: 670, y: 265))
+        scene.handleTap(at: CGPoint(x: 1120, y: 250))
+
+        XCTAssertFalse(state.runtime?.completed == true)
+        let bridge = try XCTUnwrap(scene.childNode(withName: "physicalRouteBridge"))
+        XCTAssertEqual(bridge.xScale, 0.06, accuracy: 0.001)
+        XCTAssertNil(bridge.action(forKey: "routeOpen"))
+
+        let beacon = try XCTUnwrap(scene.childNode(withName: "routeDestinationBeacon") as? SKShapeNode)
+        XCTAssertEqual(beacon.glowWidth, 0)
+        scene.willLeave()
     }
 
 }

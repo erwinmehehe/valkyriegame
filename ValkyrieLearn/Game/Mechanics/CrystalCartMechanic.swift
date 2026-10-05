@@ -1,23 +1,31 @@
 import SpriteKit
 import LearningCore
 
-@MainActor final class CrystalCartMechanic: SKNode {
+@MainActor protocol MathCastleReactiveMechanic: AnyObject {
+    func playSuccessReaction(reducedMotion: Bool)
+}
+
+@MainActor final class CrystalCartMechanic: SKNode, MathCastleReactiveMechanic {
     let cartCenter = CGPoint(x: 830, y: 265)
     let supplyCenter = CGPoint(x: 595, y: 235)
+    private let cartAssembly = SKNode()
     private let contents = SKNode()
     override init() {
         super.init()
         zPosition = 750
+        addChild(cartAssembly)
         if let cart = ArtSystem.sprite("CrystalCart", size: CGSize(width: 365, height: 255)) {
-            cart.position = CGPoint(x: 830, y: 253); cart.name = "cart"; addChild(cart)
+            cart.position = CGPoint(x: 830, y: 253)
+            cart.name = "cart"
+            cartAssembly.addChild(cart)
         }
         // A native drop surface keeps every crystal independently manipulable.
         let cartHit = ArtSystem.box(CGSize(width: 305, height: 165), color: .clear, radius: 0)
-        cartHit.position = cartCenter; cartHit.name = "cart"; addChild(cartHit)
+        cartHit.position = cartCenter; cartHit.name = "cart"; cartAssembly.addChild(cartHit)
         let supply = ArtSystem.supplyTray(CGSize(width: 125, height: 100))
         supply.position = supplyCenter; supply.name = "supply"; addChild(supply)
         let crystal = Self.crystal(); crystal.position = supplyCenter; crystal.setScale(1.45); crystal.name = "supply"; addChild(crystal)
-        addChild(contents)
+        cartAssembly.addChild(contents)
     }
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
     static func crystal() -> SKShapeNode {
@@ -35,7 +43,10 @@ import LearningCore
         contents.removeAllChildren()
         for index in 0..<model.quantity {
             let crystal = Self.crystal()
-            crystal.position = CGPoint(x: 714 + (index % 5) * 58, y: 310 - (index / 5) * 61)
+            crystal.position = CGPoint(
+                x: 714 + CGFloat(index % 5) * 58,
+                y: 310 - CGFloat(index / 5) * 61
+            )
             let fixed = model.encounter.operation != .subtraction
                 && index < model.encounter.initialQuantity
             crystal.name = fixed ? "fixedCrystal" : "cartCrystal"
@@ -56,22 +67,43 @@ import LearningCore
     func returnsToSupply(_ point: CGPoint) -> Bool {
         CGRect(x: 525, y: 155, width: 135, height: 190).contains(point)
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        cartAssembly.removeAction(forKey: "successTravel")
+        contents.removeAction(forKey: "successGlow")
+
+        if reducedMotion {
+            cartAssembly.position.x = 42
+            return
+        }
+
+        let travel = SKAction.moveBy(x: 78, y: 6, duration: 0.68)
+        travel.timingMode = .easeInEaseOut
+        cartAssembly.run(travel, withKey: "successTravel")
+        contents.run(.sequence([
+            .scale(to: 1.045, duration: 0.16),
+            .scale(to: 1, duration: 0.24)
+        ]), withKey: "successGlow")
+    }
 }
 
 
-@MainActor final class BalanceScaleMechanic: SKNode {
+@MainActor final class BalanceScaleMechanic: SKNode, MathCastleReactiveMechanic {
     private let leftContents = SKNode()
     private let rightContents = SKNode()
     private let beam = ArtSystem.box(CGSize(width: 360, height: 18), color: .systemOrange, radius: 8)
     private var leftPan: SKNode?
     private var rightPan: SKNode?
-    private var equalGear: SKShapeNode?
+    private var leftHanger: SKShapeNode?
+    private var rightHanger: SKShapeNode?
+    private let equalSelection = SKShapeNode(circleOfRadius: 40)
 
     override init() {
         super.init()
         name = MathMechanicID.balanceScale
         zPosition = 750
 
+        if let texture = ArtSystem.texture("BridgeOakPlank") { beam.fillColor = .white; beam.fillTexture = texture; beam.strokeColor = .clear }
         beam.name = "scaleBeam"
         beam.position = CGPoint(x: 0, y: 40)
         addChild(beam)
@@ -81,11 +113,17 @@ import LearningCore
             color: .init(red: 0.73, green: 0.51, blue: 0.24, alpha: 1),
             radius: 8
         )
+        if let texture = ArtSystem.texture("BridgeTimber") { stand.fillColor = .white; stand.fillTexture = texture; stand.strokeColor = .clear }
         stand.position = CGPoint(x: 0, y: -40)
         addChild(stand)
         let equal = ArtSystem.gear(radius: 36, symbol: "=")
         equal.position = CGPoint(x: 0, y: -115); equal.name = "scaleEqual"
-        addChild(equal); equalGear = equal.children.first as? SKShapeNode
+        equalSelection.userData = ["selectionIndicator": true]
+        equalSelection.fillColor = .clear; equalSelection.strokeColor = .systemYellow
+        equalSelection.lineWidth = 4; equalSelection.isHidden = true
+        // Keep the selectable gear as the ancestor of its decorative ring.
+        equal.addChild(equalSelection)
+        addChild(equal)
 
         leftPan = addPan(name: "scaleLeft", x: -150)
         rightPan = addPan(name: "scaleRight", x: 150)
@@ -99,19 +137,25 @@ import LearningCore
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
 
     private func addPan(name: String, x: CGFloat) -> SKNode {
-        let pan = ArtSystem.box(
-            CGSize(width: 180, height: 72),
-            color: .init(red: 0.35, green: 0.5, blue: 0.53, alpha: 1)
-        )
+        let pan = ArtSystem.supplyTray(CGSize(width: 180, height: 72))
         pan.position = CGPoint(x: x, y: -45)
         pan.name = name
-        let chains = CGMutablePath()
-        chains.move(to: CGPoint(x: x-70, y: -15)); chains.addLine(to: CGPoint(x: x, y: 45))
-        chains.addLine(to: CGPoint(x: x+70, y: -15))
-        let hanger = SKShapeNode(path: chains); hanger.strokeColor = .init(red: 0.88, green: 0.66, blue: 0.28, alpha: 1); hanger.lineWidth = 3
+        let hanger = SKShapeNode(path: hangerPath(x: x, offset: 0, angle: 0))
+        hanger.strokeColor = .init(red: 0.88, green: 0.66, blue: 0.28, alpha: 1); hanger.lineWidth = 3
+        hanger.userData = ["pan": name]
+        if name == "scaleLeft" { leftHanger = hanger } else { rightHanger = hanger }
         addChild(hanger)
         addChild(pan)
         return pan
+    }
+
+    private func hangerPath(x: CGFloat, offset: CGFloat, angle: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        let panTop = -45 + offset + 36
+        path.move(to: CGPoint(x: x - 70, y: panTop))
+        path.addLine(to: CGPoint(x: x * cos(angle), y: 40 + x * sin(angle)))
+        path.addLine(to: CGPoint(x: x + 70, y: panTop))
+        return path
     }
 
     func render(_ model: BalanceScaleModel) {
@@ -123,13 +167,15 @@ import LearningCore
         let rightOffset = 150 * sin(angle)
         leftPan?.position.y = -45 + leftOffset
         rightPan?.position.y = -45 + rightOffset
+        leftHanger?.path = hangerPath(x: -150, offset: leftOffset, angle: angle)
+        rightHanger?.path = hangerPath(x: 150, offset: rightOffset, angle: angle)
         leftContents.position.y = leftOffset
         rightContents.position.y = rightOffset
         for (pan, choice) in [(leftPan, ComparisonChoice.left), (rightPan, ComparisonChoice.right)] {
             (pan as? SKShapeNode)?.strokeColor = model.selected == choice ? .systemYellow : .white
             (pan as? SKShapeNode)?.lineWidth = model.selected == choice ? 5 : 1.5
         }
-        equalGear?.fillColor = model.selected == .equal ? .systemOrange : .darkGray
+        equalSelection.isHidden = model.selected != .equal
         renderQuantity(model.leftQuantity, in: leftContents, centerX: -150, targetName: "scaleLeft")
         renderQuantity(model.rightQuantity, in: rightContents, centerX: 150, targetName: "scaleRight")
     }
@@ -154,11 +200,26 @@ import LearningCore
         node.fillColor = .cyan
         node.strokeColor = .white
         node.lineWidth = 1.5
+        if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: 20, height: 27)) {
+            node.fillColor = .clear; node.strokeColor = .clear; node.addChild(crystal)
+        }
         return node
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        guard !reducedMotion else {
+            beam.alpha = 1
+            return
+        }
+
+        run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1, duration: 0.18)
+        ]), withKey: "successPulse")
     }
 }
 
-@MainActor final class NumberBondMachineMechanic: SKNode {
+@MainActor final class NumberBondMachineMechanic: SKNode, MathCastleReactiveMechanic {
     private let knownContents = SKNode()
     private let selectedContents = SKNode()
     private let wholeLabel = ArtSystem.label("", size: 34)
@@ -168,38 +229,49 @@ import LearningCore
         name = MathMechanicID.numberBondMachine
         zPosition = 750
 
-        let shell = ArtSystem.box(
-            CGSize(width: 430, height: 250),
-            color: .init(red: 0.22, green: 0.26, blue: 0.40, alpha: 1)
-        )
-        shell.strokeColor = .init(red: 0.84, green: 0.64, blue: 0.3, alpha: 1); shell.lineWidth = 5
-        shell.name = "bondMachine"
-        addChild(shell)
+        // Preserve the machine's touch footprint while opening its frame to the world.
+        let shell = ArtSystem.box(CGSize(width: 430, height: 250), color: .clear, radius: 0)
+        shell.name = "bondMachine"; addChild(shell)
+        for x in [-205, 205] {
+            let post = ArtSystem.box(CGSize(width: 18, height: 230), color: .brown, radius: 3)
+            if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture; post.strokeColor = .clear }
+            post.position.x = CGFloat(x); shell.addChild(post)
+        }
+        for y in [-100, 100] {
+            let rail = ArtSystem.box(CGSize(width: 430, height: 14), color: .brown, radius: 3)
+            if let texture = ArtSystem.texture("BridgeOakPlank") { rail.fillColor = .white; rail.fillTexture = texture; rail.strokeColor = .clear }
+            rail.position.y = CGFloat(y); shell.addChild(rail)
+        }
+        let junction = CGMutablePath()
+        junction.move(to: CGPoint(x: 0, y: 82)); junction.addLine(to: CGPoint(x: 0, y: 45))
+        for x in [-105, 105] {
+            junction.move(to: CGPoint(x: 0, y: 45)); junction.addLine(to: CGPoint(x: CGFloat(x), y: 45))
+            junction.addLine(to: CGPoint(x: CGFloat(x), y: 27.5))
+        }
+        let pipes = SKShapeNode(path: junction)
+        pipes.strokeColor = .init(red: 0.88, green: 0.66, blue: 0.28, alpha: 1); pipes.lineWidth = 4
+        shell.addChild(pipes)
+        let totalDial = ArtSystem.gear(radius: 34)
+        totalDial.position = CGPoint(x: 0, y: 82); shell.addChild(totalDial)
 
-        let known = ArtSystem.box(
-            CGSize(width: 150, height: 115),
-            color: .init(red: 0.35, green: 0.28, blue: 0.48, alpha: 1)
-        )
+        let known = ArtSystem.supplyTray(CGSize(width: 150, height: 115))
         known.position = CGPoint(x: -105, y: -30)
         known.name = "bondKnown"
         addChild(known)
 
-        let selected = ArtSystem.box(
-            CGSize(width: 150, height: 115),
-            color: .init(red: 0.22, green: 0.45, blue: 0.50, alpha: 1)
-        )
+        let selected = ArtSystem.supplyTray(CGSize(width: 150, height: 115))
         selected.position = CGPoint(x: 105, y: -30)
         selected.name = "bondSelected"
         addChild(selected)
 
+        wholeLabel.fontSize = 30
         wholeLabel.position = CGPoint(x: 0, y: 82)
         addChild(wholeLabel)
         addChild(knownContents)
         addChild(selectedContents)
-        let supply = ArtSystem.box(CGSize(width: 100, height: 100), color: .darkGray)
+        let supply = ArtSystem.supplyTray(CGSize(width: 100, height: 100))
         supply.position = CGPoint(x: -265, y: -30); supply.name = "bondSupply"
-        let token = SKShapeNode(circleOfRadius: 18)
-        token.fillColor = .cyan; token.strokeColor = .white; supply.addChild(token)
+        supply.addChild(Self.crystalToken(radius: 18, fixed: false))
         addChild(supply)
     }
 
@@ -211,24 +283,47 @@ import LearningCore
         renderTokens(model.selectedPart, in: selectedContents, centerX: 105, fixed: false)
     }
 
+    private static func crystalToken(radius: CGFloat, fixed: Bool) -> SKShapeNode {
+        let token = SKShapeNode(circleOfRadius: radius)
+        token.fillColor = fixed ? .systemPurple : .cyan; token.strokeColor = .white; token.lineWidth = 1.5
+        if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: radius * 2, height: radius * 2.6)) {
+            if fixed { crystal.color = .systemPurple; crystal.colorBlendFactor = 0.25 }
+            token.fillColor = .clear; token.strokeColor = .clear; token.addChild(crystal)
+        }
+        return token
+    }
+
     private func renderTokens(_ count: Int, in node: SKNode, centerX: CGFloat, fixed: Bool) {
         node.removeAllChildren()
         for index in 0..<count {
-            let token = SKShapeNode(circleOfRadius: 11)
-            token.fillColor = fixed ? .systemPurple : .cyan
-            token.strokeColor = .white
-            token.lineWidth = 1.5
+            let token = Self.crystalToken(radius: 10, fixed: fixed)
+            // Five columns keep every supported quantity (up to twenty) inside its tray.
             token.position = CGPoint(
-                x: centerX - 42 + CGFloat(index % 4) * 28,
-                y: -48 + CGFloat(index / 4) * 28
+                x: centerX - 44 + CGFloat(index % 5) * 22,
+                y: -62 + CGFloat(index / 5) * 22
             )
             token.name = fixed ? "bondFixed" : "bondToken"
             node.addChild(token)
         }
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        wholeLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        guard !reducedMotion else { return }
+
+        run(.sequence([
+            .scale(to: 1.035, duration: 0.14),
+            .scale(to: 0.99, duration: 0.12),
+            .scale(to: 1, duration: 0.16)
+        ]), withKey: "successPulse")
+        wholeLabel.run(.sequence([
+            .fadeAlpha(to: 0.45, duration: 0.10),
+            .fadeAlpha(to: 1, duration: 0.18)
+        ]), withKey: "successWhole")
+    }
 }
 
-@MainActor final class TenFrameGateMechanic: SKNode {
+@MainActor final class TenFrameGateMechanic: SKNode, MathCastleReactiveMechanic {
     private let cells = SKNode()
     private var latestModel: TenFrameModel?
     private var latestAllowsPreview = true
@@ -300,9 +395,26 @@ import LearningCore
             }]), withKey: previewActionKey)
         }
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        let active = cells.children.compactMap { $0 as? SKShapeNode }
+            .filter { ["tenFrameFixed", "tenFrameFilled", "tenFramePreview"].contains($0.name ?? "") }
+
+        for (index, cell) in active.enumerated() {
+            cell.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.38, alpha: 1)
+            cell.lineWidth = 3
+            guard !reducedMotion else { continue }
+
+            cell.run(.sequence([
+                .wait(forDuration: Double(index) * 0.055),
+                .scale(to: 1.13, duration: 0.08),
+                .scale(to: 1, duration: 0.12)
+            ]), withKey: "successCell")
+        }
+    }
 }
 
-@MainActor final class MissingNumberBridgeMechanic: SKNode {
+@MainActor final class MissingNumberBridgeMechanic: SKNode, MathCastleReactiveMechanic {
     private let equation = ArtSystem.label("", size: 38)
     private let answer = ArtSystem.label("", size: 44)
     private let deck = SKNode()
@@ -441,6 +553,16 @@ import LearningCore
     func returnsToSupply(_ point: CGPoint) -> Bool {
         CGRect(x: -320, y: -17, width: 100, height: 84).contains(point)
     }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        answer.fontColor = .init(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        guard !reducedMotion else { return }
+        answer.run(.sequence([
+            .scale(to: 1.08, duration: 0.10),
+            .scale(to: 1, duration: 0.16)
+        ]), withKey: "successAnswer")
+    }
+
 }
 
 @MainActor enum MathCastleMechanicFactory {
