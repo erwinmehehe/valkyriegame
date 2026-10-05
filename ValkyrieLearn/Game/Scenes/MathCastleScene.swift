@@ -89,7 +89,7 @@ import LearningCore
         addChild(questionLabel)
 
         pip.name = "help"
-        nextGear = worldGear("→", name: "next", at: CGPoint(x: 1110, y: 430), radius: 34)
+        nextGear = worldGear("→", name: "next", at: CGPoint(x: 1200, y: 430), radius: 34)
         lever = makeLever()
         let light = SKShapeNode(circleOfRadius: 27)
         light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
@@ -142,11 +142,16 @@ import LearningCore
                 color: .init(red: 0.49, green: 0.33, blue: 0.17, alpha: 1), radius: 3)
             tread.position = CGPoint(x: x, y: top - 8)
             tread.strokeColor = .init(red: 0.94, green: 0.73, blue: 0.32, alpha: 1)
-            tread.lineWidth = 2
+            tread.fillColor = .white
+            tread.fillTexture = ArtSystem.texture("BridgeOakPlank")
+            tread.strokeColor = .clear
             bridgeRouteNode.addChild(tread)
             let support = ArtSystem.box(CGSize(width: 12, height: max(20, top - 155)),
                 color: .init(red: 0.31, green: 0.23, blue: 0.17, alpha: 1), radius: 2)
             support.position = CGPoint(x: x, y: 155 + (top - 155) / 2)
+            support.fillColor = .white
+            support.fillTexture = ArtSystem.texture("BridgeTimber")
+            support.strokeColor = .clear
             support.zPosition = -1
             bridgeRouteNode.addChild(support)
         }
@@ -314,15 +319,16 @@ import LearningCore
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
         if engaged {
-            showQuestion(
+            let isBridge = runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
+            showQuestion(isBridge ? nil : (
                 state.previewVisible
                     ? "Watch the lights. Remember how many you see."
                     : runtime.encounter.prompt
-            )
+            ))
             instruction.text = state.previewVisible
                 ? "Look closely. Pip will hide the lights in a moment."
                 : (runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
-                    ? "Move spare planks into the gaps. Tap a loose plank to take it back. Pull Pip's lever to check."
+                    ? "Pip needs \(runtime.encounter.targetQuantity) bridge planks. \(runtime.encounter.initialQuantity) are fixed. Fill the gaps, then pull his lever."
                     : "Use the machine, then pull Pip's lever to check your idea.")
         } else {
             showQuestion(nil)
@@ -573,9 +579,9 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         let height = max(0, min(1, (valkyrie.position.y - 240) / 160))
-        valkyrie.setScale(1 - height * 0.12)
+        valkyrie.setScale(0.5 * (1 - height * 0.12))
         let pipHeight = max(0, min(1, (pip.position.y - 240) / 160))
-        pip.setScale(1 - pipHeight * 0.12)
+        pip.setScale(0.65 * (1 - pipHeight * 0.12))
         if engaged, lastPreviewVisible != state.previewVisible { refresh() }
     }
     override func willLeave() {

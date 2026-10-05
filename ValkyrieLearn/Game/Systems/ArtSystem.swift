@@ -27,6 +27,11 @@ import SpriteKit
     }
     static func gear(radius: CGFloat, symbol: String = "") -> SKNode {
         let node = SKNode()
+        if let face = sprite("BridgeDial", size: CGSize(width: radius * 2, height: radius * 2)) {
+            node.addChild(face)
+            if !symbol.isEmpty { node.addChild(label(symbol, size: radius * 0.75)) }
+            return node
+        }
         let path = CGMutablePath()
         for index in 0..<48 {
             let angle = CGFloat(index) * .pi / 24
