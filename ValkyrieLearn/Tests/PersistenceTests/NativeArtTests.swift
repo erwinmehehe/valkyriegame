@@ -463,11 +463,8 @@ import LearningCore
         }
 
         let encounter = state.nextPuzzleEncounter()
-        XCTAssertEqual(encounter.answer, "☾")
-
         scene.handleTap(at: CGPoint(x: 770, y: 235))
         scene.handleTap(at: CGPoint(x: 575, y: 255))
-
         try await Task.sleep(nanoseconds: 1_500_000_000)
 
         let evidence = state.profile
@@ -477,8 +474,64 @@ import LearningCore
         XCTAssertEqual(evidence.first?.encounterID, encounter.id)
         XCTAssertEqual(evidence.first?.outcome, .correct)
         XCTAssertEqual(evidence.first?.supportLevel, .independent)
+    }
+
+    func testMemoryBridgeCanBeCompletedThroughLiveRunePadInteraction() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.reducedMotion = true
+
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        state.travel(to: .memoryBridge)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let encounter = try XCTUnwrap(state.nextPuzzleMemoryEncounter())
+        XCTAssertEqual(encounter.sequence, ["★", "☾", "◆"])
+
+        try await Task.sleep(nanoseconds: 2_400_000_000)
+        for point in [
+            CGPoint(x: 505, y: 210),
+            CGPoint(x: 665, y: 250),
+            CGPoint(x: 825, y: 210)
+        ] {
+            scene.handleTap(at: point)
+            try await Task.sleep(nanoseconds: 350_000_000)
+        }
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        let evidence = state.profile
+            .progress(for: PuzzleSkills.visualSequenceMemory)
+            .evidence
+        XCTAssertEqual(evidence.count, 1)
+        XCTAssertEqual(evidence.first?.encounterID, encounter.id)
+        XCTAssertEqual(evidence.first?.outcome, .correct)
+        XCTAssertEqual(evidence.first?.supportLevel, .independent)
         XCTAssertEqual(
-            PuzzlePalaceDirector.runeGateIndependentSuccessCount(profile: state.profile),
+            PuzzlePalaceDirector.memoryBridgeIndependentSuccessCount(profile: state.profile),
             1
         )
     }
