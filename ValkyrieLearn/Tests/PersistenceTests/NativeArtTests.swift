@@ -5,6 +5,23 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeArtTests: XCTestCase {
+    func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
+        let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
+        XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = WordGardenScene(state: state)
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
+        scene.update(0)
+        XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
+        let gate = try XCTUnwrap(scene.childNode(withName: "flowerGate"))
+        let gateFrame = gate.calculateAccumulatedFrame()
+        for flower in scene.children where flower.name == "flowerChoice" {
+            XCTAssertFalse(gateFrame.intersects(flower.calculateAccumulatedFrame()))
+        }
+    }
+
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
         for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")

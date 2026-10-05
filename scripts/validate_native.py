@@ -70,3 +70,6 @@ for path, metadata in word_garden_art['assets'].items():
     data = (ROOT/path).read_bytes()
     assert git_blob_sha(data) == metadata['blobSHA'], path
 print('PASS Word Garden v3.31 source-blob provenance.')
+garden_source = ROOT/'ValkyrieLearn/Resources/AdventureArt.xcassets/WordGardenSourceAtlas.imageset/art.png'
+assert hashlib.sha256(garden_source.read_bytes()).hexdigest() == manifest['sources']['adventure-art/worlds.png']
+print('PASS full-resolution Word Garden source matches approved original artwork.')

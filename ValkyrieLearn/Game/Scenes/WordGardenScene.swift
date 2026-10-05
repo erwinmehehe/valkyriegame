@@ -73,11 +73,11 @@ import LearningCore
     }
 
     override func buildWorld() {
-        if let atlas = ArtSystem.texture("V331WorldAtlas") {
-            let wordTexture = SKTexture(
-                rect: CGRect(x: 0, y: 0.5, width: 0.5, height: 0.5),
-                in: atlas
-            )
+        // The embedded 320x180 preview atlas cannot support a full iPad scene.
+        // Use the original approved source; inset the crop to avoid grid seams.
+        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
+            let wordTexture = SKTexture(rect: CGRect(x: 0, y: 0.502, width: 0.499, height: 0.498), in: atlas)
+            wordTexture.filteringMode = .linear
             let backdrop = SKSpriteNode(texture: wordTexture, color: .white, size: size)
             backdrop.position = CGPoint(x: 640, y: 360)
             backdrop.zPosition = -100
