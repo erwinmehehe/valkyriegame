@@ -20,12 +20,19 @@ jobs:
       - uses: actions/checkout@v4
       - run: swift test -j 2
 
-  ipad-build-and-tests:
-    runs-on: macos-15
+  native-validation:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: python3 scripts/validate_native.py
-      - run: swift test
+
+  ipad-build-and-tests:
+    needs:
+      - learning-core
+      - native-validation
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
       - name: iPad Simulator unit tests
         shell: bash
         run: |
