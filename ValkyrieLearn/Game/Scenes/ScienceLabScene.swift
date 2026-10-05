@@ -387,7 +387,9 @@ import SpriteKit
     func handleTap(at point: CGPoint) {
         switch targetName(at: point) {
         case "scienceSeedBench":
-            if isNear(seedBenchPoint, radius: 125) {
+            // The approach point is 120 horizontally and 50 vertically away:
+            // its distance is exactly 130, so arrival must count as in reach.
+            if isNear(seedBenchPoint, radius: 130) {
                 inspectSeedBench()
             } else {
                 instruction.text = "Walk to the seed bench so Milo can inspect it closely."
