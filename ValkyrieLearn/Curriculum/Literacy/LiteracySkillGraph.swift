@@ -102,6 +102,7 @@ public enum LiteracySkills {
     public static let manipulateInitialPhoneme = SkillID(rawValue: "literacy.phonemic.manipulateInitialPhoneme")
 
     // Alphabetic principle
+    public static let visualLetterMatch = SkillID(rawValue: "literacy.alphabet.visualLetterMatch")
     public static let uppercaseLetterNames = SkillID(rawValue: "literacy.alphabet.uppercaseLetterNames")
     public static let lowercaseLetterNames = SkillID(rawValue: "literacy.alphabet.lowercaseLetterNames")
     public static let commonConsonantSounds = SkillID(rawValue: "literacy.alphabet.commonConsonantSounds")
@@ -256,12 +257,22 @@ public enum LiteracySkillCatalog {
             isStretch: true
         ),
 
-        // Connect sound to print.
+        // Connect visual print identity before asking the learner to attach spoken names/sounds.
+        .init(
+            id: LiteracySkills.visualLetterMatch,
+            strand: .alphabeticPrinciple,
+            title: "Match Printed Letter Shapes",
+            developmentalOrder: 10,
+            representations: [.letter],
+            responseModes: [.directTouch],
+            mechanicIDs: [WordGardenMechanicID.letterStones]
+        ),
         .init(
             id: LiteracySkills.uppercaseLetterNames,
             strand: .alphabeticPrinciple,
             title: "Recognize Uppercase Letter Names",
             developmentalOrder: 11,
+            prerequisites: [LiteracySkills.visualLetterMatch],
             representations: [.letter, .picture],
             responseModes: [.directTouch, .pictureChoice],
             mechanicIDs: [WordGardenMechanicID.letterStones]
@@ -883,4 +894,83 @@ public struct LiteracyPlacementEngine: Sendable {
     private func clamped(_ band: Int) -> Int {
         min(max(band, minBand), maxBand)
     }
+}
+
+
+// MARK: - Flower Gate native encounter content
+
+public struct WordGardenEncounter: Identifiable, Codable, Equatable, Sendable {
+    public let id: String
+    public let skillID: SkillID
+    public let mechanicID: String
+    public let representation: Representation
+    public let prompt: String
+    public let choices: [String]
+    public let correctChoice: String
+    public let context: String
+
+    public var fingerprint: String {
+        [
+            mechanicID,
+            skillID.rawValue,
+            representation.rawValue,
+            choices.joined(separator: ","),
+            correctChoice,
+            context
+        ].joined(separator: "|")
+    }
+
+    public init(
+        id: String,
+        skillID: SkillID,
+        mechanicID: String,
+        representation: Representation,
+        prompt: String,
+        choices: [String],
+        correctChoice: String,
+        context: String = "flowerGate"
+    ) {
+        self.id = id
+        self.skillID = skillID
+        self.mechanicID = mechanicID
+        self.representation = representation
+        self.prompt = prompt
+        self.choices = choices
+        self.correctChoice = correctChoice
+        self.context = context
+    }
+}
+
+public enum WordGardenEncounterCatalog {
+    /// Visual letter-memory encounters are intentionally usable before recorded
+    /// phoneme audio ships. They assess visual print identity, not letter-sound mastery.
+    public static let flowerGateLetterStones: [WordGardenEncounter] = [
+        .init(
+            id: "flower-gate-letter-a",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .symbolic,
+            prompt: "Remember the glowing rune, then choose the matching letter stone.",
+            choices: ["A", "M", "S"],
+            correctChoice: "A"
+        ),
+        .init(
+            id: "flower-gate-letter-m",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .symbolic,
+            prompt: "Remember the glowing rune, then choose the matching letter stone.",
+            choices: ["S", "M", "A"],
+            correctChoice: "M"
+        ),
+        .init(
+            id: "flower-gate-letter-s",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .symbolic,
+            prompt: "Remember the glowing rune, then choose the matching letter stone.",
+            choices: ["M", "A", "S"],
+            correctChoice: "S"
+        )
+    ]
 }
