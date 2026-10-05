@@ -38,6 +38,7 @@ public enum WordGardenMechanicID {
     public static let rhymeVine = "wordGarden.rhymeVine"
     public static let syllableBells = "wordGarden.syllableBells"
     public static let letterStones = "wordGarden.letterStones"
+    public static let sunmillPair = "wordGarden.sunmillPair"
     public static let seedBlendPath = "wordGarden.seedBlendPath"
     public static let wordBloom = "wordGarden.wordBloom"
     public static let storyLantern = "wordGarden.storyLantern"
@@ -274,7 +275,7 @@ public enum LiteracySkillCatalog {
             prerequisites: [LiteracySkills.uppercaseLetterNames],
             representations: [.letter, .picture],
             responseModes: [.directTouch, .pictureChoice],
-            mechanicIDs: [WordGardenMechanicID.letterStones]
+            mechanicIDs: [WordGardenMechanicID.letterStones, WordGardenMechanicID.sunmillPair]
         ),
         .init(
             id: LiteracySkills.commonConsonantSounds,
