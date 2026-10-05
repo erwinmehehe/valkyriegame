@@ -89,4 +89,39 @@ import SpriteKit
         XCTAssertEqual(state.adventure, before)
         scene.willLeave()
     }
+
+    func testGreenhouseStagePersistsAcrossSceneRecreation() throws {
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        let scene = ScienceLabScene(state: state)
+        scene.didMove(to: SKView())
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        XCTAssertEqual(scene.greenhouseStage, .watered)
+        scene.willLeave()
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.scienceAdventure.greenhouseStage, .watered)
+        XCTAssertFalse(restored.scienceAdventure.greenhouseComplete)
+    }
+
+    func testGreenhouseWritesScienceEvidenceAndPlacementReadiness() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = ScienceLabScene(state: state)
+        scene.didMove(to: SKView())
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+
+        XCTAssertFalse(state.profile.progress(for: ScienceSkills.noticeDetails).evidence.isEmpty)
+        XCTAssertFalse(state.profile.progress(for: ScienceSkills.plantNeeds).evidence.isEmpty)
+        XCTAssertTrue(state.profile.placementReadySkillIDs?.contains(ScienceSkills.plantNeeds) == true)
+        scene.willLeave()
+    }
+
 }
