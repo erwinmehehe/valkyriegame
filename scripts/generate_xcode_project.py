@@ -18,17 +18,22 @@ def quote(value):
     if isinstance(value, int): return str(value)
     return json.dumps(str(value))
 
-app_files = sorted(p for folder in ['App','Game','Parent','Persistence'] for p in (ROOT/'ValkyrieLearn'/folder).rglob('*.swift'))
-core_tests = sorted((ROOT/'ValkyrieLearn/Tests/LearningCoreTests').glob('*.swift'))
-store_tests = sorted((ROOT/'ValkyrieLearn/Tests/PersistenceTests').glob('*.swift'))
+def stable_paths(paths):
+    # Path ordering is case-insensitive on Windows and case-sensitive on macOS.
+    # Sort canonical relative strings so the committed project is portable.
+    return sorted(paths, key=lambda p: p.relative_to(ROOT).as_posix())
+
+app_files = stable_paths(p for folder in ['App','Game','Parent','Persistence'] for p in (ROOT/'ValkyrieLearn'/folder).rglob('*.swift'))
+core_tests = stable_paths((ROOT/'ValkyrieLearn/Tests/LearningCoreTests').glob('*.swift'))
+store_tests = stable_paths((ROOT/'ValkyrieLearn/Tests/PersistenceTests').glob('*.swift'))
 resource_root = ROOT/'ValkyrieLearn/Resources'
-resources = sorted(list(resource_root.glob('*.wav')) + list(resource_root.glob('*.atlas')) + list(resource_root.glob('*.xcassets')))
+resources = stable_paths(list(resource_root.glob('*.wav')) + list(resource_root.glob('*.atlas')) + list(resource_root.glob('*.xcassets')))
 file_refs = {}
 for p in app_files + core_tests + store_tests + resources:
     rel = p.relative_to(ROOT).as_posix()
     file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType={'.swift':'sourcecode.swift', '.wav':'audio.wav', '.atlas':'folder.skatlas', '.xcassets':'folder.assetcatalog'}[p.suffix], path=rel, sourceTree='<group>')
 # Include learning sources and curriculum for browsing; package owns their compilation.
-for p in sorted((ROOT/'ValkyrieLearn/Learning').rglob('*.swift')) + sorted((ROOT/'ValkyrieLearn/Curriculum').rglob('*.swift')):
+for p in stable_paths((ROOT/'ValkyrieLearn/Learning').rglob('*.swift')) + stable_paths((ROOT/'ValkyrieLearn/Curriculum').rglob('*.swift')):
     rel = p.relative_to(ROOT).as_posix(); file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType='sourcecode.swift', path=rel, sourceTree='<group>')
 source_group = put('Sources','PBXGroup', children=list(file_refs.values()), name='Native sources', sourceTree='<group>')
 products = []

@@ -20,6 +20,20 @@ import LearningCore
     private var routeLights: [SKShapeNode] = []
     private var challengeRunes: [SKShapeNode] = []
     private var wasPowered = false
+    private var initialBuildComplete = false
+    private var physicalBridge: SKNode?
+    private var powerConduit: SKShapeNode?
+    private var destinationBeacon: SKShapeNode?
+    private var starlightOrb: SKShapeNode?
+    private var environmentGears: [SKNode] = []
+    private var routeReady = false
+    private var routeDestination: CGPoint { bridgePath.last! }
+    private let routeEnergyPoints = [
+        CGPoint(x: 890, y: 330),
+        CGPoint(x: 965, y: 350),
+        CGPoint(x: 1035, y: 380),
+        CGPoint(x: 1090, y: 420)
+    ]
     private let bridgeRouteNode = SKNode()
     private(set) var crossingBridge = false
     private var hasLeftScene = false
@@ -48,6 +62,15 @@ import LearningCore
         MathCastleEncounterCatalog.missingNumberBridge
     ]
     private var workshopIndices = [0, 0, 0, 0, 0]
+
+    override func didMove(to view: SKView) {
+        super.didMove(to: view)
+        // The v3.31 reference keeps the protagonist inside the world composition
+        // instead of letting the character dominate the learning object.
+        valkyrie.setScale(0.5)
+        pip.setScale(0.65)
+        initialBuildComplete = true
+    }
 
     override func buildWorld() {
         super.buildWorld()
@@ -149,6 +172,7 @@ import LearningCore
             lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
         }
         buildBridgeRoute()
+        buildPhysicalProgression()
         updateChallengeGateAppearance()
         openOrder()
     }
@@ -198,9 +222,12 @@ import LearningCore
     }
 
     private func crossBridge() {
-        guard repairedBridge, !crossingBridge, !hasLeftScene else { return }
+        guard state.runtime?.completed == true, repairedBridge || routeReady, !crossingBridge, !hasLeftScene else { return }
         clearDrag(); engaged = false; showQuestion(nil)
         crossingBridge = true
+        if !repairedBridge, let machine = mechanic {
+            machine.run(.sequence([.fadeOut(withDuration: reducedMotion ? 0 : 0.2), .hide()]), withKey: "routeClear")
+        }
         instruction.text = "The bridge is repaired! Valkyrie and Pip can cross to the next work order."
         followBridge(bridgePath) { [weak self] in
             guard let self else { return }
@@ -210,7 +237,7 @@ import LearningCore
     }
 
     private func returnAcrossBridge(advance: Bool) {
-        guard repairedBridge, !crossingBridge, !hasLeftScene else { return }
+        guard state.runtime?.completed == true, repairedBridge || routeReady, !crossingBridge, !hasLeftScene else { return }
         crossingBridge = true
         instruction.text = "Pip is bringing the work order back across the bridge."
         followBridge(Array(bridgePath.reversed())) { [weak self] in
@@ -219,6 +246,7 @@ import LearningCore
             if advance {
                 self.state.advanceEncounter(); self.openOrder()
             } else {
+                self.mechanic?.isHidden = false; self.mechanic?.alpha = 1
                 self.instruction.text = "Back in the courtyard. You can explore or cross the repaired bridge again."
             }
         }
@@ -242,6 +270,277 @@ import LearningCore
         // Touch area stays large even where the lever's silhouette is narrow.
         let hit = ArtSystem.box(CGSize(width: 150, height: 110), color: .clear, radius: 0); hit.name = "submit"; node.addChild(hit)
         addChild(node); return node
+    }
+
+    /// Recreates the v3.31 Math Castle cause-and-effect loop in native SpriteKit:
+    /// solve the embedded machine -> energy travels through the room -> bridge opens
+    /// -> the destination becomes physically reachable.
+    private func buildPhysicalProgression() {
+        let conduitPath = CGMutablePath()
+        conduitPath.move(to: routeEnergyPoints[0])
+        routeEnergyPoints.dropFirst().forEach { conduitPath.addLine(to: $0) }
+        let conduit = SKShapeNode(path: conduitPath)
+        conduit.name = "castlePowerConduit"
+        conduit.zPosition = 17
+        conduit.strokeColor = UIColor(red: 0.45, green: 0.52, blue: 0.62, alpha: 0.38)
+        conduit.lineWidth = 6
+        conduit.glowWidth = 0
+        addChild(conduit)
+        powerConduit = conduit
+
+        // Ordinary solved machines open a deck at the same height as the
+        // current illustrated bridge and share its tested landing/stair path.
+        let bridgeRoot = SKNode()
+        bridgeRoot.name = "physicalRouteBridge"
+        bridgeRoot.position = CGPoint(x: 1040, y: 236)
+        bridgeRoot.zPosition = 450
+        for index in 0..<10 {
+            let plank = ArtSystem.box(CGSize(width: 44, height: 16), color: .brown, radius: 3)
+            if let texture = ArtSystem.texture("BridgeOakPlank") {
+                plank.fillColor = .white; plank.fillTexture = texture; plank.strokeColor = .clear
+            }
+            plank.position.x = -22 - CGFloat(index) * 44
+            bridgeRoot.addChild(plank)
+        }
+        bridgeRoot.xScale = 0.06; bridgeRoot.alpha = 0.18
+        addChild(bridgeRoot); physicalBridge = bridgeRoot
+
+        let beacon = SKShapeNode(circleOfRadius: 54)
+        beacon.name = "routeDestinationBeacon"
+        beacon.position = CGPoint(x: 1200, y: 430)
+        beacon.zPosition = 730
+        beacon.fillColor = UIColor(red: 1, green: 0.83, blue: 0.32, alpha: 0.06)
+        beacon.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.38, alpha: 0.35)
+        beacon.lineWidth = 3
+        beacon.glowWidth = 0
+        addChild(beacon)
+        destinationBeacon = beacon
+
+        let orb = SKShapeNode(circleOfRadius: 11)
+        orb.name = "routeStarlightOrb"
+        orb.position = routeEnergyPoints[0]
+        orb.zPosition = 830
+        orb.fillColor = UIColor(red: 0.80, green: 0.96, blue: 1, alpha: 1)
+        orb.strokeColor = .white
+        orb.lineWidth = 2
+        orb.glowWidth = 10
+        orb.isHidden = true
+        addChild(orb)
+        starlightOrb = orb
+
+        for (index, point) in [CGPoint(x: 995, y: 315), CGPoint(x: 1045, y: 338)].enumerated() {
+            let gear = ArtSystem.gear(radius: index == 0 ? 18 : 14)
+            gear.name = "environmentGear\(index)"
+            gear.position = point
+            gear.zPosition = 18
+            gear.alpha = 0.72
+            addChild(gear)
+            environmentGears.append(gear)
+        }
+
+        resetPhysicalProgression()
+    }
+
+    private func resetPhysicalProgression() {
+        routeReady = false
+        physicalBridge?.removeAllActions()
+        physicalBridge?.xScale = 0.06
+        physicalBridge?.alpha = 0.18
+        physicalBridge?.isHidden = state.runtime?.encounter.mechanicID == MathMechanicID.missingNumberBridge
+
+        powerConduit?.removeAllActions()
+        powerConduit?.strokeColor = UIColor(red: 0.45, green: 0.52, blue: 0.62, alpha: 0.38)
+        powerConduit?.glowWidth = 0
+
+        destinationBeacon?.removeAllActions()
+        destinationBeacon?.alpha = 0.35
+        destinationBeacon?.glowWidth = 0
+        nextGear?.removeAction(forKey: "routeReadyPulse")
+        nextGear?.setScale(1)
+
+        starlightOrb?.removeAllActions()
+        starlightOrb?.isHidden = true
+        starlightOrb?.position = routeEnergyPoints[0]
+
+        environmentGears.forEach {
+            $0.removeAction(forKey: "poweredSpin")
+            $0.speed = 1
+        }
+
+        for lamp in routeLights {
+            lamp.removeAllActions()
+            lamp.fillColor = UIColor(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
+            lamp.glowWidth = 0
+            lamp.setScale(1)
+        }
+    }
+
+    private func openPhysicalProgression(animated: Bool = true) {
+        guard let bridge = physicalBridge else { return }
+
+        bridge.isHidden = repairedBridge
+        if !animated || reducedMotion || repairedBridge {
+            bridge.xScale = 1
+            bridge.alpha = 1
+            routeReady = true
+            powerConduit?.strokeColor = UIColor(red: 0.73, green: 0.93, blue: 1, alpha: 0.95)
+            powerConduit?.glowWidth = 6
+            destinationBeacon?.alpha = 1
+            destinationBeacon?.glowWidth = 18
+            for lamp in routeLights {
+                lamp.fillColor = UIColor(red: 1, green: 0.86, blue: 0.4, alpha: 1)
+                lamp.glowWidth = 6
+            }
+            return
+        }
+
+        powerConduit?.strokeColor = UIColor(red: 0.73, green: 0.93, blue: 1, alpha: 0.95)
+        powerConduit?.glowWidth = 5
+
+        for (index, lamp) in routeLights.enumerated() {
+            let delay = Double(index) * 0.11
+            lamp.run(.sequence([
+                .wait(forDuration: delay),
+                .run {
+                    lamp.fillColor = UIColor(red: 1, green: 0.86, blue: 0.4, alpha: 1)
+                    lamp.glowWidth = 7
+                },
+                .scale(to: 1.28, duration: 0.09),
+                .scale(to: 1, duration: 0.14)
+            ]), withKey: "powerArrival")
+        }
+
+        if let orb = starlightOrb {
+            orb.isHidden = false
+            orb.alpha = 1
+            orb.position = routeEnergyPoints[0]
+            let travel = routeEnergyPoints.dropFirst().map {
+                SKAction.move(to: $0, duration: 0.16)
+            }
+            orb.run(.sequence(travel + [
+                .group([
+                    .fadeOut(withDuration: 0.22),
+                    .scale(to: 1.7, duration: 0.22)
+                ]),
+                .run { orb.isHidden = true; orb.setScale(1); orb.alpha = 1 }
+            ]), withKey: "routeTravel")
+        }
+
+        for (index, gear) in environmentGears.enumerated() {
+            let angle = CGFloat.pi * (index.isMultiple(of: 2) ? 2.4 : -2.4)
+            gear.run(.rotate(byAngle: angle, duration: 0.95), withKey: "poweredSpin")
+        }
+
+        let unfold = SKAction.scaleX(to: 1, duration: 1.05)
+        unfold.timingMode = .easeOut
+        // Readiness follows the actual bridge action, not an independent timer.
+        // Pausing or cancelling the unfolding must never open traversal early.
+        bridge.run(.sequence([
+            .group([
+                unfold,
+                .fadeAlpha(to: 1, duration: 0.38)
+            ]),
+            .run { [weak self] in
+                guard let self else { return }
+                self.routeReady = true
+                self.destinationBeacon?.alpha = 1
+                self.destinationBeacon?.glowWidth = 18
+                self.playStarlightBurst(at: self.routeDestination)
+            }
+        ]), withKey: "routeOpen")
+
+        destinationBeacon?.run(.sequence([
+            .wait(forDuration: 1.05),
+            .scale(to: 1.12, duration: 0.18),
+            .scale(to: 1, duration: 0.22)
+        ]), withKey: "routeReady")
+
+        nextGear?.run(.repeatForever(.sequence([
+            .scale(to: 1.08, duration: 0.65),
+            .scale(to: 1, duration: 0.65)
+        ])), withKey: "routeReadyPulse")
+    }
+
+    private func playStarlightBurst(at point: CGPoint) {
+        guard !reducedMotion else { return }
+
+        for index in 0..<9 {
+            let spark = ArtSystem.label(index.isMultiple(of: 3) ? "✦" : "·", size: index.isMultiple(of: 3) ? 19 : 25)
+            spark.position = point
+            spark.zPosition = 900
+            spark.fontColor = UIColor(
+                red: index.isMultiple(of: 2) ? 1.0 : 0.72,
+                green: 0.88,
+                blue: 1.0,
+                alpha: 1.0
+            )
+            addChild(spark)
+
+            let angle = (CGFloat(index) / 9.0) * (.pi * 2)
+            let distance: CGFloat = index.isMultiple(of: 2) ? 54 : 38
+            spark.run(.sequence([
+                .group([
+                    .moveBy(
+                        x: cos(angle) * distance,
+                        y: sin(angle) * distance + 18,
+                        duration: 0.55
+                    ),
+                    .fadeOut(withDuration: 0.55),
+                    .scale(to: 0.55, duration: 0.55)
+                ]),
+                .removeFromParent()
+            ]))
+        }
+    }
+
+    private func playMechanicSuccessReaction() {
+        (mechanic as? MathCastleReactiveMechanic)?.playSuccessReaction(reducedMotion: reducedMotion)
+    }
+
+    private func wakeMechanic() {
+        guard !reducedMotion, let mechanic else { return }
+        mechanic.removeAction(forKey: "wake")
+        mechanic.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1, duration: 0.18)
+        ]), withKey: "wake")
+    }
+
+    private func playGentleRetryReaction() {
+        guard !reducedMotion else { return }
+        if let mechanic {
+            mechanic.removeAction(forKey: "retry")
+            mechanic.run(.sequence([
+                .moveBy(x: -6, y: 0, duration: 0.07),
+                .moveBy(x: 12, y: 0, duration: 0.10),
+                .moveBy(x: -6, y: 0, duration: 0.07)
+            ]), withKey: "retry")
+        }
+        powerLight?.run(.sequence([
+            .run { [weak self] in
+                self?.powerLight?.fillColor = UIColor(red: 0.88, green: 0.63, blue: 0.25, alpha: 1)
+                self?.powerLight?.glowWidth = 5
+            },
+            .wait(forDuration: 0.22),
+            .run { [weak self] in
+                self?.powerLight?.fillColor = UIColor(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+                self?.powerLight?.glowWidth = 0
+            }
+        ]), withKey: "gentleRetry")
+    }
+
+    private func playManipulationReaction() {
+        guard !reducedMotion else { return }
+
+        for (index, gear) in environmentGears.enumerated() {
+            let angle: CGFloat = index.isMultiple(of: 2) ? 0.16 : -0.13
+            gear.run(.rotate(byAngle: angle, duration: 0.16), withKey: "inputTick")
+        }
+
+        powerLight?.run(.sequence([
+            .fadeAlpha(to: 0.55, duration: 0.06),
+            .fadeAlpha(to: 1, duration: 0.14)
+        ]), withKey: "inputPulse")
     }
 
     private func updateChallengeGateAppearance() {
@@ -279,14 +578,33 @@ import LearningCore
 
     private func updatePower(_ powered: Bool) {
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
-        powerLight?.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.38, alpha: 1) : .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
-        powerLight?.glowWidth = powered ? 16 : 0
-        for lamp in routeLights { lamp.fillColor = powered ? .init(red: 1, green: 0.86, blue: 0.4, alpha: 1) : .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1); lamp.glowWidth = powered ? 6 : 0 }
-        if powered && !wasPowered && !reducedMotion {
-            lever?.run(.sequence([.rotate(toAngle: -0.18, duration: 0.16), .rotate(toAngle: 0, duration: 0.22)]), withKey: "pull")
+
+        if powered {
+            powerLight?.fillColor = UIColor(red: 1, green: 0.86, blue: 0.38, alpha: 1)
+            powerLight?.glowWidth = 16
+
+            if !wasPowered {
+                if initialBuildComplete {
+                    playMechanicSuccessReaction()
+                }
+                openPhysicalProgression(animated: initialBuildComplete)
+                if initialBuildComplete && !reducedMotion {
+                    lever?.run(.sequence([
+                        .rotate(toAngle: -0.18, duration: 0.16),
+                        .rotate(toAngle: 0, duration: 0.22)
+                    ]), withKey: "pull")
+                }
+            }
+        } else {
+            powerLight?.fillColor = UIColor(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+            powerLight?.glowWidth = 0
+            if wasPowered || physicalBridge?.xScale != 0.06 {
+                resetPhysicalProgression()
+            }
         }
+
         wasPowered = powered
-        bridgeRouteNode.isHidden = !repairedBridge
+        bridgeRouteNode.isHidden = !powered
         // Keep walking actors in front of the completed deck and its equation.
         if repairedBridge { mechanic?.zPosition = 600 }
         updateChallengeGateAppearance()
@@ -421,14 +739,14 @@ import LearningCore
             }
             return
         }
-        if repairedBridge, ["missingFixed", "missingPlank", "missingSlot", "missingSupply",
+        if state.runtime?.completed == true, repairedBridge || routeReady, ["physicalRouteBridge", "missingFixed", "missingPlank", "missingSlot", "missingSupply",
                             "missingBridge", "missingAnswer", "missingPlus", "missingMinus", "bridgeRoute"].contains(target ?? "") {
             if valkyrie.position.y > 240 { returnAcrossBridge(advance: false) }
             else { crossBridge() }
             return
         }
         // An elevated destination can only be left along the repaired path.
-        if repairedBridge, valkyrie.position.y > 240, target != "home", target != "next" {
+        if state.runtime?.completed == true, repairedBridge || routeReady, valkyrie.position.y > 240, target != "home", target != "next", target != "routeDestinationBeacon" {
             returnAcrossBridge(advance: false)
             return
         }
@@ -452,17 +770,22 @@ import LearningCore
                 self.state.finishExploration(); self.state.audio.play("gear")
                 self.instruction.text = "Pip's gears hum! Explore or choose a new work order."
             }
-        case "next":
-            if repairedBridge {
-                if isNear(bridgePath.last!, radius: 55) { returnAcrossBridge(advance: true) }
-                else { crossBridge() }
-                return
-            }
+        case "next", "routeDestinationBeacon":
             guard state.runtime == nil || state.runtime?.completed == true || state.workshop else {
                 instruction.text = "Finish Pip's work order first. You can explore and come back."
                 return
             }
-            state.advanceEncounter(); openOrder()
+
+            if state.runtime?.completed == true {
+                guard routeReady || repairedBridge else {
+                    instruction.text = "Watch the starlight finish opening the bridge."
+                    return
+                }
+                if isNear(bridgePath.last!, radius: 55) { returnAcrossBridge(advance: true) }
+                else { crossBridge() }
+            } else {
+                state.advanceEncounter(); openOrder()
+            }
         case "workshop0": workshop(0)
         case "workshop1": workshop(1)
         case "workshop2": workshop(2)
@@ -480,7 +803,11 @@ import LearningCore
 
     private func manipulate(_ action: () -> Void) {
         guard canManipulate() else { engageMachine(); return }
-        action(); refresh(); valkyrie.pose(.interact); state.audio.play("crystal")
+        action()
+        refresh()
+        playManipulationReaction()
+        valkyrie.pose(.interact)
+        state.audio.play("crystal")
     }
 
     func drop(origin: String, at point: CGPoint) {
@@ -507,7 +834,12 @@ import LearningCore
             if let bridge = mechanic as? MissingNumberBridgeMechanic, bridge.returnsToSupply(local) { state.removeCrystal(); changed = true }
         default: break
         }
-        if changed { refresh(); valkyrie.pose(.interact); state.audio.play("crystal") }
+        if changed {
+            refresh()
+            playManipulationReaction()
+            valkyrie.pose(.interact)
+            state.audio.play("crystal")
+        }
     }
 
     private func submit() {
@@ -516,10 +848,12 @@ import LearningCore
         guard let evidence = state.submit() else {
             instruction.text = "Touch a scale pan, or the equal gear, before pulling Pip's lever."; return
         }
-        refresh(); pip.operate(reducedMotion: reducedMotion)
+        refresh()
         updateChallengeGateAppearance()
         if evidence.outcome == .correct {
-            valkyrie.pose(.celebrate); state.audio.play("success")
+            pip.helpRoute(to: CGPoint(x: 975, y: 225), reducedMotion: reducedMotion)
+            valkyrie.pose(.celebrate)
+            state.audio.play("success")
             showQuestion(nil)
             if wasChallengeGate && state.challengeGateStatus == .completed {
                 instruction.text = "The final rune shines! Your Moon Lantern is waiting at Story Tree."
@@ -529,7 +863,9 @@ import LearningCore
                 instruction.text = completionMessage
             }
         } else {
-            valkyrie.pose(.react); showScaffold()
+            valkyrie.pose(.react)
+            playGentleRetryReaction()
+            showScaffold()
         }
     }
 
@@ -592,7 +928,9 @@ import LearningCore
             valkyrie.face(toward: CGPoint(x: 820, y: 310))
             pip.face(toward: CGPoint(x: 820, y: 310))
             state.beginInteraction()
-            engaged = true; refresh()
+            engaged = true
+            wakeMechanic()
+            refresh()
         } else {
             engaged = false
             instruction.text = "Valkyrie is walking over. Tap the machine again when she arrives."
