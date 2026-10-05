@@ -48,6 +48,8 @@ import SpriteKit
             scene = MathCastleScene(state: state)
         case .wordGarden, .sunmillCrossing, .storyHollow:
             scene = WordGardenScene(state: state)
+        case .scienceLab:
+            scene = ScienceLabScene(state: state)
         }
         scene?.reducedMotion = state.reducedMotion || systemReducedMotion
     }
