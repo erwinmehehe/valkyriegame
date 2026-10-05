@@ -40,136 +40,116 @@ import LearningCore
     }
 
     override func buildWorld() {
-        // Keep the playable Greenhouse entirely vector/native at scene resolution.
-        // The legacy V331WorldAtlas preview is only 320x180; cropping one quadrant
-        // would create a 160x90 backdrop stretched across a 1280x720 scene.
-        let sky = ArtSystem.box(
-            size,
-            color: UIColor(red: 0.50, green: 0.72, blue: 0.80, alpha: 1),
-            radius: 0
-        )
-        sky.name = "scienceNativeBackdrop"
-        sky.strokeColor = .clear
-        sky.position = CGPoint(x: 640, y: 360)
-        sky.zPosition = -220
-        addChild(sky)
-
-        let horizon = ArtSystem.box(
-            CGSize(width: 1280, height: 250),
-            color: UIColor(red: 0.30, green: 0.49, blue: 0.32, alpha: 1),
-            radius: 0
-        )
-        horizon.strokeColor = .clear
-        horizon.position = CGPoint(x: 640, y: 270)
-        horizon.zPosition = -180
-        addChild(horizon)
-
-        for (x, y, width, height) in [
-            (CGFloat(165), CGFloat(350), CGFloat(300), CGFloat(125)),
-            (CGFloat(1030), CGFloat(355), CGFloat(360), CGFloat(140))
-        ] {
-            let hedge = SKShapeNode(ellipseOf: CGSize(width: width, height: height))
-            hedge.fillColor = UIColor(red: 0.20, green: 0.43, blue: 0.24, alpha: 1)
-            hedge.strokeColor = UIColor(red: 0.32, green: 0.55, blue: 0.30, alpha: 0.85)
-            hedge.lineWidth = 4
-            hedge.position = CGPoint(x: x, y: y)
-            hedge.zPosition = -170
-            addChild(hedge)
+        let hasReferenceBackdrop: Bool
+        if let atlas = ArtSystem.texture("V331WorldAtlas") {
+            // v3.31 2×2 environment atlas: Science Lab is the lower-left quadrant.
+            let scienceTexture = SKTexture(
+                rect: CGRect(x: 0, y: 0, width: 0.5, height: 0.5),
+                in: atlas
+            )
+            let backdrop = SKSpriteNode(texture: scienceTexture, color: .white, size: size)
+            backdrop.position = CGPoint(x: 640, y: 360)
+            backdrop.zPosition = -220
+            backdrop.name = "scienceReferenceBackdrop"
+            addChild(backdrop)
+            hasReferenceBackdrop = true
+        } else {
+            hasReferenceBackdrop = false
         }
 
-        let ground = ArtSystem.box(
-            CGSize(width: 1280, height: 260),
-            color: UIColor(red: 0.20, green: 0.31, blue: 0.20, alpha: 1),
-            radius: 0
-        )
-        ground.strokeColor = .clear
-        ground.position = CGPoint(x: 640, y: 120)
-        ground.zPosition = -120
-        addChild(ground)
+        if !hasReferenceBackdrop {
+            let sky = ArtSystem.box(size, color: UIColor(red: 0.55, green: 0.75, blue: 0.82, alpha: 1), radius: 0)
+            sky.strokeColor = .clear
+            sky.position = CGPoint(x: 640, y: 360)
+            sky.zPosition = -200
+            addChild(sky)
 
-        let house = SKNode()
-        house.name = "scienceGreenhouseHouse"
-        house.position = CGPoint(x: 720, y: 390)
-        house.zPosition = -80
+            let ground = ArtSystem.box(
+                CGSize(width: 1280, height: 260),
+                color: UIColor(red: 0.20, green: 0.31, blue: 0.20, alpha: 1),
+                radius: 0
+            )
+            ground.strokeColor = .clear
+            ground.position = CGPoint(x: 640, y: 120)
+            ground.zPosition = -120
+            addChild(ground)
 
-        let glass = ArtSystem.box(
-            CGSize(width: 860, height: 430),
-            color: UIColor(red: 0.78, green: 0.92, blue: 0.90, alpha: 0.22),
-            radius: 18
-        )
-        glass.strokeColor = UIColor(red: 0.87, green: 0.96, blue: 0.94, alpha: 0.9)
-        glass.lineWidth = 7
-        house.addChild(glass)
+            let house = SKNode()
+            house.position = CGPoint(x: 720, y: 390)
+            house.zPosition = -80
 
-        for x in stride(from: CGFloat(-360), through: CGFloat(360), by: CGFloat(120)) {
-            let frame = ArtSystem.box(
-                CGSize(width: 8, height: 410),
-                color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 0.9),
+            let glass = ArtSystem.box(
+                CGSize(width: 860, height: 430),
+                color: UIColor(red: 0.78, green: 0.92, blue: 0.90, alpha: 0.22),
+                radius: 18
+            )
+            glass.strokeColor = UIColor(red: 0.87, green: 0.96, blue: 0.94, alpha: 0.9)
+            glass.lineWidth = 7
+            house.addChild(glass)
+
+            for x in stride(from: CGFloat(-360), through: CGFloat(360), by: CGFloat(120)) {
+                let frame = ArtSystem.box(
+                    CGSize(width: 8, height: 410),
+                    color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 0.9),
+                    radius: 2
+                )
+                frame.position.x = x
+                frame.zPosition = 2
+                house.addChild(frame)
+            }
+
+            let roofLeft = ArtSystem.box(
+                CGSize(width: 470, height: 10),
+                color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 1),
                 radius: 2
             )
-            frame.position.x = x
-            frame.zPosition = 2
-            house.addChild(frame)
-        }
+            roofLeft.position = CGPoint(x: -190, y: 240)
+            roofLeft.zRotation = 0.22
+            house.addChild(roofLeft)
 
-        for y in [CGFloat(-120), CGFloat(0), CGFloat(120)] {
-            let rail = ArtSystem.box(
-                CGSize(width: 830, height: 7),
-                color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 0.72),
+            let roofRight = ArtSystem.box(
+                CGSize(width: 470, height: 10),
+                color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 1),
                 radius: 2
             )
-            rail.position.y = y
-            rail.zPosition = 2
-            house.addChild(rail)
+            roofRight.position = CGPoint(x: 190, y: 240)
+            roofRight.zRotation = -0.22
+            house.addChild(roofRight)
+
+            addChild(house)
         }
 
-        let roofLeft = ArtSystem.box(
-            CGSize(width: 470, height: 10),
-            color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 1),
-            radius: 2
-        )
-        roofLeft.position = CGPoint(x: -190, y: 240)
-        roofLeft.zRotation = 0.22
-        house.addChild(roofLeft)
-
-        let roofRight = ArtSystem.box(
-            CGSize(width: 470, height: 10),
-            color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 1),
-            radius: 2
-        )
-        roofRight.position = CGPoint(x: 190, y: 240)
-        roofRight.zRotation = -0.22
-        house.addChild(roofRight)
-
-        addChild(house)
-
-        for x in [CGFloat(525), CGFloat(830)] {
-            let planter = ArtSystem.box(
-                CGSize(width: 210, height: 48),
-                color: UIColor(red: 0.35, green: 0.23, blue: 0.13, alpha: 1),
-                radius: 9
-            )
-            planter.position = CGPoint(x: x, y: 355)
-            planter.zPosition = 110
-            addChild(planter)
-
-            for offset in [CGFloat(-65), CGFloat(0), CGFloat(65)] {
-                let plant = SKShapeNode(ellipseOf: CGSize(width: 34, height: 22))
-                plant.fillColor = UIColor(red: 0.30, green: 0.63, blue: 0.30, alpha: 1)
-                plant.strokeColor = .clear
-                plant.position = CGPoint(x: x + offset, y: 387)
-                plant.zPosition = 115
-                addChild(plant)
+        if hasReferenceBackdrop {
+            for (height, y) in [(CGFloat(66), CGFloat(687)), (CGFloat(100), CGFloat(46))] {
+                let shade = ArtSystem.box(
+                    CGSize(width: 1280, height: height),
+                    color: .black.withAlphaComponent(0.24),
+                    radius: 0
+                )
+                shade.strokeColor = .clear
+                shade.position = CGPoint(x: 640, y: y)
+                shade.zPosition = 1850
+                addChild(shade)
             }
         }
 
         let path = ArtSystem.box(
-            CGSize(width: 1110, height: 120),
-            color: UIColor(red: 0.50, green: 0.39, blue: 0.25, alpha: 1),
+            CGSize(width: 1110, height: hasReferenceBackdrop ? 94 : 120),
+            color: UIColor(
+                red: 0.50,
+                green: 0.39,
+                blue: 0.25,
+                alpha: hasReferenceBackdrop ? 0.42 : 1
+            ),
             radius: 50
         )
         path.position = CGPoint(x: 640, y: 190)
-        path.strokeColor = UIColor(red: 0.66, green: 0.53, blue: 0.34, alpha: 1)
+        path.strokeColor = UIColor(
+            red: 0.66,
+            green: 0.53,
+            blue: 0.34,
+            alpha: hasReferenceBackdrop ? 0.55 : 1
+        )
         path.lineWidth = 4
         path.zPosition = 20
         addChild(path)
@@ -472,9 +452,12 @@ import LearningCore
 
         case "scienceWeatherGate":
             if greenhouseComplete {
-                instruction.text = "The Greenhouse path is open. Weather Tower is the next Science Lab area."
-                valkyrie.pose(.celebrate)
-                milo.inspect(reducedMotion: reducedMotion)
+                if isNear(exitPoint, radius: 120) {
+                    state.travel(to: .scienceWeatherTower)
+                } else {
+                    instruction.text = "The Weather Tower path is open. Walk to the gate to continue."
+                    travel(to: CGPoint(x: exitPoint.x - 75, y: 180))
+                }
             } else {
                 instruction.text = "The vine gate is still closed. Finish the plant investigation first."
             }
