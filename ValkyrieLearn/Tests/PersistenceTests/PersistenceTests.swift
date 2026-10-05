@@ -83,6 +83,12 @@ import LearningCore
                 mechanicID: MathMechanicID.balanceScale, operation: .comparison,
                 initialQuantity: leftQuantity, targetQuantity: rightQuantity, prompt: "Compare")
             mechanic.render(try BalanceScaleModel(encounter: encounter))
+            for (pan, x) in [(left, CGFloat(-150)), (right, CGFloat(150))] {
+                let hanger = try XCTUnwrap(mechanic.children.first { $0.userData?["pan"] as? String == pan.name } as? SKShapeNode)
+                let bounds = try XCTUnwrap(hanger.path).boundingBoxOfPath
+                XCTAssertEqual(bounds.minY, pan.position.y + 36, accuracy: 0.001, "Suspension must meet the moving tray rim")
+                XCTAssertEqual(bounds.maxY, beam.position.y + x * sin(beam.zRotation), accuracy: 0.001, "Suspension must meet the tilted beam")
+            }
             if leftQuantity > rightQuantity {
                 XCTAssertLessThan(left.position.y, right.position.y)
                 XCTAssertGreaterThan(beam.zRotation, 0)
