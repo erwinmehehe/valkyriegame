@@ -4,7 +4,7 @@ import SwiftData
 import LearningCore
 
 @MainActor final class AppState: ObservableObject {
-    enum World: String { case storyTree, mathCastle }
+    enum World: String { case storyTree, mathCastle, scienceLab }
     enum ChallengeGateStatus: Equatable { case locked, ready, active, completed }
     @Published var world: World
     @Published var soundEnabled: Bool { didSet { audio.enabled = soundEnabled; persist() } }
