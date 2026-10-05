@@ -95,6 +95,53 @@ public struct PuzzleMemoryEncounter: Identifiable, Equatable, Sendable {
     }
 }
 
+
+public enum PuzzleGateSignal: String, Codable, CaseIterable, Equatable, Sendable {
+    case hold
+    case go
+}
+
+public struct PuzzleInhibitionEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let skillID: SkillID
+    public let mechanicID: String
+    public let representation: Representation
+    public let prompt: String
+    public let signals: [PuzzleGateSignal]
+    public let context: String
+    public let transferContext: Bool
+
+    public init(
+        id: String,
+        skillID: SkillID = PuzzleSkills.responseInhibition,
+        mechanicID: String = PuzzlePalaceMechanicID.stopGoOrbs,
+        representation: Representation = .concrete,
+        prompt: String,
+        signals: [PuzzleGateSignal],
+        context: String = "stopGoOrbs",
+        transferContext: Bool = false
+    ) {
+        self.id = id
+        self.skillID = skillID
+        self.mechanicID = mechanicID
+        self.representation = representation
+        self.prompt = prompt
+        self.signals = signals
+        self.context = context
+        self.transferContext = transferContext
+    }
+
+    public var fingerprint: String {
+        [
+            mechanicID,
+            skillID.rawValue,
+            representation.rawValue,
+            signals.map(\.rawValue).joined(separator: ","),
+            context
+        ].joined(separator: "|")
+    }
+}
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -153,6 +200,26 @@ public enum PuzzlePalaceEncounterCatalog {
             prompt: "Tiko found a longer bridge memory. Hold the four-rune order, then restore it.",
             sequence: ["☾", "★", "●", "◆"],
             choices: ["★", "☾", "◆", "●"],
+            transferContext: true
+        )
+    ]
+
+    public static let stopGoOrbs: [PuzzleInhibitionEncounter] = [
+        .init(
+            id: "puzzle.stopGo.holdGoHoldGo",
+            prompt: "The palace orb opens only on GO. Hold still through the lock signals.",
+            signals: [.hold, .go, .hold, .go]
+        ),
+        .init(
+            id: "puzzle.stopGo.doubleHoldGo",
+            prompt: "Tiko changed the rhythm. Wait through both lock signals before GO.",
+            signals: [.hold, .hold, .go, .hold, .go],
+            transferContext: true
+        ),
+        .init(
+            id: "puzzle.stopGo.mixedLong",
+            prompt: "The final orb mixes short and long waits. Touch only when the gate opens.",
+            signals: [.hold, .go, .hold, .hold, .go, .hold, .go],
             transferContext: true
         )
     ]
@@ -226,6 +293,43 @@ public enum PuzzlePalaceDirector {
     public static func memoryBridgeComplete(profile: LearnerProfile) -> Bool {
         memoryBridgeIndependentSuccessCount(profile: profile)
             == PuzzlePalaceEncounterCatalog.memoryBridge.count
+    }
+
+    public static func canEnterStopGoOrbs(profile: LearnerProfile) -> Bool {
+        memoryBridgeComplete(profile: profile)
+    }
+
+    public static func nextStopGoEncounter(profile: LearnerProfile) -> PuzzleInhibitionEncounter? {
+        guard canEnterStopGoOrbs(profile: profile) else { return nil }
+        let candidates = PuzzlePalaceEncounterCatalog.stopGoOrbs
+        let independent = Set(
+            profile.progress(for: PuzzleSkills.responseInhibition).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
+            return unfinished
+        }
+        let attempts = profile.progress(for: PuzzleSkills.responseInhibition).evidence.count
+        return candidates[attempts % candidates.count]
+    }
+
+    public static func stopGoIndependentSuccessCount(profile: LearnerProfile) -> Int {
+        let ids = Set(PuzzlePalaceEncounterCatalog.stopGoOrbs.map(\.id))
+        return Set(
+            profile.progress(for: PuzzleSkills.responseInhibition).evidence
+                .filter {
+                    $0.outcome == .correct
+                        && $0.supportLevel == .independent
+                        && ids.contains($0.encounterID)
+                }
+                .map(\.encounterID)
+        ).count
+    }
+
+    public static func stopGoComplete(profile: LearnerProfile) -> Bool {
+        stopGoIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.stopGoOrbs.count
     }
 }
 
