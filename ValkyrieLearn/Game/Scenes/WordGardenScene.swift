@@ -11,6 +11,8 @@ import LearningCore
     private var support: SupportLevel = .independent
     private var startedAt = Date()
     private var solved = false
+    private var acceptingChoices = false
+    private var targetRune: SKNode?
     private let flowerPoints = [
         CGPoint(x: 505, y: 245), CGPoint(x: 675, y: 280),
         CGPoint(x: 840, y: 240), CGPoint(x: 995, y: 285)
@@ -51,7 +53,8 @@ import LearningCore
         gate.zPosition = 300
         addChild(gate)
 
-        for x in [-55.0, 55.0] {
+        let vineOffsets: [CGFloat] = [-55, 55]
+        for x in vineOffsets {
             let vine = SKShapeNode(rectOf: CGSize(width: 18, height: 210), cornerRadius: 9)
             vine.fillColor = UIColor(red: 0.22, green: 0.48, blue: 0.22, alpha: 1)
             vine.strokeColor = .clear
@@ -72,6 +75,9 @@ import LearningCore
         support = .independent
         startedAt = Date()
         solved = false
+        acceptingChoices = false
+        targetRune?.removeFromParent()
+        targetRune = nil
         instruction.text = encounter.prompt
 
         childNode(withName: "questionPrompt")?.removeFromParent()
@@ -91,6 +97,41 @@ import LearningCore
             flower.userData = NSMutableDictionary(dictionary: ["choice": choice])
             addChild(flower)
         }
+        showTargetRune()
+    }
+
+    private func showTargetRune(retryMessage: String? = nil) {
+        acceptingChoices = false
+        targetRune?.removeFromParent()
+
+        let rune = SKShapeNode(circleOfRadius: 54)
+        rune.fillColor = UIColor(red: 0.39, green: 0.25, blue: 0.56, alpha: 0.94)
+        rune.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.35, alpha: 1)
+        rune.lineWidth = 4
+        rune.glowWidth = 10
+        rune.position = CGPoint(x: 640, y: 500)
+        rune.zPosition = 2010
+        rune.name = "targetRune"
+
+        let glyph = ArtSystem.label(encounter.answer, size: 52)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1)
+        rune.addChild(glyph)
+        addChild(rune)
+        targetRune = rune
+
+        instruction.text = retryMessage ?? encounter.prompt
+        removeAction(forKey: "wordGardenPreview")
+        run(
+            .sequence([
+                .wait(forDuration: 1.15),
+                .run { [weak self, weak rune] in
+                    rune?.isHidden = true
+                    self?.acceptingChoices = true
+                    self?.instruction.text = "Which flower matches the rune you saw?"
+                }
+            ]),
+            withKey: "wordGardenPreview"
+        )
     }
 
     private func flowerNode(letter: String, index: Int) -> SKNode {
@@ -105,7 +146,10 @@ import LearningCore
             let petal = SKShapeNode(ellipseOf: CGSize(width: 58, height: 34))
             petal.fillColor = hit.fillColor
             petal.strokeColor = .clear
-            petal.position = CGPoint(x: cos(angle) * 44, y: sin(angle) * 44)
+            petal.position = CGPoint(
+                x: CGFloat(cos(angle)) * 44,
+                y: CGFloat(sin(angle)) * 44
+            )
             petal.zRotation = CGFloat(angle)
             petal.name = "flowerChoice"
             node.addChild(petal)
@@ -136,7 +180,12 @@ import LearningCore
             return
         }
         if name == "flowerChoice", let choice = choice(at: point), let flower = choice.node {
-            guard !solved else { return }
+            guard !solved, acceptingChoices else {
+                instruction.text = solved
+                    ? "The gate is already awake."
+                    : "Watch the glowing rune first."
+                return
+            }
             let approach = CGPoint(x: max(170, flower.position.x - 105), y: 175)
             travelToFlower(approach, flower: flower, choice: choice.value)
             return
@@ -176,6 +225,7 @@ import LearningCore
         attempts += 1
         if choice == encounter.answer {
             solved = true
+            acceptingChoices = false
             flower.run(.sequence([.scale(to: 1.18, duration: reducedMotion ? 0 : 0.18), .scale(to: 1.0, duration: reducedMotion ? 0 : 0.18)]))
             if let gate = childNode(withName: "flowerGate") as? SKShapeNode {
                 gate.strokeColor = .systemGreen
@@ -222,9 +272,10 @@ import LearningCore
                 .rotate(toAngle: 0.08, duration: reducedMotion ? 0 : 0.08),
                 .rotate(toAngle: 0, duration: reducedMotion ? 0 : 0.08)
             ]))
-            instruction.text = support == .lightHint
-                ? "Look closely at the letter on each flower."
-                : "Lumi is narrowing it down. Match the shape exactly."
+            let hint = support == .lightHint
+                ? "Look closely at the shape on each flower."
+                : "Lumi is narrowing it down. Match the rune shape exactly."
+            showTargetRune(retryMessage: hint)
         }
     }
 
@@ -234,6 +285,8 @@ import LearningCore
     }
 
     override func willLeave() {
+        removeAction(forKey: "wordGardenPreview")
+        targetRune?.removeFromParent()
         lumi.cancelTravel()
         lumi.removeAllActions()
         super.willLeave()
