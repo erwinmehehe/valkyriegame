@@ -429,13 +429,70 @@ import LearningCore
         restoredStopGo.reducedMotion = true
         restoredStopGo.didMove(to: SKView())
         XCTAssertNotNil(restoredStopGo.childNode(withName: "stopGoBarrierOpen"))
+        XCTAssertNotNil(restoredStopGo.childNode(withName: "sortingPedestalRoute"))
         XCTAssertEqual(
             restored.profile.progress(for: PuzzleSkills.ruleSwitching).state,
             .new
         )
-        restoredStopGo.handleTap(at: CGPoint(x: 52, y: 669))
-        XCTAssertEqual(restored.world, .storyTree)
+        restoredStopGo.valkyrie.position = CGPoint(x: 1000, y: 175)
+        restoredStopGo.handleTap(at: CGPoint(x: 1000, y: 165))
+        XCTAssertEqual(restored.world, .sortingPedestal)
         restoredStopGo.willLeave()
+
+        let sorting = PuzzlePalaceScene(state: restored)
+        sorting.reducedMotion = true
+        sorting.didMove(to: SKView())
+        XCTAssertNotNil(sorting.childNode(withName: "sortingRuleDial"))
+        XCTAssertNotNil(sorting.childNode(withName: "sortLeftPedestal"))
+        XCTAssertNotNil(sorting.childNode(withName: "sortRightPedestal"))
+        XCTAssertEqual(
+            restored.nextPuzzleSortingEncounter()?.skillID,
+            PuzzleSkills.singleRuleSort
+        )
+        XCTAssertFalse(restored.puzzleSortingFoundationComplete)
+        sorting.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation {
+            _ = restored.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(restored.puzzleSortingFoundationComplete)
+        XCTAssertEqual(
+            restored.nextPuzzleSortingEncounter()?.skillID,
+            PuzzleSkills.ruleSwitching
+        )
+
+        for encounter in PuzzlePalaceEncounterCatalog.ruleSwitching {
+            _ = restored.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(restored.puzzleRuleSwitchingComplete)
+        XCTAssertTrue(restored.puzzleSortingPedestalComplete)
+        XCTAssertEqual(
+            restored.profile.progress(for: PuzzleSkills.changedRuleSort).state,
+            .new
+        )
+
+        let stableSorting = PuzzlePalaceScene(state: restored)
+        stableSorting.reducedMotion = true
+        stableSorting.didMove(to: SKView())
+        let dial = try XCTUnwrap(
+            stableSorting.childNode(withName: "sortingRuleDial") as? SKShapeNode
+        )
+        XCTAssertEqual(dial.glowWidth, 14)
+        stableSorting.handleTap(at: CGPoint(x: 52, y: 669))
+        XCTAssertEqual(restored.world, .storyTree)
+        stableSorting.willLeave()
     }
 
     func testFlowerGateCompletionStopsPreviewOnRestore() async throws {
@@ -635,6 +692,79 @@ import LearningCore
             view.presentScene(nil)
             window.isHidden = true
         }
+    }
+
+    func testSortingPedestalRunsStableAndSwitchingRulesThroughLivePedestals() async throws {
+        func prepareState(includeFoundation: Bool) throws -> AppState {
+            let state = try AppState(
+                context: ModelContext(try LearningStore.container(inMemory: true))
+            )
+            state.reducedMotion = true
+            for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent, attempts: 1, responseTime: 1)
+            }
+            if includeFoundation {
+                for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation {
+                    _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent, attempts: 1, responseTime: 1)
+                }
+            }
+            state.travel(to: .sortingPedestal)
+            return state
+        }
+
+        func run(_ points: [CGPoint], state: AppState) async throws {
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            view.presentScene(scene)
+
+            try await Task.sleep(nanoseconds: 350_000_000)
+            for point in points {
+                scene.handleTap(at: point)
+                try await Task.sleep(nanoseconds: 250_000_000)
+            }
+            try await Task.sleep(nanoseconds: 450_000_000)
+
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let left = CGPoint(x: 530, y: 355)
+        let right = CGPoint(x: 970, y: 355)
+
+        let foundationState = try prepareState(includeFoundation: false)
+        let foundationEncounter = try XCTUnwrap(foundationState.nextPuzzleSortingEncounter())
+        XCTAssertEqual(foundationEncounter.skillID, PuzzleSkills.singleRuleSort)
+        try await run([left, right, left, right], state: foundationState)
+        let foundationEvidence = foundationState.profile
+            .progress(for: PuzzleSkills.singleRuleSort)
+            .evidence
+        XCTAssertEqual(foundationEvidence.count, 1)
+        XCTAssertEqual(foundationEvidence.first?.encounterID, foundationEncounter.id)
+        XCTAssertEqual(foundationEvidence.first?.supportLevel, .independent)
+
+        let switchState = try prepareState(includeFoundation: true)
+        let switchEncounter = try XCTUnwrap(switchState.nextPuzzleSortingEncounter())
+        XCTAssertEqual(switchEncounter.skillID, PuzzleSkills.ruleSwitching)
+        try await run([left, right, right, left], state: switchState)
+        let switchEvidence = switchState.profile
+            .progress(for: PuzzleSkills.ruleSwitching)
+            .evidence
+        XCTAssertEqual(switchEvidence.count, 1)
+        XCTAssertEqual(switchEvidence.first?.encounterID, switchEncounter.id)
+        XCTAssertEqual(switchEvidence.first?.supportLevel, .independent)
     }
 
     func testRenderedNativeSceneReviewAttachments() async throws {
@@ -895,7 +1025,74 @@ import LearningCore
         )
         XCTAssertTrue(state.puzzleStopGoComplete)
         XCTAssertNotNil(stableStopGo.childNode(withName: "stopGoBarrierOpen"))
+        XCTAssertNotNil(stableStopGo.childNode(withName: "sortingPedestalRoute"))
         stableStopGo.willLeave()
+
+        state.travel(to: .sortingPedestal)
+        let sorting = PuzzlePalaceScene(state: state)
+        sorting.reducedMotion = true
+        view.presentScene(sorting)
+        try await capture(
+            sorting,
+            in: view,
+            name: "Puzzle-Palace-native-sorting-pedestal"
+        )
+        XCTAssertNotNil(sorting.childNode(withName: "sortingRuleDial"))
+        XCTAssertEqual(
+            state.nextPuzzleSortingEncounter()?.skillID,
+            PuzzleSkills.singleRuleSort
+        )
+        sorting.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation {
+            _ = state.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+
+        let switching = PuzzlePalaceScene(state: state)
+        switching.reducedMotion = true
+        view.presentScene(switching)
+        try await capture(
+            switching,
+            in: view,
+            name: "Puzzle-Palace-native-sorting-rule-switch"
+        )
+        XCTAssertTrue(state.puzzleSortingFoundationComplete)
+        XCTAssertEqual(
+            state.nextPuzzleSortingEncounter()?.skillID,
+            PuzzleSkills.ruleSwitching
+        )
+        switching.willLeave()
+
+        for encounter in PuzzlePalaceEncounterCatalog.ruleSwitching {
+            _ = state.recordPuzzle(
+                encounter,
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+
+        let stableSorting = PuzzlePalaceScene(state: state)
+        stableSorting.reducedMotion = true
+        view.presentScene(stableSorting)
+        try await capture(
+            stableSorting,
+            in: view,
+            name: "Puzzle-Palace-native-sorting-pedestal-stable"
+        )
+        XCTAssertTrue(state.puzzleSortingPedestalComplete)
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.changedRuleSort).state,
+            .new
+        )
+        stableSorting.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
