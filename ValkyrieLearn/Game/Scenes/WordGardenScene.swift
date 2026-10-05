@@ -223,6 +223,7 @@ import LearningCore
 
     private func resolve(choice: String, flower: SKNode) {
         attempts += 1
+        let attemptSupport = support
         if choice == encounter.answer {
             solved = true
             acceptingChoices = false
@@ -242,7 +243,7 @@ import LearningCore
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .correct,
-                support: support,
+                support: attemptSupport,
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
@@ -258,14 +259,14 @@ import LearningCore
                 }
             ]), withKey: "nextLiteracyEncounter")
         } else {
-            support = support == .independent ? .lightHint : .strongHint
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .incorrect,
-                support: support,
+                support: attemptSupport,
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
+            support = support == .independent ? .lightHint : .strongHint
             valkyrie.pose(.react)
             flower.run(.sequence([
                 .rotate(toAngle: -0.08, duration: reducedMotion ? 0 : 0.08),
