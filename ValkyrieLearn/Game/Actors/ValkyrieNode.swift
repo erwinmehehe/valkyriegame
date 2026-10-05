@@ -29,6 +29,7 @@ import SpriteKit
     func pose(_ pose: ArtSystem.Pose) {
         removeAction(forKey: "operation")
         bodyNode.removeAction(forKey: "pose")
+        bodyNode.removeAction(forKey: "helperHop")
         atlasSprite?.removeAction(forKey: "pose")
         bodyNode.position = .zero; bodyNode.zRotation = 0; bodyNode.setScale(1)
         bodyNode.xScale = facing
@@ -45,9 +46,23 @@ import SpriteKit
                 case .idle:
                     bodyNode.run(.repeatForever(.sequence([.scaleY(to: 1.008, duration: 1.8), .scaleY(to: 1, duration: 1.8)])), withKey: "pose")
                 case .celebrate:
-                    bodyNode.run(.sequence([.moveBy(x: 0, y: 12, duration: 0.18), .moveBy(x: 0, y: -12, duration: 0.22)]), withKey: "pose")
+                    bodyNode.run(.sequence([
+                        .group([
+                            .moveBy(x: 0, y: 15, duration: 0.20),
+                            .rotate(toAngle: -0.045, duration: 0.20)
+                        ]),
+                        .group([
+                            .moveBy(x: 0, y: -15, duration: 0.28),
+                            .rotate(toAngle: 0.025, duration: 0.22)
+                        ]),
+                        .rotate(toAngle: 0, duration: 0.12)
+                    ]), withKey: "pose")
                 case .react:
-                    bodyNode.run(.sequence([.rotate(toAngle: -0.035, duration: 0.14), .rotate(toAngle: 0, duration: 0.2)]), withKey: "pose")
+                    bodyNode.run(.sequence([
+                        .rotate(toAngle: -0.04, duration: 0.12),
+                        .rotate(toAngle: 0.025, duration: 0.12),
+                        .rotate(toAngle: 0, duration: 0.16)
+                    ]), withKey: "pose")
                 case .interact: break // The existing atlas supplies Valkyrie's reaching pose.
                 }
             }
