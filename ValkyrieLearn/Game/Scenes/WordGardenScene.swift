@@ -14,6 +14,8 @@ import LearningCore
     private var support: SupportLevel = .independent
     private var startedAt = Date()
     private var solved = false
+    private var acceptingFlowerChoices = false
+    private var targetRune: SKNode?
 
     private let flowerPoints = [
         CGPoint(x: 505, y: 245), CGPoint(x: 675, y: 280),
@@ -79,15 +81,17 @@ import LearningCore
             addChild(backdrop)
         }
 
-        let shade = ArtSystem.box(
-            CGSize(width: 1280, height: 96),
-            color: .black.withAlphaComponent(0.25),
-            radius: 0
-        )
-        shade.strokeColor = .clear
-        shade.position = CGPoint(x: 640, y: 42)
-        shade.zPosition = 1990
-        addChild(shade)
+        for (height, y) in [(CGFloat(62), CGFloat(684)), (CGFloat(96), CGFloat(42))] {
+            let shade = ArtSystem.box(
+                CGSize(width: 1280, height: height),
+                color: .black.withAlphaComponent(0.25),
+                radius: 0
+            )
+            shade.strokeColor = .clear
+            shade.position = CGPoint(x: 640, y: y)
+            shade.zPosition = 1990
+            addChild(shade)
+        }
 
         let home = worldControl("⌂", name: "home", at: CGPoint(x: 52, y: 669), radius: 26)
         home.zPosition = 2100
@@ -117,7 +121,8 @@ import LearningCore
         gate.zPosition = 300
         addChild(gate)
 
-        for (index, x) in [-55.0, 55.0].enumerated() {
+        let vineOffsets: [CGFloat] = [-55, 55]
+        for (index, x) in vineOffsets.enumerated() {
             let vine = SKShapeNode(rectOf: CGSize(width: 18, height: 210), cornerRadius: 9)
             vine.fillColor = UIColor(red: 0.22, green: 0.48, blue: 0.22, alpha: 1)
             vine.strokeColor = .clear
@@ -130,6 +135,8 @@ import LearningCore
         star.name = "gateStar"
         star.position = CGPoint(x: 0, y: 55)
         gate.addChild(star)
+
+        buildSoundFlowers()
     }
 
     private func buildSunmillLandmark() {
@@ -259,7 +266,10 @@ import LearningCore
 
         instruction.text = encounter.prompt
         addPrompt(encounter.prompt)
-        updateSunmillTarget(encounter.answer.uppercased())
+        updateSunmillTarget(
+            WordGardenEncounterCatalog.uppercaseTarget(for: encounter)
+                ?? encounter.answer.uppercased()
+        )
 
         for (index, choice) in encounter.choices.enumerated() {
             let node = sunmillChoiceNode(letter: choice, index: index)
@@ -552,7 +562,7 @@ import LearningCore
 
     private func refreshFlowerGateProgress() {
         let count = WordGardenDirector.independentSuccessCount(
-            for: WordGardenEncounterCatalog.uppercaseLetters,
+            for: WordGardenEncounterCatalog.visualLetterShapes,
             profile: state.profile
         )
 
@@ -590,7 +600,7 @@ import LearningCore
 
     private func refreshSunmillProgress(animated: Bool) {
         let count = WordGardenDirector.independentSuccessCount(
-            for: WordGardenEncounterCatalog.lowercaseLetters,
+            for: WordGardenEncounterCatalog.visualCasePairs,
             profile: state.profile
         )
         let target = -CGFloat(count) * (2 * .pi / 3)
