@@ -64,7 +64,7 @@ print('PASS illustrated bridge prop hashes and crop dimensions.')
 # Word Garden reference assets are preserved exact v3.31 embedded-source blobs.
 word_garden_art = json.loads((ROOT/'ValkyrieLearn/Resources/WORD_GARDEN_ART_MANIFEST.json').read_text())
 def git_blob_sha(data):
-    return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\\0' + data).hexdigest()
+    return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
 assert git_blob_sha((ROOT/'index.html').read_bytes()) == word_garden_art['sourceBlobSHA']
 for path, metadata in word_garden_art['assets'].items():
     data = (ROOT/path).read_bytes()
