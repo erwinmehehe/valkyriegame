@@ -137,12 +137,20 @@ import LearningCore
         XCTAssertNotEqual(state.runtime?.encounter.id, repairedID)
         bridge.willLeave()
         for (index, name) in [(0, "Math-Castle-native-scale-unequal"), (2, "Math-Castle-native-scale-equal-selected")] {
-            XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.balanceScale[index]))
-            let scale = MathCastleScene(state: state); scale.reducedMotion = true
+            // Visual fixtures use fresh sessions so engagement breaks in the preceding
+            // bridge journey cannot refuse the requested scale encounter.
+            let scaleState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+            scaleState.reducedMotion = true
+            XCTAssertTrue(scaleState.startWorkshop(MathCastleEncounterCatalog.balanceScale[index]))
+            let scale = MathCastleScene(state: scaleState); scale.reducedMotion = true
             view.presentScene(scale)
             scale.valkyrie.position = CGPoint(x: 490, y: 175); scale.pip.position = CGPoint(x: 385, y: 187)
             scale.handleTap(at: CGPoint(x: 820, y: 350))
             if index == 2 { scale.handleTap(at: CGPoint(x: 820, y: 195)) }
+            guard case .balanceScale(let model)? = scaleState.runtime else {
+                XCTFail("Scale capture must render the requested mechanic"); continue
+            }
+            XCTAssertEqual(model.selected, index == 2 ? .equal : nil)
             try await capture(scale, in: view, name: name)
             scale.willLeave()
         }
