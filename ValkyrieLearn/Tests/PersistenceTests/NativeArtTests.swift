@@ -97,10 +97,10 @@ import LearningCore
         XCTAssertNotNil(flower.childNode(withName: "questionPrompt"))
         XCTAssertEqual(flower.children.filter { $0.name == "flowerChoice" }.count, 4)
         XCTAssertNil(flower.childNode(withName: "sunmillRoute"))
-        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.uppercaseLetterNames)
+        XCTAssertEqual(state.nextLiteracyEncounter().skillID, LiteracySkills.visualLetterMatch)
         flower.willLeave()
 
-        for encounter in WordGardenEncounterCatalog.uppercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .correct,
@@ -129,7 +129,7 @@ import LearningCore
         XCTAssertEqual(sunmill.children.filter { $0.name == "sunmillChoice" }.count, 4)
         XCTAssertEqual(
             state.nextSunmillEncounter()?.skillID,
-            LiteracySkills.lowercaseLetterNames
+            LiteracySkills.visualCasePairing
         )
         sunmill.handleTap(at: CGPoint(x: 1110, y: 665))
         XCTAssertEqual(state.world, .wordGarden)
@@ -160,7 +160,7 @@ import LearningCore
         try await capture(flower, in: view, name: "Word-Garden-native-flower-gate")
         flower.willLeave()
 
-        for encounter in WordGardenEncounterCatalog.uppercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualLetterShapes {
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .correct,
@@ -175,7 +175,7 @@ import LearningCore
         try await capture(sunmill, in: view, name: "Word-Garden-native-sunmill")
         sunmill.willLeave()
 
-        for encounter in WordGardenEncounterCatalog.lowercaseLetters {
+        for encounter in WordGardenEncounterCatalog.visualCasePairs {
             _ = state.recordLiteracy(
                 encounter,
                 outcome: .correct,
