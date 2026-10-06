@@ -1833,6 +1833,20 @@ import LearningCore
             try await capture(scale, in: view, name: name)
             scale.willLeave()
         }
+        let tenFrameState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        tenFrameState.reducedMotion = true
+        XCTAssertTrue(tenFrameState.startWorkshop(MathCastleEncounterCatalog.tenFrameGate[0]))
+        let tenFrame = MathCastleScene(state: tenFrameState)
+        tenFrame.reducedMotion = true
+        view.presentScene(tenFrame)
+        tenFrame.valkyrie.position = CGPoint(x: 490, y: 175)
+        tenFrame.pip.position = CGPoint(x: 385, y: 187)
+        tenFrame.handleTap(at: CGPoint(x: 820, y: 344))
+        try await capture(tenFrame, in: view, name: "Math-Castle-native-ten-frame")
+        tenFrame.willLeave()
+
         for (capacity, name) in [(false, "Math-Castle-native-bond"), (true, "Math-Castle-native-bond-capacity")] {
             let bondState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
             bondState.reducedMotion = true
