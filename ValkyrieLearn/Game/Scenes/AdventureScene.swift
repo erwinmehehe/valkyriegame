@@ -58,10 +58,24 @@ struct AdventureSceneLayout {
     var environment: ArtSystem.Environment { .castle }
     var worldTitle: String { "Math Castle" }
 
+    private final class InteractionRegistration {
+        weak var node: SKNode?
+        let clearance: CGFloat
+
+        init(node: SKNode, clearance: CGFloat) {
+            self.node = node
+            self.clearance = clearance
+        }
+    }
+
     private var leaving = false
     private var registeredInteractionZones: [CGRect] = []
+    private var interactionRegistrations: [InteractionRegistration] = []
     private weak var instructionBackdrop: SKShapeNode?
     private weak var titleBackdrop: SKShapeNode?
+    private let successHaptic = UINotificationFeedbackGenerator()
+    private let errorHaptic = UINotificationFeedbackGenerator()
+    private let selectionHaptic = UISelectionFeedbackGenerator()
 
     var reducedMotion = false {
         didSet {
@@ -86,6 +100,9 @@ struct AdventureSceneLayout {
 
         view.isMultipleTouchEnabled = false
         view.shouldCullNonVisibleNodes = true
+        successHaptic.prepare()
+        errorHaptic.prepare()
+        selectionHaptic.prepare()
 
         let camera = SKCameraNode()
         camera.position = CGPoint(x: 640, y: 360)
@@ -355,9 +372,8 @@ struct AdventureSceneLayout {
     }
 
     func registerInteraction(_ node: SKNode, clearance: CGFloat = 18) {
-        let frame = node.calculateAccumulatedFrame().insetBy(dx: -clearance, dy: -clearance)
-        guard !frame.isNull, !frame.isInfinite else { return }
-        registeredInteractionZones.append(frame)
+        guard !interactionRegistrations.contains(where: { $0.node === node }) else { return }
+        interactionRegistrations.append(InteractionRegistration(node: node, clearance: clearance))
     }
 
     func registerInteractionZone(_ rect: CGRect) {
@@ -366,13 +382,30 @@ struct AdventureSceneLayout {
 
     func clearRegisteredInteractionZones() {
         registeredInteractionZones.removeAll(keepingCapacity: true)
+        interactionRegistrations.removeAll(keepingCapacity: true)
+    }
+
+    private func liveInteractionZones() -> [CGRect] {
+        interactionRegistrations.removeAll { registration in
+            guard let node = registration.node else { return true }
+            return node.scene !== self
+        }
+
+        return interactionRegistrations.compactMap { registration in
+            guard let node = registration.node else { return nil }
+            let frame = node.calculateAccumulatedFrame().insetBy(
+                dx: -registration.clearance,
+                dy: -registration.clearance
+            )
+            return frame.isNull || frame.isInfinite ? nil : frame
+        }
     }
 
     func safeActorPoint(
         near desired: CGPoint,
         avoiding extraZones: [CGRect] = []
     ) -> CGPoint {
-        let combined = registeredInteractionZones + extraZones
+        let combined = registeredInteractionZones + liveInteractionZones() + extraZones
         let candidates: [CGFloat] = [0, -115, 115, -165, 165, -220, 220, -280, 280]
         let rendered = valkyrie.calculateAccumulatedFrame()
         let actorFootprint = CGSize(
@@ -410,9 +443,9 @@ struct AdventureSceneLayout {
         )
         let point = safeActorPoint(near: desired)
 
+        state.audio.play("footstep")
         valkyrie.walk(to: point) { [weak self] in
             guard let self, !self.leaving else { return }
-            self.state.audio.play("footstep")
             action?()
         }
 
@@ -454,18 +487,18 @@ struct AdventureSceneLayout {
 
     func successFeedback() {
         state.audio.play("success")
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+        successHaptic.notificationOccurred(.success)
+        successHaptic.prepare()
     }
 
     func errorFeedback() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.error)
+        errorHaptic.notificationOccurred(.error)
+        errorHaptic.prepare()
     }
 
     func selectionFeedback() {
-        let generator = UISelectionFeedbackGenerator()
-        generator.selectionChanged()
+        selectionHaptic.selectionChanged()
+        selectionHaptic.prepare()
     }
 
     func isNear(_ point: CGPoint, radius: CGFloat = 85) -> Bool {
