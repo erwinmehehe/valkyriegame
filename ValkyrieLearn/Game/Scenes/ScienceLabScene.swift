@@ -47,6 +47,7 @@ import LearningCore
         sky.strokeColor = .clear
         sky.position = CGPoint(x: 640, y: 360)
         sky.zPosition = -200
+        sky.name = "scienceGreenhouseBackdrop"
         addChild(sky)
         
         let ground = ArtSystem.box(
