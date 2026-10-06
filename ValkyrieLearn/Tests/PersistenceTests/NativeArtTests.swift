@@ -221,7 +221,7 @@ import LearningCore
     }
 
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
-        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko", "StoryBloom"] {
+        for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Milo", "Tiko", "StoryBloom"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
         }
         for character in ["Valkyrie", "Pip"] {
@@ -250,6 +250,53 @@ import LearningCore
             XCTAssertEqual(sprite.size.height, 300)
             XCTAssertFalse(actor.children.compactMap { $0 as? SKLabelNode }.contains { !$0.isHidden })
         }
+    }
+
+    func testCompanionPresentationPreservesSourceAspectAndReadablePresence() throws {
+        let companions: [(String, CharacterNode, CGFloat)] = [
+            ("Lumi", LumiNode(), 128),
+            ("Milo", MiloNode(), 113),
+            ("Tiko", TikoNode(), 130)
+        ]
+
+        for (asset, actor, expectedHeight) in companions {
+            actor.pose(.idle)
+            let sprite = try XCTUnwrap(
+                actor.bodyNode.children.compactMap { $0 as? SKSpriteNode }.first
+            )
+            let source = try XCTUnwrap(ArtSystem.texture(asset))
+            XCTAssertGreaterThan(source.size().height, 0)
+            XCTAssertEqual(
+                sprite.size.width / sprite.size.height,
+                source.size().width / source.size().height,
+                accuracy: 0.001,
+                "\(asset) must render at its source-art aspect ratio."
+            )
+            XCTAssertEqual(sprite.size.height, expectedHeight, accuracy: 0.001)
+            XCTAssertNotNil(
+                actor.childNode(withName: "companionPresence"),
+                "\(asset) needs an in-world grounding treatment."
+            )
+            XCTAssertFalse(
+                actor.children.compactMap { $0 as? SKLabelNode }.contains { !$0.isHidden },
+                "\(asset) should never expose the engineering fallback label when art resolves."
+            )
+        }
+
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let garden = WordGardenScene(state: state)
+        garden.reducedMotion = true
+        garden.didMove(to: SKView())
+        defer { garden.willLeave() }
+
+        let lumi = try XCTUnwrap(garden.childNode(withName: "lumi"))
+        XCTAssertGreaterThanOrEqual(
+            lumi.calculateAccumulatedFrame().height,
+            90,
+            "Lumi must read as a companion, not a tiny decorative sticker."
+        )
     }
 
     func testActorKeepsFacingWhenItStopsAndReducedMotionRemovesAmbientActions() async throws {

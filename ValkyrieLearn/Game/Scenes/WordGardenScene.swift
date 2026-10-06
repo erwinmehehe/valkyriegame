@@ -65,7 +65,7 @@ import LearningCore
         super.didMove(to: view)
         pip.removeFromParent()
         valkyrie.setScale(0.5)
-        lumi.setScale(0.65)
+        lumi.setScale(0.82)
 
         switch place {
         case .flowerGate:

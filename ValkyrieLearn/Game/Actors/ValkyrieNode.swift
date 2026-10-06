@@ -6,9 +6,11 @@ import SpriteKit
     private var atlasSprite: SKSpriteNode?
     private var temporaryLabel: SKLabelNode?
     private var facing: CGFloat = 1
+    private let renderHeight: CGFloat
     var reducedMotion = false
     init(character: String, color: UIColor, height: CGFloat) {
         self.character = character
+        self.renderHeight = height
         super.init()
         addChild(bodyNode)
         let body = ArtSystem.box(CGSize(width: height * 0.42, height: height * 0.62), color: color)
@@ -25,6 +27,27 @@ import SpriteKit
         bodyNode.addChild(sprite); atlasSprite = sprite
         pose(.idle)
     }
+
+    @discardableResult
+    func addPresenceAura(
+        color: UIColor,
+        width: CGFloat,
+        height: CGFloat = 28,
+        glow: CGFloat = 4
+    ) -> SKShapeNode {
+        let aura = SKShapeNode(ellipseOf: CGSize(width: width, height: height))
+        aura.name = "companionPresence"
+        aura.fillColor = color.withAlphaComponent(0.14)
+        aura.strokeColor = color.withAlphaComponent(0.28)
+        aura.lineWidth = 1.5
+        aura.glowWidth = glow
+        aura.position.y = 8
+        aura.zPosition = -2
+        aura.isUserInteractionEnabled = false
+        addChild(aura)
+        return aura
+    }
+
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
     func pose(_ pose: ArtSystem.Pose) {
         removeAction(forKey: "operation")
@@ -37,7 +60,15 @@ import SpriteKit
         if let first = frames.first, let sprite = atlasSprite {
             temporaryLabel?.isHidden = true
             bodyNode.children.filter { $0 !== sprite }.forEach { $0.isHidden = true }
-            sprite.isHidden = false; sprite.texture = first
+            sprite.isHidden = false
+            sprite.texture = first
+            let textureSize = first.size()
+            if textureSize.height > 0 {
+                sprite.size = CGSize(
+                    width: renderHeight * textureSize.width / textureSize.height,
+                    height: renderHeight
+                )
+            }
             if !reducedMotion {
                 switch pose {
                 case .walk:
