@@ -1638,6 +1638,14 @@ import LearningCore
             "Identifying the broken step alone must not count as completed debugging evidence."
         )
         let replacement = try XCTUnwrap(bugLantern.childNode(withName: "bugReplacement"))
+        XCTAssertEqual(bugLantern.tiko.position.x, brokenNode.position.x, accuracy: 0.001)
+        XCTAssertEqual(bugLantern.tiko.position.y, 205, accuracy: 0.001)
+        XCTAssertFalse(
+            replacement.calculateAccumulatedFrame().intersects(
+                bugLantern.tiko.calculateAccumulatedFrame()
+            ),
+            "Tiko's failure demonstration must stay visually separate from the replacement command."
+        )
         XCTAssertEqual(
             replacement.accessibilityLabel,
             "Replacement command: \(bugEncounter.intended[bugEncounter.brokenIndex].title). Install it in step \(bugEncounter.brokenIndex + 1)."
