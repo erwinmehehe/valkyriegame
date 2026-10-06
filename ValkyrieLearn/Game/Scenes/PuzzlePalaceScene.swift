@@ -601,6 +601,12 @@ import LearningCore
             pedestal.userData = NSMutableDictionary(dictionary: ["choice": choice])
             addChild(pedestal)
         }
+
+        showAttentionCue(
+            at: CGPoint(x: 770, y: 155),
+            tint: UIColor(red: 0.76, green: 0.65, blue: 1.0, alpha: 1),
+            width: 180
+        )
     }
 
     private func runeStone(_ rune: String, name: String) -> SKNode {
@@ -700,6 +706,7 @@ import LearningCore
     private func clearRuneObjects() {
         childNode(withName: "runeBoard")?.removeFromParent()
         children.filter { $0.name == "runeChoice" }.forEach { $0.removeFromParent() }
+        clearAttentionCue()
     }
 
     private func buildMemoryBridgeWorld() {
@@ -844,6 +851,7 @@ import LearningCore
 
     private func clearMemoryPads() {
         children.filter { $0.name == "memoryPad" }.forEach { $0.removeFromParent() }
+        clearAttentionCue()
     }
 
     private func previewMemorySequence() {
@@ -872,6 +880,11 @@ import LearningCore
             guard let self else { return }
             self.memoryAcceptingInput = true
             self.startedAt = Date()
+            self.showAttentionCue(
+                at: CGPoint(x: 745, y: 155),
+                tint: UIColor(red: 0.76, green: 0.65, blue: 1.0, alpha: 1),
+                width: 190
+            )
             self.instruction.text = "Now repeat Tiko's rune order to raise the bridge."
         })
         run(.sequence(actions), withKey: "memoryPreview")

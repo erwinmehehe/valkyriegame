@@ -36,6 +36,7 @@ import LearningCore
         addChild(milo)
 
         instruction.text = "Milo found two weather flags. Observe the morning flag first."
+        refreshGuidanceCue()
     }
 
     override func buildWorld() {
@@ -569,6 +570,7 @@ import LearningCore
         valkyrie.pose(.interact)
         state.scienceObserveMorningWeather()
         instruction.text = "Morning: cloudy with rain. Milo says to compare another observation before forecasting."
+        refreshGuidanceCue()
     }
 
     private func observeAfternoon() {
@@ -580,6 +582,7 @@ import LearningCore
         valkyrie.pose(.interact)
         state.scienceObserveAfternoonWeather()
         instruction.text = "Afternoon: cloudy with rain again. The same condition appeared twice. What is likely next?"
+        refreshGuidanceCue()
     }
 
     private func chooseForecast(_ choice: ForecastChoice) {
@@ -601,5 +604,21 @@ import LearningCore
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "Sun could happen, but it does not match the pattern we observed. Compare the two rainy flags again."
         }
+        refreshGuidanceCue()
     }
+
+    private func refreshGuidanceCue() {
+        let tint = UIColor(red: 0.62, green: 0.87, blue: 1.0, alpha: 1)
+        switch weatherStage {
+        case .arrive:
+            showAttentionCue(at: morningPoint, tint: tint)
+        case .morningObserved:
+            showAttentionCue(at: afternoonPoint, tint: tint)
+        case .afternoonObserved:
+            showAttentionCue(at: forecastPoint, tint: tint, width: 138)
+        case .complete:
+            showAttentionCue(at: creatureGatePoint, tint: tint, width: 104)
+        }
+    }
+
 }

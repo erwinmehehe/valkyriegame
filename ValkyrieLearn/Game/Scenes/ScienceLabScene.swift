@@ -37,6 +37,7 @@ import LearningCore
         renderGate()
 
         instruction.text = "Milo noticed something at the seed bench. Walk over and inspect it."
+        refreshGuidanceCue()
     }
 
     override func buildWorld() {
@@ -755,6 +756,7 @@ import LearningCore
         case .lit:
             instruction.text = "Water and light changed the plant. The Greenhouse gate is open."
         }
+        refreshGuidanceCue()
     }
 
     private func testWater() {
@@ -776,6 +778,7 @@ import LearningCore
         state.scienceWaterGreenhouse()
         renderPlant()
         instruction.text = "The dry soil darkened, and a sprout appeared. Our water test changed the seed tray."
+        refreshGuidanceCue()
     }
 
     private func testLight() {
@@ -800,5 +803,21 @@ import LearningCore
         renderGate()
         state.audio.play("success")
         instruction.text = "The pale sprout became greener in the light. Observation, prediction, test, result—the Weather Tower path opened."
+        refreshGuidanceCue()
     }
+
+    private func refreshGuidanceCue() {
+        let tint = UIColor(red: 0.57, green: 0.93, blue: 0.63, alpha: 1)
+        switch greenhouseStage {
+        case .arrive:
+            showAttentionCue(at: seedBenchPoint, tint: tint)
+        case .inspected:
+            showAttentionCue(at: waterValvePoint, tint: tint)
+        case .watered:
+            showAttentionCue(at: sunPrismPoint, tint: tint)
+        case .lit:
+            showAttentionCue(at: exitPoint, tint: tint, width: 104)
+        }
+    }
+
 }
