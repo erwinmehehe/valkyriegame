@@ -3464,7 +3464,9 @@ import LearningCore
         plate.fillColor = UIColor(red: 0.12, green: 0.25, blue: 0.22, alpha: 0.98)
         plate.strokeColor = UIColor(red: 0.45, green: 0.92, blue: 0.67, alpha: 0.96)
         plate.lineWidth = 5
-        plate.position = CGPoint(x: 760, y: 205)
+        // Keep the replacement physically separate from Tiko's failed-step position
+        // so diagnosis and repair remain visually distinct, including reduced motion.
+        plate.position = CGPoint(x: 390, y: 205)
         plate.name = "bugReplacement"
         plate.zPosition = 1050
 
