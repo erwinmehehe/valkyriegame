@@ -74,9 +74,12 @@ import LearningCore
 
     override func buildWorld() {
         super.buildWorld()
+        let usesNativeCastleBackdrop = installRetinaSafeCastleBackdropIfNeeded()
         _ = worldControl("‹", name: "home", at: CGPoint(x: 52, y: 669))
-        // A source-textured courtyard supports the live actors and machinery.
-        if let floor = ArtSystem.sprite("CastleCourtyard", size: CGSize(width: 1280, height: 250)) {
+        // Keep the painted courtyard only when its source can actually support the
+        // rendered point size. The native backdrop already supplies a crisp floor.
+        if !usesNativeCastleBackdrop,
+           let floor = ArtSystem.sprite("CastleCourtyard", size: CGSize(width: 1280, height: 250)) {
             floor.position = CGPoint(x: 640, y: 125)
             floor.zPosition = -80
             addChild(floor)
@@ -194,6 +197,231 @@ import LearningCore
         buildPhysicalProgression()
         updateChallengeGateAppearance()
         openOrder()
+    }
+
+    /// Prevents a 1x reference painting from being stretched across a Retina iPad.
+    /// When dedicated 2x+ Math Castle art is added, this method becomes a no-op and
+    /// the normal illustrated AdventureScene backdrop is used automatically.
+    @discardableResult
+    private func installRetinaSafeCastleBackdropIfNeeded() -> Bool {
+        guard !ArtSystem.isRetinaReady("MathCastle", targetPoints: size) else {
+            return false
+        }
+
+        childNode(withName: "worldBackdrop")?.removeFromParent()
+        childNode(withName: "foregroundLeft")?.removeFromParent()
+        childNode(withName: "foregroundRight")?.removeFromParent()
+
+        let sky = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.075, green: 0.065, blue: 0.17, alpha: 1),
+            radius: 0
+        )
+        sky.strokeColor = .clear
+        sky.position = CGPoint(x: 640, y: 360)
+        sky.zPosition = -260
+        sky.name = "mathNativeBackdrop"
+        addChild(sky)
+
+        // Preserve a trace of the approved palette/composition without letting the
+        // low-resolution painting define edges on the playable surface.
+        if let texture = ArtSystem.texture("MathCastle") {
+            let matte = SKSpriteNode(texture: texture, color: .white, size: size)
+            matte.position = CGPoint(x: 640, y: 360)
+            matte.zPosition = -250
+            matte.alpha = 0.08
+            matte.name = "mathLegacyMatte"
+            addChild(matte)
+        }
+
+        let halo = SKShapeNode(circleOfRadius: 115)
+        halo.position = CGPoint(x: 1045, y: 525)
+        halo.fillColor = UIColor(red: 0.47, green: 0.72, blue: 1.0, alpha: 0.12)
+        halo.strokeColor = .clear
+        halo.glowWidth = 18
+        halo.zPosition = -238
+        addChild(halo)
+
+        func polygon(
+            _ points: [CGPoint],
+            fill: UIColor,
+            stroke: UIColor = .clear,
+            lineWidth: CGFloat = 0
+        ) -> SKShapeNode {
+            let path = CGMutablePath()
+            if let first = points.first {
+                path.move(to: first)
+                for point in points.dropFirst() { path.addLine(to: point) }
+                path.closeSubpath()
+            }
+            let node = SKShapeNode(path: path)
+            node.fillColor = fill
+            node.strokeColor = stroke
+            node.lineWidth = lineWidth
+            return node
+        }
+
+        let backRidge = polygon(
+            [
+                CGPoint(x: 0, y: 250), CGPoint(x: 0, y: 390),
+                CGPoint(x: 120, y: 455), CGPoint(x: 245, y: 375),
+                CGPoint(x: 355, y: 470), CGPoint(x: 470, y: 390),
+                CGPoint(x: 610, y: 485), CGPoint(x: 760, y: 395),
+                CGPoint(x: 900, y: 475), CGPoint(x: 1040, y: 400),
+                CGPoint(x: 1160, y: 465), CGPoint(x: 1280, y: 390),
+                CGPoint(x: 1280, y: 250)
+            ],
+            fill: UIColor(red: 0.15, green: 0.12, blue: 0.30, alpha: 0.96)
+        )
+        backRidge.zPosition = -228
+        backRidge.name = "mathNativeArchitecture"
+        addChild(backRidge)
+
+        let nearRidge = polygon(
+            [
+                CGPoint(x: 0, y: 210), CGPoint(x: 0, y: 315),
+                CGPoint(x: 175, y: 390), CGPoint(x: 330, y: 300),
+                CGPoint(x: 500, y: 405), CGPoint(x: 670, y: 305),
+                CGPoint(x: 845, y: 390), CGPoint(x: 1015, y: 300),
+                CGPoint(x: 1160, y: 365), CGPoint(x: 1280, y: 315),
+                CGPoint(x: 1280, y: 210)
+            ],
+            fill: UIColor(red: 0.105, green: 0.095, blue: 0.235, alpha: 0.98)
+        )
+        nearRidge.zPosition = -220
+        addChild(nearRidge)
+
+        // Castle silhouettes frame the Challenge Gate without competing with the
+        // live manipulatives in the center of the scene.
+        let towers: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
+            (925, 405, 92, 275),
+            (1035, 430, 116, 330),
+            (1160, 395, 96, 255)
+        ]
+        for (x, y, width, height) in towers {
+            let tower = ArtSystem.box(
+                CGSize(width: width, height: height),
+                color: UIColor(red: 0.12, green: 0.105, blue: 0.25, alpha: 0.96),
+                radius: 18
+            )
+            tower.position = CGPoint(x: x, y: y)
+            tower.zPosition = -205
+            tower.strokeColor = UIColor(red: 0.43, green: 0.50, blue: 0.78, alpha: 0.52)
+            tower.lineWidth = 3
+            addChild(tower)
+
+            let roof = polygon(
+                [
+                    CGPoint(x: x - width * 0.62, y: y + height * 0.50),
+                    CGPoint(x: x, y: y + height * 0.76),
+                    CGPoint(x: x + width * 0.62, y: y + height * 0.50)
+                ],
+                fill: UIColor(red: 0.20, green: 0.15, blue: 0.38, alpha: 0.98),
+                stroke: UIColor(red: 0.56, green: 0.58, blue: 0.90, alpha: 0.42),
+                lineWidth: 2
+            )
+            roof.zPosition = -204
+            addChild(roof)
+
+            for windowY in stride(
+                from: y - height * 0.28,
+                through: y + height * 0.24,
+                by: 58
+            ) {
+                let window = SKShapeNode(circleOfRadius: 8)
+                window.position = CGPoint(x: x, y: windowY)
+                window.fillColor = UIColor(red: 0.72, green: 0.90, blue: 1.0, alpha: 0.82)
+                window.strokeColor = UIColor(red: 0.86, green: 0.95, blue: 1.0, alpha: 0.85)
+                window.glowWidth = 5
+                window.zPosition = -200
+                addChild(window)
+            }
+        }
+
+        let courtyard = ArtSystem.box(
+            CGSize(width: 1280, height: 260),
+            color: UIColor(red: 0.145, green: 0.13, blue: 0.19, alpha: 1),
+            radius: 0
+        )
+        courtyard.position = CGPoint(x: 640, y: 125)
+        courtyard.zPosition = -120
+        courtyard.strokeColor = .clear
+        courtyard.name = "mathNativeCourtyard"
+        addChild(courtyard)
+
+        let walkway = ArtSystem.box(
+            CGSize(width: 1110, height: 116),
+            color: UIColor(red: 0.21, green: 0.19, blue: 0.25, alpha: 0.98),
+            radius: 48
+        )
+        walkway.position = CGPoint(x: 650, y: 190)
+        walkway.zPosition = -105
+        walkway.strokeColor = UIColor(red: 0.63, green: 0.50, blue: 0.78, alpha: 0.46)
+        walkway.lineWidth = 3
+        addChild(walkway)
+
+        for x in stride(from: CGFloat(80), through: CGFloat(1200), by: CGFloat(125)) {
+            let seam = ArtSystem.box(
+                CGSize(width: 2, height: 235),
+                color: UIColor(red: 0.48, green: 0.43, blue: 0.56, alpha: 0.13),
+                radius: 1
+            )
+            seam.position = CGPoint(x: x, y: 125)
+            seam.zPosition = -112
+            addChild(seam)
+        }
+        for y in [CGFloat(52), CGFloat(106), CGFloat(160), CGFloat(214)] {
+            let seam = ArtSystem.box(
+                CGSize(width: 1260, height: 2),
+                color: UIColor(red: 0.48, green: 0.43, blue: 0.56, alpha: 0.11),
+                radius: 1
+            )
+            seam.position = CGPoint(x: 640, y: y)
+            seam.zPosition = -111
+            addChild(seam)
+        }
+
+        let crystals: [(CGFloat, CGFloat, CGFloat, UIColor)] = [
+            (88, 135, 118, UIColor(red: 0.56, green: 0.42, blue: 1.0, alpha: 1)),
+            (150, 120, 78, UIColor(red: 0.44, green: 0.77, blue: 1.0, alpha: 1)),
+            (1185, 145, 105, UIColor(red: 0.82, green: 0.43, blue: 0.96, alpha: 1)),
+            (1235, 118, 72, UIColor(red: 0.47, green: 0.78, blue: 1.0, alpha: 1))
+        ]
+        for (x, y, height, tint) in crystals {
+            let crystal = polygon(
+                [
+                    CGPoint(x: x, y: y + height / 2),
+                    CGPoint(x: x - 22, y: y + 8),
+                    CGPoint(x: x - 13, y: y - height / 2),
+                    CGPoint(x: x + 13, y: y - height / 2),
+                    CGPoint(x: x + 22, y: y + 8)
+                ],
+                fill: tint.withAlphaComponent(0.68),
+                stroke: tint.withAlphaComponent(0.96),
+                lineWidth: 3
+            )
+            crystal.zPosition = -88
+            crystal.glowWidth = 8
+            addChild(crystal)
+        }
+
+        let stars = [
+            CGPoint(x: 120, y: 600), CGPoint(x: 245, y: 640),
+            CGPoint(x: 370, y: 575), CGPoint(x: 505, y: 650),
+            CGPoint(x: 680, y: 600), CGPoint(x: 805, y: 655),
+            CGPoint(x: 960, y: 610), CGPoint(x: 1125, y: 650)
+        ]
+        for (index, point) in stars.enumerated() {
+            let star = SKShapeNode(circleOfRadius: index.isMultiple(of: 3) ? 3.5 : 2.2)
+            star.position = point
+            star.fillColor = UIColor(red: 0.83, green: 0.91, blue: 1.0, alpha: 0.82)
+            star.strokeColor = .clear
+            star.glowWidth = 3
+            star.zPosition = -235
+            addChild(star)
+        }
+
+        return true
     }
 
     private func buildBridgeRoute() {
