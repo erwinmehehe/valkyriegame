@@ -64,6 +64,58 @@ import LearningCore
         )
     }
 
+    func testRasterQualityAndLegacyAtlasNeverOwnsThePlayableSurface() throws {
+        XCTAssertEqual(ArtSystem.pixelSize("V331WorldAtlas"), CGSize(width: 320, height: 180))
+        XCTAssertEqual(ArtSystem.pixelSize("StarlightIsles"), CGSize(width: 1280, height: 720))
+        XCTAssertEqual(ArtSystem.pixelSize("MathCastle"), CGSize(width: 1280, height: 720))
+        XCTAssertEqual(
+            ArtSystem.sourceScale(for: "StarlightIsles", targetPoints: CGSize(width: 1280, height: 720)),
+            1,
+            accuracy: 0.001
+        )
+        XCTAssertFalse(
+            ArtSystem.isRetinaReady(
+                "V331WorldAtlas",
+                targetPoints: CGSize(width: 1280, height: 720)
+            ),
+            "The 320x180 legacy atlas must never be treated as Retina-ready fullscreen art."
+        )
+
+        let puzzleState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let puzzle = PuzzlePalaceScene(state: puzzleState)
+        puzzle.reducedMotion = true
+        puzzle.didMove(to: SKView())
+        defer { puzzle.willLeave() }
+
+        let puzzleMatte = try XCTUnwrap(
+            puzzle.childNode(withName: "puzzleLegacyMatte") as? SKSpriteNode
+        )
+        XCTAssertLessThanOrEqual(puzzleMatte.alpha, 0.20)
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleNativeBackdrop"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleArchitecture"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloor"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleStageDais"))
+
+        let scienceState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        scienceState.travel(to: .scienceLab)
+        let science = ScienceLabScene(state: scienceState)
+        science.reducedMotion = true
+        science.didMove(to: SKView())
+        defer { science.willLeave() }
+
+        let scienceMatte = try XCTUnwrap(
+            science.childNode(withName: "scienceLegacyMatte") as? SKSpriteNode
+        )
+        XCTAssertLessThanOrEqual(scienceMatte.alpha, 0.16)
+        XCTAssertNotNil(science.childNode(withName: "scienceNativeBackdrop"))
+        XCTAssertNotNil(science.childNode(withName: "scienceGreenhouseFrame"))
+        XCTAssertNotNil(science.childNode(withName: "scienceGround"))
+    }
+
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
         for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko", "StoryBloom"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
