@@ -339,6 +339,7 @@ import SpriteKit
     func handleTap(at point: CGPoint) {
         switch targetName(at: point) {
         case "wordGarden":
+            selectionFeedback()
             let destination = CGPoint(x: 190, y: 170)
             if isNear(destination) {
                 state.travel(to: .wordGarden)
@@ -348,6 +349,7 @@ import SpriteKit
             }
 
         case "castle":
+            selectionFeedback()
             let destination = CGPoint(x: 795, y: 450)
             if isNear(destination) {
                 state.travel(to: .mathCastle)
@@ -357,6 +359,7 @@ import SpriteKit
             }
 
         case "scienceLab":
+            selectionFeedback()
             let destination = CGPoint(x: 580, y: 450)
             if isNear(destination) {
                 state.enterScienceLab()
@@ -366,6 +369,7 @@ import SpriteKit
             }
 
         case "puzzlePalace":
+            selectionFeedback()
             let destination = CGPoint(x: 580, y: 450)
             if isNear(destination) {
                 state.travel(to: .puzzlePalace)
@@ -390,6 +394,7 @@ import SpriteKit
             }
 
         case "moonLantern":
+            selectionFeedback()
             guard state.hasStoryReward(.moonLantern) else { return }
             _ = state.cycleStoryRewardPlacement(
                 .moonLantern,
@@ -401,6 +406,7 @@ import SpriteKit
             instruction.text = "The Moon Lantern found a new branch."
 
         case "wordGardenLantern":
+            selectionFeedback()
             guard state.hasStoryReward(.wordGardenLantern) else { return }
             _ = state.cycleStoryRewardPlacement(
                 .wordGardenLantern,
