@@ -53,6 +53,7 @@ import LearningCore
         sky.zPosition = -250
         sky.name = "scienceNativeBackdrop"
         addChild(sky)
+        ArtSystem.scienceBackdrop(in: self, environment: .greenhouse)
 
         if let atlas = ArtSystem.texture("V331WorldAtlas") {
             let scienceTexture = SKTexture(
@@ -172,6 +173,51 @@ import LearningCore
                 house.addChild(leaves)
             }
         }
+
+        // Glass reflections, hanging vines and gold rafters put real depth between
+        // the distant painted garden and the workbench. They are decorative only.
+        for (index, x) in [CGFloat(-280), -40, 200].enumerated() {
+            let pane = SKShapeNode(path: {
+                let path = CGMutablePath()
+                path.move(to: CGPoint(x: x - 38, y: 185))
+                path.addLine(to: CGPoint(x: x + 44, y: -115))
+                return path
+            }())
+            pane.strokeColor = UIColor(white: 1, alpha: index == 1 ? 0.14 : 0.22)
+            pane.lineWidth = index == 1 ? 24 : 18
+            pane.zPosition = 1
+            house.addChild(pane)
+        }
+        for x in [CGFloat(-352), -180, 192, 350] {
+            let vine = SKNode()
+            vine.position = CGPoint(x: x, y: 160)
+            vine.zPosition = 3
+            let stem = SKShapeNode(rectOf: CGSize(width: 5, height: 116), cornerRadius: 2)
+            stem.fillColor = UIColor(red: 0.23, green: 0.45, blue: 0.25, alpha: 0.88)
+            stem.strokeColor = .clear
+            stem.position.y = -56
+            vine.addChild(stem)
+            for index in 0..<4 {
+                let leaf = SKShapeNode(ellipseOf: CGSize(width: 37, height: 17))
+                leaf.position = CGPoint(
+                    x: index.isMultiple(of: 2) ? -16 : 16,
+                    y: -CGFloat(index) * 27 - 15
+                )
+                leaf.zRotation = index.isMultiple(of: 2) ? 0.36 : -0.36
+                leaf.fillColor = UIColor(red: 0.36, green: 0.66, blue: 0.35, alpha: 0.93)
+                leaf.strokeColor = .clear
+                vine.addChild(leaf)
+            }
+            house.addChild(vine)
+        }
+        let roofCrest = ArtSystem.box(
+            CGSize(width: 96, height: 24),
+            color: UIColor(red: 0.71, green: 0.52, blue: 0.23, alpha: 0.97),
+            radius: 10
+        )
+        roofCrest.position = CGPoint(x: 0, y: 246)
+        roofCrest.zPosition = 4
+        house.addChild(roofCrest)
 
         addChild(house)
 
