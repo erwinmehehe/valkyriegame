@@ -78,7 +78,8 @@ import SpriteKit
             name: "wordGarden",
             at: CGPoint(x: 150, y: 430),
             tint: UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 1),
-            width: 150
+            width: 150,
+            plaqueOffsetY: 72
         )
 
         _ = destinationMarker(
