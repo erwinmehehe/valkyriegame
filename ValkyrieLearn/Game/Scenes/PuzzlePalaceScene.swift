@@ -58,9 +58,9 @@ import LearningCore
     private var mirrorPracticeBusy = false
     private var mirrorApproaching = false
     private let mirrorChoicePoints = [
-        CGPoint(x: 520, y: 335),
-        CGPoint(x: 760, y: 335),
-        CGPoint(x: 1000, y: 335)
+        CGPoint(x: 525, y: 390),
+        CGPoint(x: 765, y: 390),
+        CGPoint(x: 1005, y: 390)
     ]
     private let resortStartPositions = [
         CGPoint(x: 535, y: 395),
@@ -667,7 +667,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
         refreshMemoryBridgeProgress(animated: true)
-        state.audio.play("success")
+        successFeedback()
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -2004,8 +2004,9 @@ import LearningCore
                 guard let self else { return }
                 self.mirrorPracticeReady = true
                 self.instruction.text = "Up became right. Tap the lantern to try the mirrors."
-                let next = self.hotspot("→", name: "mirrorPracticeContinue", at: CGPoint(x: 1135, y: 165),
-                                        size: CGSize(width: 110, height: 66))
+                let next = self.worldGear("✦", name: "mirrorPracticeContinue",
+                                          at: CGPoint(x: 1150, y: 175), radius: 34,
+                                          accessibilityLabel: "Try the mirrors")
                 next.zPosition = 1500
             }
             if self.reducedMotion { arrow.zRotation = -.pi / 2; ready() }
@@ -2026,7 +2027,10 @@ import LearningCore
 
     private func approachMirror(_ node: SKShapeNode, then operation: @escaping () -> Void) {
         guard mirrorAcceptingInput, !solved else { return }
-        let destination = CGPoint(x: node.position.x - 180, y: 175)
+        let destination = safeActorPoint(
+            near: CGPoint(x: node.position.x - 235, y: 175),
+            avoiding: [node.calculateAccumulatedFrame().insetBy(dx: -36, dy: -20)]
+        )
         let operate = { [weak self, weak node] in
             guard let self, let node, node.parent === self else { return }
             self.mirrorApproaching = false
@@ -2049,8 +2053,8 @@ import LearningCore
 
     private func addMirrorNextLantern() {
         guard childNode(withName: "mirrorNext") == nil else { return }
-        let next = hotspot("→", name: "mirrorNext", at: CGPoint(x: 1135, y: 165),
-                           size: CGSize(width: 110, height: 66))
+        let next = worldGear("✦", name: "mirrorNext", at: CGPoint(x: 1150, y: 175),
+                             radius: 34, accessibilityLabel: "Next mirror")
         next.zPosition = 1500
     }
 
@@ -2067,66 +2071,79 @@ import LearningCore
             glyph.text = "✦"
         }
         if childNode(withName: "mirrorRestoredHome") == nil {
-            let home = hotspot("⌂", name: "mirrorRestoredHome", at: CGPoint(x: 1060, y: 165),
-                               size: CGSize(width: 95, height: 66))
+            let home = worldControl("⌂", name: "mirrorRestoredHome",
+                                    at: CGPoint(x: 1080, y: 175), radius: 30,
+                                    accessibilityLabel: "Return to Story Tree")
             home.zPosition = 1500
         }
         if state.puzzlePathTilesAvailable && childNode(withName: "pathTilesRoute") == nil {
-            let route = hotspot("Path Tiles →", name: "pathTilesRoute", at: CGPoint(x: 1170, y: 165),
-                                size: CGSize(width: 150, height: 66))
+            let route = worldGear("→", name: "pathTilesRoute",
+                                  at: CGPoint(x: 1170, y: 175), radius: 34,
+                                  accessibilityLabel: "Continue to Path Tiles")
             route.zPosition = 1500
         }
         instruction.text = "The hall is restored. Tiko found a planning floor beyond the mirrors."
     }
 
     private func buildMirrorHallWorld() {
-        let hall = SKShapeNode(rectOf: CGSize(width: 860, height: 330), cornerRadius: 62)
-        hall.fillColor = UIColor(red: 0.08, green: 0.10, blue: 0.20, alpha: 0.15)
-        hall.strokeColor = UIColor(red: 0.55, green: 0.70, blue: 0.96, alpha: 0.24)
-        hall.lineWidth = 6
-        hall.position = CGPoint(x: 760, y: 390)
-        hall.name = "mirrorHallChamber"
-        hall.zPosition = 110
-        addChild(hall)
+        // Keep the source palace artwork visible. The live objects are architectural
+        // fixtures layered into the room, not a modal card floating over it.
+        let floorRail = SKShapeNode(rectOf: CGSize(width: 780, height: 18), cornerRadius: 9)
+        floorRail.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.34, alpha: 0.78)
+        floorRail.strokeColor = UIColor(red: 0.61, green: 0.52, blue: 0.86, alpha: 0.60)
+        floorRail.lineWidth = 2
+        floorRail.position = CGPoint(x: 765, y: 282)
+        floorRail.zPosition = 115
+        floorRail.name = "mirrorHallRail"
+        addChild(floorRail)
+
         buildMirrorMachinery()
 
-        let beacon = SKShapeNode(circleOfRadius: 70)
-        beacon.fillColor = UIColor(red: 0.16, green: 0.19, blue: 0.34, alpha: 0.98)
+        let beacon = SKShapeNode(circleOfRadius: 58)
+        beacon.fillColor = UIColor(red: 0.14, green: 0.18, blue: 0.31, alpha: 0.96)
         beacon.strokeColor = UIColor(red: 0.64, green: 0.82, blue: 1.0, alpha: 1)
-        beacon.lineWidth = 7
-        beacon.position = CGPoint(x: 760, y: 535)
+        beacon.lineWidth = 6
+        beacon.position = CGPoint(x: 765, y: 565)
         beacon.name = "mirrorBeacon"
         beacon.zPosition = 600
         addChild(beacon)
 
-        let glyph = ArtSystem.label("↑", size: 62)
+        let glyph = ArtSystem.label("↑", size: 54)
         glyph.name = "mirrorBeaconGlyph"
         glyph.fontColor = UIColor(red: 0.92, green: 0.97, blue: 1.0, alpha: 1)
         beacon.addChild(glyph)
 
-        let title = ArtSystem.label("MATCH TIKO'S DIRECTION", size: 19)
-        title.fontColor = UIColor(red: 0.83, green: 0.90, blue: 1.0, alpha: 1)
-        title.position = CGPoint(x: 760, y: 640)
+        let title = ArtSystem.label("FOLLOW TIKO'S LIGHT", size: 18)
+        title.fontColor = UIColor(red: 0.87, green: 0.93, blue: 1.0, alpha: 1)
+        title.position = CGPoint(x: 765, y: 646)
         title.name = "mirrorHallTitle"
         title.zPosition = 610
         addChild(title)
 
         for index in 0..<PuzzlePalaceEncounterCatalog.mirrorHallOrientation.count {
-            let light = SKShapeNode(circleOfRadius: 16)
-            light.fillColor = UIColor(red: 0.20, green: 0.24, blue: 0.38, alpha: 0.96)
-            light.strokeColor = UIColor(red: 0.58, green: 0.73, blue: 0.96, alpha: 0.84)
-            light.lineWidth = 3
-            light.position = CGPoint(x: 990 + CGFloat(index) * 54, y: 575)
-            light.name = "mirrorProgress\(index)"
-            light.zPosition = 620
-            addChild(light)
+            let sconce = SKShapeNode(circleOfRadius: 14)
+            sconce.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.35, alpha: 1)
+            sconce.strokeColor = UIColor(red: 0.64, green: 0.79, blue: 0.98, alpha: 0.82)
+            sconce.lineWidth = 3
+            sconce.position = CGPoint(x: 1010 + CGFloat(index) * 52, y: 595)
+            sconce.name = "mirrorProgress\(index)"
+            sconce.zPosition = 620
+            addChild(sconce)
+
+            let hook = SKShapeNode(rectOf: CGSize(width: 5, height: 25), cornerRadius: 2)
+            hook.fillColor = UIColor(red: 0.58, green: 0.49, blue: 0.72, alpha: 0.8)
+            hook.strokeColor = .clear
+            hook.position = CGPoint(x: sconce.position.x, y: 620)
+            hook.zPosition = 610
+            addChild(hook)
         }
 
-        let back = hotspot(
-            "← Re-sort Vault",
+        let back = worldControl(
+            "‹",
             name: "resortVaultBack",
-            at: CGPoint(x: 1080, y: 665),
-            size: CGSize(width: 205, height: 52)
+            at: CGPoint(x: 1180, y: 665),
+            radius: 30,
+            accessibilityLabel: "Back to Re-sort Vault"
         )
         back.zPosition = 2050
     }
@@ -2146,10 +2163,10 @@ import LearningCore
         }
 
         for (index, direction) in orientationEncounter.choices.enumerated() {
-            let mirror = SKShapeNode(rectOf: CGSize(width: 150, height: 170), cornerRadius: 66)
-            mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.72)
+            let mirror = SKShapeNode(ellipseOf: CGSize(width: 142, height: 176))
+            mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.58)
             mirror.strokeColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
-            mirror.lineWidth = 6
+            mirror.lineWidth = 7
             decorateMirrorGlass(mirror)
             mirror.position = mirrorChoicePoints[index]
             mirror.name = "mirrorOrientationChoice"
@@ -2160,6 +2177,8 @@ import LearningCore
             arrow.fontColor = UIColor(red: 0.94, green: 0.97, blue: 1.0, alpha: 1)
             mirror.addChild(arrow)
             addChild(mirror)
+            makeAccessible(mirror, label: "Mirror pointing \(direction.rawValue)")
+            registerInteraction(mirror, clearance: 28)
         }
 
         instruction.text = orientationEncounter.prompt
@@ -2205,6 +2224,7 @@ import LearningCore
             )
             support = support == .independent ? .lightHint : .strongHint
             node.strokeColor = .systemRed
+            errorFeedback()
             nudge(node)
             valkyrie.pose(.react)
             tiko.pose(.react)
@@ -2323,39 +2343,24 @@ import LearningCore
         source.name = "mirrorRotationSource"
         addChild(source)
         if let title = childNode(withName: "mirrorHallTitle") as? SKLabelNode {
-            title.text = "TURN THIS WAY ↻"
+            title.text = "IMAGINE THE TURN"
         }
-        // Four fixed marks make the turn's magnitude visible without previewing the answer.
-        if childNode(withName: "rotationQuarterMark0") == nil {
-            for index in 0..<4 {
-                let mark = SKShapeNode(circleOfRadius: 5)
-                let angle = CGFloat(index) * .pi / 2
-                mark.position = CGPoint(x: 760 + sin(angle) * 61, y: 535 + cos(angle) * 61)
-                mark.fillColor = .white
-                mark.strokeColor = .clear
-                mark.name = "rotationQuarterMark\(index)"
-                mark.zPosition = 620
-                addChild(mark)
-            }
-        }
-        for index in 0..<4 {
-            if let mark = childNode(withName: "rotationQuarterMark\(index)") as? SKShapeNode {
-                mark.fillColor = index <= rotationEncounter.quarterTurns ? .systemYellow : .darkGray
-                mark.glowWidth = index == rotationEncounter.quarterTurns ? 5 : 0
-            }
-        }
+        // One curved cue communicates direction and magnitude. Avoid extra dots,
+        // badges or labels that compete with the actual spatial reasoning task.
         for (index, shape) in rotationEncounter.choices.enumerated() {
-            let mirror = SKShapeNode(rectOf: CGSize(width: 150, height: 170), cornerRadius: 66)
-            mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.72)
+            let mirror = SKShapeNode(ellipseOf: CGSize(width: 142, height: 176))
+            mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.58)
             mirror.strokeColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
-            mirror.lineWidth = 6
+            mirror.lineWidth = 7
             decorateMirrorGlass(mirror)
             mirror.position = mirrorChoicePoints[index]
             mirror.zPosition = 650
             mirror.name = "mirrorRotationChoice"
             mirror.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
-            mirror.addChild(tileShapeNode(shape, tileSize: 30))
+            mirror.addChild(tileShapeNode(shape, tileSize: 28))
             addChild(mirror)
+            makeAccessible(mirror, label: "Rotated shape choice \(index + 1)")
+            registerInteraction(mirror, clearance: 30)
         }
         instruction.text = "Imagine this turn. Tap the mirror with the matching shape."
         buildVisualTurnCue(quarterTurns: rotationEncounter.quarterTurns)
