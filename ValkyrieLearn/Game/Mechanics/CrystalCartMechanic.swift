@@ -14,6 +14,21 @@ import LearningCore
         super.init()
         zPosition = 750
         addChild(cartAssembly)
+
+        let dropZone = ArtSystem.panel(
+            CGSize(width: 292, height: 142),
+            fill: UIColor(red: 0.10, green: 0.20, blue: 0.25, alpha: 0.18),
+            stroke: UIColor(red: 0.58, green: 0.88, blue: 0.94, alpha: 0.50),
+            radius: 34,
+            lineWidth: 3,
+            shadowAlpha: 0.12,
+            innerHighlight: UIColor(red: 0.80, green: 0.96, blue: 1.0, alpha: 0.08)
+        )
+        dropZone.position = cartCenter
+        dropZone.zPosition = -1
+        dropZone.name = "cartDropZone"
+        cartAssembly.addChild(dropZone)
+
         if let cart = ArtSystem.sprite("CrystalCart", size: CGSize(width: 365, height: 255)) {
             cart.position = CGPoint(x: 830, y: 253)
             cart.name = "cart"
@@ -22,8 +37,25 @@ import LearningCore
         // A native drop surface keeps every crystal independently manipulable.
         let cartHit = ArtSystem.box(CGSize(width: 305, height: 165), color: .clear, radius: 0)
         cartHit.position = cartCenter; cartHit.name = "cart"; cartAssembly.addChild(cartHit)
+
         let supply = ArtSystem.supplyTray(CGSize(width: 125, height: 100))
         supply.position = supplyCenter; supply.name = "supply"; addChild(supply)
+
+        let supplyPlaque = ArtSystem.plaque(
+            CGSize(width: 116, height: 28),
+            fill: UIColor(red: 0.10, green: 0.12, blue: 0.18, alpha: 0.92),
+            stroke: UIColor(red: 0.63, green: 0.86, blue: 0.92, alpha: 0.72),
+            radius: 12
+        )
+        supplyPlaque.position = CGPoint(x: supplyCenter.x, y: supplyCenter.y + 72)
+        supplyPlaque.name = "supply"
+        addChild(supplyPlaque)
+
+        let supplyLabel = ArtSystem.label("CRYSTALS", size: 11)
+        supplyLabel.fontColor = UIColor(red: 0.88, green: 0.98, blue: 1.0, alpha: 1)
+        supplyLabel.name = "supply"
+        supplyPlaque.addChild(supplyLabel)
+
         let crystal = Self.crystal(); crystal.position = supplyCenter; crystal.setScale(1.45); crystal.name = "supply"; addChild(crystal)
         cartAssembly.addChild(contents)
     }
@@ -264,6 +296,26 @@ import LearningCore
         selected.name = "bondSelected"
         addChild(selected)
 
+        for (title, x, name) in [
+            ("KNOWN", CGFloat(-105), "bondKnown"),
+            ("BUILD", CGFloat(105), "bondSelected")
+        ] {
+            let plaque = ArtSystem.plaque(
+                CGSize(width: 84, height: 26),
+                fill: UIColor(red: 0.09, green: 0.11, blue: 0.17, alpha: 0.92),
+                stroke: UIColor(red: 0.80, green: 0.63, blue: 0.31, alpha: 0.66),
+                radius: 11
+            )
+            plaque.position = CGPoint(x: x, y: 43)
+            plaque.name = name
+            addChild(plaque)
+
+            let label = ArtSystem.label(title, size: 10)
+            label.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.63, alpha: 1)
+            label.name = name
+            plaque.addChild(label)
+        }
+
         wholeLabel.fontSize = 30
         wholeLabel.position = CGPoint(x: 0, y: 82)
         addChild(wholeLabel)
@@ -358,14 +410,40 @@ import LearningCore
                 y: 34 - CGFloat(row) * 64
             )
             cell.name = "tenFrameCell"
+
+            if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: 34, height: 46)) {
+                crystal.name = "tenFrameCell"
+                crystal.isHidden = true
+                crystal.zPosition = 2
+                cell.addChild(crystal)
+            }
+
             cells.addChild(cell)
         }
         addChild(cells)
-        let supply = ArtSystem.box(CGSize(width: 100, height: 100), color: .darkGray)
+
+        let supply = ArtSystem.supplyTray(CGSize(width: 100, height: 100))
         supply.position = CGPoint(x: -270, y: 0); supply.name = "tenFrameSupply"
-        let token = SKShapeNode(circleOfRadius: 18)
-        token.fillColor = .systemTeal; token.strokeColor = .white; supply.addChild(token)
+        if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: 38, height: 52)) {
+            crystal.name = "tenFrameSupply"
+            supply.addChild(crystal)
+        }
         addChild(supply)
+
+        let supplyPlaque = ArtSystem.plaque(
+            CGSize(width: 94, height: 26),
+            fill: UIColor(red: 0.09, green: 0.11, blue: 0.17, alpha: 0.92),
+            stroke: UIColor(red: 0.60, green: 0.86, blue: 0.91, alpha: 0.68),
+            radius: 11
+        )
+        supplyPlaque.position = CGPoint(x: -270, y: 70)
+        supplyPlaque.name = "tenFrameSupply"
+        addChild(supplyPlaque)
+
+        let supplyLabel = ArtSystem.label("ADD", size: 10)
+        supplyLabel.fontColor = UIColor(red: 0.88, green: 0.98, blue: 1.0, alpha: 1)
+        supplyLabel.name = "tenFrameSupply"
+        supplyPlaque.addChild(supplyLabel)
     }
 
     required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
@@ -378,12 +456,26 @@ import LearningCore
         let visibleQuantity = previewVisible ? model.encounter.targetQuantity : model.filled
         cells.children.enumerated().forEach { index, cell in
             guard let shape = cell as? SKShapeNode else { return }
-            shape.fillColor = index < visibleQuantity
+            let active = index < visibleQuantity
+            let fixed = index < model.encounter.initialQuantity
+
+            shape.fillColor = active
                 ? .systemTeal
-                : .init(red: 0.17, green: 0.20, blue: 0.30, alpha: 1)
+                : UIColor(red: 0.11, green: 0.14, blue: 0.22, alpha: 1)
+            shape.strokeColor = active
+                ? UIColor(red: 0.57, green: 0.86, blue: 0.93, alpha: 0.86)
+                : UIColor(red: 0.42, green: 0.47, blue: 0.60, alpha: 0.56)
+            shape.lineWidth = active ? 2.5 : 1.5
             shape.name = previewVisible ? "tenFramePreview"
-                : (index < model.encounter.initialQuantity ? "tenFrameFixed"
+                : (fixed ? "tenFrameFixed"
                    : (index < model.filled ? "tenFrameFilled" : "tenFrameCell"))
+
+            if let crystal = shape.children.compactMap({ $0 as? SKSpriteNode }).first {
+                crystal.isHidden = !active
+                crystal.name = shape.name
+                crystal.color = fixed ? .systemPurple : .white
+                crystal.colorBlendFactor = fixed ? 0.26 : 0
+            }
         }
         removeAction(forKey: previewActionKey)
         if previewVisible {
