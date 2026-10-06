@@ -1583,6 +1583,25 @@ import LearningCore
         palace.reducedMotion = true
         view.presentScene(palace)
         try await capture(palace, in: view, name: "Puzzle-Palace-native-rune-gate")
+        XCTAssertNil(
+            palace.childNode(withName: "puzzleCrystalFixture"),
+            "Rune Gate must not carry decorative crystal clutter from deeper palace rooms."
+        )
+        XCTAssertNil(
+            palace.childNode(withName: "puzzlePillar"),
+            "Rune Gate must not show the old synthetic pillar scaffolding."
+        )
+        XCTAssertNil(
+            palace.childNode(withName: "puzzleStageDais"),
+            "Rune Gate must keep the floor clear instead of layering another giant platform."
+        )
+        XCTAssertNotNil(palace.childNode(withName: "puzzleGate"))
+        XCTAssertEqual(
+            palace.valkyrie.xScale,
+            0.56,
+            accuracy: 0.001,
+            "Rune Gate polish must not alter Valkyrie's native presentation."
+        )
         palace.willLeave()
 
         for encounter in PuzzlePalaceEncounterCatalog.runeGate {
