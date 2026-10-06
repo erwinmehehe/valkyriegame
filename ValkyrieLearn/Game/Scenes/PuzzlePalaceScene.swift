@@ -235,17 +235,7 @@ import LearningCore
     }
 
     override func buildWorld() {
-        if let atlas = ArtSystem.texture("V331WorldAtlas") {
-            // v3.31 2×2 environment atlas: Puzzle Palace is the lower-right quadrant.
-            let puzzleTexture = SKTexture(
-                rect: CGRect(x: 0.5, y: 0, width: 0.5, height: 0.5),
-                in: atlas
-            )
-            let backdrop = SKSpriteNode(texture: puzzleTexture, color: .white, size: size)
-            backdrop.position = CGPoint(x: 640, y: 360)
-            backdrop.zPosition = -100
-            addChild(backdrop)
-        }
+        buildNativePalaceBackdrop()
 
         for (height, y) in [(CGFloat(62), CGFloat(684)), (CGFloat(96), CGFloat(42))] {
             let shade = ArtSystem.box(
@@ -289,6 +279,167 @@ import LearningCore
             buildCommandGearsWorld()
             refreshCommandGearsProgress(animated: false)
         }
+    }
+
+
+    private func buildNativePalaceBackdrop() {
+        let base = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.055, green: 0.055, blue: 0.13, alpha: 1),
+            radius: 0
+        )
+        base.strokeColor = .clear
+        base.position = CGPoint(x: 640, y: 360)
+        base.zPosition = -260
+        base.name = "puzzleNativeBackdrop"
+        addChild(base)
+
+        // Preserve the v3.31 palette as a distant matte only. The source quadrant is
+        // 160x90 pixels, so it must never be the full-strength playable environment.
+        if let atlas = ArtSystem.texture("V331WorldAtlas") {
+            let puzzleTexture = SKTexture(
+                rect: CGRect(x: 0.5, y: 0, width: 0.5, height: 0.5),
+                in: atlas
+            )
+            puzzleTexture.filteringMode = .linear
+            let matte = SKSpriteNode(texture: puzzleTexture, color: .white, size: size)
+            matte.position = CGPoint(x: 640, y: 360)
+            matte.zPosition = -250
+            matte.alpha = 0.10
+            matte.name = "puzzleLegacyMatte"
+            addChild(matte)
+        }
+
+        let hall = ArtSystem.box(
+            CGSize(width: 1080, height: 430),
+            color: UIColor(red: 0.09, green: 0.08, blue: 0.20, alpha: 0.78),
+            radius: 66
+        )
+        hall.strokeColor = UIColor(red: 0.52, green: 0.43, blue: 0.78, alpha: 0.72)
+        hall.lineWidth = 4
+        hall.position = CGPoint(x: 690, y: 390)
+        hall.zPosition = -215
+        hall.name = "puzzleArchitecture"
+        addChild(hall)
+
+        let floor = ArtSystem.box(
+            CGSize(width: 1280, height: 205),
+            color: UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.98),
+            radius: 0
+        )
+        floor.strokeColor = .clear
+        floor.position = CGPoint(x: 640, y: 105)
+        floor.zPosition = -145
+        floor.name = "puzzleFloor"
+        addChild(floor)
+
+        if let courtyard = ArtSystem.sprite(
+            "CastleCourtyard",
+            size: CGSize(width: 1280, height: 235)
+        ) {
+            courtyard.position = CGPoint(x: 640, y: 118)
+            courtyard.zPosition = -143
+            courtyard.alpha = 0.78
+            courtyard.color = UIColor(red: 0.55, green: 0.44, blue: 0.80, alpha: 1)
+            courtyard.colorBlendFactor = 0.28
+            courtyard.name = "puzzleFloorTexture"
+            addChild(courtyard)
+        }
+
+        for x in stride(from: CGFloat(90), through: CGFloat(1190), by: CGFloat(140)) {
+            let seam = ArtSystem.box(
+                CGSize(width: 3, height: 195),
+                color: UIColor(red: 0.36, green: 0.29, blue: 0.48, alpha: 0.10),
+                radius: 1
+            )
+            seam.position = CGPoint(x: x, y: 108)
+            seam.zPosition = -140
+            addChild(seam)
+        }
+        for y in [CGFloat(55), CGFloat(110), CGFloat(165)] {
+            let seam = ArtSystem.box(
+                CGSize(width: 1260, height: 3),
+                color: UIColor(red: 0.36, green: 0.29, blue: 0.48, alpha: 0.09),
+                radius: 1
+            )
+            seam.position = CGPoint(x: 640, y: y)
+            seam.zPosition = -140
+            addChild(seam)
+        }
+
+        for x in [CGFloat(205), 405, 605, 805, 1005, 1205] {
+            let pillar = ArtSystem.box(
+                CGSize(width: 46, height: 350),
+                color: UIColor(red: 0.12, green: 0.11, blue: 0.24, alpha: 1),
+                radius: 12
+            )
+            pillar.strokeColor = UIColor(red: 0.55, green: 0.44, blue: 0.78, alpha: 0.58)
+            pillar.lineWidth = 2
+            pillar.position = CGPoint(x: x, y: 405)
+            pillar.zPosition = -195
+            pillar.name = "puzzlePillar"
+            addChild(pillar)
+
+            let cap = SKShapeNode(circleOfRadius: 31)
+            cap.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.38, alpha: 1)
+            cap.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.32, alpha: 0.88)
+            cap.lineWidth = 4
+            cap.position = CGPoint(x: x, y: 565)
+            cap.zPosition = -190
+            addChild(cap)
+        }
+
+        for x in [CGFloat(320), 690, 1060] {
+            let arch = SKShapeNode(
+                rectOf: CGSize(width: 235, height: 285),
+                cornerRadius: 108
+            )
+            arch.fillColor = UIColor(red: 0.07, green: 0.09, blue: 0.18, alpha: 0.72)
+            arch.strokeColor = UIColor(red: 0.48, green: 0.67, blue: 0.88, alpha: 0.68)
+            arch.lineWidth = 4
+            arch.position = CGPoint(x: x, y: 410)
+            arch.zPosition = -185
+            addChild(arch)
+
+            let inner = SKShapeNode(
+                rectOf: CGSize(width: 177, height: 225),
+                cornerRadius: 84
+            )
+            inner.fillColor = UIColor(red: 0.12, green: 0.18, blue: 0.31, alpha: 0.88)
+            inner.strokeColor = UIColor(red: 0.67, green: 0.55, blue: 0.91, alpha: 0.78)
+            inner.lineWidth = 4
+            arch.addChild(inner)
+        }
+
+        for (index, point) in [
+            CGPoint(x: 255, y: 545),
+            CGPoint(x: 505, y: 515),
+            CGPoint(x: 875, y: 515),
+            CGPoint(x: 1125, y: 545)
+        ].enumerated() {
+            if let crystal = ArtSystem.sprite(
+                "Crystal",
+                size: CGSize(width: 66, height: 96)
+            ) {
+                crystal.position = point
+                crystal.zPosition = -168
+                crystal.alpha = index.isMultiple(of: 2) ? 0.82 : 0.66
+                crystal.name = "puzzleCrystalFixture"
+                addChild(crystal)
+            }
+        }
+
+        let dais = ArtSystem.box(
+            CGSize(width: 590, height: 58),
+            color: UIColor(red: 0.20, green: 0.15, blue: 0.31, alpha: 0.96),
+            radius: 24
+        )
+        dais.strokeColor = UIColor(red: 0.72, green: 0.57, blue: 0.30, alpha: 0.76)
+        dais.lineWidth = 4
+        dais.position = CGPoint(x: 775, y: 228)
+        dais.zPosition = -105
+        dais.name = "puzzleStageDais"
+        addChild(dais)
     }
 
     private func buildRuneGate() {
