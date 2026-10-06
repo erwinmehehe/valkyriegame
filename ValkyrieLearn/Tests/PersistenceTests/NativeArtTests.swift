@@ -120,6 +120,56 @@ import LearningCore
         XCTAssertNotNil(science.childNode(withName: "scienceWaterBed"))
     }
 
+    func testWordGardenPreservesPaintedAtlasCropsWithRetinaPreparedRaster() throws {
+        let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
+        XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
+
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let cases: [(AdventureWorld, String, String)] = [
+            (.wordGarden, "word-garden-flower-gate", "wordGardenPathRim"),
+            (.sunmillCrossing, "word-garden-sunmill", "sunmillWaterRim"),
+            (.storyHollow, "word-garden-story-hollow", "storyHollowRim")
+        ]
+
+        for (world, cropKey, accentName) in cases {
+            state.travel(to: world)
+            let scene = WordGardenScene(state: state)
+            scene.reducedMotion = true
+            scene.didMove(to: SKView())
+            defer { scene.willLeave() }
+
+            let backdrop = try XCTUnwrap(
+                scene.childNode(withName: "wordGardenBackdrop") as? SKSpriteNode
+            )
+            XCTAssertEqual(
+                backdrop.userData?["sourceAsset"] as? String,
+                "WordGardenSourceAtlas"
+            )
+            XCTAssertEqual(
+                backdrop.userData?["sourceCrop"] as? String,
+                cropKey
+            )
+            XCTAssertEqual(
+                backdrop.userData?["retinaPrepared"] as? Bool,
+                true
+            )
+
+            let image = try XCTUnwrap(backdrop.texture?.cgImage())
+            XCTAssertGreaterThanOrEqual(image.width, 2560)
+            XCTAssertGreaterThanOrEqual(image.height, 1440)
+
+            XCTAssertNotNil(scene.childNode(withName: "wordGardenRetinaAccents"))
+            XCTAssertNotNil(scene.childNode(withName: "//" + accentName))
+            XCTAssertFalse(
+                backdrop.isHidden,
+                "Retina preparation must preserve the painted Word Garden environment."
+            )
+            scene.willLeave()
+        }
+    }
+
     func testMathCastlePreservesIllustrationWithRetinaPreparedRaster() throws {
         XCTAssertFalse(
             ArtSystem.isRetinaReady(
