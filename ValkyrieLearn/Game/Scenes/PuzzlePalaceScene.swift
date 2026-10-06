@@ -129,6 +129,8 @@ import LearningCore
     override func didMove(to view: SKView) {
         super.didMove(to: view)
         pip.removeFromParent()
+        valkyrie.setScale(0.56)
+        tiko.setScale(0.92)
         switch place {
         case .runeGate:
             valkyrie.position = CGPoint(x: 190, y: 175)
