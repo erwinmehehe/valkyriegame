@@ -2,7 +2,7 @@ import SpriteKit
 
 @MainActor final class MiloNode: CharacterNode {
     init() {
-        super.init(character: "Milo", color: .systemGreen, height: 116)
+        super.init(character: "Milo", color: .systemGreen, height: 113)
         name = "milo"
         addPresenceAura(color: .systemGreen, width: 98, height: 28, glow: 4)
     }
