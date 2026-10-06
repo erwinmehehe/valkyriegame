@@ -50,8 +50,8 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 560, height: 92),
-        cornerRadius: 10
+        rectOf: CGSize(width: 500, height: 76),
+        cornerRadius: 12
     )
     private let questionLabel = ArtSystem.label("", size: 23)
     private let workshopGroups: [[LearningEncounter]] = [
@@ -67,8 +67,8 @@ import LearningCore
         super.didMove(to: view)
         // The v3.31 reference keeps the protagonist inside the world composition
         // instead of letting the character dominate the learning object.
-        valkyrie.setScale(0.5)
-        pip.setScale(0.65)
+        valkyrie.setScale(0.58)
+        pip.setScale(0.72)
         initialBuildComplete = true
     }
 
@@ -84,19 +84,26 @@ import LearningCore
         // The five workshop seals are mounted on one physical timber rack.
         let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
         if let texture = ArtSystem.texture("BridgeOakPlank") { rack.fillColor = .white; rack.fillTexture = texture }
-        rack.position = CGPoint(x: 330, y: 503); rack.zPosition = 30; addChild(rack)
+        rack.position = CGPoint(x: 300, y: 520); rack.zPosition = 30
+        rack.alpha = 0.58; rack.name = "workshopRack"; addChild(rack)
         for x in [150, 510] {
             let post = ArtSystem.box(CGSize(width: 14, height: 142), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
             if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture }
-            post.position = CGPoint(x: x, y: 440); post.zPosition = 29; addChild(post)
+            post.position = CGPoint(x: x - 30, y: 462); post.zPosition = 29
+            post.alpha = 0.55; post.name = "workshopRack"; addChild(post)
         }
         for (index, symbol) in ["◆", "⚖", "◉", "▦", "↔"].enumerated() {
-            _ = worldGear(symbol, name: "workshop\(index)", at: CGPoint(x: 150 + index * 90, y: 535), radius: 31)
+            let seal = worldGear(symbol, name: "workshop\(index)",
+                                 at: CGPoint(x: 140 + index * 80, y: 548), radius: 26,
+                                 accessibilityLabel: "Workshop station \(index + 1)")
+            seal.alpha = 0.68
         }
-        _ = worldGear("↻", name: "wind", at: CGPoint(x: 390, y: 605), radius: 32)
+        let wind = worldGear("↻", name: "wind", at: CGPoint(x: 300, y: 615), radius: 30,
+                             accessibilityLabel: "Wind Pip's workshop gear")
+        wind.alpha = 0.72
 
         // Present the active prompt as a castle work order instead of a HUD panel.
-        questionPlate.position = CGPoint(x: 805, y: 606)
+        questionPlate.position = CGPoint(x: 800, y: 620)
         if let texture = ArtSystem.texture("BridgeWorkOrder") {
             questionPlate.fillColor = .white
             questionPlate.fillTexture = texture
@@ -129,8 +136,9 @@ import LearningCore
             addChild(hanger)
         }
 
-        questionLabel.position = CGPoint(x: 805, y: 606)
-        questionLabel.preferredMaxLayoutWidth = 490
+        questionLabel.position = CGPoint(x: 800, y: 620)
+        questionLabel.preferredMaxLayoutWidth = 440
+        questionLabel.fontSize = 20
         questionLabel.numberOfLines = 2
         questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
         questionLabel.zPosition = 2000
@@ -141,6 +149,23 @@ import LearningCore
         pip.name = "help"
         nextGear = worldGear("→", name: "next", at: CGPoint(x: 1200, y: 430), radius: 34)
         lever = makeLever()
+
+        let workflow = SKShapeNode()
+        let workflowPath = CGMutablePath()
+        workflowPath.move(to: CGPoint(x: 600, y: 205))
+        workflowPath.addCurve(
+            to: CGPoint(x: 1080, y: 238),
+            control1: CGPoint(x: 735, y: 180),
+            control2: CGPoint(x: 930, y: 205)
+        )
+        workflow.path = workflowPath
+        workflow.strokeColor = UIColor(red: 0.76, green: 0.64, blue: 0.38, alpha: 0.34)
+        workflow.lineWidth = 5
+        workflow.glowWidth = 2
+        workflow.zPosition = 20
+        workflow.name = "workOrderFlow"
+        addChild(workflow)
+
         let light = SKShapeNode(circleOfRadius: 27)
         light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
         light.name = "castlePowerLight"
@@ -165,12 +190,6 @@ import LearningCore
             challengeRunes.append(rune)
         }
 
-        for index in 0..<5 {
-            let lamp = SKShapeNode(circleOfRadius: 7)
-            lamp.position = CGPoint(x: 1080 + index * 10, y: 390 + index * 28)
-            lamp.zPosition = 25; lamp.name = "powerRouteLamp\(index)"; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
-            lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
-        }
         buildBridgeRoute()
         buildPhysicalProgression()
         updateChallengeGateAppearance()
@@ -619,7 +638,7 @@ import LearningCore
             questionLabel.text = nil
             return
         }
-        questionLabel.text = "Pip asks: " + text
+        questionLabel.text = text
         questionPlate.isHidden = false
         questionLabel.isHidden = false
         hangers.forEach { $0.isHidden = false }
@@ -636,7 +655,7 @@ import LearningCore
             switch selection {
             case .explorationBreak: instruction.text = "Let's explore! Wind Pip's gear or return to Story Tree."
             case .needsContent: instruction.text = "Pip has no new ready work orders. Explore, or try his workshop."
-            default: instruction.text = "Tap the machine to walk over. Tap again when Valkyrie arrives."
+            default: instruction.text = "Walk to Pip's machine to begin the work order."
             }
         }
     }
@@ -672,6 +691,15 @@ import LearningCore
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
+
+        let secondaryHidden = !state.workshop && !runtime.completed
+        children.filter {
+            ($0.name?.hasPrefix("workshop") == true) || $0.name == "workshopRack" || $0.name == "wind"
+        }.forEach {
+            $0.alpha = secondaryHidden ? 0.18 : 0.72
+            $0.isHidden = secondaryHidden
+        }
+        childNode(withName: "next")?.isHidden = !runtime.completed && !state.workshop
         if engaged {
             let isBridge = runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
             showQuestion(isBridge ? nil : (
@@ -683,7 +711,7 @@ import LearningCore
                 ? "Look closely. Pip will hide the lights in a moment."
                 : (runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
                     ? "Pip needs \(runtime.encounter.targetQuantity) bridge planks. \(runtime.encounter.initialQuantity) are fixed. Fill the gaps, then pull his lever."
-                    : "Use the machine, then pull Pip's lever to check your idea.")
+                    : "Build your answer, then pull Pip's golden lever.")
         } else {
             showQuestion(nil)
         }
@@ -804,6 +832,7 @@ import LearningCore
     private func manipulate(_ action: () -> Void) {
         guard canManipulate() else { engageMachine(); return }
         action()
+        selectionFeedback()
         refresh()
         playManipulationReaction()
         valkyrie.pose(.interact)
@@ -851,9 +880,10 @@ import LearningCore
         refresh()
         updateChallengeGateAppearance()
         if evidence.outcome == .correct {
+            successFeedback()
+            focusCamera(on: CGPoint(x: 1030, y: 300))
             pip.helpRoute(to: CGPoint(x: 975, y: 225), reducedMotion: reducedMotion)
             valkyrie.pose(.celebrate)
-            state.audio.play("success")
             showQuestion(nil)
             if wasChallengeGate && state.challengeGateStatus == .completed {
                 instruction.text = "The final rune shines! Your Moon Lantern is waiting at Story Tree."
@@ -863,6 +893,7 @@ import LearningCore
                 instruction.text = completionMessage
             }
         } else {
+            errorFeedback()
             valkyrie.pose(.react)
             playGentleRetryReaction()
             showScaffold()
