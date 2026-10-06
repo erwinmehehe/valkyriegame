@@ -83,6 +83,7 @@ struct AdventureSceneLayout {
             pip.reducedMotion = reducedMotion
             valkyrie.pose(.idle)
             pip.pose(.idle)
+            syncDecorativeMotion()
         }
     }
 
@@ -111,6 +112,7 @@ struct AdventureSceneLayout {
         self.camera = camera
 
         buildWorld()
+        syncDecorativeMotion()
 
         valkyrie.position = CGPoint(x: 190, y: 170)
         pip.position = CGPoint(x: 380, y: 180)
@@ -206,6 +208,21 @@ struct AdventureSceneLayout {
         guard !reducedMotion else { return }
         childNode(withName: "worldBackdrop")?.alpha = 0.72
         childNode(withName: "worldBackdrop")?.run(.fadeAlpha(to: 1, duration: 0.34))
+
+        for (name, delay) in [
+            ("worldTitleBackdrop", 0.04),
+            ("worldTitle", 0.08),
+            ("instructionBackdrop", 0.10),
+            ("feedbackText", 0.14)
+        ] {
+            guard let node = childNode(withName: name) else { continue }
+            node.alpha = 0
+            node.run(.sequence([
+                .wait(forDuration: delay),
+                .fadeIn(withDuration: 0.24)
+            ]), withKey: "entrance")
+        }
+
         valkyrie.alpha = 0
         pip.alpha = 0
         valkyrie.run(.sequence([
@@ -215,6 +232,142 @@ struct AdventureSceneLayout {
         pip.run(.sequence([
             .wait(forDuration: 0.14),
             .fadeIn(withDuration: 0.24)
+        ]))
+    }
+
+    private var ambientTint: UIColor {
+        if worldTitle.hasPrefix("Word Garden") {
+            return UIColor(red: 1.0, green: 0.64, blue: 0.82, alpha: 1)
+        }
+        if worldTitle.hasPrefix("Science Lab") {
+            return UIColor(red: 0.58, green: 0.94, blue: 0.78, alpha: 1)
+        }
+        if worldTitle.hasPrefix("Puzzle Palace") {
+            return UIColor(red: 0.73, green: 0.64, blue: 1.0, alpha: 1)
+        }
+        if worldTitle.hasPrefix("Story Tree") {
+            return UIColor(red: 1.0, green: 0.82, blue: 0.36, alpha: 1)
+        }
+        return UIColor(red: 0.72, green: 0.91, blue: 1.0, alpha: 1)
+    }
+
+    private func syncDecorativeMotion() {
+        childNode(withName: "decorativeAmbientLife")?.removeFromParent()
+
+        for name in ["foregroundLeft", "foregroundRight"] {
+            guard let foreground = childNode(withName: name) else { continue }
+            foreground.removeAction(forKey: "ambientSway")
+            if reducedMotion {
+                foreground.position.y = 80
+            } else {
+                let direction: CGFloat = name == "foregroundLeft" ? 1 : -1
+                foreground.run(.repeatForever(.sequence([
+                    .group([
+                        .moveBy(x: direction * 2, y: 3, duration: 2.6),
+                        .rotate(byAngle: direction * 0.006, duration: 2.6)
+                    ]),
+                    .group([
+                        .moveBy(x: direction * -2, y: -3, duration: 2.6),
+                        .rotate(byAngle: direction * -0.006, duration: 2.6)
+                    ])
+                ])), withKey: "ambientSway")
+            }
+        }
+
+        guard !reducedMotion, scene != nil || view != nil else { return }
+
+        let root = SKNode()
+        root.name = "decorativeAmbientLife"
+        root.zPosition = 115
+        root.isUserInteractionEnabled = false
+
+        let points: [CGPoint] = [
+            CGPoint(x: 165, y: 420),
+            CGPoint(x: 320, y: 545),
+            CGPoint(x: 485, y: 455),
+            CGPoint(x: 650, y: 565),
+            CGPoint(x: 815, y: 440),
+            CGPoint(x: 970, y: 535),
+            CGPoint(x: 1115, y: 405)
+        ]
+
+        for (index, point) in points.enumerated() {
+            let mote = SKShapeNode(circleOfRadius: index.isMultiple(of: 3) ? 4.5 : 3.2)
+            mote.fillColor = ambientTint.withAlphaComponent(0.52)
+            mote.strokeColor = .clear
+            mote.glowWidth = 4
+            mote.position = point
+            mote.alpha = 0.45 + CGFloat(index % 3) * 0.16
+            mote.isUserInteractionEnabled = false
+            root.addChild(mote)
+
+            let dx: CGFloat = index.isMultiple(of: 2) ? 8 : -7
+            let dy: CGFloat = 8 + CGFloat(index % 3) * 3
+            let duration = 2.4 + Double(index % 4) * 0.38
+            mote.run(.repeatForever(.sequence([
+                .group([
+                    .moveBy(x: dx, y: dy, duration: duration),
+                    .fadeAlpha(to: 0.30, duration: duration)
+                ]),
+                .group([
+                    .moveBy(x: -dx, y: -dy, duration: duration),
+                    .fadeAlpha(to: 0.82, duration: duration)
+                ])
+            ])), withKey: "ambientDrift")
+        }
+
+        addChild(root)
+    }
+
+    private func playSuccessBurst(at point: CGPoint) {
+        guard !reducedMotion else { return }
+        childNode(withName: "successBurst")?.removeFromParent()
+
+        let root = SKNode()
+        root.name = "successBurst"
+        root.position = point
+        root.zPosition = 1850
+        root.isUserInteractionEnabled = false
+
+        let ring = SKShapeNode(circleOfRadius: 22)
+        ring.fillColor = .clear
+        ring.strokeColor = ambientTint.withAlphaComponent(0.90)
+        ring.lineWidth = 4
+        ring.glowWidth = 9
+        ring.setScale(0.72)
+        root.addChild(ring)
+        ring.run(.group([
+            .scale(to: 2.25, duration: 0.56),
+            .fadeOut(withDuration: 0.56)
+        ]))
+
+        let directions: [CGPoint] = [
+            CGPoint(x: 0, y: 48),
+            CGPoint(x: 38, y: 32),
+            CGPoint(x: 48, y: 0),
+            CGPoint(x: 34, y: -30),
+            CGPoint(x: -34, y: -30),
+            CGPoint(x: -48, y: 0),
+            CGPoint(x: -38, y: 32)
+        ]
+        for (index, direction) in directions.enumerated() {
+            let sparkle = SKShapeNode(circleOfRadius: index.isMultiple(of: 2) ? 5 : 3.5)
+            sparkle.fillColor = ambientTint
+            sparkle.strokeColor = .white.withAlphaComponent(0.55)
+            sparkle.lineWidth = 1
+            sparkle.glowWidth = 6
+            root.addChild(sparkle)
+            sparkle.run(.group([
+                .move(to: direction, duration: 0.48 + Double(index % 2) * 0.08),
+                .fadeOut(withDuration: 0.56),
+                .scale(to: 0.55, duration: 0.56)
+            ]))
+        }
+
+        addChild(root)
+        root.run(.sequence([
+            .wait(forDuration: 0.64),
+            .removeFromParent()
         ]))
     }
 
@@ -492,10 +645,16 @@ struct AdventureSceneLayout {
         ]), withKey: "cameraReset")
     }
 
-    func successFeedback() {
+    func successFeedback(at point: CGPoint? = nil) {
         state.audio.play("success")
         successHaptic.notificationOccurred(.success)
         successHaptic.prepare()
+        playSuccessBurst(
+            at: point ?? CGPoint(
+                x: valkyrie.position.x,
+                y: valkyrie.position.y + 92
+            )
+        )
     }
 
     func errorFeedback() {
