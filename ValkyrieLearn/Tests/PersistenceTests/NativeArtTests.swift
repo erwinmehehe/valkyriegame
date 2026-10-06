@@ -127,7 +127,7 @@ import LearningCore
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
-        let cases: [(AdventureWorld, String, String)] = [
+        let cases: [(AppState.World, String, String)] = [
             (.wordGarden, "word-garden-flower-gate", "wordGardenPathRim"),
             (.sunmillCrossing, "word-garden-sunmill", "sunmillWaterRim"),
             (.storyHollow, "word-garden-story-hollow", "storyHollowRim")
@@ -138,7 +138,6 @@ import LearningCore
             let scene = WordGardenScene(state: state)
             scene.reducedMotion = true
             scene.didMove(to: SKView())
-            defer { scene.willLeave() }
 
             let backdrop = try XCTUnwrap(
                 scene.childNode(withName: "wordGardenBackdrop") as? SKSpriteNode
