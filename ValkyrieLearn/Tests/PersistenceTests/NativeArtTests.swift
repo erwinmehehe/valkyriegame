@@ -94,10 +94,11 @@ import LearningCore
         let puzzleMatte = try XCTUnwrap(
             puzzle.childNode(withName: "puzzleLegacyMatte") as? SKSpriteNode
         )
-        XCTAssertEqual(puzzleMatte.alpha, CGFloat(0.20), accuracy: CGFloat(0.001))
+        XCTAssertEqual(puzzleMatte.alpha, CGFloat(0.10), accuracy: CGFloat(0.001))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleNativeBackdrop"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleArchitecture"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloor"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloorTexture"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleStageDais"))
 
         let scienceState = try AppState(
@@ -112,10 +113,11 @@ import LearningCore
         let scienceMatte = try XCTUnwrap(
             science.childNode(withName: "scienceLegacyMatte") as? SKSpriteNode
         )
-        XCTAssertEqual(scienceMatte.alpha, CGFloat(0.16), accuracy: CGFloat(0.001))
+        XCTAssertEqual(scienceMatte.alpha, CGFloat(0.08), accuracy: CGFloat(0.001))
         XCTAssertNotNil(science.childNode(withName: "scienceNativeBackdrop"))
         XCTAssertNotNil(science.childNode(withName: "scienceGreenhouseFrame"))
         XCTAssertNotNil(science.childNode(withName: "scienceGround"))
+        XCTAssertNotNil(science.childNode(withName: "scienceWaterBed"))
     }
 
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
