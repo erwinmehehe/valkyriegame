@@ -50,9 +50,10 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 500, height: 76),
-        cornerRadius: 12
+        rectOf: CGSize(width: 500, height: 100),
+        cornerRadius: 16
     )
+    private let questionHeading = ArtSystem.label("PIP'S WORK ORDER", size: 13)
     private let questionLabel = ArtSystem.label("", size: 23)
     private let workshopGroups: [[LearningEncounter]] = [
         MathFoundation.workshopExamples,
@@ -90,6 +91,33 @@ import LearningCore
             floor.name = "castleCourtyardRetina"
             addChild(floor)
         }
+
+        // Ground the active mechanic on a subtle shared workshop footprint while
+        // keeping the approved castle illustration dominant.
+        let workZone = ArtSystem.panel(
+            CGSize(width: 640, height: 275),
+            fill: UIColor(red: 0.10, green: 0.14, blue: 0.20, alpha: 0.14),
+            stroke: UIColor(red: 0.76, green: 0.58, blue: 0.27, alpha: 0.34),
+            radius: 72,
+            lineWidth: 2,
+            shadowAlpha: 0.08,
+            innerHighlight: UIColor(red: 0.95, green: 0.78, blue: 0.42, alpha: 0.05)
+        )
+        workZone.position = CGPoint(x: 820, y: 350)
+        workZone.zPosition = 5
+        workZone.name = "mathWorkZone"
+        addChild(workZone)
+
+        let workZoneRail = ArtSystem.box(
+            CGSize(width: 520, height: 5),
+            color: UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.34),
+            radius: 2
+        )
+        workZoneRail.position = CGPoint(x: 820, y: 220)
+        workZoneRail.strokeColor = .clear
+        workZoneRail.zPosition = 7
+        workZoneRail.name = "mathWorkZoneRail"
+        addChild(workZoneRail)
         // The five workshop seals are mounted on one physical timber rack.
         let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
         if let texture = ArtSystem.texture("BridgeOakPlank") { rack.fillColor = .white; rack.fillTexture = texture }
@@ -145,9 +173,16 @@ import LearningCore
             addChild(hanger)
         }
 
-        questionLabel.position = CGPoint(x: 800, y: 620)
+        questionHeading.position = CGPoint(x: 800, y: 647)
+        questionHeading.fontColor = UIColor(red: 1.0, green: 0.82, blue: 0.42, alpha: 1)
+        questionHeading.zPosition = 2001
+        questionHeading.name = "questionPromptHeading"
+        questionHeading.isHidden = true
+        addChild(questionHeading)
+
+        questionLabel.position = CGPoint(x: 800, y: 608)
         questionLabel.preferredMaxLayoutWidth = 440
-        questionLabel.fontSize = 20
+        questionLabel.fontSize = 19
         questionLabel.numberOfLines = 2
         questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
         questionLabel.zPosition = 2000
@@ -395,6 +430,22 @@ import LearningCore
             handle.fillColor = .clear; handle.strokeColor = .clear
             handle.addChild(face)
         }
+
+        let checkPlate = ArtSystem.plaque(
+            CGSize(width: 88, height: 28),
+            fill: UIColor(red: 0.13, green: 0.11, blue: 0.17, alpha: 0.92),
+            stroke: UIColor(red: 0.92, green: 0.71, blue: 0.32, alpha: 0.80),
+            radius: 12
+        )
+        checkPlate.position = CGPoint(x: 0, y: -70)
+        checkPlate.name = "submit"
+        node.addChild(checkPlate)
+
+        let checkLabel = ArtSystem.label("CHECK", size: 12)
+        checkLabel.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1)
+        checkLabel.name = "submit"
+        checkPlate.addChild(checkLabel)
+
         // Touch area stays large even where the lever's silhouette is narrow.
         let hit = ArtSystem.box(CGSize(width: 150, height: 110), color: .clear, radius: 0); hit.name = "submit"; node.addChild(hit)
         makeAccessible(node, label: "Pull Pip's golden lever", hint: "Checks the current work order.")
@@ -745,6 +796,7 @@ import LearningCore
         let hangers = children.filter { $0.name == "questionPromptHanger" }
         guard let text, !text.isEmpty else {
             questionPlate.isHidden = true
+            questionHeading.isHidden = true
             questionLabel.isHidden = true
             hangers.forEach { $0.isHidden = true }
             questionLabel.text = nil
@@ -752,6 +804,7 @@ import LearningCore
         }
         questionLabel.text = text
         questionPlate.isHidden = false
+        questionHeading.isHidden = false
         questionLabel.isHidden = false
         hangers.forEach { $0.isHidden = false }
     }
