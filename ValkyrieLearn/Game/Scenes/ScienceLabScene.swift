@@ -399,9 +399,9 @@ import LearningCore
             x: min(walkable.maxX, max(walkable.minX, destination.x)),
             y: min(walkable.maxY, max(walkable.minY, destination.y))
         )
+        state.audio.play("footstep")
         valkyrie.walk(to: point) { [weak self] in
-            guard let self else { return }
-            self.state.audio.play("footstep")
+            guard self != nil else { return }
             action?()
         }
         milo.walk(to: CGPoint(x: max(110, point.x - 95), y: min(walkable.maxY, point.y + 18))) {}

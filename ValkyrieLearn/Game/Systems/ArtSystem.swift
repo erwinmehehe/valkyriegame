@@ -7,15 +7,32 @@ import SpriteKit
     enum Environment { case isles, castle }
     private static var atlasCache: [String: SKTextureAtlas] = [:]
     private static var textureCache: [String: SKTexture] = [:]
+    private static var frameCache: [String: [SKTexture]] = [:]
     static func frames(character: String, pose: Pose) -> [SKTexture] {
+        let key = character + "|" + pose.rawValue
+        if let cached = frameCache[key] { return cached }
+
         let hasAtlas = Bundle.main.url(forResource: character, withExtension: "atlasc") != nil
             || Bundle.main.url(forResource: character, withExtension: "atlas") != nil
+
+        let frames: [SKTexture]
         if !hasAtlas {
-            return texture(character).map { [$0] } ?? []
+            frames = texture(character).map { [$0] } ?? []
+        } else {
+            let atlas = atlasCache[character] ?? SKTextureAtlas(named: character)
+            atlasCache[character] = atlas
+            frames = atlas.textureNames
+                .filter { $0.hasPrefix(pose.rawValue + "_") }
+                .sorted()
+                .map {
+                    let texture = atlas.textureNamed($0)
+                    texture.filteringMode = .linear
+                    return texture
+                }
         }
-        let atlas = atlasCache[character] ?? SKTextureAtlas(named: character)
-        atlasCache[character] = atlas
-        return atlas.textureNames.filter { $0.hasPrefix(pose.rawValue + "_") }.sorted().map { atlas.textureNamed($0) }
+
+        frameCache[key] = frames
+        return frames
     }
     static func texture(_ name: String) -> SKTexture? {
         if let cached = textureCache[name] { return cached }
