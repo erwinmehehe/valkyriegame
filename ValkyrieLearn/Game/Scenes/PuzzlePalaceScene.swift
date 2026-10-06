@@ -1114,7 +1114,7 @@ import LearningCore
 
     private func buildStopGoWorld() {
         let upperRail = ArtSystem.panel(
-            CGSize(width: 710, height: 24),
+            CGSize(width: 560, height: 20),
             fill: UIColor(red: 0.16, green: 0.11, blue: 0.25, alpha: 0.84),
             stroke: UIColor(red: 0.58, green: 0.47, blue: 0.82, alpha: 0.66),
             radius: 9,
@@ -1127,7 +1127,7 @@ import LearningCore
         addChild(upperRail)
 
         let lowerRail = ArtSystem.panel(
-            CGSize(width: 710, height: 24),
+            CGSize(width: 560, height: 20),
             fill: UIColor(red: 0.11, green: 0.08, blue: 0.20, alpha: 0.84),
             stroke: UIColor(red: 0.48, green: 0.39, blue: 0.72, alpha: 0.56),
             radius: 9,
@@ -1138,16 +1138,16 @@ import LearningCore
         lowerRail.zPosition = 179
         addChild(lowerRail)
 
-        for index in 0..<5 {
+        for (index, x) in [CGFloat(610), 755, 900].enumerated() {
             let brace = ArtSystem.panel(
-                CGSize(width: 46, height: 76),
+                CGSize(width: 42, height: 68),
                 fill: UIColor(red: 0.16, green: 0.12, blue: 0.28, alpha: 0.94),
                 stroke: UIColor(red: 0.56, green: 0.45, blue: 0.80, alpha: 0.66),
                 radius: 12,
                 lineWidth: 2,
                 shadowAlpha: 0.18
             )
-            brace.position = CGPoint(x: 505 + CGFloat(index) * 125, y: 365)
+            brace.position = CGPoint(x: x, y: 365)
             brace.name = "stopGoBrace"
             brace.zPosition = 190
             addChild(brace)
@@ -1161,6 +1161,14 @@ import LearningCore
         orbRoot.name = "stopGoOrb"
         orbRoot.position = CGPoint(x: 755, y: 365)
         orbRoot.zPosition = 620
+
+        let halo = SKShapeNode(circleOfRadius: 104)
+        halo.fillColor = UIColor(red: 0.19, green: 0.16, blue: 0.34, alpha: 0.08)
+        halo.strokeColor = UIColor(red: 0.70, green: 0.58, blue: 0.96, alpha: 0.24)
+        halo.lineWidth = 2
+        halo.name = "stopGoOrbHalo"
+        halo.zPosition = -2
+        orbRoot.addChild(halo)
 
         let ring = ArtSystem.medallion(
             radius: 83,
@@ -1185,10 +1193,10 @@ import LearningCore
         orbRoot.addChild(glyph)
         addChild(orbRoot)
 
-        let barrier = SKShapeNode(rectOf: CGSize(width: 98, height: 238), cornerRadius: 44)
-        barrier.fillColor = UIColor(red: 0.09, green: 0.065, blue: 0.18, alpha: 0.76)
-        barrier.strokeColor = UIColor(red: 0.62, green: 0.50, blue: 0.88, alpha: 0.76)
-        barrier.lineWidth = 6
+        let barrier = SKShapeNode(rectOf: CGSize(width: 82, height: 204), cornerRadius: 38)
+        barrier.fillColor = UIColor(red: 0.09, green: 0.065, blue: 0.18, alpha: 0.62)
+        barrier.strokeColor = UIColor(red: 0.62, green: 0.50, blue: 0.88, alpha: 0.62)
+        barrier.lineWidth = 4
         barrier.position = CGPoint(x: 1095, y: 385)
         barrier.name = "stopGoBarrier"
         barrier.zPosition = 350
@@ -1207,11 +1215,18 @@ import LearningCore
                 fill: UIColor(red: 0.20, green: 0.14, blue: 0.32, alpha: 0.96),
                 stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
             )
-            light.position = CGPoint(x: 970 + CGFloat(index) * 57, y: 555)
+            light.position = CGPoint(x: 700 + CGFloat(index) * 55, y: 552)
             light.name = "stopGoProgress\(index)"
             light.zPosition = 520
             addChild(light)
         }
+
+        let legend = ArtSystem.label("Ⅱ  WAIT      ✦  TAP", size: 14)
+        legend.position = CGPoint(x: 755, y: 228)
+        legend.fontColor = UIColor(red: 0.94, green: 0.86, blue: 0.67, alpha: 0.86)
+        legend.name = "stopGoLegend"
+        legend.zPosition = 132
+        addChild(legend)
 
         let back = worldControl("‹", name: "memoryBridgeBack",
                                 at: CGPoint(x: 1180, y: 665), radius: 30,
@@ -1281,7 +1296,8 @@ import LearningCore
     private func updateStopGoOrb(_ signal: PuzzleGateSignal) {
         guard let root = childNode(withName: "stopGoOrb"),
               let core = root.childNode(withName: "stopGoOrbCore") as? SKShapeNode,
-              let glyph = root.childNode(withName: "stopGoOrbGlyph") as? SKLabelNode else {
+              let glyph = root.childNode(withName: "stopGoOrbGlyph") as? SKLabelNode,
+              let halo = root.childNode(withName: "stopGoOrbHalo") as? SKShapeNode else {
             return
         }
 
@@ -1290,12 +1306,16 @@ import LearningCore
             core.fillColor = UIColor(red: 0.43, green: 0.19, blue: 0.31, alpha: 1)
             core.strokeColor = UIColor(red: 0.95, green: 0.65, blue: 0.73, alpha: 1)
             core.glowWidth = 3
+            halo.strokeColor = UIColor(red: 0.95, green: 0.65, blue: 0.73, alpha: 0.30)
+            halo.glowWidth = 0
             glyph.text = "Ⅱ"
             glyph.fontColor = UIColor(red: 1.0, green: 0.87, blue: 0.72, alpha: 1)
         case .go:
             core.fillColor = UIColor(red: 0.24, green: 0.48, blue: 0.31, alpha: 1)
             core.strokeColor = UIColor(red: 0.68, green: 1.0, blue: 0.72, alpha: 1)
             core.glowWidth = 14
+            halo.strokeColor = UIColor(red: 0.68, green: 1.0, blue: 0.72, alpha: 0.62)
+            halo.glowWidth = reducedMotion ? 0 : 9
             glyph.text = "✦"
             glyph.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.48, alpha: 1)
             if !reducedMotion {
