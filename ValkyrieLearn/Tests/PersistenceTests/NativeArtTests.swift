@@ -120,6 +120,54 @@ import LearningCore
         XCTAssertNotNil(science.childNode(withName: "scienceWaterBed"))
     }
 
+    func testMathCastlePreservesIllustrationWithRetinaPreparedRaster() throws {
+        XCTAssertFalse(
+            ArtSystem.isRetinaReady(
+                "MathCastle",
+                targetPoints: CGSize(width: 1280, height: 720)
+            ),
+            "The approved Math Castle source is still 1x and needs the preparation path."
+        )
+
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let backdrop = try XCTUnwrap(
+            scene.childNode(withName: "worldBackdrop") as? SKSpriteNode
+        )
+        XCTAssertEqual(
+            backdrop.userData?["sourceAsset"] as? String,
+            "MathCastle"
+        )
+        XCTAssertEqual(
+            backdrop.userData?["retinaPrepared"] as? Bool,
+            true
+        )
+        let backdropImage = try XCTUnwrap(backdrop.texture?.cgImage())
+        XCTAssertGreaterThanOrEqual(backdropImage.width, 2560)
+        XCTAssertGreaterThanOrEqual(backdropImage.height, 1440)
+
+        let courtyard = try XCTUnwrap(
+            scene.childNode(withName: "castleCourtyardRetina") as? SKSpriteNode
+        )
+        let courtyardImage = try XCTUnwrap(courtyard.texture?.cgImage())
+        XCTAssertGreaterThanOrEqual(courtyardImage.width, 2560)
+        XCTAssertGreaterThanOrEqual(courtyardImage.height, 500)
+
+        XCTAssertNotNil(scene.childNode(withName: "castleRetinaAccents"))
+        XCTAssertNotNil(scene.childNode(withName: "//castleFloorRim"))
+        XCTAssertNotNil(scene.childNode(withName: "//castleGateRim"))
+        XCTAssertFalse(
+            scene.childNode(withName: "worldBackdrop")?.isHidden ?? true,
+            "Retina preparation must preserve the illustrated castle instead of replacing it."
+        )
+    }
+
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
         for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko", "StoryBloom"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
