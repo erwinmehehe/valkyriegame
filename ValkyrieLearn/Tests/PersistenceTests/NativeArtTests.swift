@@ -1550,6 +1550,16 @@ import LearningCore
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
         pathTiles.willLeave()
 
+        XCTAssertFalse(state.puzzleCommandGearsAvailable)
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            _ = state.recordPuzzle(
+                family[0],
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
         XCTAssertTrue(state.puzzleCommandGearsAvailable)
         state.travel(to: .commandGears)
         let commandGears = PuzzlePalaceScene(state: state)
@@ -1568,7 +1578,7 @@ import LearningCore
             XCTAssertGreaterThanOrEqual(socket.calculateAccumulatedFrame().height, 80)
         }
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.actionSequencing).state, .new)
-        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertNotEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
 
         let commandEncounter = try XCTUnwrap(state.nextPuzzleCommandGearsEncounter())
@@ -1583,10 +1593,63 @@ import LearningCore
             state.profile.progress(for: PuzzleSkills.actionSequencing).evidence.last?.outcome,
             .correct
         )
-        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertNotEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
         commandGears.willLeave()
+
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            _ = state.recordPuzzle(
+                family[0],
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(state.puzzleBugLanternAvailable)
+        state.travel(to: .bugLantern)
+        let bugLantern = PuzzlePalaceScene(state: state)
+        bugLantern.reducedMotion = true
+        view.presentScene(bugLantern)
+        try await capture(bugLantern, in: view, name: "Puzzle-Palace-native-bug-lantern")
+        XCTAssertNotNil(bugLantern.childNode(withName: "bugLanternFixture"))
+        XCTAssertNotNil(bugLantern.childNode(withName: "bugRail"))
+        let bugSteps = bugLantern.children.filter { $0.name?.hasPrefix("bugStep") == true
+            && !($0.name?.contains("Label") ?? false) }
+        XCTAssertEqual(bugSteps.count, 3)
+        for step in bugSteps {
+            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().width, 150)
+            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().height, 100)
+            XCTAssertTrue(step.isAccessibilityElement)
+        }
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+
+        let bugEncounter = try XCTUnwrap(state.nextPuzzleBugLanternEncounter())
+        let brokenNode = try XCTUnwrap(
+            bugLantern.childNode(withName: "bugStep\(bugEncounter.brokenIndex)")
+        )
+        let debugEvidenceBeforeRepair = state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count
+        bugLantern.handleTap(at: brokenNode.position)
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count,
+            debugEvidenceBeforeRepair,
+            "Identifying the broken step alone must not count as completed debugging evidence."
+        )
+        let replacement = try XCTUnwrap(bugLantern.childNode(withName: "bugReplacement"))
+        XCTAssertEqual(
+            replacement.accessibilityLabel,
+            "Replacement command: \(bugEncounter.intended[bugEncounter.brokenIndex].title). Install it in step \(bugEncounter.brokenIndex + 1)."
+        )
+        bugLantern.handleTap(at: replacement.position)
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.last?.outcome,
+            .correct
+        )
+        XCTAssertNotEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+        bugLantern.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
