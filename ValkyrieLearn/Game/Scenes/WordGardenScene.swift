@@ -636,26 +636,29 @@ import LearningCore
 
     private func addPrompt(_ text: String) {
         childNode(withName: "questionPrompt")?.removeFromParent()
-        let prompt = ArtSystem.label(text, size: 25)
+        childNode(withName: "questionPromptBackdrop")?.removeFromParent()
+
+        let backdrop = ArtSystem.panel(
+            CGSize(width: 760, height: 82),
+            fill: UIColor(red: 0.055, green: 0.05, blue: 0.11, alpha: 0.76),
+            stroke: UIColor(red: 0.93, green: 0.72, blue: 0.46, alpha: 0.26),
+            radius: 28,
+            lineWidth: 1.5,
+            shadowAlpha: 0.24,
+            innerHighlight: UIColor(red: 1.0, green: 0.84, blue: 0.64, alpha: 0.06)
+        )
+        backdrop.name = "questionPromptBackdrop"
+        backdrop.position = CGPoint(x: 660, y: 610)
+        backdrop.zPosition = 1996
+        addChild(backdrop)
+
+        let prompt = ArtSystem.label(text, size: 21)
         prompt.name = "questionPrompt"
         prompt.position = CGPoint(x: 660, y: 610)
-        prompt.preferredMaxLayoutWidth = 820
+        prompt.preferredMaxLayoutWidth = 700
         prompt.numberOfLines = 2
-        prompt.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.91, alpha: 1)
+        prompt.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.90, alpha: 1)
         prompt.zPosition = 2000
-
-        let plate = ArtSystem.panel(
-            CGSize(width: 900, height: 76),
-            fill: UIColor(red: 0.035, green: 0.045, blue: 0.075, alpha: 0.68),
-            stroke: UIColor(white: 1.0, alpha: 0.12),
-            radius: 24,
-            lineWidth: 1.5,
-            shadowAlpha: 0.24
-        )
-        plate.name = "questionPromptBackdrop"
-        plate.zPosition = -2
-        prompt.addChild(plate)
-
         addChild(prompt)
     }
 
