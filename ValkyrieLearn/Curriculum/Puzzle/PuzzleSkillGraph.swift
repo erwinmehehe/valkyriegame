@@ -193,24 +193,24 @@ public enum PuzzleSkillCatalog {
             isStretch: true
         ),
         .init(
-            id: PuzzleSkills.actionSequencing,
-            strand: .sequencing,
-            title: "Put Actions in a Useful Order",
-            developmentalOrder: 10,
-            prerequisites: [PuzzleSkills.visualSequenceMemory],
-            representations: [.command, .path],
-            responseModes: [.arrange],
-            mechanicIDs: [PuzzlePalaceMechanicID.commandGears]
-        ),
-        .init(
             id: PuzzleSkills.pathPlanning,
             strand: .planning,
             title: "Plan a Route Before Moving",
-            developmentalOrder: 11,
+            developmentalOrder: 10,
             prerequisites: [PuzzleSkills.spatialOrientation, PuzzleSkills.visualSequenceMemory],
             representations: [.path, .command],
             responseModes: [.route, .arrange],
-            mechanicIDs: [PuzzlePalaceMechanicID.pathTiles, PuzzlePalaceMechanicID.commandGears]
+            mechanicIDs: [PuzzlePalaceMechanicID.pathTiles]
+        ),
+        .init(
+            id: PuzzleSkills.actionSequencing,
+            strand: .sequencing,
+            title: "Put Actions in a Useful Order",
+            developmentalOrder: 11,
+            prerequisites: [PuzzleSkills.pathPlanning, PuzzleSkills.visualSequenceMemory],
+            representations: [.command, .path],
+            responseModes: [.arrange],
+            mechanicIDs: [PuzzlePalaceMechanicID.commandGears]
         ),
         .init(
             id: PuzzleSkills.debugSingleStep,
@@ -227,7 +227,11 @@ public enum PuzzleSkillCatalog {
             strand: .debugging,
             title: "Repair a Multi-Step Plan",
             developmentalOrder: 13,
-            prerequisites: [PuzzleSkills.debugSingleStep, PuzzleSkills.pathPlanning],
+            prerequisites: [
+                PuzzleSkills.debugSingleStep,
+                PuzzleSkills.actionSequencing,
+                PuzzleSkills.pathPlanning
+            ],
             representations: [.command, .path],
             responseModes: [.debug, .arrange],
             mechanicIDs: [PuzzlePalaceMechanicID.bugLantern, PuzzlePalaceMechanicID.commandGears],
