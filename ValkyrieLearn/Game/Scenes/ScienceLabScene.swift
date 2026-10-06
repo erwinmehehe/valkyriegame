@@ -35,6 +35,7 @@ import LearningCore
         valkyrie.setScale(0.5)
         renderPlant()
         renderGate()
+        refreshStagePresentation()
 
         instruction.text = "Milo noticed something at the seed bench. Walk over and inspect it."
     }
@@ -513,6 +514,44 @@ import LearningCore
         _ = worldControl("⌂", name: "scienceHome", at: CGPoint(x: 55, y: 665), radius: 30)
     }
 
+    private func refreshStagePresentation() {
+        let benchAlpha: CGFloat
+        let waterAlpha: CGFloat
+        let lightAlpha: CGFloat
+        let gateAlpha: CGFloat
+
+        switch greenhouseStage {
+        case .arrive:
+            benchAlpha = 1.0
+            waterAlpha = 0.42
+            lightAlpha = 0.26
+            gateAlpha = 0.30
+        case .inspected:
+            benchAlpha = 0.72
+            waterAlpha = 1.0
+            lightAlpha = 0.34
+            gateAlpha = 0.30
+        case .watered:
+            benchAlpha = 0.72
+            waterAlpha = 0.58
+            lightAlpha = 1.0
+            gateAlpha = 0.36
+        case .lit:
+            benchAlpha = 0.68
+            waterAlpha = 0.50
+            lightAlpha = 0.72
+            gateAlpha = 1.0
+        }
+
+        plantNode.alpha = benchAlpha
+        childNode(withName: "scienceWaterTank")?.alpha = waterAlpha
+        childNode(withName: "scienceWaterPipe")?.alpha = waterAlpha
+        childNode(withName: "scienceWaterValve")?.alpha = waterAlpha
+        childNode(withName: "scienceSunPrism")?.alpha = lightAlpha
+        childNode(withName: "sciencePrismBeam")?.alpha = lightAlpha
+        gateNode.alpha = gateAlpha
+    }
+
     private func renderPlant() {
         plantNode.removeFromParent()
         plantNode = SKNode()
@@ -766,6 +805,7 @@ import LearningCore
         case .lit:
             instruction.text = "Water and light changed the plant. The Greenhouse gate is open."
         }
+        refreshStagePresentation()
     }
 
     private func testWater() {
@@ -786,6 +826,7 @@ import LearningCore
         state.audio.play("crystal")
         state.scienceWaterGreenhouse()
         renderPlant()
+        refreshStagePresentation()
         instruction.text = "The dry soil darkened, and a sprout appeared. Our water test changed the seed tray."
     }
 
@@ -809,6 +850,7 @@ import LearningCore
         state.scienceLightGreenhouse()
         renderPlant()
         renderGate()
+        refreshStagePresentation()
         state.audio.play("success")
         instruction.text = "The pale sprout became greener in the light. Observation, prediction, test, result—the Weather Tower path opened."
     }
