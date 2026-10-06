@@ -50,8 +50,14 @@ import LearningCore
                 in: atlas
             )
             groveTexture.filteringMode = .linear
+            let preparedTexture = ArtSystem.retinaEnhancedTexture(
+                groveTexture,
+                cacheKey: "word-garden-lower-crop",
+                targetPoints: size,
+                sharpness: 0.20
+            ) ?? groveTexture
             let backdrop = SKSpriteNode(
-                texture: groveTexture,
+                texture: preparedTexture,
                 color: UIColor(red: 0.58, green: 0.82, blue: 0.58, alpha: 1),
                 size: size
             )
@@ -59,6 +65,11 @@ import LearningCore
             backdrop.position = CGPoint(x: 640, y: 360)
             backdrop.zPosition = -300
             backdrop.name = "creatureGroveBackdropHD"
+            backdrop.userData = NSMutableDictionary(dictionary: [
+                "retinaPrepared": true,
+                "sourceAsset": "WordGardenSourceAtlas",
+                "sourceCrop": "word-garden-lower-crop"
+            ])
             addChild(backdrop)
 
             let shade = ArtSystem.box(
