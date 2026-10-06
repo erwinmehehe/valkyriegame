@@ -63,7 +63,7 @@ import LearningCore
             let matte = SKSpriteNode(texture: scienceTexture, color: .white, size: size)
             matte.position = CGPoint(x: 640, y: 360)
             matte.zPosition = -240
-            matte.alpha = 0.16
+            matte.alpha = 0.08
             matte.name = "scienceLegacyMatte"
             addChild(matte)
         }
@@ -79,6 +79,17 @@ import LearningCore
         ground.name = "scienceGround"
         addChild(ground)
 
+        if let waterBed = ArtSystem.sprite(
+            "BridgeChannel",
+            size: CGSize(width: 310, height: 105)
+        ) {
+            waterBed.position = CGPoint(x: 1015, y: 150)
+            waterBed.zPosition = -90
+            waterBed.alpha = 0.82
+            waterBed.name = "scienceWaterBed"
+            addChild(waterBed)
+        }
+
         let house = SKNode()
         house.position = CGPoint(x: 720, y: 390)
         house.zPosition = -80
@@ -86,11 +97,11 @@ import LearningCore
 
         let glass = ArtSystem.box(
             CGSize(width: 860, height: 430),
-            color: UIColor(red: 0.78, green: 0.92, blue: 0.90, alpha: 0.20),
+            color: UIColor(red: 0.78, green: 0.92, blue: 0.90, alpha: 0.12),
             radius: 18
         )
-        glass.strokeColor = UIColor(red: 0.87, green: 0.96, blue: 0.94, alpha: 0.95)
-        glass.lineWidth = 7
+        glass.strokeColor = UIColor(red: 0.87, green: 0.96, blue: 0.94, alpha: 0.82)
+        glass.lineWidth = 5
         house.addChild(glass)
 
         for x in stride(from: CGFloat(-360), through: CGFloat(360), by: CGFloat(120)) {
@@ -144,12 +155,22 @@ import LearningCore
             planter.lineWidth = 3
             house.addChild(planter)
 
-            let leaves = SKShapeNode(circleOfRadius: 34)
-            leaves.fillColor = UIColor(red: 0.22, green: 0.48, blue: 0.24, alpha: 0.94)
-            leaves.strokeColor = UIColor(red: 0.56, green: 0.78, blue: 0.38, alpha: 0.82)
-            leaves.lineWidth = 3
-            leaves.position = CGPoint(x: x, y: -102)
-            house.addChild(leaves)
+            if abs(x) > 200, let bloom = ArtSystem.sprite(
+                "StoryBloom",
+                size: CGSize(width: 78, height: 78)
+            ) {
+                bloom.position = CGPoint(x: x, y: -105)
+                bloom.zPosition = 1
+                bloom.name = "scienceSpecimenBloom"
+                house.addChild(bloom)
+            } else {
+                let leaves = SKShapeNode(circleOfRadius: 34)
+                leaves.fillColor = UIColor(red: 0.22, green: 0.48, blue: 0.24, alpha: 0.94)
+                leaves.strokeColor = UIColor(red: 0.56, green: 0.78, blue: 0.38, alpha: 0.82)
+                leaves.lineWidth = 3
+                leaves.position = CGPoint(x: x, y: -102)
+                house.addChild(leaves)
+            }
         }
 
         addChild(house)
@@ -195,6 +216,12 @@ import LearningCore
         bench.position = seedBenchPoint
         bench.name = "scienceSeedBench"
         bench.zPosition = 360
+        if let timber = ArtSystem.texture("BridgeOakPlank") {
+            bench.fillColor = .white
+            bench.fillTexture = timber
+            bench.strokeColor = UIColor(red: 0.54, green: 0.36, blue: 0.18, alpha: 0.88)
+            bench.lineWidth = 3
+        }
         addChild(bench)
 
         let soil = ArtSystem.box(
