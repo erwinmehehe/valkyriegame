@@ -189,4 +189,100 @@ final class PuzzleRotationTests: XCTestCase {
         XCTAssertNotEqual(profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
     }
 
+
+    private func recordMemoryForCommands(in profile: inout LearnerProfile) {
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            MasteryEngine().record(LearningEvidence(
+                encounterID: encounter.id,
+                skillID: encounter.skillID,
+                outcome: .correct,
+                supportLevel: .independent,
+                representation: encounter.representation,
+                mechanicID: encounter.mechanicID
+            ), in: &profile)
+        }
+    }
+
+    private func recordSequence(
+        _ encounter: PuzzleSequenceEncounter,
+        in profile: inout LearnerProfile,
+        support: SupportLevel = .independent,
+        outcome: Outcome = .correct
+    ) {
+        MasteryEngine().record(LearningEvidence(
+            encounterID: encounter.id,
+            skillID: encounter.skillID,
+            outcome: outcome,
+            supportLevel: support,
+            representation: encounter.representation,
+            mechanicID: encounter.mechanicID,
+            transferContext: encounter.transferContext
+        ), in: &profile)
+    }
+
+    func testCommandGearCatalogMeasuresSequencingWithFreshVariants() {
+        XCTAssertEqual(PuzzlePalaceEncounterCatalog.commandGearFamilies.count, 3)
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            XCTAssertEqual(family.count, 2)
+            XCTAssertEqual(Set(family.map(\.fingerprint)).count, 2)
+            for encounter in family {
+                XCTAssertEqual(encounter.skillID, PuzzleSkills.actionSequencing)
+                XCTAssertEqual(encounter.mechanicID, PuzzlePalaceMechanicID.commandGears)
+                XCTAssertFalse(encounter.isCorrect(encounter.presented))
+                XCTAssertTrue(encounter.isCorrect(encounter.correctOrder))
+                XCTAssertEqual(Set(encounter.presented.map(\.id)),
+                               Set(encounter.correctOrder.map(\.id)))
+            }
+        }
+    }
+
+    func testCommandGearsRequireMemoryButNotPathPlanning() throws {
+        var profile = LearnerProfile()
+        XCTAssertFalse(PuzzlePalaceDirector.canEnterCommandGears(profile: profile))
+        XCTAssertNil(PuzzlePalaceDirector.nextCommandGearsEncounter(profile: profile))
+
+        recordMemoryForCommands(in: &profile)
+
+        XCTAssertTrue(PuzzlePalaceDirector.canEnterCommandGears(profile: profile))
+        XCTAssertNotNil(PuzzlePalaceDirector.nextCommandGearsEncounter(profile: profile))
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+    }
+
+    func testAssistedCommandRetryChangesVariantAndDoesNotLeakOtherSkills() throws {
+        var profile = LearnerProfile()
+        recordMemoryForCommands(in: &profile)
+
+        let first = try XCTUnwrap(PuzzlePalaceDirector.nextCommandGearsEncounter(profile: profile))
+        recordSequence(first, in: &profile, support: .lightHint)
+        let retry = try XCTUnwrap(PuzzlePalaceDirector.nextCommandGearsEncounter(profile: profile))
+
+        XCTAssertNotEqual(retry.id, first.id)
+        XCTAssertNotEqual(retry.fingerprint, first.fingerprint)
+        XCTAssertEqual(PuzzlePalaceDirector.commandGearsIndependentSuccessCount(profile: profile), 0)
+
+        recordSequence(retry, in: &profile)
+        XCTAssertEqual(PuzzlePalaceDirector.commandGearsIndependentSuccessCount(profile: profile), 1)
+        XCTAssertNotEqual(profile.progress(for: PuzzleSkills.actionSequencing).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+    }
+
+    func testThreeIndependentCommandFamiliesRestoreCommandGears() {
+        var profile = LearnerProfile()
+        recordMemoryForCommands(in: &profile)
+
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            recordSequence(family[0], in: &profile)
+        }
+
+        XCTAssertEqual(PuzzlePalaceDirector.commandGearsIndependentSuccessCount(profile: profile), 3)
+        XCTAssertTrue(PuzzlePalaceDirector.commandGearsComplete(profile: profile))
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+    }
+
 }
