@@ -2425,36 +2425,136 @@ import LearningCore
 
 
     private func buildPathTilesWorld() {
-        let chamber = SKShapeNode(rectOf: CGSize(width: 860, height: 360), cornerRadius: 54)
-        chamber.fillColor = UIColor(red: 0.08, green: 0.12, blue: 0.20, alpha: 0.24)
-        chamber.strokeColor = UIColor(red: 0.44, green: 0.82, blue: 0.92, alpha: 0.55)
-        chamber.lineWidth = 6
-        chamber.position = CGPoint(x: 760, y: 400)
+        // A compact stone dais makes the grid feel like part of Puzzle Palace
+        // instead of a full-screen modal panel.
+        let daisShadow = SKShapeNode(
+            rectOf: CGSize(width: 430, height: 300),
+            cornerRadius: 32
+        )
+        daisShadow.fillColor = UIColor.black.withAlphaComponent(0.24)
+        daisShadow.strokeColor = .clear
+        daisShadow.position = CGPoint(x: 766, y: 392)
+        daisShadow.zPosition = 96
+        addChild(daisShadow)
+
+        let chamber = SKShapeNode(
+            rectOf: CGSize(width: 410, height: 282),
+            cornerRadius: 26
+        )
+        chamber.fillColor = UIColor(red: 0.12, green: 0.16, blue: 0.24, alpha: 0.82)
+        chamber.strokeColor = UIColor(red: 0.56, green: 0.76, blue: 0.82, alpha: 0.72)
+        chamber.lineWidth = 3
+        chamber.position = CGPoint(x: 760, y: 402)
         chamber.name = "pathTilesChamber"
         chamber.zPosition = 100
         addChild(chamber)
 
-        let title = ArtSystem.label("PATH TILES", size: 34)
+        let threshold = ArtSystem.box(
+            CGSize(width: 360, height: 18),
+            color: UIColor(red: 0.48, green: 0.38, blue: 0.22, alpha: 0.95),
+            radius: 6
+        )
+        threshold.strokeColor = UIColor(red: 0.86, green: 0.70, blue: 0.36, alpha: 0.78)
+        threshold.lineWidth = 2
+        threshold.position = CGPoint(x: 760, y: 250)
+        threshold.zPosition = 110
+        addChild(threshold)
+
+        let title = ArtSystem.label("PLAN THE PATH", size: 22)
+        title.fontColor = UIColor(red: 0.92, green: 0.96, blue: 1.0, alpha: 0.96)
         title.name = "pathTilesTitle"
-        title.position = CGPoint(x: 760, y: 610)
+        title.position = CGPoint(x: 760, y: 575)
         title.zPosition = 800
         addChild(title)
 
+        // Progress is mounted as palace lamps rather than floating HUD dots.
         for index in 0..<PuzzlePalaceEncounterCatalog.pathTileFamilies.count {
-            let light = SKShapeNode(circleOfRadius: 15)
+            let x = 690 + CGFloat(index) * 70
+
+            let bracket = SKShapeNode(
+                rectOf: CGSize(width: 8, height: 24),
+                cornerRadius: 3
+            )
+            bracket.fillColor = UIColor(red: 0.58, green: 0.46, blue: 0.28, alpha: 0.95)
+            bracket.strokeColor = .clear
+            bracket.position = CGPoint(x: x, y: 548)
+            bracket.zPosition = 815
+            addChild(bracket)
+
+            let light = SKShapeNode(circleOfRadius: 13)
             light.fillColor = UIColor(red: 0.18, green: 0.24, blue: 0.34, alpha: 1)
-            light.strokeColor = UIColor(red: 0.44, green: 0.82, blue: 0.92, alpha: 0.8)
+            light.strokeColor = UIColor(red: 0.56, green: 0.82, blue: 0.90, alpha: 0.88)
             light.lineWidth = 3
-            light.position = CGPoint(x: 680 + CGFloat(index) * 80, y: 565)
+            light.position = CGPoint(x: x, y: 531)
             light.name = "pathProgress\(index)"
             light.zPosition = 820
             addChild(light)
         }
 
+        let routeHeader = ArtSystem.label("CHOOSE A ROUTE", size: 16)
+        routeHeader.fontColor = UIColor(red: 1.0, green: 0.87, blue: 0.52, alpha: 0.94)
+        routeHeader.position = CGPoint(x: 1100, y: 390)
+        routeHeader.zPosition = 820
+        addChild(routeHeader)
+
         let back = worldControl("‹", name: "mirrorHallBack",
                                 at: CGPoint(x: 1180, y: 665), radius: 30,
                                 accessibilityLabel: "Back to Mirror Hall")
         back.zPosition = 2050
+    }
+
+    @discardableResult
+    private func addPathRouteChoice(
+        _ directions: [PuzzleOrientation],
+        index: Int,
+        at point: CGPoint
+    ) -> SKNode {
+        let name = "pathChoice\(index)"
+        let root = SKNode()
+        root.name = name
+        root.position = point
+        root.zPosition = 900
+        root.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
+
+        let rail = ArtSystem.box(
+            CGSize(width: 285, height: 64),
+            color: UIColor(red: 0.16, green: 0.13, blue: 0.23, alpha: 0.94),
+            radius: 12
+        )
+        rail.strokeColor = UIColor(red: 0.78, green: 0.62, blue: 0.34, alpha: 0.86)
+        rail.lineWidth = 2
+        rail.name = name
+        root.addChild(rail)
+
+        let option = ArtSystem.label(["I", "II", "III"][index], size: 15)
+        option.fontColor = UIColor(red: 1.0, green: 0.84, blue: 0.46, alpha: 1)
+        option.position = CGPoint(x: -124, y: 0)
+        option.name = name
+        root.addChild(option)
+
+        let spacing: CGFloat = 39
+        let totalWidth = CGFloat(max(0, directions.count - 1)) * spacing
+        let startX = -totalWidth / 2 + 12
+
+        for (step, direction) in directions.enumerated() {
+            let socket = SKShapeNode(circleOfRadius: 16)
+            socket.fillColor = UIColor(red: 0.14, green: 0.25, blue: 0.34, alpha: 1)
+            socket.strokeColor = UIColor(red: 0.48, green: 0.78, blue: 0.88, alpha: 0.82)
+            socket.lineWidth = 2
+            socket.position = CGPoint(x: startX + CGFloat(step) * spacing, y: 0)
+            socket.name = name
+
+            let glyph = ArtSystem.label(direction.glyph, size: 18)
+            glyph.fontColor = .white
+            glyph.name = name
+            socket.addChild(glyph)
+            root.addChild(socket)
+        }
+
+        makeAccessible(root, label: "Route option \(index + 1)")
+        addChild(root)
+        registerInteraction(root, clearance: 16)
+        return root
     }
 
     private func clearPathTilesChoices() {
@@ -2512,14 +2612,13 @@ import LearningCore
             }
         }
 
-        let choiceYs: [CGFloat] = [300, 225, 150]
+        let choiceYs: [CGFloat] = [325, 245, 165]
         for index in 0..<pathEncounter.choices.count {
-            let arrows = pathEncounter.choices[index].map(\.glyph).joined(separator: " ")
-            let choice = hotspot(arrows, name: "pathChoice\(index)",
-                                 at: CGPoint(x: 1085, y: choiceYs[index]),
-                                 size: CGSize(width: 260, height: 58))
-            choice.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
-            choice.zPosition = 900
+            _ = addPathRouteChoice(
+                pathEncounter.choices[index],
+                index: index,
+                at: CGPoint(x: 1100, y: choiceYs[index])
+            )
         }
 
         instruction.text = pathEncounter.prompt
