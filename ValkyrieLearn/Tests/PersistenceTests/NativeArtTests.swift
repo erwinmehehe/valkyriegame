@@ -107,7 +107,7 @@ import LearningCore
             window.isHidden = true
         }
         scene.update(0) // Exercise real actor depth, not the initial z = 0 state.
-        XCTAssertEqual(scene.targetName(at: CGPoint(x: 390, y: 605)), "wind")
+        XCTAssertEqual(scene.targetName(at: CGPoint(x: 300, y: 615)), "wind")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 52, y: 669)), "home")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 595, y: 235)), "supply")
         XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == false) // Free workshop exit.
@@ -188,7 +188,7 @@ import LearningCore
         let story = StoryTreeScene(state: state)
         story.didMove(to: SKView())
         story.valkyrie.position = CGPoint(x: 190, y: 170)
-        story.handleTap(at: CGPoint(x: 150, y: 255))
+        story.handleTap(at: CGPoint(x: 150, y: 430))
         XCTAssertEqual(state.world, .wordGarden)
         story.willLeave()
 
