@@ -473,6 +473,10 @@ import LearningCore
         PuzzlePalaceDirector.commandGearsComplete(profile: profile)
     }
 
+    var puzzlePalaceComplete: Bool {
+        PuzzlePalaceDirector.palaceRestorationComplete(profile: profile)
+    }
+
     func nextPuzzleCommandGearsEncounter() -> PuzzleSequenceEncounter? {
         PuzzlePalaceDirector.nextCommandGearsEncounter(profile: profile)
     }
@@ -841,6 +845,9 @@ import LearningCore
     }
     func retrySave() { persist() }
     func persist() {
+        if PuzzlePalaceDirector.palaceRestorationComplete(profile: profile) {
+            _ = profile.unlockStoryReward(.puzzlePalaceLantern)
+        }
         do {
             try store.save(profile: profile, adventure: adventure,
                            sound: soundEnabled, reducedMotion: reducedMotion, world: world.rawValue)
