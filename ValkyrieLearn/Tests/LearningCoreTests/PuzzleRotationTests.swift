@@ -109,4 +109,84 @@ final class PuzzleRotationTests: XCTestCase {
         XCTAssertNotEqual(next.source, first.source)
     }
 
+
+    private func recordPathPrerequisites(in profile: inout LearnerProfile, includeRotation: Bool = true) {
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            MasteryEngine().record(LearningEvidence(
+                encounterID: encounter.id, skillID: encounter.skillID, outcome: .correct,
+                supportLevel: .independent, representation: encounter.representation,
+                mechanicID: encounter.mechanicID
+            ), in: &profile)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            MasteryEngine().record(LearningEvidence(
+                encounterID: encounter.id, skillID: encounter.skillID, outcome: .correct,
+                supportLevel: .independent, representation: encounter.representation,
+                mechanicID: encounter.mechanicID
+            ), in: &profile)
+        }
+        recordOrientation(in: &profile)
+        if includeRotation {
+            for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+                recordRotation(encounter, in: &profile)
+            }
+        }
+    }
+
+    private func recordPath(_ encounter: PuzzlePathEncounter, in profile: inout LearnerProfile,
+                            support: SupportLevel = .independent, outcome: Outcome = .correct) {
+        MasteryEngine().record(LearningEvidence(
+            encounterID: encounter.id, skillID: encounter.skillID, outcome: outcome,
+            supportLevel: support, representation: encounter.representation,
+            mechanicID: encounter.mechanicID, transferContext: encounter.transferContext
+        ), in: &profile)
+    }
+
+    func testPathTileCatalogHasExactlyOneSafePlanPerVariant() {
+        XCTAssertEqual(PuzzlePalaceEncounterCatalog.pathTileFamilies.count, 3)
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            XCTAssertEqual(family.count, 2)
+            XCTAssertEqual(Set(family.map(\.fingerprint)).count, family.count)
+            for encounter in family {
+                XCTAssertEqual(encounter.skillID, PuzzleSkills.pathPlanning)
+                XCTAssertEqual(encounter.mechanicID, PuzzlePalaceMechanicID.pathTiles)
+                let valid = encounter.choices.indices.filter(encounter.isValidChoice)
+                XCTAssertEqual(valid, [encounter.answerIndex])
+            }
+        }
+    }
+
+    func testPathTilesWaitForFullMirrorHallCompletion() {
+        var profile = LearnerProfile()
+        recordPathPrerequisites(in: &profile, includeRotation: false)
+        XCTAssertFalse(PuzzlePalaceDirector.canEnterPathTiles(profile: profile))
+        XCTAssertNil(PuzzlePalaceDirector.nextPathTilesEncounter(profile: profile))
+
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+            recordRotation(encounter, in: &profile)
+        }
+        XCTAssertTrue(PuzzlePalaceDirector.canEnterPathTiles(profile: profile))
+        XCTAssertNotNil(PuzzlePalaceDirector.nextPathTilesEncounter(profile: profile))
+    }
+
+    func testAssistedPathRetryChangesMapAndOnlyIndependentFamiliesCount() throws {
+        var profile = LearnerProfile()
+        recordPathPrerequisites(in: &profile)
+        let first = try XCTUnwrap(PuzzlePalaceDirector.nextPathTilesEncounter(profile: profile))
+        recordPath(first, in: &profile, support: .lightHint)
+        let retry = try XCTUnwrap(PuzzlePalaceDirector.nextPathTilesEncounter(profile: profile))
+        XCTAssertNotEqual(retry.id, first.id)
+        XCTAssertNotEqual(retry.fingerprint, first.fingerprint)
+
+        recordPath(retry, in: &profile)
+        XCTAssertEqual(PuzzlePalaceDirector.pathTilesIndependentSuccessCount(profile: profile), 1)
+        recordPath(first, in: &profile)
+        XCTAssertEqual(PuzzlePalaceDirector.pathTilesIndependentSuccessCount(profile: profile), 1)
+
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.actionSequencing).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+        XCTAssertNotEqual(profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+    }
+
 }
