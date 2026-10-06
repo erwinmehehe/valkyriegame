@@ -180,3 +180,25 @@ jobs:
           fi
           git commit -m "chore: publish native render contact sheet [skip ci]"
           git push origin "HEAD:${GITHUB_HEAD_REF}"
+
+  publish-native-review-base64:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Encode published native contact sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/native-render/pr65-native-contact-sheet.jpg
+          base64 -w 0 docs/native-render/pr65-native-contact-sheet.jpg > docs/native-render/pr65-native-contact-sheet.b64
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/native-render/pr65-native-contact-sheet.b64
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore: encode native render for review [skip ci]"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
