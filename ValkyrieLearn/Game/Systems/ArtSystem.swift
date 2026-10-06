@@ -30,6 +30,27 @@ import SpriteKit
         guard let texture = texture(name) else { return nil }
         return SKSpriteNode(texture: texture, color: .white, size: size)
     }
+
+    static func pixelSize(_ name: String) -> CGSize? {
+        let image = UIImage(named: name) ?? Bundle.main.url(forResource: name, withExtension: "webp")
+            .flatMap { UIImage(contentsOfFile: $0.path) }
+        guard let cgImage = image?.cgImage else { return nil }
+        return CGSize(width: cgImage.width, height: cgImage.height)
+    }
+
+    static func sourceScale(for name: String, targetPoints: CGSize) -> CGFloat? {
+        guard let pixels = pixelSize(name), targetPoints.width > 0, targetPoints.height > 0 else { return nil }
+        return min(pixels.width / targetPoints.width, pixels.height / targetPoints.height)
+    }
+
+    static func isRetinaReady(
+        _ name: String,
+        targetPoints: CGSize,
+        minimumScale: CGFloat = 2
+    ) -> Bool {
+        guard let scale = sourceScale(for: name, targetPoints: targetPoints) else { return false }
+        return scale >= minimumScale
+    }
     static func gear(radius: CGFloat, symbol: String = "") -> SKNode {
         let node = SKNode()
         if let face = sprite("BridgeDial", size: CGSize(width: radius * 2, height: radius * 2)) {
