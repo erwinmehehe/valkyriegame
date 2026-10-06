@@ -631,6 +631,7 @@ import LearningCore
         acceptingChoices = false
         targetRune?.removeFromParent()
         targetRune = nil
+        clearAttentionCue()
         removeAction(forKey: "wordGardenPreview")
     }
 
@@ -721,6 +722,11 @@ import LearningCore
                     guard let self, !self.hasLeftScene else { return }
                     rune?.isHidden = true
                     self.acceptingChoices = true
+                    self.showAttentionCue(
+                        at: CGPoint(x: 755, y: 165),
+                        tint: UIColor(red: 1.0, green: 0.66, blue: 0.84, alpha: 1),
+                        width: 190
+                    )
                     self.instruction.text = self.place == .flowerGate
                         ? "Which flower matches the rune you saw?"
                         : "Which leaf matches the mill-rune you saw?"
@@ -780,6 +786,11 @@ import LearningCore
                     guard let self else { return }
                     preview?.isHidden = true
                     self.acceptingChoices = true
+                    self.showAttentionCue(
+                        at: CGPoint(x: 735, y: 155),
+                        tint: UIColor(red: 0.88, green: 0.70, blue: 1.0, alpha: 1),
+                        width: 190
+                    )
                     self.instruction.text = "Restore the \(positionName) seed-rune."
                 }
             ]),
