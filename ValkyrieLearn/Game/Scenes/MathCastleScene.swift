@@ -2,6 +2,9 @@ import SpriteKit
 import LearningCore
 
 @MainActor final class MathCastleScene: AdventureScene {
+    override var interactionSafeZone: CGRect { CGRect(x: 560, y: 245, width: 500, height: 335) }
+    override var actorLane: CGRect { CGRect(x: 115, y: 135, width: 940, height: 105) }
+
     private var mechanic: SKNode?
     private var renderedEncounterID: String?
     private let station = CGPoint(x: 490, y: 175)
@@ -50,8 +53,8 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 560, height: 92),
-        cornerRadius: 10
+        rectOf: CGSize(width: 430, height: 72),
+        cornerRadius: 14
     )
     private let questionLabel = ArtSystem.label("", size: 23)
     private let workshopGroups: [[LearningEncounter]] = [
@@ -67,8 +70,8 @@ import LearningCore
         super.didMove(to: view)
         // The v3.31 reference keeps the protagonist inside the world composition
         // instead of letting the character dominate the learning object.
-        valkyrie.setScale(0.5)
-        pip.setScale(0.65)
+        valkyrie.setScale(0.60)
+        pip.setScale(0.72)
         initialBuildComplete = true
     }
 
@@ -96,7 +99,7 @@ import LearningCore
         _ = worldGear("↻", name: "wind", at: CGPoint(x: 390, y: 605), radius: 32)
 
         // Present the active prompt as a castle work order instead of a HUD panel.
-        questionPlate.position = CGPoint(x: 805, y: 606)
+        questionPlate.position = CGPoint(x: 820, y: 612)
         if let texture = ArtSystem.texture("BridgeWorkOrder") {
             questionPlate.fillColor = .white
             questionPlate.fillTexture = texture
@@ -111,7 +114,7 @@ import LearningCore
         questionPlate.isHidden = true
         addChild(questionPlate)
 
-        for x in [555.0, 1055.0] {
+        for x in [620.0, 1020.0] {
             let hanger = ArtSystem.box(
                 CGSize(width: 10, height: 58),
                 color: .init(red: 0.39, green: 0.27, blue: 0.15, alpha: 1),
@@ -129,8 +132,9 @@ import LearningCore
             addChild(hanger)
         }
 
-        questionLabel.position = CGPoint(x: 805, y: 606)
-        questionLabel.preferredMaxLayoutWidth = 490
+        questionLabel.position = CGPoint(x: 820, y: 607)
+        questionLabel.preferredMaxLayoutWidth = 375
+        questionLabel.fontSize = 20
         questionLabel.numberOfLines = 2
         questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
         questionLabel.zPosition = 2000
@@ -169,7 +173,9 @@ import LearningCore
             let lamp = SKShapeNode(circleOfRadius: 7)
             lamp.position = CGPoint(x: 1080 + index * 10, y: 390 + index * 28)
             lamp.zPosition = 25; lamp.name = "powerRouteLamp\(index)"; lamp.fillColor = .init(red: 0.34, green: 0.31, blue: 0.37, alpha: 1)
-            lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1); addChild(lamp); routeLights.append(lamp)
+            lamp.strokeColor = .init(red: 0.93, green: 0.66, blue: 0.25, alpha: 1)
+            lamp.alpha = 0
+            addChild(lamp); routeLights.append(lamp)
         }
         buildBridgeRoute()
         buildPhysicalProgression()
@@ -619,7 +625,7 @@ import LearningCore
             questionLabel.text = nil
             return
         }
-        questionLabel.text = "Pip asks: " + text
+        questionLabel.text = text
         questionPlate.isHidden = false
         questionLabel.isHidden = false
         hangers.forEach { $0.isHidden = false }
@@ -660,7 +666,13 @@ import LearningCore
                 mechanic = MathCastleMechanicFactory.makeNode(for: runtime.encounter)
                 mechanic?.position = CGPoint(x: 820, y: 310)
             }
-            if let mechanic { mechanic.zPosition = 815; addChild(mechanic) }
+            if let mechanic {
+                mechanic.zPosition = 815
+                if runtime.encounter.mechanicID == MathMechanicID.crystalCart {
+                    mechanic.position = CGPoint(x: 760, y: 300)
+                }
+                addChild(mechanic)
+            }
             renderedEncounterID = runtime.encounter.id
         }
         switch runtime {
@@ -680,10 +692,10 @@ import LearningCore
                     : runtime.encounter.prompt
             ))
             instruction.text = state.previewVisible
-                ? "Look closely. Pip will hide the lights in a moment."
+                ? "Look closely. Remember what you see."
                 : (runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
-                    ? "Pip needs \(runtime.encounter.targetQuantity) bridge planks. \(runtime.encounter.initialQuantity) are fixed. Fill the gaps, then pull his lever."
-                    : "Use the machine, then pull Pip's lever to check your idea.")
+                    ? "Fill the missing planks, then pull Pip's lever."
+                    : "Build your answer in the machine, then pull Pip's lever.")
         } else {
             showQuestion(nil)
         }
