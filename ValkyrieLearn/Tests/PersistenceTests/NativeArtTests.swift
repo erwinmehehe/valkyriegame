@@ -1027,6 +1027,10 @@ import LearningCore
         let home = StoryTreeScene(state: state); home.reducedMotion = true
         view.presentScene(home)
         try await capture(home, in: view, name: "Story-Tree-native")
+        XCTAssertEqual(home.instruction.numberOfLines, 2)
+        XCTAssertLessThanOrEqual(home.instruction.preferredMaxLayoutWidth, 860)
+        XCTAssertNil(home.camera?.action(forKey: "sceneEntrance"))
+        XCTAssertNotNil(home.childNode(withName: "instructionPlate"))
         for name in ["wordGarden", "puzzlePalace", "castle", "scienceLab"] {
             let landmark = try XCTUnwrap(home.childNode(withName: name))
             XCTAssertGreaterThanOrEqual(landmark.calculateAccumulatedFrame().height, 52)
@@ -1402,6 +1406,11 @@ import LearningCore
             try await Task.sleep(nanoseconds: 250_000_000)
             let actorFrame = rotationHall.valkyrie.calculateAccumulatedFrame().insetBy(dx: 18, dy: 12)
             XCTAssertFalse(actorFrame.intersects(firstChoice.calculateAccumulatedFrame()))
+            try await capture(
+                rotationHall,
+                in: view,
+                name: "Puzzle-Palace-native-mental-rotation-approach-safe"
+            )
         }
         rotationHall.willLeave()
 
