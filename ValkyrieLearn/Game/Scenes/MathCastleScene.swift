@@ -591,6 +591,7 @@ import LearningCore
 
             if !wasPowered {
                 if initialBuildComplete {
+                    tactileFeedback(success: true)
                     playMechanicSuccessReaction()
                 }
                 openPhysicalProgression(animated: initialBuildComplete)
@@ -654,6 +655,12 @@ import LearningCore
     }
 
     private func refresh() {
+        let workshopVisible = state.workshop || state.runtime == nil
+        for index in 0..<5 {
+            childNode(withName: "workshop\(index)")?.alpha = workshopVisible ? 1.0 : 0.22
+        }
+        childNode(withName: "wind")?.alpha = workshopVisible ? 1.0 : 0.25
+
         guard let runtime = state.runtime else {
             mechanic?.removeFromParent(); mechanic = nil; renderedEncounterID = nil
             updatePower(false); return
