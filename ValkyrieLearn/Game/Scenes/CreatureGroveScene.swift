@@ -740,29 +740,31 @@ import LearningCore
                 guard let node = childNode(withName: name) else { continue }
                 node.removeAction(forKey: "groveStageReveal")
                 guard visible else {
-                    node.alpha = 0
-                    node.isHidden = true
+                    // Keep the authored hit target alive so an early tap still
+                    // reaches the stage guard and explains what to do next.
+                    // Alpha-only staging avoids turning an early tap into an
+                    // unrelated walk command.
+                    node.isHidden = false
+                    node.alpha = 0.001
+                    node.setScale(1)
                     continue
                 }
 
-                if node.isHidden {
-                    node.isHidden = false
-                    if animated && !reducedMotion {
-                        node.alpha = 0
-                        node.setScale(0.94)
-                        node.run(
-                            .group([
-                                .fadeAlpha(to: 1, duration: 0.22),
-                                .scale(to: 1, duration: 0.22)
-                            ]),
-                            withKey: "groveStageReveal"
-                        )
-                    } else {
-                        node.alpha = 1
-                        node.setScale(1)
-                    }
+                let wasVisuallyDormant = node.alpha < 0.01
+                node.isHidden = false
+                if wasVisuallyDormant && animated && !reducedMotion {
+                    node.alpha = 0.001
+                    node.setScale(0.94)
+                    node.run(
+                        .group([
+                            .fadeAlpha(to: 1, duration: 0.22),
+                            .scale(to: 1, duration: 0.22)
+                        ]),
+                        withKey: "groveStageReveal"
+                    )
                 } else {
                     node.alpha = 1
+                    node.setScale(1)
                 }
             }
         }
