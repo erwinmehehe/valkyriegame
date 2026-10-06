@@ -120,6 +120,35 @@ import LearningCore
         XCTAssertNotNil(science.childNode(withName: "scienceWaterBed"))
     }
 
+    func testMathCastleUsesNativeBackdropWhenIllustratedSourceIsNotRetinaReady() throws {
+        XCTAssertFalse(
+            ArtSystem.isRetinaReady(
+                "MathCastle",
+                targetPoints: CGSize(width: 1280, height: 720)
+            )
+        )
+
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        XCTAssertNil(
+            scene.childNode(withName: "worldBackdrop"),
+            "A 1x Math Castle painting must not own the full Retina gameplay surface."
+        )
+        let matte = try XCTUnwrap(
+            scene.childNode(withName: "mathLegacyMatte") as? SKSpriteNode
+        )
+        XCTAssertEqual(matte.alpha, CGFloat(0.08), accuracy: CGFloat(0.001))
+        XCTAssertNotNil(scene.childNode(withName: "mathNativeBackdrop"))
+        XCTAssertNotNil(scene.childNode(withName: "mathNativeArchitecture"))
+        XCTAssertNotNil(scene.childNode(withName: "mathNativeCourtyard"))
+    }
+
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
         for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko", "StoryBloom"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
