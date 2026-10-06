@@ -1529,8 +1529,13 @@ import LearningCore
                      "Mirror Hall should reveal the palace artwork instead of covering it with a modal panel.")
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallRail"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorBeacon"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallTitlePlate"))
         let orientationChoices = mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }
         XCTAssertEqual(orientationChoices.count, 3)
+        let mirrorPools = mirrorHall.children.filter {
+            $0.name?.hasPrefix("mirrorChoicePool") == true
+        }
+        XCTAssertEqual(mirrorPools.count, 3)
         let actorFrame = mirrorHall.valkyrie.calculateAccumulatedFrame().insetBy(dx: 8, dy: 8)
         for choice in orientationChoices {
             XCTAssertFalse(
@@ -1663,8 +1668,17 @@ import LearningCore
         try await capture(bugLantern, in: view, name: "Puzzle-Palace-native-bug-lantern")
         XCTAssertNotNil(bugLantern.childNode(withName: "bugLanternFixture"))
         XCTAssertNotNil(bugLantern.childNode(withName: "bugRail"))
+        let bugSockets = bugLantern.children.filter {
+            $0.name?.hasPrefix("bugStepSocket") == true
+        }
+        XCTAssertEqual(bugSockets.count, 3)
+        let bugFlowArrows = bugLantern.children.filter {
+            $0.name?.hasPrefix("bugFlowArrow") == true
+        }
+        XCTAssertEqual(bugFlowArrows.count, 2)
         let bugSteps = bugLantern.children.filter { $0.name?.hasPrefix("bugStep") == true
-            && !($0.name?.contains("Label") ?? false) }
+            && !($0.name?.contains("Label") ?? false)
+            && !($0.name?.contains("Socket") ?? false) }
         XCTAssertEqual(bugSteps.count, 3)
         for step in bugSteps {
             XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().width, 150)
