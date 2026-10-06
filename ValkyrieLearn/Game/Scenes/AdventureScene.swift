@@ -470,8 +470,8 @@ struct AdventureSceneLayout {
     func makeAccessible(_ node: SKNode, label: String, hint: String? = nil) {
         node.isAccessibilityElement = true
         node.accessibilityLabel = label
-        node.accessibilityRole = "button"
-        if let hint { node.accessibilityHelp = hint }
+        node.accessibilityTraits = .button
+        if let hint { node.accessibilityHint = hint }
     }
 
     override func update(_ currentTime: TimeInterval) {
