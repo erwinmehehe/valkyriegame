@@ -51,6 +51,7 @@ import LearningCore
         sky.position = CGPoint(x: 640, y: 360)
         sky.zPosition = -220
         addChild(sky)
+        ArtSystem.scienceBackdrop(in: self, environment: .creatureGrove)
 
         let grove = ArtSystem.box(
             CGSize(width: 1280, height: 310),
@@ -76,6 +77,16 @@ import LearningCore
             trunk.position = CGPoint(x: x, y: 340)
             trunk.zPosition = -80
             addChild(trunk)
+            for offset in [CGFloat(-20), 10, 30] {
+                let bark = ArtSystem.box(
+                    CGSize(width: 4, height: height * 0.62),
+                    color: UIColor(red: 0.55, green: 0.39, blue: 0.19, alpha: 0.40),
+                    radius: 2
+                )
+                bark.position = CGPoint(x: x + offset * 0.30, y: 320)
+                bark.zPosition = -79
+                addChild(bark)
+            }
 
             let crown = SKShapeNode(ellipseOf: CGSize(width: 190, height: 125))
             crown.fillColor = UIColor(red: 0.16, green: 0.43, blue: 0.22, alpha: 1)
@@ -84,6 +95,23 @@ import LearningCore
             crown.position = CGPoint(x: x, y: 535 + (height - 310) * 0.3)
             crown.zPosition = -75
             addChild(crown)
+            // Layered canopies break up the prototype's single-disc trees.
+            for (dx, dy, width, height) in [
+                (CGFloat(-55), CGFloat(-24), CGFloat(115), CGFloat(86)),
+                (CGFloat(52), CGFloat(-10), CGFloat(132), CGFloat(100)),
+                (CGFloat(-13), CGFloat(42), CGFloat(122), CGFloat(98))
+            ] {
+                let foliage = SKShapeNode(ellipseOf: CGSize(width: width, height: height))
+                foliage.position = CGPoint(
+                    x: x + dx,
+                    y: 535 + (height - 310) * 0.3 + dy
+                )
+                foliage.fillColor = UIColor(red: 0.23, green: 0.54, blue: 0.27, alpha: 0.97)
+                foliage.strokeColor = UIColor(red: 0.45, green: 0.69, blue: 0.38, alpha: 0.52)
+                foliage.lineWidth = 3
+                foliage.zPosition = -74
+                addChild(foliage)
+            }
         }
 
         let path = ArtSystem.box(
@@ -96,6 +124,31 @@ import LearningCore
         path.lineWidth = 4
         path.zPosition = 25
         addChild(path)
+        // A low stone trail physically connects observations around the pond.
+        for (index, x) in stride(from: CGFloat(158), through: CGFloat(1150), by: CGFloat(124)).enumerated() {
+            let slab = SKShapeNode(ellipseOf: CGSize(width: 83, height: 26))
+            slab.position = CGPoint(x: x, y: 175 + CGFloat(index % 2) * 11)
+            slab.fillColor = UIColor(red: 0.76, green: 0.71, blue: 0.54, alpha: 0.23)
+            slab.strokeColor = UIColor(red: 0.91, green: 0.84, blue: 0.61, alpha: 0.34)
+            slab.lineWidth = 2
+            slab.zPosition = 26
+            addChild(slab)
+        }
+        for (x, y, size) in [
+            (CGFloat(110), CGFloat(320), CGFloat(82)),
+            (CGFloat(260), CGFloat(330), CGFloat(68)),
+            (CGFloat(1110), CGFloat(325), CGFloat(75)),
+            (CGFloat(1200), CGFloat(340), CGFloat(93))
+        ] {
+            if let bloom = ArtSystem.sprite(
+                "StoryBloom",
+                size: CGSize(width: size, height: size)
+            ) {
+                bloom.position = CGPoint(x: x, y: y)
+                bloom.zPosition = -68
+                addChild(bloom)
+            }
+        }
 
         addDuckObservation()
         addHabitatChoices()
@@ -266,6 +319,23 @@ import LearningCore
         water.lineWidth = 4
         pondNode.addChild(water)
 
+        // Soft ripples and lily pads turn the single-color ellipse into water.
+        for (index, x) in [CGFloat(-170), -75, 25, 145].enumerated() {
+            let ripple = SKShapeNode(ellipseOf: CGSize(width: 80, height: 16))
+            ripple.position = CGPoint(x: x, y: index.isMultiple(of: 2) ? 21 : -12)
+            ripple.fillColor = .clear
+            ripple.strokeColor = UIColor(red: 0.70, green: 0.95, blue: 0.91, alpha: 0.36)
+            ripple.lineWidth = 3
+            pondNode.addChild(ripple)
+            if groveRestored {
+                let lily = SKShapeNode(ellipseOf: CGSize(width: 45, height: 19))
+                lily.position = CGPoint(x: x - 12, y: index.isMultiple(of: 2) ? 15 : -19)
+                lily.fillColor = UIColor(red: 0.38, green: 0.68, blue: 0.33, alpha: 0.96)
+                lily.strokeColor = UIColor(red: 0.59, green: 0.81, blue: 0.44, alpha: 0.72)
+                lily.lineWidth = 2
+                pondNode.addChild(lily)
+            }
+        }
         if groveRestored {
             for x in stride(from: CGFloat(-225), through: CGFloat(225), by: CGFloat(75)) {
                 let reed = ArtSystem.box(
