@@ -23,5 +23,6 @@ import AVFoundation
             players[channel]?.stop(); players[channel] = player; player.play()
         } catch { /* Audio is optional; gameplay remains available offline. */ }
     }
+    func stop(channel: Channel) { players[channel]?.stop(); players.removeValue(forKey: channel) }
     func stop() { players.values.forEach { $0.stop() }; players.removeAll() }
 }

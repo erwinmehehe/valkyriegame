@@ -441,6 +441,14 @@ import LearningCore
         PuzzlePalaceDirector.nextChangedRuleResortEncounter(profile: profile)
     }
 
+    var puzzleMirrorRotationComplete: Bool {
+        PuzzlePalaceDirector.mirrorRotationComplete(profile: profile)
+    }
+
+    func nextPuzzleMirrorRotationEncounter() -> PuzzleRotationEncounter? {
+        PuzzlePalaceDirector.nextMirrorRotationEncounter(profile: profile)
+    }
+
     func nextPuzzleMirrorHallEncounter() -> PuzzleOrientationEncounter? {
         PuzzlePalaceDirector.nextMirrorHallEncounter(profile: profile)
     }
@@ -628,6 +636,42 @@ import LearningCore
     @discardableResult
     func recordPuzzle(
         _ encounter: PuzzleOrientationEncounter,
+        outcome: Outcome,
+        support: SupportLevel,
+        attempts: Int,
+        responseTime: TimeInterval?
+    ) -> LearningEvidence {
+        let evidence = LearningEvidence(
+            encounterID: encounter.id,
+            skillID: encounter.skillID,
+            outcome: outcome,
+            supportLevel: support,
+            representation: encounter.representation,
+            mechanicID: encounter.mechanicID,
+            attempts: attempts,
+            responseTime: responseTime,
+            timestamp: Date(),
+            transferContext: encounter.transferContext,
+            easySuccess: outcome == .correct && support == .independent && attempts == 1
+        )
+        MasteryEngine().record(evidence, in: &profile)
+        profile.recordActivity(ActivityRecord(
+            fingerprint: encounter.fingerprint,
+            mechanicID: encounter.mechanicID,
+            skillID: encounter.skillID,
+            representation: encounter.representation,
+            timestamp: evidence.timestamp
+        ))
+        if outcome == .correct {
+            profile.usedFingerprints.insert(encounter.fingerprint)
+        }
+        persist()
+        return evidence
+    }
+
+    @discardableResult
+    func recordPuzzle(
+        _ encounter: PuzzleRotationEncounter,
         outcome: Outcome,
         support: SupportLevel,
         attempts: Int,
