@@ -43,13 +43,37 @@ import LearningCore
         // The old V331WorldAtlas greenhouse was a low-resolution quadrant enlarged
         // across the Retina gameplay surface. Keep the greenhouse fully vector-based
         // so glass, frames, paths, controls and text remain crisp at every iPad size.
-        let sky = ArtSystem.box(size, color: UIColor(red: 0.55, green: 0.75, blue: 0.82, alpha: 1), radius: 0)
-        sky.strokeColor = .clear
-        sky.position = CGPoint(x: 640, y: 360)
-        sky.zPosition = -200
-        sky.name = "scienceGreenhouseBackdrop"
-        addChild(sky)
-        
+        if let texture = ArtSystem.texture("StarlightIsles") {
+            let backdrop = SKSpriteNode(texture: texture, color: .white, size: size)
+            backdrop.position = CGPoint(x: 640, y: 360)
+            backdrop.zPosition = -240
+            backdrop.name = "scienceGreenhouseBackdrop"
+            backdrop.color = UIColor(red: 0.42, green: 0.78, blue: 0.72, alpha: 1)
+            backdrop.colorBlendFactor = 0.16
+            addChild(backdrop)
+
+            let glassWash = ArtSystem.box(
+                size,
+                color: UIColor(red: 0.50, green: 0.82, blue: 0.80, alpha: 0.10),
+                radius: 0
+            )
+            glassWash.strokeColor = .clear
+            glassWash.position = CGPoint(x: 640, y: 360)
+            glassWash.zPosition = -225
+            addChild(glassWash)
+        } else {
+            let sky = ArtSystem.box(
+                size,
+                color: UIColor(red: 0.55, green: 0.75, blue: 0.82, alpha: 1),
+                radius: 0
+            )
+            sky.strokeColor = .clear
+            sky.position = CGPoint(x: 640, y: 360)
+            sky.zPosition = -200
+            sky.name = "scienceGreenhouseBackdrop"
+            addChild(sky)
+        }
+
         let ground = ArtSystem.box(
             CGSize(width: 1280, height: 260),
             color: UIColor(red: 0.20, green: 0.31, blue: 0.20, alpha: 1),
