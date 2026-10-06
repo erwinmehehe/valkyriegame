@@ -52,6 +52,13 @@ import LearningCore
             XCTAssertTrue(node.isAccessibilityElement, "\(name) must expose an accessibility label.")
             XCTAssertFalse((node.accessibilityLabel ?? "").isEmpty)
         }
+
+        let wordGarden = try XCTUnwrap(scene.childNode(withName: "wordGarden"))
+        let actorFrame = scene.valkyrie.calculateAccumulatedFrame().insetBy(dx: 18, dy: 12)
+        XCTAssertFalse(
+            actorFrame.intersects(wordGarden.calculateAccumulatedFrame()),
+            "Opening Valkyrie pose must not cover the Word Garden landmark."
+        )
     }
 
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
@@ -1463,12 +1470,22 @@ import LearningCore
         pathTiles.reducedMotion = true
         view.presentScene(pathTiles)
         try await capture(pathTiles, in: view, name: "Puzzle-Palace-native-path-tiles")
-        XCTAssertNotNil(pathTiles.childNode(withName: "pathTilesChamber"))
-        XCTAssertNotNil(pathTiles.childNode(withName: "pathGrid"))
-        XCTAssertEqual(
-            pathTiles.children.filter { $0.name?.hasPrefix("pathChoice") == true }.count,
-            3
+        let pathChamber = try XCTUnwrap(pathTiles.childNode(withName: "pathTilesChamber"))
+        XCTAssertLessThan(
+            pathChamber.calculateAccumulatedFrame().width,
+            500,
+            "Path Tiles should be a compact floor dais, not a full-screen modal frame."
         )
+        XCTAssertNotNil(pathTiles.childNode(withName: "pathGrid"))
+        let pathChoices = pathTiles.children.filter { $0.name?.hasPrefix("pathChoice") == true }
+        XCTAssertEqual(pathChoices.count, 3)
+        for choice in pathChoices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 280)
+            XCTAssertGreaterThanOrEqual(frame.height, 60)
+            XCTAssertTrue(choice.isAccessibilityElement)
+            XCTAssertTrue((choice.accessibilityLabel ?? "").hasPrefix("Route option"))
+        }
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.actionSequencing).state, .new)
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
