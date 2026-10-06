@@ -323,14 +323,33 @@ struct AdventureSceneLayout {
     }
 
     func targetName(at point: CGPoint) -> String? {
+        // SpriteKit does not guarantee that nodes(at:) is returned in visual order.
+        // Resolve the highest rendered named ancestor so a full-screen backdrop can
+        // never steal a tap from an in-world control layered above it.
+        var best: (name: String, score: CGFloat, depth: Int)?
+
         for hit in nodes(at: point) {
             var node: SKNode? = hit
-            while let current = node {
-                if let name = current.name { return name }
+            var depth = 0
+            while let current = node, current !== self {
+                if let name = current.name, !name.isEmpty {
+                    var score = current.zPosition
+                    var ancestor = current.parent
+                    while let parent = ancestor, parent !== self {
+                        score += parent.zPosition
+                        ancestor = parent.parent
+                    }
+                    if best == nil
+                        || score > best!.score
+                        || (score == best!.score && depth < best!.depth) {
+                        best = (name, score, depth)
+                    }
+                }
+                depth += 1
                 node = current.parent
             }
         }
-        return nil
+        return best?.name
     }
 
     func registerInteraction(_ node: SKNode, clearance: CGFloat = 18) {
