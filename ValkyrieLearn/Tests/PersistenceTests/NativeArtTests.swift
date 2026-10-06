@@ -161,6 +161,10 @@ import LearningCore
 
             XCTAssertNotNil(scene.childNode(withName: "wordGardenRetinaAccents"))
             XCTAssertNotNil(scene.childNode(withName: "//" + accentName))
+            XCTAssertNotNil(
+                scene.childNode(withName: "//questionPromptBackdrop"),
+                "Word Garden prompts need a contrast surface over the bright painting."
+            )
             XCTAssertFalse(
                 backdrop.isHidden,
                 "Retina preparation must preserve the painted Word Garden environment."
