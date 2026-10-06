@@ -2003,11 +2003,8 @@ import LearningCore
 
     private func approachMirror(_ node: SKShapeNode, then operation: @escaping () -> Void) {
         guard mirrorAcceptingInput, !solved else { return }
-        // Keep the actor in the low walking lane while she checks a mirror.
-        // This preserves a clear visual gap from every scored mirror and avoids
-        // sibling answer zones pushing the approach point hundreds of points away.
         let destination = safeActorPoint(
-            near: CGPoint(x: node.position.x - 180, y: walkable.minY),
+            near: CGPoint(x: node.position.x - 235, y: 175),
             avoiding: [node.calculateAccumulatedFrame().insetBy(dx: -36, dy: -20)]
         )
         let operate = { [weak self, weak node] in
