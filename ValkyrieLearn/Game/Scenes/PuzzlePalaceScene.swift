@@ -235,17 +235,7 @@ import LearningCore
     }
 
     override func buildWorld() {
-        if let atlas = ArtSystem.texture("V331WorldAtlas") {
-            // v3.31 2×2 environment atlas: Puzzle Palace is the lower-right quadrant.
-            let puzzleTexture = SKTexture(
-                rect: CGRect(x: 0.5, y: 0, width: 0.5, height: 0.5),
-                in: atlas
-            )
-            let backdrop = SKSpriteNode(texture: puzzleTexture, color: .white, size: size)
-            backdrop.position = CGPoint(x: 640, y: 360)
-            backdrop.zPosition = -100
-            addChild(backdrop)
-        }
+        buildSharpPalaceBackdrop()
 
         for (height, y) in [(CGFloat(62), CGFloat(684)), (CGFloat(96), CGFloat(42))] {
             let shade = ArtSystem.box(
@@ -288,6 +278,105 @@ import LearningCore
         case .commandGears:
             buildCommandGearsWorld()
             refreshCommandGearsProgress(animated: false)
+        }
+    }
+
+    private func buildSharpPalaceBackdrop() {
+        // V331WorldAtlas is a tiny 2x2 reference sheet and becomes visibly soft when
+        // one quarter is enlarged to a Retina iPad. Use the full-resolution Castle
+        // painting as the illustrated base, then recolor and layer crisp Palace
+        // architecture on top until dedicated HD Palace art replaces it.
+        if let texture = ArtSystem.texture("MathCastle") {
+            let backdrop = SKSpriteNode(texture: texture, color: .white, size: size)
+            backdrop.position = CGPoint(x: 640, y: 360)
+            backdrop.zPosition = -240
+            backdrop.name = "palaceBackdropHD"
+            backdrop.color = UIColor(red: 0.28, green: 0.10, blue: 0.46, alpha: 1)
+            backdrop.colorBlendFactor = 0.46
+            addChild(backdrop)
+        } else {
+            let fallback = ArtSystem.box(
+                size,
+                color: UIColor(red: 0.13, green: 0.09, blue: 0.24, alpha: 1),
+                radius: 0
+            )
+            fallback.strokeColor = .clear
+            fallback.position = CGPoint(x: 640, y: 360)
+            fallback.zPosition = -240
+            fallback.name = "palaceBackdropHD"
+            addChild(fallback)
+        }
+
+        let atmosphere = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.14, green: 0.05, blue: 0.25, alpha: 0.18),
+            radius: 0
+        )
+        atmosphere.strokeColor = .clear
+        atmosphere.position = CGPoint(x: 640, y: 360)
+        atmosphere.zPosition = -225
+        atmosphere.name = "palaceAtmosphere"
+        addChild(atmosphere)
+
+        let floor = ArtSystem.box(
+            CGSize(width: 1280, height: 150),
+            color: UIColor(red: 0.10, green: 0.09, blue: 0.18, alpha: 0.56),
+            radius: 0
+        )
+        floor.strokeColor = UIColor(red: 0.56, green: 0.43, blue: 0.82, alpha: 0.45)
+        floor.lineWidth = 2
+        floor.position = CGPoint(x: 640, y: 134)
+        floor.zPosition = -120
+        floor.name = "palaceFloor"
+        addChild(floor)
+
+        for x in stride(from: CGFloat(120), through: CGFloat(1160), by: CGFloat(130)) {
+            let seam = ArtSystem.box(
+                CGSize(width: 2, height: 132),
+                color: UIColor(red: 0.60, green: 0.48, blue: 0.88, alpha: 0.24),
+                radius: 0
+            )
+            seam.strokeColor = .clear
+            seam.position = CGPoint(x: x, y: 134)
+            seam.zPosition = -112
+            addChild(seam)
+        }
+
+        for x in [CGFloat(92), CGFloat(1188)] {
+            let column = ArtSystem.box(
+                CGSize(width: 82, height: 500),
+                color: UIColor(red: 0.13, green: 0.11, blue: 0.24, alpha: 0.78),
+                radius: 24
+            )
+            column.strokeColor = UIColor(red: 0.65, green: 0.52, blue: 0.92, alpha: 0.70)
+            column.lineWidth = 4
+            column.position = CGPoint(x: x, y: 390)
+            column.zPosition = -105
+            addChild(column)
+        }
+
+        for (x, y, h, tint) in [
+            (CGFloat(165), CGFloat(350), CGFloat(150), UIColor(red: 0.54, green: 0.44, blue: 1.0, alpha: 1)),
+            (CGFloat(1085), CGFloat(365), CGFloat(185), UIColor(red: 0.78, green: 0.34, blue: 0.96, alpha: 1)),
+            (CGFloat(1000), CGFloat(530), CGFloat(118), UIColor(red: 0.38, green: 0.72, blue: 1.0, alpha: 1))
+        ] {
+            let crystal = SKShapeNode(path: {
+                let p = CGMutablePath()
+                p.move(to: CGPoint(x: 0, y: h / 2))
+                p.addLine(to: CGPoint(x: -24, y: 0))
+                p.addLine(to: CGPoint(x: -14, y: -h / 2))
+                p.addLine(to: CGPoint(x: 14, y: -h / 2))
+                p.addLine(to: CGPoint(x: 24, y: 0))
+                p.closeSubpath()
+                return p
+            }())
+            crystal.position = CGPoint(x: x, y: y)
+            crystal.zPosition = -90
+            crystal.fillColor = tint.withAlphaComponent(0.72)
+            crystal.strokeColor = tint
+            crystal.lineWidth = 3
+            crystal.glowWidth = 10
+            addChild(crystal)
         }
     }
 
