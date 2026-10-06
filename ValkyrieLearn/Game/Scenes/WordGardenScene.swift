@@ -1252,9 +1252,9 @@ import LearningCore
             x: min(walkable.maxX, max(walkable.minX, destination.x)),
             y: min(walkable.maxY, max(walkable.minY, destination.y))
         )
+        state.audio.play("footstep")
         valkyrie.walk(to: point) { [weak self] in
             guard let self, !self.hasLeftScene else { return }
-            self.state.audio.play("footstep")
             action?()
         }
         lumi.walk(to: CGPoint(x: max(100, point.x - 90), y: point.y + 12)) {}
