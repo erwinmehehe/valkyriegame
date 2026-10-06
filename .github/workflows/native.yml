@@ -1,8 +1,5 @@
-name: Native foundation
+name: Inline native render review
 on:
-  push:
-    branches:
-      - main
   pull_request:
     types:
       - opened
@@ -10,222 +7,31 @@ on:
       - reopened
       - ready_for_review
 
-concurrency:
-  group: native-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: write
 
 jobs:
-  learning-core:
-    runs-on: ubuntu-latest
-    container: swift:6.0
-    steps:
-      - uses: actions/checkout@v4
-      - run: swift test -j 2
-
-  native-validation:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 scripts/validate_native.py
-
-  ipad-build-and-tests:
-    needs:
-      - learning-core
-      - native-validation
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
-    runs-on: macos-15
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - name: iPad Simulator unit tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          xcodebuild -version
-          simulator_id=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for devices in d["devices"].values() for x in devices if x["name"].startswith("iPad")))')
-          xcodebuild test -project ValkyrieLearn.xcodeproj -scheme ValkyrieLearn \
-            -destination "platform=iOS Simulator,id=$simulator_id" \
-            -resultBundlePath NativeTests.xcresult CODE_SIGNING_ALLOWED=NO
-      - name: Export native scene screenshots
-        if: ${{ always() && !cancelled() }}
-        run: |
-          if [ -d NativeTests.xcresult ]; then
-            xcrun xcresulttool export attachments --path NativeTests.xcresult --output-path native-scene-review
-          fi
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() && !cancelled() }}
-        with:
-          name: native-scene-review
-          path: native-scene-review
-          if-no-files-found: ignore
-      - name: Build compact native scene review
-        if: ${{ always() && !cancelled() }}
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import json, shutil
-
-          source = Path("native-scene-review")
-          compact = Path("native-scene-review-compact")
-          compact.mkdir(exist_ok=True)
-
-          pngs = sorted(source.rglob("*.png"))
-          if pngs:
-              count = min(16, len(pngs))
-              indices = sorted({round(i * (len(pngs) - 1) / max(1, count - 1)) for i in range(count)})
-              for index in indices:
-                  path = pngs[index]
-                  shutil.copy2(path, compact / path.name)
-              print("Compact review selected", len(indices), "of", len(pngs), "PNG screenshots")
-              for index in indices:
-                  print(index, pngs[index].name)
-
-          manifest = source / "manifest.json"
-          if manifest.exists():
-              shutil.copy2(manifest, compact / "manifest.json")
-              print("Manifest preview:")
-              print(manifest.read_text()[:12000])
-          PY
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() && !cancelled() }}
-        with:
-          name: native-scene-review-compact
-          path: native-scene-review-compact
-          if-no-files-found: ignore
-      - name: Compose native contact sheet
-        if: ${{ always() && !cancelled() }}
-        shell: bash
-        run: |
-          cat > /tmp/native_contact_sheet.swift <<'SWIFT'
-          import AppKit
-          import Foundation
-
-          let fm = FileManager.default
-          let root = URL(fileURLWithPath: "native-scene-review-compact")
-          let keys: [URLResourceKey] = [.isRegularFileKey]
-          guard let enumerator = fm.enumerator(
-              at: root,
-              includingPropertiesForKeys: keys,
-              options: [.skipsHiddenFiles]
-          ) else {
-              fatalError("Cannot enumerate compact native screenshots")
-          }
-
-          var files: [URL] = []
-          for case let url as URL in enumerator where url.pathExtension.lowercased() == "png" {
-              files.append(url)
-          }
-          files.sort { $0.lastPathComponent < $1.lastPathComponent }
-          guard !files.isEmpty else { fatalError("No native screenshots found") }
-
-          let cell = NSSize(width: 640, height: 360)
-          let columns = 4
-          let rows = Int(ceil(Double(files.count) / Double(columns)))
-          let canvasSize = NSSize(
-              width: cell.width * CGFloat(columns),
-              height: cell.height * CGFloat(rows)
-          )
-
-          let canvas = NSImage(size: canvasSize)
-          canvas.lockFocus()
-          NSColor.black.setFill()
-          NSRect(origin: .zero, size: canvasSize).fill()
-
-          for (index, url) in files.enumerated() {
-              guard let image = NSImage(contentsOf: url) else { continue }
-              let column = index % columns
-              let row = index / columns
-              let x = CGFloat(column) * cell.width
-              let y = CGFloat(rows - row - 1) * cell.height
-              let destination = NSRect(x: x, y: y, width: cell.width, height: cell.height)
-              image.draw(
-                  in: destination,
-                  from: NSRect(origin: .zero, size: image.size),
-                  operation: .sourceOver,
-                  fraction: 1.0
-              )
-          }
-          canvas.unlockFocus()
-
-          guard let tiff = canvas.tiffRepresentation,
-                let bitmap = NSBitmapImageRep(data: tiff),
-                let jpeg = bitmap.representation(
-                    using: .jpeg,
-                    properties: [.compressionFactor: 0.86]
-                ) else {
-              fatalError("Could not encode contact sheet")
-          }
-          try jpeg.write(to: URL(fileURLWithPath: "/tmp/pr65-native-contact-sheet.jpg"))
-          print("Wrote native contact sheet from \(files.count) simulator screenshots")
-          SWIFT
-          swift /tmp/native_contact_sheet.swift
-      - name: Publish native contact sheet to review branch
-        if: ${{ always() && !cancelled() && github.event_name == 'pull_request' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin "${GITHUB_HEAD_REF}"
-          git checkout -B "${GITHUB_HEAD_REF}" "origin/${GITHUB_HEAD_REF}"
-          mkdir -p docs/native-render
-          cp /tmp/pr65-native-contact-sheet.jpg docs/native-render/pr65-native-contact-sheet.jpg
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/native-render/pr65-native-contact-sheet.jpg
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "chore: publish native render contact sheet [skip ci]"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
-
-  publish-native-review-base64:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-      - name: Encode published native contact sheet
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f docs/native-render/pr65-native-contact-sheet.jpg
-          base64 -w 0 docs/native-render/pr65-native-contact-sheet.jpg > docs/native-render/pr65-native-contact-sheet.b64
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/native-render/pr65-native-contact-sheet.b64
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "chore: encode native render for review [skip ci]"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
-
-  publish-native-review-small:
-    if: github.event_name == 'pull_request'
+  publish-inline-native-render:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-      - name: Create chat-sized native render
+      - name: Create small inline render
         shell: bash
         run: |
           set -euo pipefail
           test -f docs/native-render/pr65-native-contact-sheet.jpg
-          mkdir -p docs/native-render
-          sips -z 720 1280 docs/native-render/pr65-native-contact-sheet.jpg \
-            --out docs/native-render/pr65-native-contact-sheet-small.jpg >/dev/null
-          base64 -i docs/native-render/pr65-native-contact-sheet-small.jpg \
-            | tr -d '\n' > docs/native-render/pr65-native-contact-sheet-small.b64
+          sips -z 576 1024 docs/native-render/pr65-native-contact-sheet.jpg \
+            --out docs/native-render/pr65-native-contact-sheet-inline.jpg >/dev/null
+          base64 -i docs/native-render/pr65-native-contact-sheet-inline.jpg \
+            | tr -d '\n' > docs/native-render/pr65-native-contact-sheet-inline.b64
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/native-render/pr65-native-contact-sheet-small.jpg \
-            docs/native-render/pr65-native-contact-sheet-small.b64
+          git add docs/native-render/pr65-native-contact-sheet-inline.jpg \
+            docs/native-render/pr65-native-contact-sheet-inline.b64
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "chore: publish chat-sized native render [skip ci]"
+          git commit -m "chore: publish inline native render [skip ci]"
           git push origin "HEAD:${GITHUB_HEAD_REF}"
