@@ -83,12 +83,13 @@ import LearningCore
         addChild(groveWash)
 
         let path = ArtSystem.panel(
-            CGSize(width: 1120, height: 126),
-            fill: UIColor(red: 0.27, green: 0.23, blue: 0.15, alpha: 0.88),
-            stroke: UIColor(red: 0.61, green: 0.56, blue: 0.36, alpha: 0.82),
-            radius: 54,
-            lineWidth: 4,
-            shadowAlpha: 0.34
+            CGSize(width: 1120, height: 108),
+            fill: UIColor(red: 0.24, green: 0.21, blue: 0.15, alpha: 0.70),
+            stroke: UIColor(red: 0.61, green: 0.56, blue: 0.36, alpha: 0.62),
+            radius: 48,
+            lineWidth: 3,
+            shadowAlpha: 0.22,
+            innerHighlight: UIColor(red: 0.78, green: 0.72, blue: 0.50, alpha: 0.04)
         )
         path.position = CGPoint(x: 640, y: 185)
         path.zPosition = 25
@@ -97,8 +98,8 @@ import LearningCore
 
         for x in stride(from: CGFloat(160), through: CGFloat(1110), by: CGFloat(135)) {
             let steppingStone = SKShapeNode(ellipseOf: CGSize(width: 72, height: 22))
-            steppingStone.fillColor = UIColor(red: 0.43, green: 0.39, blue: 0.28, alpha: 0.62)
-            steppingStone.strokeColor = UIColor(red: 0.70, green: 0.65, blue: 0.44, alpha: 0.32)
+            steppingStone.fillColor = UIColor(red: 0.43, green: 0.39, blue: 0.28, alpha: 0.46)
+            steppingStone.strokeColor = UIColor(red: 0.70, green: 0.65, blue: 0.44, alpha: 0.26)
             steppingStone.lineWidth = 1.5
             steppingStone.position = CGPoint(x: x, y: 205 + (Int(x) / 135 % 2 == 0 ? 7 : -4))
             steppingStone.zPosition = 29
@@ -397,12 +398,20 @@ import LearningCore
         pondNode.zPosition = 120
 
         let bank = SKShapeNode(ellipseOf: CGSize(width: 575, height: 168))
-        bank.fillColor = UIColor(red: 0.20, green: 0.24, blue: 0.14, alpha: 0.78)
-        bank.strokeColor = UIColor(red: 0.44, green: 0.52, blue: 0.27, alpha: 0.72)
-        bank.lineWidth = 4
+        bank.fillColor = UIColor(red: 0.20, green: 0.24, blue: 0.14, alpha: 0.64)
+        bank.strokeColor = UIColor(red: 0.44, green: 0.52, blue: 0.27, alpha: 0.62)
+        bank.lineWidth = 3
+        bank.name = "grovePondBank"
         pondNode.addChild(bank)
 
-        let water = SKShapeNode(ellipseOf: CGSize(width: 530, height: 135))
+        let shoreline = SKShapeNode(ellipseOf: CGSize(width: 552, height: 150))
+        shoreline.fillColor = UIColor(red: 0.36, green: 0.43, blue: 0.22, alpha: 0.20)
+        shoreline.strokeColor = UIColor(red: 0.58, green: 0.66, blue: 0.34, alpha: 0.38)
+        shoreline.lineWidth = 2
+        shoreline.name = "grovePondShoreline"
+        pondNode.addChild(shoreline)
+
+        let water = SKShapeNode(ellipseOf: CGSize(width: 520, height: 130))
         water.fillColor = groveRestored
             ? UIColor(red: 0.16, green: 0.58, blue: 0.64, alpha: 0.90)
             : UIColor(red: 0.16, green: 0.37, blue: 0.42, alpha: 0.72)
@@ -417,7 +426,27 @@ import LearningCore
         reflection.fillColor = UIColor(red: 0.72, green: 0.93, blue: 0.91, alpha: groveRestored ? 0.14 : 0.08)
         reflection.strokeColor = .clear
         reflection.position = CGPoint(x: -40, y: 22)
+        reflection.name = "grovePondReflection"
         pondNode.addChild(reflection)
+
+        for (index, spec) in [
+            (CGFloat(-125), CGFloat(18), CGFloat(118), CGFloat(24)),
+            (CGFloat(30), CGFloat(-6), CGFloat(154), CGFloat(28)),
+            (CGFloat(145), CGFloat(22), CGFloat(96), CGFloat(20))
+        ].enumerated() {
+            let ripple = SKShapeNode(ellipseOf: CGSize(width: spec.2, height: spec.3))
+            ripple.fillColor = .clear
+            ripple.strokeColor = UIColor(
+                red: 0.70,
+                green: 0.92,
+                blue: 0.88,
+                alpha: groveRestored ? 0.32 : 0.18
+            )
+            ripple.lineWidth = index == 1 ? 2.4 : 1.6
+            ripple.position = CGPoint(x: spec.0, y: spec.1)
+            ripple.name = "grovePondRipple"
+            pondNode.addChild(ripple)
+        }
 
         for (x, y) in [
             (CGFloat(-235), CGFloat(-32)),
