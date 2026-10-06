@@ -419,6 +419,102 @@ public struct PuzzleRotationEncounter: Identifiable, Equatable, Sendable {
     }
 }
 
+
+public struct PuzzlePathEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let prompt: String
+    public let gridWidth: Int
+    public let gridHeight: Int
+    public let start: PuzzleTile
+    public let goal: PuzzleTile
+    public let blocked: Set<PuzzleTile>
+    public let choices: [[PuzzleOrientation]]
+    public let answerIndex: Int
+    public let transferContext: Bool
+    public let skillID = PuzzleSkills.pathPlanning
+    public let mechanicID = PuzzlePalaceMechanicID.pathTiles
+    public let representation = Representation.pictorial
+
+    public init(
+        id: String,
+        prompt: String,
+        gridWidth: Int,
+        gridHeight: Int,
+        start: PuzzleTile,
+        goal: PuzzleTile,
+        blocked: [PuzzleTile],
+        choices: [[PuzzleOrientation]],
+        answerIndex: Int,
+        transferContext: Bool = false
+    ) {
+        precondition(gridWidth > 1 && gridHeight > 1)
+        precondition(!choices.isEmpty && choices.indices.contains(answerIndex))
+        self.id = id
+        self.prompt = prompt
+        self.gridWidth = gridWidth
+        self.gridHeight = gridHeight
+        self.start = start
+        self.goal = goal
+        self.blocked = Set(blocked)
+        self.choices = choices
+        self.answerIndex = answerIndex
+        self.transferContext = transferContext
+
+        precondition(isInBounds(start) && isInBounds(goal))
+        precondition(!self.blocked.contains(start) && !self.blocked.contains(goal))
+        let signatures = choices.map { $0.map(\.rawValue).joined(separator: ",") }
+        precondition(Set(signatures).count == choices.count)
+        let validChoices = choices.indices.filter { isValidChoice($0) }
+        precondition(validChoices == [answerIndex])
+    }
+
+    public func route(for choiceIndex: Int) -> [PuzzleTile] {
+        precondition(choices.indices.contains(choiceIndex))
+        var current = start
+        var result = [current]
+        for direction in choices[choiceIndex] {
+            switch direction {
+            case .north: current = PuzzleTile(x: current.x, y: current.y + 1)
+            case .east: current = PuzzleTile(x: current.x + 1, y: current.y)
+            case .south: current = PuzzleTile(x: current.x, y: current.y - 1)
+            case .west: current = PuzzleTile(x: current.x - 1, y: current.y)
+            }
+            result.append(current)
+        }
+        return result
+    }
+
+    public func isValidChoice(_ choiceIndex: Int) -> Bool {
+        guard choices.indices.contains(choiceIndex) else { return false }
+        let route = route(for: choiceIndex)
+        guard route.last == goal, Set(route).count == route.count else { return false }
+        return route.allSatisfy { isInBounds($0) && !blocked.contains($0) }
+    }
+
+    public func isInBounds(_ tile: PuzzleTile) -> Bool {
+        tile.x >= 0 && tile.x < gridWidth && tile.y >= 0 && tile.y < gridHeight
+    }
+
+    public var fingerprint: String {
+        let blockedSignature = blocked
+            .sorted { $0.y == $1.y ? $0.x < $1.x : $0.y < $1.y }
+            .map { String($0.x) + "," + String($0.y) }
+            .joined(separator: ";")
+        let choiceSignature = choices
+            .map { $0.map(\.rawValue).joined(separator: ",") }
+            .joined(separator: "|")
+        return [
+            mechanicID,
+            skillID.rawValue,
+            String(gridWidth) + "x" + String(gridHeight),
+            String(start.x) + "," + String(start.y),
+            String(goal.x) + "," + String(goal.y),
+            blockedSignature,
+            choiceSignature
+        ].joined(separator: "|")
+    }
+}
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -631,6 +727,111 @@ public enum PuzzlePalaceEncounterCatalog {
             choices: [.north, .south, .east],
             transferContext: true
         )
+    ]
+
+
+    public static let pathTileFamilies: [[PuzzlePathEncounter]] = [
+        [
+            .init(
+                id: "puzzle.pathTiles.archwayA",
+                prompt: "Plan the whole route before Tiko moves. Which path reaches the star without touching a dark tile?",
+                gridWidth: 4,
+                gridHeight: 3,
+                start: .init(x: 0, y: 0),
+                goal: .init(x: 3, y: 2),
+                blocked: [.init(x: 1, y: 0), .init(x: 2, y: 1)],
+                choices: [
+                    [.east, .north, .north, .east, .east],
+                    [.north, .east, .north, .east, .east],
+                    [.north, .east, .east, .north, .east]
+                ],
+                answerIndex: 1
+            ),
+            .init(
+                id: "puzzle.pathTiles.archwayB",
+                prompt: "The floor shifted. Pick a complete safe route before anyone steps onto the tiles.",
+                gridWidth: 4,
+                gridHeight: 3,
+                start: .init(x: 0, y: 0),
+                goal: .init(x: 3, y: 2),
+                blocked: [.init(x: 0, y: 1), .init(x: 2, y: 0)],
+                choices: [
+                    [.east, .north, .east, .north, .east],
+                    [.north, .east, .north, .east, .east],
+                    [.east, .east, .north, .north, .east]
+                ],
+                answerIndex: 0,
+                transferContext: true
+            )
+        ],
+        [
+            .init(
+                id: "puzzle.pathTiles.galleryA",
+                prompt: "Look ahead across the gallery. Choose the route that stays clear all the way to the star.",
+                gridWidth: 4,
+                gridHeight: 4,
+                start: .init(x: 0, y: 0),
+                goal: .init(x: 3, y: 3),
+                blocked: [.init(x: 0, y: 1), .init(x: 2, y: 2)],
+                choices: [
+                    [.north, .east, .north, .north, .east, .east],
+                    [.east, .north, .east, .north, .north, .east],
+                    [.east, .north, .north, .north, .east, .east]
+                ],
+                answerIndex: 2,
+                transferContext: true
+            ),
+            .init(
+                id: "puzzle.pathTiles.galleryB",
+                prompt: "Tiko found another floor plan. Decide on the safe route before testing it.",
+                gridWidth: 4,
+                gridHeight: 4,
+                start: .init(x: 0, y: 0),
+                goal: .init(x: 3, y: 3),
+                blocked: [.init(x: 1, y: 1), .init(x: 3, y: 1)],
+                choices: [
+                    [.north, .north, .east, .north, .east, .east],
+                    [.east, .north, .north, .east, .north, .east],
+                    [.north, .east, .east, .east, .north, .north]
+                ],
+                answerIndex: 0,
+                transferContext: true
+            )
+        ],
+        [
+            .init(
+                id: "puzzle.pathTiles.returnA",
+                prompt: "Now plan from the far side. Which full route gets Tiko home without crossing a blocked tile?",
+                gridWidth: 4,
+                gridHeight: 3,
+                start: .init(x: 3, y: 0),
+                goal: .init(x: 0, y: 2),
+                blocked: [.init(x: 2, y: 0), .init(x: 1, y: 1)],
+                choices: [
+                    [.west, .north, .north, .west, .west],
+                    [.north, .north, .west, .west, .west],
+                    [.north, .west, .west, .north, .west]
+                ],
+                answerIndex: 1,
+                transferContext: true
+            ),
+            .init(
+                id: "puzzle.pathTiles.returnB",
+                prompt: "One last shifted path: choose a complete route first, then let Tiko scout it.",
+                gridWidth: 4,
+                gridHeight: 3,
+                start: .init(x: 3, y: 0),
+                goal: .init(x: 0, y: 2),
+                blocked: [.init(x: 3, y: 1), .init(x: 1, y: 0)],
+                choices: [
+                    [.north, .west, .north, .west, .west],
+                    [.west, .west, .north, .north, .west],
+                    [.west, .north, .north, .west, .west]
+                ],
+                answerIndex: 2,
+                transferContext: true
+            )
+        ]
     ]
 
 }
@@ -894,6 +1095,50 @@ public enum PuzzlePalaceDirector {
     public static func mirrorRotationComplete(profile: LearnerProfile) -> Bool {
         mirrorRotationIndependentSuccessCount(profile: profile)
             == PuzzlePalaceEncounterCatalog.mirrorHallRotation.count
+    }
+
+
+    public static func canEnterPathTiles(profile: LearnerProfile) -> Bool {
+        memoryBridgeComplete(profile: profile)
+            && canEnterMirrorHall(profile: profile)
+            && mirrorHallComplete(profile: profile)
+            && mirrorRotationComplete(profile: profile)
+    }
+
+    public static func nextPathTilesEncounter(profile: LearnerProfile) -> PuzzlePathEncounter? {
+        guard canEnterPathTiles(profile: profile), !pathTilesComplete(profile: profile) else { return nil }
+        let evidence = profile.progress(for: PuzzleSkills.pathPlanning).evidence
+        let independent = Set(
+            evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        let seen = Set(evidence.map(\.encounterID))
+
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            guard !family.contains(where: { independent.contains($0.id) }) else { continue }
+            if let fresh = family.first(where: { !seen.contains($0.id) }) {
+                return fresh
+            }
+            return family.first { $0.id != evidence.last?.encounterID } ?? family.first
+        }
+        return nil
+    }
+
+    public static func pathTilesIndependentSuccessCount(profile: LearnerProfile) -> Int {
+        let independent = Set(
+            profile.progress(for: PuzzleSkills.pathPlanning).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        return PuzzlePalaceEncounterCatalog.pathTileFamilies.filter { family in
+            family.contains { independent.contains($0.id) }
+        }.count
+    }
+
+    public static func pathTilesComplete(profile: LearnerProfile) -> Bool {
+        pathTilesIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.pathTileFamilies.count
     }
 
     public static func independentSortSuccessCount(
