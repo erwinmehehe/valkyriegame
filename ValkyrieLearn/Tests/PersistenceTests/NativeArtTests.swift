@@ -1654,7 +1654,14 @@ import LearningCore
             name: "Puzzle-Palace-native-stop-go-orbs"
         )
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoOrb"))
+        XCTAssertNotNil(stopGo.childNode(withName: "//stopGoOrbHalo"))
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoBarrier"))
+        XCTAssertNotNil(stopGo.childNode(withName: "stopGoLegend"))
+        XCTAssertEqual(
+            stopGo.children.filter { $0.name == "stopGoBrace" }.count,
+            3,
+            "Stop/Go chamber should keep the signal focus clear instead of filling the room with braces."
+        )
         stopGo.willLeave()
 
         for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
