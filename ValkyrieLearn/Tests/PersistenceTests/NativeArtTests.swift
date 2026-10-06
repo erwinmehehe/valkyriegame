@@ -1027,6 +1027,11 @@ import LearningCore
         let home = StoryTreeScene(state: state); home.reducedMotion = true
         view.presentScene(home)
         try await capture(home, in: view, name: "Story-Tree-native")
+        for name in ["wordGarden", "puzzlePalace", "castle", "scienceLab"] {
+            let landmark = try XCTUnwrap(home.childNode(withName: name))
+            XCTAssertGreaterThanOrEqual(landmark.calculateAccumulatedFrame().height, 52)
+            XCTAssertFalse((landmark.accessibilityLabel ?? "").isEmpty)
+        }
         home.handleTap(at: CGPoint(x: 795, y: 445))
         // Exercise the painted waypoint route before the arrival capture.
         try await Task.sleep(nanoseconds: 3_000_000_000)
@@ -1385,7 +1390,19 @@ import LearningCore
         try await capture(rotationHall, in: view, name: "Puzzle-Palace-native-turn-practice")
         try finishMirrorPracticeIfNeeded(rotationHall)
         try await capture(rotationHall, in: view, name: "Puzzle-Palace-native-mental-rotation")
-        XCTAssertEqual(rotationHall.children.filter { $0.name == "mirrorRotationChoice" }.count, 3)
+        let rotationChoices = rotationHall.children.filter { $0.name == "mirrorRotationChoice" }
+        XCTAssertEqual(rotationChoices.count, 3)
+        for choice in rotationChoices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 140)
+            XCTAssertGreaterThanOrEqual(frame.height, 170)
+        }
+        if let firstChoice = rotationChoices.first {
+            rotationHall.handleTap(at: firstChoice.position)
+            try await Task.sleep(nanoseconds: 250_000_000)
+            let actorFrame = rotationHall.valkyrie.calculateAccumulatedFrame().insetBy(dx: 18, dy: 12)
+            XCTAssertFalse(actorFrame.intersects(firstChoice.calculateAccumulatedFrame()))
+        }
         rotationHall.willLeave()
 
         for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
