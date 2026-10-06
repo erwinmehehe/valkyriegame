@@ -2172,6 +2172,8 @@ import LearningCore
             mirror.name = "mirrorOrientationChoice"
             mirror.userData = NSMutableDictionary(dictionary: ["direction": direction.rawValue])
             mirror.zPosition = 650
+            mirror.isAccessibilityElement = true
+            mirror.accessibilityLabel = "Mirror pointing \(direction.rawValue)"
 
             let arrow = ArtSystem.label(direction.glyph, size: 58)
             arrow.fontColor = UIColor(red: 0.94, green: 0.97, blue: 1.0, alpha: 1)
@@ -2357,6 +2359,8 @@ import LearningCore
             mirror.zPosition = 650
             mirror.name = "mirrorRotationChoice"
             mirror.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
+            mirror.isAccessibilityElement = true
+            mirror.accessibilityLabel = "Rotated shape choice \(index + 1)"
             mirror.addChild(tileShapeNode(shape, tileSize: 30))
             addChild(mirror)
         }
