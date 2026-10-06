@@ -460,7 +460,7 @@ import LearningCore
             let fixed = index < model.encounter.initialQuantity
 
             shape.fillColor = active
-                ? UIColor(red: 0.16, green: 0.26, blue: 0.32, alpha: 1)
+                ? .systemTeal
                 : UIColor(red: 0.11, green: 0.14, blue: 0.22, alpha: 1)
             shape.strokeColor = active
                 ? UIColor(red: 0.57, green: 0.86, blue: 0.93, alpha: 0.86)
