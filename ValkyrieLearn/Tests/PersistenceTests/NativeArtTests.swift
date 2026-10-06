@@ -2547,4 +2547,38 @@ import LearningCore
     }
 
 
+
+    func testScienceGuidanceCueTracksTheNextPhysicalActionWithoutStealingInput() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        var cue = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(cue.position.x, 685, accuracy: 0.001)
+        XCTAssertEqual(cue.position.y, 235, accuracy: 0.001)
+        XCTAssertFalse(cue.hasActions())
+        XCTAssertTrue(cue.children.allSatisfy { !$0.hasActions() })
+        XCTAssertNotEqual(
+            scene.targetName(at: cue.position),
+            "decorativeAttentionCue",
+            "A visual hint must never steal a gameplay tap."
+        )
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        cue = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(cue.position.x, 430, accuracy: 0.001)
+        XCTAssertEqual(cue.position.y, 220, accuracy: 0.001)
+
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        cue = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(cue.position.x, 940, accuracy: 0.001)
+        XCTAssertEqual(cue.position.y, 245, accuracy: 0.001)
+    }
+
 }
