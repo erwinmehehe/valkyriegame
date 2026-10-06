@@ -515,6 +515,62 @@ public struct PuzzlePathEncounter: Identifiable, Equatable, Sendable {
     }
 }
 
+
+public struct PuzzleCommandStep: Identifiable, Equatable, Hashable, Sendable {
+    public let id: String
+    public let glyph: String
+    public let title: String
+
+    public init(id: String, glyph: String, title: String) {
+        precondition(!id.isEmpty && !glyph.isEmpty && !title.isEmpty)
+        self.id = id
+        self.glyph = glyph
+        self.title = title
+    }
+}
+
+public struct PuzzleSequenceEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let prompt: String
+    public let correctOrder: [PuzzleCommandStep]
+    public let presented: [PuzzleCommandStep]
+    public let transferContext: Bool
+    public let skillID = PuzzleSkills.actionSequencing
+    public let mechanicID = PuzzlePalaceMechanicID.commandGears
+    public let representation = Representation.pictorial
+
+    public init(
+        id: String,
+        prompt: String,
+        correctOrder: [PuzzleCommandStep],
+        presented: [PuzzleCommandStep],
+        transferContext: Bool = false
+    ) {
+        precondition(correctOrder.count == 3 && presented.count == 3)
+        precondition(Set(correctOrder.map(\.id)).count == 3)
+        precondition(Set(presented.map(\.id)) == Set(correctOrder.map(\.id)))
+        precondition(presented != correctOrder)
+        self.id = id
+        self.prompt = prompt
+        self.correctOrder = correctOrder
+        self.presented = presented
+        self.transferContext = transferContext
+    }
+
+    public func isCorrect(_ steps: [PuzzleCommandStep]) -> Bool {
+        steps.map(\.id) == correctOrder.map(\.id)
+    }
+
+    public var fingerprint: String {
+        [
+            mechanicID,
+            skillID.rawValue,
+            correctOrder.map(\.id).joined(separator: ","),
+            presented.map(\.id).joined(separator: ",")
+        ].joined(separator: "|")
+    }
+}
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -834,6 +890,71 @@ public enum PuzzlePalaceEncounterCatalog {
         ]
     ]
 
+
+    public static let commandGearFamilies: [[PuzzleSequenceEncounter]] = {
+        let takeKey = PuzzleCommandStep(id: "takeKey", glyph: "◆", title: "TAKE KEY")
+        let unlock = PuzzleCommandStep(id: "unlock", glyph: "◇", title: "UNLOCK")
+        let crossDoor = PuzzleCommandStep(id: "crossDoor", glyph: "→", title: "GO THROUGH")
+
+        let placeCrystal = PuzzleCommandStep(id: "placeCrystal", glyph: "✦", title: "PLACE CRYSTAL")
+        let turnGear = PuzzleCommandStep(id: "turnGear", glyph: "↻", title: "TURN GEAR")
+        let openDoor = PuzzleCommandStep(id: "openDoor", glyph: "▱", title: "OPEN DOOR")
+
+        let lowerBridge = PuzzleCommandStep(id: "lowerBridge", glyph: "↓", title: "LOWER BRIDGE")
+        let crossBridge = PuzzleCommandStep(id: "crossBridge", glyph: "→", title: "CROSS")
+        let raiseBridge = PuzzleCommandStep(id: "raiseBridge", glyph: "↑", title: "RAISE BRIDGE")
+
+        return [
+            [
+                .init(
+                    id: "puzzle.commandGears.keyGateA",
+                    prompt: "Tiko needs to get through the locked gate. Put the three command gears in a useful order.",
+                    correctOrder: [takeKey, unlock, crossDoor],
+                    presented: [crossDoor, takeKey, unlock]
+                ),
+                .init(
+                    id: "puzzle.commandGears.keyGateB",
+                    prompt: "The gate reset. Build the command chain Tiko needs before he can go through.",
+                    correctOrder: [takeKey, unlock, crossDoor],
+                    presented: [unlock, crossDoor, takeKey],
+                    transferContext: true
+                )
+            ],
+            [
+                .init(
+                    id: "puzzle.commandGears.crystalDoorA",
+                    prompt: "Power the palace door. Which action should happen first, next, and last?",
+                    correctOrder: [placeCrystal, turnGear, openDoor],
+                    presented: [openDoor, placeCrystal, turnGear],
+                    transferContext: true
+                ),
+                .init(
+                    id: "puzzle.commandGears.crystalDoorB",
+                    prompt: "This door uses the same machine in a new arrangement. Build the useful action order.",
+                    correctOrder: [placeCrystal, turnGear, openDoor],
+                    presented: [turnGear, openDoor, placeCrystal],
+                    transferContext: true
+                )
+            ],
+            [
+                .init(
+                    id: "puzzle.commandGears.bridgeA",
+                    prompt: "Tiko must cross and leave the bridge safe behind him. Arrange the commands.",
+                    correctOrder: [lowerBridge, crossBridge, raiseBridge],
+                    presented: [crossBridge, raiseBridge, lowerBridge],
+                    transferContext: true
+                ),
+                .init(
+                    id: "puzzle.commandGears.bridgeB",
+                    prompt: "The bridge gears shuffled. Put the actions back into a useful order.",
+                    correctOrder: [lowerBridge, crossBridge, raiseBridge],
+                    presented: [raiseBridge, lowerBridge, crossBridge],
+                    transferContext: true
+                )
+            ]
+        ]
+    }()
+
 }
 
 public enum PuzzlePalaceDirector {
@@ -1139,6 +1260,49 @@ public enum PuzzlePalaceDirector {
     public static func pathTilesComplete(profile: LearnerProfile) -> Bool {
         pathTilesIndependentSuccessCount(profile: profile)
             == PuzzlePalaceEncounterCatalog.pathTileFamilies.count
+    }
+
+
+    public static func canEnterCommandGears(profile: LearnerProfile) -> Bool {
+        // Curriculum prerequisite for action sequencing is visual sequence memory.
+        // Path Tiles is a neighboring narrative chamber, not a mastery prerequisite.
+        memoryBridgeComplete(profile: profile)
+    }
+
+    public static func nextCommandGearsEncounter(profile: LearnerProfile) -> PuzzleSequenceEncounter? {
+        guard canEnterCommandGears(profile: profile), !commandGearsComplete(profile: profile) else { return nil }
+        let evidence = profile.progress(for: PuzzleSkills.actionSequencing).evidence
+        let independent = Set(
+            evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        let seen = Set(evidence.map(\.encounterID))
+
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            guard !family.contains(where: { independent.contains($0.id) }) else { continue }
+            if let fresh = family.first(where: { !seen.contains($0.id) }) {
+                return fresh
+            }
+            return family.first { $0.id != evidence.last?.encounterID } ?? family.first
+        }
+        return nil
+    }
+
+    public static func commandGearsIndependentSuccessCount(profile: LearnerProfile) -> Int {
+        let independent = Set(
+            profile.progress(for: PuzzleSkills.actionSequencing).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        return PuzzlePalaceEncounterCatalog.commandGearFamilies.filter { family in
+            family.contains { independent.contains($0.id) }
+        }.count
+    }
+
+    public static func commandGearsComplete(profile: LearnerProfile) -> Bool {
+        commandGearsIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.commandGearFamilies.count
     }
 
     public static func independentSortSuccessCount(
