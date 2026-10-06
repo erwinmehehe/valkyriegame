@@ -282,58 +282,55 @@ import LearningCore
     }
 
     private func buildSharpPalaceBackdrop() {
-        // V331WorldAtlas is a tiny 2x2 reference sheet and becomes visibly soft when
-        // one quarter is enlarged to a Retina iPad. Use the full-resolution Castle
-        // painting as the illustrated base, then recolor and layer crisp Palace
-        // architecture on top until dedicated HD Palace art replaces it.
         if let texture = ArtSystem.texture("MathCastle") {
             let backdrop = SKSpriteNode(texture: texture, color: .white, size: size)
             backdrop.position = CGPoint(x: 640, y: 360)
-            backdrop.zPosition = -240
+            backdrop.zPosition = -260
             backdrop.name = "palaceBackdropHD"
-            backdrop.color = UIColor(red: 0.28, green: 0.10, blue: 0.46, alpha: 1)
-            backdrop.colorBlendFactor = 0.46
+            backdrop.color = UIColor(red: 0.34, green: 0.15, blue: 0.52, alpha: 1)
+            backdrop.colorBlendFactor = 0.34
             addChild(backdrop)
         } else {
             let fallback = ArtSystem.box(
                 size,
-                color: UIColor(red: 0.13, green: 0.09, blue: 0.24, alpha: 1),
+                color: UIColor(red: 0.10, green: 0.07, blue: 0.20, alpha: 1),
                 radius: 0
             )
             fallback.strokeColor = .clear
             fallback.position = CGPoint(x: 640, y: 360)
-            fallback.zPosition = -240
+            fallback.zPosition = -260
             fallback.name = "palaceBackdropHD"
             addChild(fallback)
         }
 
         let atmosphere = ArtSystem.box(
             size,
-            color: UIColor(red: 0.14, green: 0.05, blue: 0.25, alpha: 0.18),
+            color: UIColor(red: 0.12, green: 0.04, blue: 0.24, alpha: 0.16),
             radius: 0
         )
         atmosphere.strokeColor = .clear
         atmosphere.position = CGPoint(x: 640, y: 360)
-        atmosphere.zPosition = -225
+        atmosphere.zPosition = -245
         atmosphere.name = "palaceAtmosphere"
         addChild(atmosphere)
 
-        let floor = ArtSystem.box(
-            CGSize(width: 1280, height: 150),
-            color: UIColor(red: 0.10, green: 0.09, blue: 0.18, alpha: 0.56),
-            radius: 0
+        let floor = ArtSystem.panel(
+            CGSize(width: 1190, height: 150),
+            fill: UIColor(red: 0.08, green: 0.07, blue: 0.15, alpha: 0.54),
+            stroke: UIColor(red: 0.62, green: 0.49, blue: 0.86, alpha: 0.42),
+            radius: 34,
+            lineWidth: 2,
+            shadowAlpha: 0.20
         )
-        floor.strokeColor = UIColor(red: 0.56, green: 0.43, blue: 0.82, alpha: 0.45)
-        floor.lineWidth = 2
         floor.position = CGPoint(x: 640, y: 134)
         floor.zPosition = -120
         floor.name = "palaceFloor"
         addChild(floor)
 
-        for x in stride(from: CGFloat(120), through: CGFloat(1160), by: CGFloat(130)) {
+        for x in stride(from: CGFloat(150), through: CGFloat(1130), by: CGFloat(140)) {
             let seam = ArtSystem.box(
-                CGSize(width: 2, height: 132),
-                color: UIColor(red: 0.60, green: 0.48, blue: 0.88, alpha: 0.24),
+                CGSize(width: 2, height: 112),
+                color: UIColor(red: 0.68, green: 0.54, blue: 0.94, alpha: 0.18),
                 radius: 0
             )
             seam.strokeColor = .clear
@@ -342,40 +339,81 @@ import LearningCore
             addChild(seam)
         }
 
-        for x in [CGFloat(92), CGFloat(1188)] {
-            let column = ArtSystem.box(
-                CGSize(width: 82, height: 500),
-                color: UIColor(red: 0.13, green: 0.11, blue: 0.24, alpha: 0.78),
-                radius: 24
+        for x in [CGFloat(72), CGFloat(1208)] {
+            let pillar = SKNode()
+            pillar.position = CGPoint(x: x, y: 388)
+            pillar.zPosition = -106
+
+            let shaft = ArtSystem.panel(
+                CGSize(width: 48, height: 350),
+                fill: UIColor(red: 0.10, green: 0.08, blue: 0.19, alpha: 0.76),
+                stroke: UIColor(red: 0.64, green: 0.51, blue: 0.88, alpha: 0.48),
+                radius: 16,
+                lineWidth: 2,
+                shadowAlpha: 0.18
             )
-            column.strokeColor = UIColor(red: 0.65, green: 0.52, blue: 0.92, alpha: 0.70)
-            column.lineWidth = 4
-            column.position = CGPoint(x: x, y: 390)
-            column.zPosition = -105
-            addChild(column)
+            pillar.addChild(shaft)
+
+            for y in [CGFloat(-155), CGFloat(155)] {
+                let cap = ArtSystem.panel(
+                    CGSize(width: 72, height: 32),
+                    fill: UIColor(red: 0.17, green: 0.13, blue: 0.28, alpha: 0.82),
+                    stroke: UIColor(red: 0.72, green: 0.58, blue: 0.94, alpha: 0.56),
+                    radius: 10,
+                    lineWidth: 2,
+                    shadowAlpha: 0.12
+                )
+                cap.position.y = y
+                pillar.addChild(cap)
+            }
+
+            let rune = ArtSystem.medallion(
+                radius: 18,
+                fill: UIColor(red: 0.18, green: 0.12, blue: 0.32, alpha: 0.92),
+                stroke: UIColor(red: 0.70, green: 0.58, blue: 0.96, alpha: 0.76),
+                glow: reducedMotion ? 0 : 3
+            )
+            rune.position.y = 86
+            rune.addChild(ArtSystem.label("◈", size: 18))
+            pillar.addChild(rune)
+
+            addChild(pillar)
+        }
+
+        for x in [CGFloat(245), CGFloat(1015)] {
+            for index in 0..<5 {
+                let link = SKShapeNode(ellipseOf: CGSize(width: 18, height: 30))
+                link.fillColor = .clear
+                link.strokeColor = UIColor(red: 0.32, green: 0.24, blue: 0.16, alpha: 0.62)
+                link.lineWidth = 5
+                link.position = CGPoint(x: x, y: 665 - CGFloat(index) * 34)
+                link.zRotation = index % 2 == 0 ? 0 : .pi / 2
+                link.zPosition = -95
+                addChild(link)
+            }
         }
 
         for (x, y, h, tint) in [
-            (CGFloat(165), CGFloat(350), CGFloat(150), UIColor(red: 0.54, green: 0.44, blue: 1.0, alpha: 1)),
-            (CGFloat(1085), CGFloat(365), CGFloat(185), UIColor(red: 0.78, green: 0.34, blue: 0.96, alpha: 1)),
-            (CGFloat(1000), CGFloat(530), CGFloat(118), UIColor(red: 0.38, green: 0.72, blue: 1.0, alpha: 1))
+            (CGFloat(165), CGFloat(350), CGFloat(135), UIColor(red: 0.54, green: 0.44, blue: 1.0, alpha: 1)),
+            (CGFloat(1090), CGFloat(365), CGFloat(170), UIColor(red: 0.78, green: 0.34, blue: 0.96, alpha: 1)),
+            (CGFloat(995), CGFloat(530), CGFloat(105), UIColor(red: 0.38, green: 0.72, blue: 1.0, alpha: 1))
         ] {
             let crystal = SKShapeNode(path: {
                 let p = CGMutablePath()
                 p.move(to: CGPoint(x: 0, y: h / 2))
-                p.addLine(to: CGPoint(x: -24, y: 0))
-                p.addLine(to: CGPoint(x: -14, y: -h / 2))
-                p.addLine(to: CGPoint(x: 14, y: -h / 2))
-                p.addLine(to: CGPoint(x: 24, y: 0))
+                p.addLine(to: CGPoint(x: -22, y: 0))
+                p.addLine(to: CGPoint(x: -13, y: -h / 2))
+                p.addLine(to: CGPoint(x: 13, y: -h / 2))
+                p.addLine(to: CGPoint(x: 22, y: 0))
                 p.closeSubpath()
                 return p
             }())
             crystal.position = CGPoint(x: x, y: y)
             crystal.zPosition = -90
-            crystal.fillColor = tint.withAlphaComponent(0.72)
-            crystal.strokeColor = tint
+            crystal.fillColor = tint.withAlphaComponent(0.58)
+            crystal.strokeColor = tint.withAlphaComponent(0.86)
             crystal.lineWidth = 3
-            crystal.glowWidth = 10
+            crystal.glowWidth = reducedMotion ? 0 : 7
             addChild(crystal)
         }
     }
@@ -445,15 +483,28 @@ import LearningCore
         board.zPosition = 720
         addChild(board)
 
-        let rail = ArtSystem.box(
-            CGSize(width: 590, height: 112),
-            color: UIColor(red: 0.19, green: 0.14, blue: 0.29, alpha: 0.80),
-            radius: 26
+        let rail = ArtSystem.panel(
+            CGSize(width: 570, height: 38),
+            fill: UIColor(red: 0.16, green: 0.11, blue: 0.25, alpha: 0.86),
+            stroke: UIColor(red: 0.62, green: 0.50, blue: 0.86, alpha: 0.72),
+            radius: 14,
+            lineWidth: 3,
+            shadowAlpha: 0.24
         )
-        rail.strokeColor = UIColor(red: 0.58, green: 0.48, blue: 0.82, alpha: 0.85)
-        rail.lineWidth = 5
+        rail.position.y = -46
         rail.name = "runeBoard"
         board.addChild(rail)
+
+        for x in [CGFloat(-190), CGFloat(-65), CGFloat(60), CGFloat(185)] {
+            let bracket = ArtSystem.box(
+                CGSize(width: 10, height: 44),
+                color: UIColor(red: 0.50, green: 0.37, blue: 0.20, alpha: 0.82),
+                radius: 4
+            )
+            bracket.position = CGPoint(x: x, y: -20)
+            bracket.zPosition = -1
+            board.addChild(bracket)
+        }
 
         for (index, rune) in encounter.fixedRunes.enumerated() {
             let stone = runeStone(rune, name: "fixedRune")
@@ -476,13 +527,25 @@ import LearningCore
     }
 
     private func runeStone(_ rune: String, name: String) -> SKNode {
-        let stone = SKShapeNode(rectOf: CGSize(width: 90, height: 82), cornerRadius: 20)
-        stone.fillColor = UIColor(red: 0.29, green: 0.22, blue: 0.43, alpha: 0.98)
-        stone.strokeColor = UIColor(red: 0.76, green: 0.65, blue: 0.98, alpha: 1)
-        stone.lineWidth = 4
+        let stone = ArtSystem.panel(
+            CGSize(width: 90, height: 82),
+            fill: UIColor(red: 0.20, green: 0.15, blue: 0.34, alpha: 0.98),
+            stroke: UIColor(red: 0.74, green: 0.62, blue: 0.96, alpha: 0.94),
+            radius: 22,
+            lineWidth: 4,
+            shadowAlpha: 0.28,
+            innerHighlight: UIColor(red: 0.86, green: 0.76, blue: 1.0, alpha: 0.12)
+        )
         stone.name = name
 
-        let glyph = ArtSystem.label(rune, size: 43)
+        let jewel = SKShapeNode(circleOfRadius: 29)
+        jewel.fillColor = UIColor(red: 0.28, green: 0.20, blue: 0.44, alpha: 0.72)
+        jewel.strokeColor = UIColor(red: 0.90, green: 0.78, blue: 1.0, alpha: 0.32)
+        jewel.lineWidth = 2
+        jewel.name = name
+        stone.addChild(jewel)
+
+        let glyph = ArtSystem.label(rune, size: 41)
         glyph.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.55, alpha: 1)
         glyph.name = name
         stone.addChild(glyph)
@@ -490,14 +553,25 @@ import LearningCore
     }
 
     private func runeSocket() -> SKNode {
-        let socket = SKShapeNode(rectOf: CGSize(width: 90, height: 82), cornerRadius: 20)
-        socket.fillColor = UIColor(red: 0.10, green: 0.08, blue: 0.18, alpha: 0.82)
-        socket.strokeColor = UIColor(red: 0.75, green: 0.68, blue: 0.90, alpha: 0.78)
-        socket.lineWidth = 4
-        socket.glowWidth = 5
+        let socket = ArtSystem.panel(
+            CGSize(width: 90, height: 82),
+            fill: UIColor(red: 0.07, green: 0.055, blue: 0.14, alpha: 0.94),
+            stroke: UIColor(red: 0.70, green: 0.62, blue: 0.90, alpha: 0.84),
+            radius: 22,
+            lineWidth: 4,
+            shadowAlpha: 0.30
+        )
+        socket.glowWidth = 4
         socket.name = "runeSocket"
 
-        let mark = ArtSystem.label("?", size: 39)
+        let well = SKShapeNode(circleOfRadius: 29)
+        well.fillColor = UIColor(red: 0.03, green: 0.025, blue: 0.08, alpha: 0.80)
+        well.strokeColor = UIColor(red: 0.64, green: 0.57, blue: 0.84, alpha: 0.38)
+        well.lineWidth = 2
+        well.name = "runeSocket"
+        socket.addChild(well)
+
+        let mark = ArtSystem.label("?", size: 37)
         mark.fontColor = UIColor(red: 0.86, green: 0.81, blue: 0.96, alpha: 1)
         mark.name = "runeSocketMark"
         socket.addChild(mark)
@@ -509,27 +583,37 @@ import LearningCore
 
         let pedestal = SKShapeNode(ellipseOf: CGSize(width: 126, height: 66))
         pedestal.fillColor = UIColor(
-            red: 0.31 + CGFloat(index) * 0.025,
-            green: 0.23,
-            blue: 0.44,
-            alpha: 0.97
+            red: 0.22 + CGFloat(index) * 0.02,
+            green: 0.16,
+            blue: 0.36,
+            alpha: 0.96
         )
-        pedestal.strokeColor = UIColor(red: 0.75, green: 0.63, blue: 0.97, alpha: 1)
+        pedestal.strokeColor = UIColor(red: 0.76, green: 0.64, blue: 0.98, alpha: 0.94)
         pedestal.lineWidth = 4
         pedestal.name = "runeChoice"
         node.addChild(pedestal)
 
-        let glyph = ArtSystem.label(rune, size: 43)
+        let inset = SKShapeNode(ellipseOf: CGSize(width: 102, height: 46))
+        inset.fillColor = UIColor(red: 0.34, green: 0.24, blue: 0.48, alpha: 0.40)
+        inset.strokeColor = UIColor(white: 1, alpha: 0.12)
+        inset.lineWidth = 1
+        inset.name = "runeChoice"
+        node.addChild(inset)
+
+        let glyph = ArtSystem.label(rune, size: 41)
         glyph.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.50, alpha: 1)
         glyph.name = "runeChoice"
         node.addChild(glyph)
 
-        let base = ArtSystem.box(
-            CGSize(width: 96, height: 22),
-            color: UIColor(red: 0.22, green: 0.17, blue: 0.31, alpha: 1),
-            radius: 8
+        let base = ArtSystem.panel(
+            CGSize(width: 88, height: 24),
+            fill: UIColor(red: 0.12, green: 0.09, blue: 0.22, alpha: 0.96),
+            stroke: UIColor(red: 0.46, green: 0.36, blue: 0.68, alpha: 0.58),
+            radius: 8,
+            lineWidth: 2,
+            shadowAlpha: 0.18
         )
-        base.position.y = -46
+        base.position.y = -47
         base.name = "runeChoice"
         base.zPosition = -1
         node.addChild(base)
@@ -542,50 +626,82 @@ import LearningCore
     }
 
     private func buildMemoryBridgeWorld() {
-        let chasm = SKShapeNode(rectOf: CGSize(width: 720, height: 235), cornerRadius: 62)
-        chasm.fillColor = UIColor(red: 0.035, green: 0.025, blue: 0.085, alpha: 0.88)
-        chasm.strokeColor = UIColor(red: 0.35, green: 0.28, blue: 0.56, alpha: 0.72)
-        chasm.lineWidth = 6
+        let chasm = SKShapeNode(ellipseOf: CGSize(width: 735, height: 210))
+        chasm.fillColor = UIColor(red: 0.025, green: 0.018, blue: 0.070, alpha: 0.52)
+        chasm.strokeColor = UIColor(red: 0.40, green: 0.31, blue: 0.62, alpha: 0.50)
+        chasm.lineWidth = 5
         chasm.position = CGPoint(x: 760, y: 405)
         chasm.name = "memoryChasm"
         chasm.zPosition = 110
         addChild(chasm)
 
-        let mist = ArtSystem.label("✦    ·    ✦    ·    ✦", size: 31)
-        mist.fontColor = UIColor(red: 0.58, green: 0.48, blue: 0.82, alpha: 0.42)
+        let innerVoid = SKShapeNode(ellipseOf: CGSize(width: 610, height: 150))
+        innerVoid.fillColor = UIColor(red: 0.01, green: 0.008, blue: 0.04, alpha: 0.72)
+        innerVoid.strokeColor = .clear
+        innerVoid.position = CGPoint(x: 760, y: 405)
+        innerVoid.zPosition = 112
+        addChild(innerVoid)
+
+        let mist = ArtSystem.label("✦     ·     ✦     ·     ✦", size: 27)
+        mist.fontColor = UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.34)
         mist.position = CGPoint(x: 760, y: 405)
         mist.name = "memoryChasmMist"
         mist.zPosition = 120
         addChild(mist)
 
         for index in 0..<4 {
-            let plank = SKShapeNode(rectOf: CGSize(width: 118, height: 66), cornerRadius: 16)
-            plank.fillColor = UIColor(red: 0.24, green: 0.18, blue: 0.36, alpha: 0.68)
-            plank.strokeColor = UIColor(red: 0.48, green: 0.39, blue: 0.70, alpha: 0.62)
-            plank.lineWidth = 4
+            let plank = ArtSystem.panel(
+                CGSize(width: 112, height: 58),
+                fill: UIColor(red: 0.21, green: 0.15, blue: 0.34, alpha: 0.78),
+                stroke: UIColor(red: 0.58, green: 0.47, blue: 0.82, alpha: 0.54),
+                radius: 15,
+                lineWidth: 3,
+                shadowAlpha: 0.20
+            )
             plank.position = CGPoint(x: 545 + CGFloat(index) * 145, y: 375)
             plank.yScale = 0.58
-            plank.alpha = 0.48
-            plank.name = "memoryBridgePlank\(index)"
+            plank.alpha = 0.55
+            plank.name = "memoryBridgePlank(index)"
             plank.zPosition = 270
             addChild(plank)
         }
 
+        for x in [CGFloat(420), CGFloat(1100)] {
+            let anchor = ArtSystem.medallion(
+                radius: 28,
+                fill: UIColor(red: 0.16, green: 0.11, blue: 0.28, alpha: 0.92),
+                stroke: UIColor(red: 0.68, green: 0.56, blue: 0.92, alpha: 0.72),
+                glow: reducedMotion ? 0 : 3
+            )
+            anchor.position = CGPoint(x: x, y: 395)
+            anchor.zPosition = 275
+            anchor.addChild(ArtSystem.label("◈", size: 24))
+            addChild(anchor)
+        }
+
         for index in 0..<PuzzlePalaceEncounterCatalog.memoryBridge.count {
-            let light = SKShapeNode(circleOfRadius: 17)
-            light.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
-            light.strokeColor = UIColor(red: 0.65, green: 0.55, blue: 0.92, alpha: 0.82)
-            light.lineWidth = 3
+            let light = ArtSystem.medallion(
+                radius: 15,
+                fill: UIColor(red: 0.20, green: 0.14, blue: 0.32, alpha: 0.96),
+                stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
+            )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 58, y: 555)
-            light.name = "memoryProgress\(index)"
+            light.name = "memoryProgress(index)"
             light.zPosition = 520
             addChild(light)
         }
 
-        let startMarker = ArtSystem.label("Tiko", size: 20)
-        startMarker.fontColor = UIColor(red: 0.88, green: 0.80, blue: 1.0, alpha: 1)
+        let startMarker = ArtSystem.plaque(
+            CGSize(width: 82, height: 30),
+            fill: UIColor(red: 0.09, green: 0.07, blue: 0.18, alpha: 0.86),
+            stroke: UIColor(red: 0.66, green: 0.55, blue: 0.90, alpha: 0.56),
+            radius: 14
+        )
         startMarker.position = CGPoint(x: 345, y: 355)
         startMarker.zPosition = 320
+        let markerLabel = ArtSystem.label("TIKO", size: 12)
+        markerLabel.fontColor = UIColor(red: 0.88, green: 0.80, blue: 1.0, alpha: 1)
+        startMarker.addChild(markerLabel)
         addChild(startMarker)
     }
 
@@ -616,29 +732,34 @@ import LearningCore
         root.name = "memoryPad"
         root.userData = NSMutableDictionary(dictionary: ["symbol": symbol])
 
-        let stone = SKShapeNode(circleOfRadius: 47)
-        stone.fillColor = UIColor(
-            red: 0.24 + CGFloat(index) * 0.025,
-            green: 0.18,
-            blue: 0.37,
-            alpha: 0.98
+        let stone = ArtSystem.medallion(
+            radius: 47,
+            fill: UIColor(
+                red: 0.18 + CGFloat(index) * 0.02,
+                green: 0.13,
+                blue: 0.32,
+                alpha: 0.98
+            ),
+            stroke: UIColor(red: 0.70, green: 0.60, blue: 0.96, alpha: 0.94),
+            glow: 0
         )
-        stone.strokeColor = UIColor(red: 0.70, green: 0.60, blue: 0.96, alpha: 1)
-        stone.lineWidth = 4
         stone.name = "memoryPad"
         root.addChild(stone)
 
-        let glyph = ArtSystem.label(symbol, size: 39)
+        let glyph = ArtSystem.label(symbol, size: 37)
         glyph.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.48, alpha: 1)
         glyph.name = "memoryPad"
         root.addChild(glyph)
 
-        let foot = ArtSystem.box(
-            CGSize(width: 72, height: 18),
-            color: UIColor(red: 0.18, green: 0.13, blue: 0.28, alpha: 1),
-            radius: 7
+        let foot = ArtSystem.panel(
+            CGSize(width: 70, height: 20),
+            fill: UIColor(red: 0.11, green: 0.08, blue: 0.20, alpha: 0.96),
+            stroke: UIColor(red: 0.44, green: 0.35, blue: 0.66, alpha: 0.58),
+            radius: 7,
+            lineWidth: 2,
+            shadowAlpha: 0.16
         )
-        foot.position.y = -56
+        foot.position.y = -57
         foot.name = "memoryPad"
         foot.zPosition = -1
         root.addChild(foot)
@@ -903,24 +1024,48 @@ import LearningCore
     }
 
     private func buildStopGoWorld() {
-        let rail = SKShapeNode(rectOf: CGSize(width: 710, height: 96), cornerRadius: 42)
-        rail.fillColor = UIColor(red: 0.11, green: 0.09, blue: 0.20, alpha: 0.80)
-        rail.strokeColor = UIColor(red: 0.53, green: 0.43, blue: 0.78, alpha: 0.84)
-        rail.lineWidth = 6
-        rail.position = CGPoint(x: 755, y: 365)
-        rail.name = "stopGoRail"
-        rail.zPosition = 180
-        addChild(rail)
+        let upperRail = ArtSystem.panel(
+            CGSize(width: 710, height: 24),
+            fill: UIColor(red: 0.16, green: 0.11, blue: 0.25, alpha: 0.84),
+            stroke: UIColor(red: 0.58, green: 0.47, blue: 0.82, alpha: 0.66),
+            radius: 9,
+            lineWidth: 2,
+            shadowAlpha: 0.18
+        )
+        upperRail.position = CGPoint(x: 755, y: 402)
+        upperRail.name = "stopGoRail"
+        upperRail.zPosition = 180
+        addChild(upperRail)
+
+        let lowerRail = ArtSystem.panel(
+            CGSize(width: 710, height: 24),
+            fill: UIColor(red: 0.11, green: 0.08, blue: 0.20, alpha: 0.84),
+            stroke: UIColor(red: 0.48, green: 0.39, blue: 0.72, alpha: 0.56),
+            radius: 9,
+            lineWidth: 2,
+            shadowAlpha: 0.14
+        )
+        lowerRail.position = CGPoint(x: 755, y: 328)
+        lowerRail.zPosition = 179
+        addChild(lowerRail)
 
         for index in 0..<5 {
-            let brace = SKShapeNode(rectOf: CGSize(width: 52, height: 82), cornerRadius: 13)
-            brace.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.32, alpha: 0.95)
-            brace.strokeColor = UIColor(red: 0.55, green: 0.45, blue: 0.80, alpha: 0.72)
-            brace.lineWidth = 3
+            let brace = ArtSystem.panel(
+                CGSize(width: 46, height: 76),
+                fill: UIColor(red: 0.16, green: 0.12, blue: 0.28, alpha: 0.94),
+                stroke: UIColor(red: 0.56, green: 0.45, blue: 0.80, alpha: 0.66),
+                radius: 12,
+                lineWidth: 2,
+                shadowAlpha: 0.18
+            )
             brace.position = CGPoint(x: 505 + CGFloat(index) * 125, y: 365)
             brace.name = "stopGoBrace"
             brace.zPosition = 190
             addChild(brace)
+
+            let rune = ArtSystem.label("◇", size: 17)
+            rune.fontColor = UIColor(red: 0.76, green: 0.68, blue: 0.94, alpha: 0.56)
+            brace.addChild(rune)
         }
 
         let orbRoot = SKNode()
@@ -928,43 +1073,53 @@ import LearningCore
         orbRoot.position = CGPoint(x: 755, y: 365)
         orbRoot.zPosition = 620
 
-        let ring = SKShapeNode(circleOfRadius: 83)
-        ring.fillColor = UIColor(red: 0.21, green: 0.16, blue: 0.34, alpha: 0.96)
-        ring.strokeColor = UIColor(red: 0.70, green: 0.58, blue: 0.96, alpha: 1)
-        ring.lineWidth = 8
+        let ring = ArtSystem.medallion(
+            radius: 83,
+            fill: UIColor(red: 0.17, green: 0.12, blue: 0.30, alpha: 0.96),
+            stroke: UIColor(red: 0.70, green: 0.58, blue: 0.96, alpha: 0.94),
+            glow: reducedMotion ? 0 : 3
+        )
         ring.name = "stopGoOrb"
         orbRoot.addChild(ring)
 
-        let core = SKShapeNode(circleOfRadius: 49)
-        core.fillColor = UIColor(red: 0.32, green: 0.25, blue: 0.46, alpha: 1)
-        core.strokeColor = UIColor(red: 0.92, green: 0.82, blue: 1.0, alpha: 0.94)
-        core.lineWidth = 4
+        let core = ArtSystem.medallion(
+            radius: 49,
+            fill: UIColor(red: 0.30, green: 0.22, blue: 0.44, alpha: 1),
+            stroke: UIColor(red: 0.92, green: 0.82, blue: 1.0, alpha: 0.94)
+        )
         core.name = "stopGoOrbCore"
         orbRoot.addChild(core)
 
-        let glyph = ArtSystem.label("Ⅱ", size: 45)
+        let glyph = ArtSystem.label("Ⅱ", size: 43)
         glyph.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.58, alpha: 1)
         glyph.name = "stopGoOrbGlyph"
         orbRoot.addChild(glyph)
-
         addChild(orbRoot)
 
-        let barrier = SKShapeNode(rectOf: CGSize(width: 105, height: 260), cornerRadius: 38)
-        barrier.fillColor = UIColor(red: 0.14, green: 0.10, blue: 0.23, alpha: 0.92)
-        barrier.strokeColor = UIColor(red: 0.58, green: 0.47, blue: 0.86, alpha: 0.90)
-        barrier.lineWidth = 7
+        let barrier = SKShapeNode(rectOf: CGSize(width: 98, height: 238), cornerRadius: 44)
+        barrier.fillColor = UIColor(red: 0.09, green: 0.065, blue: 0.18, alpha: 0.76)
+        barrier.strokeColor = UIColor(red: 0.62, green: 0.50, blue: 0.88, alpha: 0.76)
+        barrier.lineWidth = 6
         barrier.position = CGPoint(x: 1095, y: 385)
         barrier.name = "stopGoBarrier"
         barrier.zPosition = 350
         addChild(barrier)
 
+        let barrierRune = ArtSystem.label("◈", size: 30)
+        barrierRune.fontColor = UIColor(red: 0.78, green: 0.68, blue: 1.0, alpha: 0.72)
+        barrierRune.position = CGPoint(x: 1095, y: 385)
+        barrierRune.zPosition = 355
+        barrierRune.name = "stopGoBarrier"
+        addChild(barrierRune)
+
         for index in 0..<PuzzlePalaceEncounterCatalog.stopGoOrbs.count {
-            let light = SKShapeNode(circleOfRadius: 17)
-            light.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
-            light.strokeColor = UIColor(red: 0.65, green: 0.55, blue: 0.92, alpha: 0.82)
-            light.lineWidth = 3
+            let light = ArtSystem.medallion(
+                radius: 15,
+                fill: UIColor(red: 0.20, green: 0.14, blue: 0.32, alpha: 0.96),
+                stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
+            )
             light.position = CGPoint(x: 970 + CGFloat(index) * 57, y: 555)
-            light.name = "stopGoProgress\(index)"
+            light.name = "stopGoProgress(index)"
             light.zPosition = 520
             addChild(light)
         }
@@ -1230,14 +1385,22 @@ import LearningCore
     }
 
     private func buildSortingWorld() {
-        let floor = SKShapeNode(rectOf: CGSize(width: 780, height: 245), cornerRadius: 54)
-        floor.fillColor = UIColor(red: 0.10, green: 0.08, blue: 0.19, alpha: 0.70)
-        floor.strokeColor = UIColor(red: 0.50, green: 0.41, blue: 0.76, alpha: 0.72)
-        floor.lineWidth = 6
+        let floor = SKShapeNode(ellipseOf: CGSize(width: 790, height: 230))
+        floor.fillColor = UIColor(red: 0.07, green: 0.055, blue: 0.16, alpha: 0.48)
+        floor.strokeColor = UIColor(red: 0.52, green: 0.42, blue: 0.78, alpha: 0.50)
+        floor.lineWidth = 4
         floor.position = CGPoint(x: 750, y: 365)
         floor.name = "sortingFloor"
         floor.zPosition = 120
         addChild(floor)
+
+        let runeRing = SKShapeNode(ellipseOf: CGSize(width: 650, height: 168))
+        runeRing.fillColor = .clear
+        runeRing.strokeColor = UIColor(red: 0.68, green: 0.55, blue: 0.90, alpha: 0.22)
+        runeRing.lineWidth = 2
+        runeRing.position = CGPoint(x: 750, y: 365)
+        runeRing.zPosition = 121
+        addChild(runeRing)
 
         buildSortPedestal(
             at: CGPoint(x: 530, y: 355),
@@ -1248,10 +1411,12 @@ import LearningCore
             name: "sortRightPedestal"
         )
 
-        let dial = SKShapeNode(circleOfRadius: 72)
-        dial.fillColor = UIColor(red: 0.20, green: 0.15, blue: 0.32, alpha: 0.98)
-        dial.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
-        dial.lineWidth = 6
+        let dial = ArtSystem.medallion(
+            radius: 72,
+            fill: UIColor(red: 0.17, green: 0.12, blue: 0.29, alpha: 0.98),
+            stroke: UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 0.94),
+            glow: reducedMotion ? 0 : 3
+        )
         dial.position = CGPoint(x: 750, y: 515)
         dial.name = "sortingRuleDial"
         dial.zPosition = 560
@@ -1262,10 +1427,13 @@ import LearningCore
         ruleGlyph.name = "sortingRuleGlyph"
         dial.addChild(ruleGlyph)
 
-        let stage = ArtSystem.box(
-            CGSize(width: 160, height: 42),
-            color: UIColor(red: 0.18, green: 0.13, blue: 0.28, alpha: 0.90),
-            radius: 16
+        let stage = ArtSystem.panel(
+            CGSize(width: 156, height: 42),
+            fill: UIColor(red: 0.12, green: 0.09, blue: 0.22, alpha: 0.86),
+            stroke: UIColor(red: 0.48, green: 0.39, blue: 0.70, alpha: 0.52),
+            radius: 16,
+            lineWidth: 2,
+            shadowAlpha: 0.18
         )
         stage.position = CGPoint(x: 750, y: 430)
         stage.name = "sortingObjectStage"
@@ -1273,23 +1441,25 @@ import LearningCore
         addChild(stage)
 
         for index in 0..<3 {
-            let light = SKShapeNode(circleOfRadius: 16)
-            light.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.38, alpha: 0.96)
-            light.strokeColor = UIColor(red: 0.65, green: 0.55, blue: 0.92, alpha: 0.82)
-            light.lineWidth = 3
+            let light = ArtSystem.medallion(
+                radius: 14,
+                fill: UIColor(red: 0.20, green: 0.14, blue: 0.32, alpha: 0.96),
+                stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
+            )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 55, y: 555)
-            light.name = "sortingProgress\(index)"
+            light.name = "sortingProgress(index)"
             light.zPosition = 520
             addChild(light)
         }
 
         for index in 0..<3 {
-            let light = SKShapeNode(circleOfRadius: 13)
-            light.fillColor = UIColor(red: 0.24, green: 0.18, blue: 0.36, alpha: 0.92)
-            light.strokeColor = UIColor(red: 0.56, green: 0.47, blue: 0.82, alpha: 0.78)
-            light.lineWidth = 3
+            let light = ArtSystem.medallion(
+                radius: 11,
+                fill: UIColor(red: 0.18, green: 0.13, blue: 0.28, alpha: 0.92),
+                stroke: UIColor(red: 0.56, green: 0.47, blue: 0.82, alpha: 0.66)
+            )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 55, y: 515)
-            light.name = "switchProgress\(index)"
+            light.name = "switchProgress(index)"
             light.zPosition = 520
             addChild(light)
         }
@@ -1307,21 +1477,41 @@ import LearningCore
         root.zPosition = 420
 
         let bowl = SKShapeNode(ellipseOf: CGSize(width: 185, height: 82))
-        bowl.fillColor = UIColor(red: 0.28, green: 0.21, blue: 0.40, alpha: 0.98)
-        bowl.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+        bowl.fillColor = UIColor(red: 0.23, green: 0.16, blue: 0.38, alpha: 0.98)
+        bowl.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 0.92)
         bowl.lineWidth = 5
         bowl.name = name
         root.addChild(bowl)
 
-        let stem = ArtSystem.box(
-            CGSize(width: 82, height: 100),
-            color: UIColor(red: 0.18, green: 0.13, blue: 0.28, alpha: 1),
-            radius: 16
+        let inset = SKShapeNode(ellipseOf: CGSize(width: 150, height: 56))
+        inset.fillColor = UIColor(red: 0.31, green: 0.22, blue: 0.45, alpha: 0.34)
+        inset.strokeColor = UIColor(white: 1, alpha: 0.10)
+        inset.lineWidth = 1
+        inset.name = name
+        root.addChild(inset)
+
+        let stem = ArtSystem.panel(
+            CGSize(width: 72, height: 94),
+            fill: UIColor(red: 0.12, green: 0.09, blue: 0.22, alpha: 0.98),
+            stroke: UIColor(red: 0.46, green: 0.36, blue: 0.68, alpha: 0.58),
+            radius: 16,
+            lineWidth: 2,
+            shadowAlpha: 0.18
         )
-        stem.position.y = -80
+        stem.position.y = -78
         stem.name = name
         stem.zPosition = -1
         root.addChild(stem)
+
+        let crest = ArtSystem.medallion(
+            radius: 17,
+            fill: UIColor(red: 0.20, green: 0.14, blue: 0.33, alpha: 0.96),
+            stroke: UIColor(red: 0.68, green: 0.56, blue: 0.91, alpha: 0.72)
+        )
+        crest.position.y = -75
+        crest.name = name
+        crest.zPosition = 1
+        stem.addChild(crest)
 
         let glyph = ArtSystem.label("?", size: 42)
         glyph.name = name + "Glyph"
