@@ -135,6 +135,85 @@ import UIKit
         return enhanced
     }
 
+    /// Retina-prepares an already cropped/sub-texture source. This is used for
+    /// approved atlas regions that do not exist as standalone asset-catalog images.
+    static func retinaEnhancedTexture(
+        _ source: SKTexture,
+        cacheKey: String,
+        targetPoints: CGSize,
+        minimumScale: CGFloat = 2,
+        sharpness: CGFloat = 0.24
+    ) -> SKTexture? {
+        guard targetPoints.width > 0, targetPoints.height > 0, minimumScale >= 1 else {
+            return source
+        }
+
+        let key = [
+            "subtexture",
+            cacheKey,
+            String(Int(targetPoints.width.rounded())),
+            String(Int(targetPoints.height.rounded())),
+            String(format: "%.2f", minimumScale),
+            String(format: "%.2f", sharpness)
+        ].joined(separator: "|")
+        if let cached = retinaTextureCache[key] { return cached }
+
+        let sourceImage = source.cgImage()
+        let targetWidth = max(
+            sourceImage.width,
+            Int(ceil(targetPoints.width * minimumScale))
+        )
+        let targetHeight = max(
+            sourceImage.height,
+            Int(ceil(targetPoints.height * minimumScale))
+        )
+
+        if sourceImage.width >= targetWidth, sourceImage.height >= targetHeight {
+            source.filteringMode = .linear
+            retinaTextureCache[key] = source
+            return source
+        }
+
+        guard let bitmap = CGContext(
+            data: nil,
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: targetWidth * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return source
+        }
+
+        bitmap.interpolationQuality = .high
+        bitmap.draw(
+            sourceImage,
+            in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight)
+        )
+        guard var prepared = bitmap.makeImage() else { return source }
+
+        if sharpness > 0,
+           let filter = CIFilter(name: "CISharpenLuminance") {
+            filter.setValue(CIImage(cgImage: prepared), forKey: kCIInputImageKey)
+            filter.setValue(min(0.55, sharpness), forKey: kCIInputSharpnessKey)
+            if let output = filter.outputImage,
+               let sharpened = imageContext.createCGImage(output, from: output.extent) {
+                prepared = sharpened
+            }
+        }
+
+        let image = UIImage(
+            cgImage: prepared,
+            scale: minimumScale,
+            orientation: .up
+        )
+        let enhanced = SKTexture(image: image)
+        enhanced.filteringMode = .linear
+        retinaTextureCache[key] = enhanced
+        return enhanced
+    }
+
     static func retinaEnhancedSprite(
         _ name: String,
         size: CGSize,
