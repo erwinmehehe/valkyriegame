@@ -39,15 +39,40 @@ import LearningCore
     }
 
     override func buildWorld() {
-        if let backdrop = ArtSystem.paintedBackdrop(
+        if let texture = ArtSystem.retinaEnhancedTexture(
             "StarlightIsles",
-            size: size,
-            tint: UIColor(red: 0.45, green: 0.76, blue: 0.88, alpha: 1),
-            blend: 0.22,
-            dim: 0.14
+            targetPoints: size,
+            sharpness: 0.26
         ) {
+            let backdrop = SKNode()
             backdrop.zPosition = -300
             backdrop.name = "weatherBackdropHD"
+
+            let painting = SKSpriteNode(
+                texture: texture,
+                color: UIColor(red: 0.45, green: 0.76, blue: 0.88, alpha: 1),
+                size: size
+            )
+            painting.position = CGPoint(x: 640, y: 360)
+            painting.colorBlendFactor = 0.22
+            painting.name = "weatherBackdropRetina"
+            painting.userData = NSMutableDictionary(dictionary: [
+                "retinaPrepared": true,
+                "sourceAsset": "StarlightIsles"
+            ])
+            backdrop.addChild(painting)
+
+            let dim = ArtSystem.box(
+                size,
+                color: UIColor(white: 0.02, alpha: 0.14),
+                radius: 0
+            )
+            dim.strokeColor = .clear
+            dim.position = CGPoint(x: 640, y: 360)
+            dim.zPosition = 1
+            dim.name = "weatherBackdropDim"
+            backdrop.addChild(dim)
+
             addChild(backdrop)
         }
 
