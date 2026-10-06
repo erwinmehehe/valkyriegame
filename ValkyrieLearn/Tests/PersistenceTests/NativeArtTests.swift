@@ -54,10 +54,13 @@ import LearningCore
         }
 
         let wordGarden = try XCTUnwrap(scene.childNode(withName: "wordGarden"))
+        let wordGardenPlaque = try XCTUnwrap(wordGarden.children.first {
+            ($0.userData?["destinationRole"] as? String) == "plaque"
+        })
         let actorFrame = scene.valkyrie.calculateAccumulatedFrame().insetBy(dx: 18, dy: 12)
         XCTAssertFalse(
-            actorFrame.intersects(wordGarden.calculateAccumulatedFrame()),
-            "Opening Valkyrie pose must not cover the Word Garden landmark."
+            actorFrame.intersects(wordGardenPlaque.calculateAccumulatedFrame()),
+            "Opening Valkyrie pose must not cover the Word Garden label plaque."
         )
     }
 
