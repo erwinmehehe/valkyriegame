@@ -69,56 +69,45 @@ import SpriteKit
     override func buildWorld() {
         super.buildWorld()
 
-        let gardenSign = hotspot(
-            "← Word Garden",
+        let gardenSign = landmark(
+            "Word Garden",
+            symbol: "✿",
             name: "wordGarden",
-            at: CGPoint(x: 205, y: 165),
-            size: CGSize(width: 210, height: 56)
+            at: CGPoint(x: 150, y: 165),
+            accent: UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 1),
+            width: 145
         )
         gardenSign.zPosition = 820
 
-        let puzzleSign = hotspot(
-            "Puzzle Palace ◈",
+        let puzzleSign = landmark(
+            "Puzzle Palace",
+            symbol: "◈",
             name: "puzzlePalace",
-            at: CGPoint(x: 580, y: 450),
-            size: CGSize(width: 205, height: 52)
+            at: CGPoint(x: 515, y: 448),
+            accent: UIColor(red: 0.64, green: 0.52, blue: 0.94, alpha: 1),
+            width: 155
         )
         puzzleSign.zPosition = 530
 
-        let sign = hotspot(
-            "Math Castle →",
+        let sign = landmark(
+            "Math Castle",
+            symbol: "◆",
             name: "castle",
-            at: CGPoint(x: 795, y: 445),
-            size: CGSize(width: 210, height: 56)
+            at: CGPoint(x: 800, y: 448),
+            accent: UIColor(red: 0.96, green: 0.72, blue: 0.29, alpha: 1),
+            width: 150
         )
-        // Arrival feet are at y = 450 (actor depth 550); keep the sign behind them.
         sign.zPosition = 540
-        let post = ArtSystem.box(
-            CGSize(width: 15, height: 95),
-            color: .init(red: 0.39, green: 0.24, blue: 0.12, alpha: 1),
-            radius: 3
-        )
-        post.position.y = -64
-        post.zPosition = -1
-        sign.addChild(post)
 
-        let scienceSign = hotspot(
-            state.scienceAdventure.groveRestored ? "Science Lab ✦" : "Science Lab →",
+        let scienceSign = landmark(
+            state.scienceAdventure.groveRestored ? "Science Lab ✦" : "Science Lab",
+            symbol: "❧",
             name: "scienceLab",
-            at: CGPoint(x: 580, y: 515),
-            size: CGSize(width: 205, height: 54)
+            at: CGPoint(x: 565, y: 535),
+            accent: UIColor(red: 0.48, green: 0.84, blue: 0.60, alpha: 1),
+            width: 145
         )
-        // Keep the Science Lab sign below Puzzle Palace where the signpost overlaps its tap area.
-        // The Science label itself remains tappable at (580, 515), while Puzzle Palace wins at (580, 450).
         scienceSign.zPosition = 520
-        let sciencePost = ArtSystem.box(
-            CGSize(width: 14, height: 88),
-            color: .init(red: 0.24, green: 0.39, blue: 0.25, alpha: 1),
-            radius: 3
-        )
-        sciencePost.position.y = -60
-        sciencePost.zPosition = -1
-        scienceSign.addChild(sciencePost)
 
         _ = worldGear("✦", name: "pipWind", at: CGPoint(x: 315, y: 260), radius: 34)
 
@@ -149,7 +138,7 @@ import SpriteKit
         } else if state.hasStoryReward(.moonLantern) {
             instruction.text = "The Story Tree grew a Moon Lantern. Science Lab is open too."
         } else {
-            instruction.text = "The Story Tree is waiting for its starlight. Math Castle, Word Garden, and Science Lab are ready to explore."
+            instruction.text = "Choose a glowing landmark. Valkyrie will follow the path."
         }
     }
 
