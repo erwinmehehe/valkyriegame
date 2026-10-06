@@ -639,9 +639,23 @@ import LearningCore
         let prompt = ArtSystem.label(text, size: 25)
         prompt.name = "questionPrompt"
         prompt.position = CGPoint(x: 660, y: 610)
-        prompt.preferredMaxLayoutWidth = 850
+        prompt.preferredMaxLayoutWidth = 820
         prompt.numberOfLines = 2
+        prompt.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.91, alpha: 1)
         prompt.zPosition = 2000
+
+        let plate = ArtSystem.panel(
+            CGSize(width: 900, height: 76),
+            fill: UIColor(red: 0.035, green: 0.045, blue: 0.075, alpha: 0.68),
+            stroke: UIColor(white: 1.0, alpha: 0.12),
+            radius: 24,
+            lineWidth: 1.5,
+            shadowAlpha: 0.24
+        )
+        plate.name = "questionPromptBackdrop"
+        plate.zPosition = -2
+        prompt.addChild(plate)
+
         addChild(prompt)
     }
 
