@@ -68,11 +68,13 @@ import LearningCore
         XCTAssertEqual(ArtSystem.pixelSize("V331WorldAtlas"), CGSize(width: 320, height: 180))
         XCTAssertEqual(ArtSystem.pixelSize("StarlightIsles"), CGSize(width: 1280, height: 720))
         XCTAssertEqual(ArtSystem.pixelSize("MathCastle"), CGSize(width: 1280, height: 720))
-        XCTAssertEqual(
-            ArtSystem.sourceScale(for: "StarlightIsles", targetPoints: CGSize(width: 1280, height: 720)),
-            1,
-            accuracy: 0.001
+        let starlightScale = try XCTUnwrap(
+            ArtSystem.sourceScale(
+                for: "StarlightIsles",
+                targetPoints: CGSize(width: 1280, height: 720)
+            )
         )
+        XCTAssertEqual(starlightScale, CGFloat(1), accuracy: CGFloat(0.001))
         XCTAssertFalse(
             ArtSystem.isRetinaReady(
                 "V331WorldAtlas",
