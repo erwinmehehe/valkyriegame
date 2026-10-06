@@ -33,6 +33,7 @@ import LearningCore
         valkyrie.setScale(0.5)
         milo.position = CGPoint(x: 315, y: 190)
         milo.reducedMotion = reducedMotion
+        milo.setScale(0.82)
         addChild(milo)
 
         instruction.text = "Milo found two weather flags. Observe the morning flag first."
