@@ -48,6 +48,7 @@ import LearningCore
         sky.position = CGPoint(x: 640, y: 360)
         sky.zPosition = -220
         addChild(sky)
+        ArtSystem.scienceBackdrop(in: self, environment: .weatherTower)
 
         for (x, y, radius, alpha) in [
             (CGFloat(250), CGFloat(570), CGFloat(90), CGFloat(0.42)),
@@ -82,6 +83,17 @@ import LearningCore
         path.lineWidth = 4
         path.zPosition = 30
         addChild(path)
+        // An illustrated stepping-stone route replaces the empty brown strip.
+        // All stones stay below actors and the four weather interactions.
+        for (index, x) in stride(from: CGFloat(170), through: CGFloat(1090), by: CGFloat(112)).enumerated() {
+            let stone = SKShapeNode(ellipseOf: CGSize(width: 82, height: 24))
+            stone.position = CGPoint(x: x, y: 168 + CGFloat(index % 2) * 13)
+            stone.zPosition = 31
+            stone.fillColor = UIColor(red: 0.74, green: 0.71, blue: 0.58, alpha: 0.28)
+            stone.strokeColor = UIColor(red: 0.96, green: 0.84, blue: 0.61, alpha: 0.30)
+            stone.lineWidth = 2
+            addChild(stone)
+        }
 
         let tower = SKNode()
         tower.position = CGPoint(x: 720, y: 385)
@@ -118,6 +130,43 @@ import LearningCore
         roof.strokeColor = UIColor(red: 0.60, green: 0.70, blue: 0.69, alpha: 1)
         roof.lineWidth = 6
         tower.addChild(roof)
+
+        // The observatory reads as a destination rather than a blank cylinder:
+        // recessed windows, warm shutters, a weather crest and stone highlights.
+        for y in [CGFloat(-95), 38, 125] {
+            for x in [CGFloat(-82), 82] {
+                let window = SKShapeNode(rectOf: CGSize(width: 74, height: 82), cornerRadius: 27)
+                window.position = CGPoint(x: x, y: y)
+                window.fillColor = UIColor(red: 0.09, green: 0.26, blue: 0.35, alpha: 0.95)
+                window.strokeColor = UIColor(red: 0.81, green: 0.65, blue: 0.39, alpha: 0.94)
+                window.lineWidth = 5
+                window.zPosition = 3
+                tower.addChild(window)
+                let shine = SKShapeNode(ellipseOf: CGSize(width: 21, height: 33))
+                shine.position = CGPoint(x: -15, y: 10)
+                shine.fillColor = UIColor(red: 0.79, green: 0.92, blue: 0.91, alpha: 0.30)
+                shine.strokeColor = .clear
+                window.addChild(shine)
+                let sill = ArtSystem.box(
+                    CGSize(width: 94, height: 12),
+                    color: UIColor(red: 0.76, green: 0.63, blue: 0.40, alpha: 1),
+                    radius: 4
+                )
+                sill.position = CGPoint(x: x, y: y - 45)
+                sill.zPosition = 4
+                tower.addChild(sill)
+            }
+        }
+        let crest = SKShapeNode(circleOfRadius: 33)
+        crest.position = CGPoint(x: 0, y: 187)
+        crest.fillColor = UIColor(red: 0.23, green: 0.40, blue: 0.41, alpha: 1)
+        crest.strokeColor = UIColor(red: 0.94, green: 0.75, blue: 0.36, alpha: 1)
+        crest.lineWidth = 5
+        crest.zPosition = 6
+        tower.addChild(crest)
+        let compass = ArtSystem.label("☀", size: 34)
+        compass.fontColor = UIColor(red: 1, green: 0.89, blue: 0.57, alpha: 1)
+        crest.addChild(compass)
 
         addChild(tower)
 
@@ -172,6 +221,27 @@ import LearningCore
         symbolLabel.name = name
         flag.addChild(symbolLabel)
 
+        // Gold rivets and a hanging pennant make the weather marker a tangible flag.
+        for x in [CGFloat(-72), 72] {
+            let rivet = SKShapeNode(circleOfRadius: 4)
+            rivet.position = CGPoint(x: x, y: 36)
+            rivet.fillColor = UIColor(red: 1, green: 0.81, blue: 0.44, alpha: 1)
+            rivet.strokeColor = .clear
+            flag.addChild(rivet)
+        }
+        let pennant = SKShapeNode(path: {
+            let p = CGMutablePath()
+            p.move(to: CGPoint(x: -45, y: -45))
+            p.addLine(to: CGPoint(x: 0, y: -71))
+            p.addLine(to: CGPoint(x: 45, y: -45))
+            p.closeSubpath()
+            return p
+        }())
+        pennant.fillColor = UIColor(red: 0.26, green: 0.51, blue: 0.56, alpha: 0.98)
+        pennant.strokeColor = UIColor(red: 0.84, green: 0.76, blue: 0.55, alpha: 0.86)
+        pennant.lineWidth = 2
+        pennant.zPosition = -1
+        flag.addChild(pennant)
         addChild(flag)
     }
 
