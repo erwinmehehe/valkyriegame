@@ -317,15 +317,15 @@ import LearningCore
         }
 
         let path = ArtSystem.panel(
-            CGSize(width: 1110, height: 108),
-            fill: UIColor(red: 0.39, green: 0.30, blue: 0.19, alpha: 0.90),
-            stroke: UIColor(red: 0.69, green: 0.57, blue: 0.36, alpha: 0.84),
-            radius: 50,
-            lineWidth: 4,
-            shadowAlpha: 0.28,
-            innerHighlight: UIColor(red: 0.82, green: 0.70, blue: 0.47, alpha: 0.10)
+            CGSize(width: 1110, height: 86),
+            fill: UIColor(red: 0.39, green: 0.30, blue: 0.19, alpha: 0.58),
+            stroke: UIColor(red: 0.69, green: 0.57, blue: 0.36, alpha: 0.58),
+            radius: 43,
+            lineWidth: 3,
+            shadowAlpha: 0.16,
+            innerHighlight: UIColor(red: 0.82, green: 0.70, blue: 0.47, alpha: 0.06)
         )
-        path.position = CGPoint(x: 640, y: 190)
+        path.position = CGPoint(x: 640, y: 184)
         path.zPosition = 20
         addChild(path)
 
