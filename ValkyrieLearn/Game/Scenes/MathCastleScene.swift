@@ -288,7 +288,10 @@ import LearningCore
         }
         // Touch area stays large even where the lever's silhouette is narrow.
         let hit = ArtSystem.box(CGSize(width: 150, height: 110), color: .clear, radius: 0); hit.name = "submit"; node.addChild(hit)
-        addChild(node); return node
+        makeAccessible(node, label: "Pull Pip's golden lever", hint: "Checks the current work order.")
+        addChild(node)
+        registerInteraction(node, clearance: 16)
+        return node
     }
 
     /// Recreates the v3.31 Math Castle cause-and-effect loop in native SpriteKit:
