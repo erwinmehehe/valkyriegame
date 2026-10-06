@@ -12,6 +12,7 @@ import LearningCore
         case resortVault
         case mirrorHall
         case pathTiles
+        case commandGears
     }
 
     private let place: Place
@@ -24,6 +25,7 @@ import LearningCore
         case .resortVault: return "Puzzle Palace · Re-sort Vault"
         case .mirrorHall: return "Puzzle Palace · Mirror Hall"
         case .pathTiles: return "Puzzle Palace · Path Tiles"
+        case .commandGears: return "Puzzle Palace · Command Gears"
         }
     }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
@@ -53,6 +55,9 @@ import LearningCore
     private var rotationEncounter: PuzzleRotationEncounter?
     private var pathEncounter: PuzzlePathEncounter?
     private var pathAcceptingInput = false
+    private var sequenceEncounter: PuzzleSequenceEncounter?
+    private var commandSteps: [PuzzleCommandStep] = []
+    private var commandAcceptingInput = false
     private var mirrorAcceptingInput = false
     private var mirrorPracticeReady = false
     private var mirrorPracticeBusy = false
@@ -94,6 +99,8 @@ import LearningCore
             place = .mirrorHall
         case .pathTiles:
             place = .pathTiles
+        case .commandGears:
+            place = .commandGears
         default:
             place = .runeGate
         }
@@ -127,6 +134,9 @@ import LearningCore
             valkyrie.position = CGPoint(x: 180, y: 175)
             tiko.position = CGPoint(x: 305, y: 190)
         case .pathTiles:
+            valkyrie.position = CGPoint(x: 180, y: 175)
+            tiko.position = CGPoint(x: 305, y: 190)
+        case .commandGears:
             valkyrie.position = CGPoint(x: 180, y: 175)
             tiko.position = CGPoint(x: 305, y: 190)
         }
@@ -209,6 +219,18 @@ import LearningCore
                 pathEncounter = state.nextPuzzlePathTilesEncounter()
                 buildPathTilesEncounter()
             }
+        case .commandGears:
+            state.audio.play("palace_ambience", channel: .ambience, looping: true)
+            guard state.puzzleCommandGearsAvailable else {
+                instruction.text = "Tiko needs the Memory Bridge before he can build command chains."
+                return
+            }
+            if state.puzzleCommandGearsComplete {
+                finishCommandGears()
+            } else {
+                sequenceEncounter = state.nextPuzzleCommandGearsEncounter()
+                buildCommandGearsEncounter()
+            }
         }
     }
 
@@ -263,6 +285,9 @@ import LearningCore
         case .pathTiles:
             buildPathTilesWorld()
             refreshPathTilesProgress(animated: false)
+        case .commandGears:
+            buildCommandGearsWorld()
+            refreshCommandGearsProgress(animated: false)
         }
     }
 
@@ -2711,11 +2736,306 @@ import LearningCore
         }
         if childNode(withName: "pathTilesHome") == nil {
             let home = worldControl("⌂", name: "pathTilesHome",
-                                    at: CGPoint(x: 1120, y: 175), radius: 31,
+                                    at: CGPoint(x: 1080, y: 175), radius: 31,
                                     accessibilityLabel: "Return to Story Tree")
             home.zPosition = 1500
         }
-        instruction.text = "Tiko can see a safe route before moving. The next chamber can build on this planning skill."
+        if state.puzzleCommandGearsAvailable && childNode(withName: "commandGearsRoute") == nil {
+            let route = worldGear("⚙", name: "commandGearsRoute",
+                                  at: CGPoint(x: 1170, y: 175), radius: 35,
+                                  accessibilityLabel: "Enter Command Gears")
+            route.zPosition = 1500
+        }
+        instruction.text = "Path planning is restored. Tiko found a command engine deeper in the palace."
+    }
+
+
+    private func buildCommandGearsWorld() {
+        let rail = ArtSystem.box(
+            CGSize(width: 650, height: 22),
+            color: UIColor(red: 0.42, green: 0.31, blue: 0.18, alpha: 0.96),
+            radius: 7
+        )
+        rail.strokeColor = UIColor(red: 0.88, green: 0.69, blue: 0.34, alpha: 0.88)
+        rail.lineWidth = 2
+        rail.position = CGPoint(x: 760, y: 275)
+        rail.name = "commandRail"
+        rail.zPosition = 120
+        addChild(rail)
+
+        let title = ArtSystem.label("BUILD TIKO'S COMMAND CHAIN", size: 21)
+        title.fontColor = UIColor(red: 0.94, green: 0.97, blue: 1.0, alpha: 0.97)
+        title.position = CGPoint(x: 760, y: 585)
+        title.name = "commandGearsTitle"
+        title.zPosition = 820
+        addChild(title)
+
+        let sourceLabel = ArtSystem.label("COMMAND GEARS", size: 15)
+        sourceLabel.fontColor = UIColor(red: 1.0, green: 0.86, blue: 0.50, alpha: 0.95)
+        sourceLabel.position = CGPoint(x: 760, y: 515)
+        sourceLabel.zPosition = 820
+        addChild(sourceLabel)
+
+        let socketXs: [CGFloat] = [585, 760, 935]
+        for index in 0..<3 {
+            let socket = SKShapeNode(circleOfRadius: 43)
+            socket.fillColor = UIColor(red: 0.12, green: 0.15, blue: 0.24, alpha: 0.94)
+            socket.strokeColor = UIColor(red: 0.54, green: 0.72, blue: 0.82, alpha: 0.78)
+            socket.lineWidth = 4
+            socket.position = CGPoint(x: socketXs[index], y: 285)
+            socket.name = "commandSocket\(index)"
+            socket.zPosition = 500
+            let number = ArtSystem.label("\(index + 1)", size: 17)
+            number.fontColor = UIColor(white: 1, alpha: 0.32)
+            socket.addChild(number)
+            addChild(socket)
+        }
+
+        for index in 0..<PuzzlePalaceEncounterCatalog.commandGearFamilies.count {
+            let lamp = SKShapeNode(circleOfRadius: 12)
+            lamp.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.31, alpha: 1)
+            lamp.strokeColor = UIColor(red: 0.84, green: 0.66, blue: 0.34, alpha: 0.86)
+            lamp.lineWidth = 3
+            lamp.position = CGPoint(x: 1090 + CGFloat(index) * 38, y: 535)
+            lamp.name = "commandProgress\(index)"
+            lamp.zPosition = 820
+            addChild(lamp)
+        }
+
+        let runGear = worldGear("▶", name: "commandRun",
+                                at: CGPoint(x: 1100, y: 295), radius: 40,
+                                accessibilityLabel: "Run command chain")
+        runGear.zPosition = 900
+
+        let resetGear = worldGear("↺", name: "commandReset",
+                                  at: CGPoint(x: 1100, y: 390), radius: 31,
+                                  accessibilityLabel: "Reset command chain")
+        resetGear.zPosition = 900
+
+        let back = worldControl("‹", name: "pathTilesBack",
+                                at: CGPoint(x: 1180, y: 665), radius: 30,
+                                accessibilityLabel: "Back to Path Tiles")
+        back.zPosition = 2050
+    }
+
+    private func clearCommandSourceGears() {
+        for index in 0..<3 {
+            childNode(withName: "commandSource\(index)")?.removeFromParent()
+            childNode(withName: "commandSourceLabel\(index)")?.removeFromParent()
+        }
+    }
+
+    private func buildCommandGearsEncounter(resetSupport: Bool = true) {
+        guard let sequenceEncounter else { return }
+        clearCommandSourceGears()
+        commandSteps.removeAll()
+        renderCommandSockets()
+        attempts = 0
+        if resetSupport { support = .independent }
+        startedAt = Date()
+        solved = false
+        commandAcceptingInput = true
+
+        let xs: [CGFloat] = [560, 760, 960]
+        for (index, step) in sequenceEncounter.presented.enumerated() {
+            let gear = worldGear(step.glyph, name: "commandSource\(index)",
+                                 at: CGPoint(x: xs[index], y: 445), radius: 43,
+                                 accessibilityLabel: step.title)
+            gear.zPosition = 850
+            gear.userData = NSMutableDictionary(dictionary: ["stepID": step.id])
+
+            let label = ArtSystem.label(step.title, size: 14)
+            label.fontColor = UIColor(red: 1.0, green: 0.92, blue: 0.68, alpha: 1)
+            label.position = CGPoint(x: xs[index], y: 382)
+            label.name = "commandSourceLabel\(index)"
+            label.zPosition = 850
+            addChild(label)
+        }
+
+        instruction.text = sequenceEncounter.prompt
+        tiko.pose(.interact)
+    }
+
+    private func selectCommandGear(_ sourceIndex: Int) {
+        guard place == .commandGears, commandAcceptingInput, !solved,
+              let sequenceEncounter,
+              sequenceEncounter.presented.indices.contains(sourceIndex) else { return }
+        let step = sequenceEncounter.presented[sourceIndex]
+        guard !commandSteps.contains(step), commandSteps.count < 3 else { return }
+        commandSteps.append(step)
+        selectionFeedback()
+        renderCommandSockets()
+        childNode(withName: "commandSource\(sourceIndex)")?.alpha = 0.30
+        childNode(withName: "commandSourceLabel\(sourceIndex)")?.alpha = 0.42
+        instruction.text = commandSteps.count == 3
+            ? "Command chain ready. Tap RUN and watch Tiko test it."
+            : "Choose what Tiko should do next."
+    }
+
+    private func resetCommandChain() {
+        guard place == .commandGears, commandAcceptingInput else { return }
+        commandSteps.removeAll()
+        for index in 0..<3 {
+            childNode(withName: "commandSource\(index)")?.alpha = 1
+            childNode(withName: "commandSourceLabel\(index)")?.alpha = 1
+        }
+        renderCommandSockets()
+        instruction.text = sequenceEncounter?.prompt ?? "Build Tiko's command chain."
+        selectionFeedback()
+    }
+
+    private func renderCommandSockets() {
+        for index in 0..<3 {
+            guard let socket = childNode(withName: "commandSocket\(index)") as? SKShapeNode else { continue }
+            socket.removeAllChildren()
+            if commandSteps.indices.contains(index) {
+                let step = commandSteps[index]
+                socket.fillColor = UIColor(red: 0.18, green: 0.34, blue: 0.42, alpha: 1)
+                socket.strokeColor = UIColor(red: 0.82, green: 0.68, blue: 0.36, alpha: 1)
+                let glyph = ArtSystem.label(step.glyph, size: 30)
+                glyph.name = socket.name
+                socket.addChild(glyph)
+                let tiny = ArtSystem.label(step.title, size: 9)
+                tiny.position.y = -57
+                tiny.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.67, alpha: 1)
+                tiny.name = socket.name
+                socket.addChild(tiny)
+            } else {
+                socket.fillColor = UIColor(red: 0.12, green: 0.15, blue: 0.24, alpha: 0.94)
+                socket.strokeColor = UIColor(red: 0.54, green: 0.72, blue: 0.82, alpha: 0.78)
+                let number = ArtSystem.label("\(index + 1)", size: 17)
+                number.fontColor = UIColor(white: 1, alpha: 0.32)
+                socket.addChild(number)
+            }
+        }
+    }
+
+    private func runCommandChain() {
+        guard place == .commandGears, commandAcceptingInput, !solved,
+              let activeEncounter = sequenceEncounter else { return }
+        guard commandSteps.count == 3 else {
+            instruction.text = "Fill all three command sockets before Tiko runs the chain."
+            errorFeedback()
+            return
+        }
+
+        commandAcceptingInput = false
+        attempts += 1
+        let attemptSupport = support
+        let correct = activeEncounter.isCorrect(commandSteps)
+
+        _ = state.recordPuzzle(
+            activeEncounter,
+            outcome: correct ? .correct : .incorrect,
+            support: attemptSupport,
+            attempts: attempts,
+            responseTime: Date().timeIntervalSince(startedAt)
+        )
+
+        animateCommandExecution(correct: correct) { [weak self] in
+            guard let self else { return }
+            if correct {
+                self.solved = true
+                self.successFeedback()
+                self.refreshCommandGearsProgress(animated: true)
+                self.valkyrie.pose(.celebrate)
+                self.tiko.pose(.celebrate)
+                if self.state.puzzleCommandGearsComplete {
+                    self.finishCommandGears()
+                } else {
+                    self.instruction.text = attemptSupport == .independent
+                        ? "That chain worked! Tap the lantern for another command machine."
+                        : "You did it together. Try a fresh command machine next."
+                    if self.childNode(withName: "commandNext") == nil {
+                        let next = self.worldGear("✦", name: "commandNext",
+                                                  at: CGPoint(x: 1170, y: 165), radius: 34,
+                                                  accessibilityLabel: "Next command machine")
+                        next.zPosition = 1500
+                    }
+                }
+            } else {
+                self.errorFeedback()
+                self.support = self.support == .independent ? .lightHint : .strongHint
+                self.valkyrie.pose(.react)
+                self.tiko.pose(.react)
+                self.instruction.text = self.support == .lightHint
+                    ? "Think about what must happen before Tiko can use the last action."
+                    : "Find the action that makes the next one possible. Build from first to last."
+                self.sequenceEncounter = self.state.nextPuzzleCommandGearsEncounter()
+                self.run(.sequence([
+                    .wait(forDuration: self.reducedMotion ? 0 : 0.55),
+                    .run { [weak self] in self?.buildCommandGearsEncounter(resetSupport: false) }
+                ]))
+            }
+        }
+    }
+
+    private func animateCommandExecution(correct: Bool, completion: @escaping () -> Void) {
+        let sockets = (0..<3).compactMap { childNode(withName: "commandSocket\($0)") as? SKShapeNode }
+        if reducedMotion {
+            sockets.forEach { $0.glowWidth = correct ? 6 : 0 }
+            completion()
+            return
+        }
+
+        var actions: [SKAction] = []
+        for (index, socket) in sockets.enumerated() {
+            actions += [
+                .run {
+                    socket.glowWidth = 10
+                    socket.setScale(1.08)
+                },
+                .wait(forDuration: 0.20),
+                .run {
+                    socket.glowWidth = 0
+                    socket.setScale(1)
+                }
+            ]
+            if index < 2 { actions.append(.wait(forDuration: 0.06)) }
+        }
+        actions.append(.run(completion))
+        run(.sequence(actions), withKey: "commandExecution")
+    }
+
+    private func refreshCommandGearsProgress(animated: Bool) {
+        let count = PuzzlePalaceDirector.commandGearsIndependentSuccessCount(profile: state.profile)
+        for index in 0..<PuzzlePalaceEncounterCatalog.commandGearFamilies.count {
+            guard let lamp = childNode(withName: "commandProgress\(index)") as? SKShapeNode else { continue }
+            let active = index < count
+            lamp.fillColor = active ? .systemGreen : UIColor(red: 0.18, green: 0.22, blue: 0.31, alpha: 1)
+            lamp.glowWidth = active ? 8 : 0
+            if active && animated && !reducedMotion {
+                lamp.run(.sequence([
+                    .scale(to: 1.25, duration: 0.12),
+                    .scale(to: 1.0, duration: 0.16)
+                ]))
+            }
+        }
+    }
+
+    private func finishCommandGears() {
+        commandAcceptingInput = false
+        clearCommandSourceGears()
+        commandSteps.removeAll()
+        renderCommandSockets()
+        childNode(withName: "commandNext")?.removeFromParent()
+        refreshCommandGearsProgress(animated: true)
+        if let title = childNode(withName: "commandGearsTitle") as? SKLabelNode {
+            title.text = "COMMAND ENGINE RESTORED"
+        }
+        for index in 0..<3 {
+            if let socket = childNode(withName: "commandSocket\(index)") as? SKShapeNode {
+                socket.fillColor = UIColor(red: 0.18, green: 0.42, blue: 0.33, alpha: 1)
+                socket.glowWidth = 7
+            }
+        }
+        if childNode(withName: "commandHome") == nil {
+            let home = worldControl("⌂", name: "commandHome",
+                                    at: CGPoint(x: 1110, y: 175), radius: 31,
+                                    accessibilityLabel: "Return to Story Tree")
+            home.zPosition = 1500
+        }
+        instruction.text = "Tiko can put actions in a useful order. A strange lantern is flickering deeper in the palace."
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -2878,6 +3198,33 @@ import LearningCore
 
         case "pathTilesHome":
             state.travel(to: .storyTree)
+
+        case "commandGearsRoute":
+            guard state.puzzleCommandGearsAvailable else { return }
+            state.travel(to: .commandGears)
+
+        case "pathTilesBack":
+            state.travel(to: .pathTiles)
+
+        case "commandHome":
+            state.travel(to: .storyTree)
+
+        case "commandRun":
+            runCommandChain()
+
+        case "commandReset":
+            resetCommandChain()
+
+        case "commandNext":
+            guard place == .commandGears, solved, !state.puzzleCommandGearsComplete else { return }
+            childNode(withName: "commandNext")?.removeFromParent()
+            sequenceEncounter = state.nextPuzzleCommandGearsEncounter()
+            buildCommandGearsEncounter()
+
+        case let name? where name.hasPrefix("commandSource"):
+            guard place == .commandGears,
+                  let index = Int(name.replacingOccurrences(of: "commandSource", with: "")) else { return }
+            selectCommandGear(index)
 
         case "pathNext":
             guard place == .pathTiles, solved, !state.puzzlePathTilesComplete else { return }
