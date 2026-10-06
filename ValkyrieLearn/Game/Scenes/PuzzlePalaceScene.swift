@@ -3620,9 +3620,9 @@ import LearningCore
         }
         if state.puzzlePalaceComplete {
             renderPuzzlePalaceFinale(celebrate: celebrate)
-            instruction.text = state.puzzleBugRepairAvailable
-                ? "The Palace is restored. Repair Lab is ready for whole-plan debugging."
-                : "The Palace is glowing again. Tiko's violet lantern is waiting at the Story Tree."
+            instruction.text = "The Palace is glowing again. Tiko's violet lantern is waiting at the Story Tree."
+        } else if state.puzzleBugRepairAvailable {
+            instruction.text = "Single-step debugging is restored. Enter Repair Lab to fix a whole plan."
         } else {
             instruction.text = "Tiko can now diagnose and repair one broken command."
         }
@@ -3958,7 +3958,13 @@ import LearningCore
                                     accessibilityLabel: "Return to Story Tree")
             home.zPosition = 1500
         }
-        instruction.text = "Tiko can now find and repair mistakes across a whole plan."
+
+        if state.puzzlePalaceComplete {
+            renderPuzzlePalaceFinale(celebrate: true)
+            instruction.text = "The Palace is fully restored. Tiko can debug and repair complete plans."
+        } else {
+            instruction.text = "Tiko can now find and repair mistakes across a whole plan."
+        }
     }
 
     private func renderPuzzlePalaceFinale(celebrate: Bool) {
