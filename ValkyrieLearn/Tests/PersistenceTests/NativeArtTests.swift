@@ -1761,7 +1761,14 @@ import LearningCore
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallTitlePlate"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "decorativeMirrorHallConceptAccents"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "//decorativeMirrorHallFloorCompass"))
-        XCTAssertNotNil(mirrorHall.childNode(withName: "//decorativeMirrorHallBackdropArch0"))
+        let mirrorBackdropArch = try XCTUnwrap(
+            mirrorHall.childNode(withName: "//decorativeMirrorHallBackdropArch0") as? SKShapeNode
+        )
+        XCTAssertLessThanOrEqual(
+            mirrorBackdropArch.lineWidth,
+            3,
+            "Decorative Mirror Hall architecture must stay quieter than scored mirrors."
+        )
         let orientationChoices = mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }
         XCTAssertEqual(orientationChoices.count, 3)
         let mirrorPools = mirrorHall.children.filter {
@@ -2483,6 +2490,7 @@ import LearningCore
             greenhouse.targetName(at: CGPoint(x: 940, y: 245)),
             "scienceSunPrism"
         )
+        XCTAssertEqual(greenhouse.milo.xScale, 0.82, accuracy: 0.001)
         greenhouse.willLeave()
 
         let weatherState = try AppState(
@@ -2501,6 +2509,7 @@ import LearningCore
         XCTAssertNotNil(weather.childNode(withName: "scienceForecastBase"))
         XCTAssertNotNil(weather.childNode(withName: "scienceMorningWeather"))
         XCTAssertNotNil(weather.childNode(withName: "scienceAfternoonWeather"))
+        XCTAssertEqual(weather.milo.xScale, 0.82, accuracy: 0.001)
         weather.willLeave()
 
         let groveState = try AppState(
@@ -2519,6 +2528,7 @@ import LearningCore
         XCTAssertNotNil(grove.childNode(withName: "scienceGroveDuck"))
         XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
         XCTAssertNotNil(grove.childNode(withName: "scienceCompareBoard"))
+        XCTAssertEqual(grove.milo.xScale, 0.82, accuracy: 0.001)
         grove.willLeave()
     }
 
