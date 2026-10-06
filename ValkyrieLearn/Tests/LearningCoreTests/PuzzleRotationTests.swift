@@ -395,6 +395,110 @@ final class PuzzleRotationTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
     }
 
+    private func recordRepairPrerequisites(in profile: inout LearnerProfile) {
+        recordCommandPrerequisiteForBug(in: &profile)
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            recordBug(family[0], in: &profile)
+        }
+    }
+
+    private func recordRepairPrerequisites(in profile: inout LearnerProfile) {
+        recordCommandPrerequisiteForBug(in: &profile)
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            recordBug(family[0], in: &profile)
+        }
+    }
+
+    func testBugRepairCatalogIsARealTwoStepSwapRepair() {
+        XCTAssertEqual(PuzzlePalaceEncounterCatalog.bugRepairFamilies.count, 3)
+        for family in PuzzlePalaceEncounterCatalog.bugRepairFamilies {
+            XCTAssertEqual(family.count, 2)
+            XCTAssertEqual(Set(family.map(\.fingerprint)).count, 2)
+            for encounter in family {
+                XCTAssertEqual(encounter.skillID, PuzzleSkills.debugSequence)
+                XCTAssertEqual(encounter.mechanicID, PuzzlePalaceMechanicID.bugLantern)
+                XCTAssertEqual(encounter.correctOrder.count, 4)
+                XCTAssertEqual(encounter.presented.count, 4)
+                XCTAssertEqual(encounter.swapIndices.count, 2)
+                XCTAssertNotEqual(encounter.presented, encounter.correctOrder)
+                XCTAssertTrue(encounter.isCorrectSwap(encounter.swapIndices))
+                XCTAssertEqual(encounter.repaired(by: encounter.swapIndices), encounter.correctOrder)
+            }
+        }
+    }
+
+    func testBugRepairRequiresPlanningSequencingAndSingleStepDebugging() {
+        var missingPlanning = LearnerProfile()
+        recordMemoryForCommands(in: &missingPlanning)
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            recordSequence(family[0], in: &missingPlanning)
+        }
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            recordBug(family[0], in: &missingPlanning)
+        }
+
+        XCTAssertTrue(PuzzlePalaceDirector.commandGearsComplete(profile: missingPlanning))
+        XCTAssertTrue(PuzzlePalaceDirector.bugLanternComplete(profile: missingPlanning))
+        XCTAssertFalse(PuzzlePalaceDirector.pathTilesComplete(profile: missingPlanning))
+        XCTAssertFalse(PuzzlePalaceDirector.canEnterBugRepair(profile: missingPlanning))
+
+        var missingSequencing = LearnerProfile()
+        recordPathPlanningForCommands(in: &missingSequencing)
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            recordBug(family[0], in: &missingSequencing)
+        }
+
+        XCTAssertTrue(PuzzlePalaceDirector.pathTilesComplete(profile: missingSequencing))
+        XCTAssertTrue(PuzzlePalaceDirector.bugLanternComplete(profile: missingSequencing))
+        XCTAssertFalse(PuzzlePalaceDirector.commandGearsComplete(profile: missingSequencing))
+        XCTAssertFalse(PuzzlePalaceDirector.canEnterBugRepair(profile: missingSequencing))
+
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            recordSequence(family[0], in: &missingSequencing)
+        }
+
+        XCTAssertTrue(PuzzlePalaceDirector.commandGearsComplete(profile: missingSequencing))
+        XCTAssertTrue(PuzzlePalaceDirector.canEnterBugRepair(profile: missingSequencing))
+        XCTAssertNotNil(PuzzlePalaceDirector.nextBugRepairEncounter(profile: missingSequencing))
+    }
+
+    func testAssistedRepairRetryChangesVariantAndDoesNotRewritePrerequisiteEvidence() throws {
+        var profile = LearnerProfile()
+        recordRepairPrerequisites(in: &profile)
+
+        let pathEvidenceBefore = profile.progress(for: PuzzleSkills.pathPlanning).evidence.count
+        let bugEvidenceBefore = profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count
+        let sequenceEvidenceBefore = profile.progress(for: PuzzleSkills.actionSequencing).evidence.count
+
+        let first = try XCTUnwrap(PuzzlePalaceDirector.nextBugRepairEncounter(profile: profile))
+        recordRepair(first, in: &profile, support: .lightHint)
+        let retry = try XCTUnwrap(PuzzlePalaceDirector.nextBugRepairEncounter(profile: profile))
+
+        XCTAssertNotEqual(retry.id, first.id)
+        XCTAssertNotEqual(retry.fingerprint, first.fingerprint)
+        XCTAssertEqual(PuzzlePalaceDirector.bugRepairIndependentSuccessCount(profile: profile), 0)
+
+        recordRepair(retry, in: &profile)
+        XCTAssertEqual(PuzzlePalaceDirector.bugRepairIndependentSuccessCount(profile: profile), 1)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.pathPlanning).evidence.count, pathEvidenceBefore)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count, bugEvidenceBefore)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.actionSequencing).evidence.count, sequenceEvidenceBefore)
+        XCTAssertNotEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+    }
+
+    func testThreeIndependentRepairFamiliesCompleteDebugSequence() {
+        var profile = LearnerProfile()
+        recordRepairPrerequisites(in: &profile)
+
+        for family in PuzzlePalaceEncounterCatalog.bugRepairFamilies {
+            recordRepair(family[0], in: &profile)
+        }
+
+        XCTAssertEqual(PuzzlePalaceDirector.bugRepairIndependentSuccessCount(profile: profile), 3)
+        XCTAssertTrue(PuzzlePalaceDirector.bugRepairComplete(profile: profile))
+        XCTAssertNotEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+    }
+
     func testPalaceRestorationRequiresEveryImplementedRoom() {
         var profile = LearnerProfile()
 
