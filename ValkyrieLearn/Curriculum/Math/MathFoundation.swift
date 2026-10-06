@@ -461,6 +461,110 @@ public enum MathCastleEncounterCatalog {
             prompt: "Split 8 crystals: 2 stay here. Put the rest in the other chamber.", context: "decompose10Workshop")
     ]
 
+    /// Deeper reasoning delivered through the existing physical manipulatives.
+    ///
+    /// These encounters only enter adaptive play when their real skill prerequisites
+    /// are ready. They deliberately avoid awarding unsupported "strategy choice" or
+    /// "multiple solutions" evidence until a mechanic can actually observe those acts.
+    public static let reasoningDepth: [LearningEncounter] = [
+        LearningEncounter(
+            id: "reason-equivalence-3-to-10",
+            skillID: MathSkills.equivalence10,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .reasoning,
+            operation: .numberBond,
+            initialQuantity: 3,
+            targetQuantity: 10,
+            prompt: "One gate shows 6 + 4 = 10. Build an equal total with 3 already in this chamber.",
+            context: "reasoningDepth",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "reason-same-total-2-to-10",
+            skillID: MathSkills.sameTotalDifferentWay,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .reasoning,
+            operation: .numberBond,
+            initialQuantity: 2,
+            targetQuantity: 10,
+            prompt: "Pip already made ten with 4 and 6. Make the same total a different way with 2 here.",
+            context: "reasoningDepth",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "reason-pip-mistake-4-plus-5",
+            skillID: MathSkills.reasoning,
+            mechanicID: MathMechanicID.numberBondMachine,
+            representation: .reasoning,
+            operation: .numberBond,
+            initialQuantity: 4,
+            targetQuantity: 9,
+            prompt: "Pip says 4 and 5 make 10. Repair the machine so the whole is 9.",
+            context: "reasoningDepth",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "reason-what-changed-6-to-9",
+            skillID: MathSkills.whatChanged,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .reasoning,
+            operation: .addition,
+            initialQuantity: 6,
+            targetQuantity: 9,
+            prompt: "The cart changed from 6 crystals to 9. Show exactly what changed.",
+            context: "reasoningDepth",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "reason-missing-9-to-15",
+            skillID: MathSkills.addWithin20,
+            mechanicID: MathMechanicID.missingNumberBridge,
+            representation: .reasoning,
+            operation: .missingAddend,
+            initialQuantity: 9,
+            targetQuantity: 15,
+            prompt: "Pip left a blank in 9 + □ = 15. Build the missing part of the bridge.",
+            context: "reasoningDepth",
+            challengeDepth: 2
+        ),
+        LearningEncounter(
+            id: "reason-transfer-add-5-to-9",
+            skillID: MathSkills.storyAddition10,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .story,
+            operation: .addition,
+            initialQuantity: 5,
+            targetQuantity: 9,
+            prompt: "Five moonstones are loaded. Four more arrive for the bridge. Show how many are ready now.",
+            context: "reasoningTransfer",
+            challengeDepth: 1
+        ),
+        LearningEncounter(
+            id: "reason-transfer-subtract-12-to-7",
+            skillID: MathSkills.subtractWithin20,
+            mechanicID: MathMechanicID.crystalCart,
+            representation: .story,
+            operation: .subtraction,
+            initialQuantity: 12,
+            targetQuantity: 7,
+            prompt: "Twelve crystals arrive. Five power the lift. Leave the crystals that remain in Pip's cart.",
+            context: "reasoningTransfer",
+            challengeDepth: 1
+        ),
+        LearningEncounter(
+            id: "reason-explain-compare-7-9",
+            skillID: MathSkills.explainComparison,
+            mechanicID: MathMechanicID.balanceScale,
+            representation: .reasoning,
+            operation: .comparison,
+            initialQuantity: 7,
+            targetQuantity: 9,
+            prompt: "The pans look close. Which side must be heavier, and what in the quantities proves it?",
+            context: "reasoningDepth",
+            challengeDepth: 2
+        )
+    ]
+
     public static let all: [LearningEncounter] =
         MathFoundation.encounters
         + prerequisites
@@ -468,6 +572,7 @@ public enum MathCastleEncounterCatalog {
         + numberBondMachine
         + tenFrameGate
         + missingNumberBridge
+        + reasoningDepth
 
     public static func sessionPlan(
         for profile: LearnerProfile,
