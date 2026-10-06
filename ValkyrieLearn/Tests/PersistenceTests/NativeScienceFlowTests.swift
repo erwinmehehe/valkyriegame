@@ -143,7 +143,8 @@ import LearningCore
         let legacyMatte = try XCTUnwrap(
             scene.childNode(withName: "scienceLegacyMatte") as? SKSpriteNode
         )
-        XCTAssertEqual(legacyMatte.alpha, CGFloat(0.16), accuracy: CGFloat(0.001))
+        XCTAssertEqual(legacyMatte.alpha, CGFloat(0.08), accuracy: CGFloat(0.001))
+        XCTAssertNotNil(scene.childNode(withName: "scienceWaterBed"))
         XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
         XCTAssertEqual(scene.valkyrie.yScale, 0.5, accuracy: 0.001)
         XCTAssertFalse(ArtSystem.frames(character: "Milo", pose: .idle).isEmpty)
