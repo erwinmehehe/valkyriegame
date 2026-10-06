@@ -94,16 +94,35 @@ import LearningCore
             let crop = place == .storyHollow
                 ? CGRect(x: 0, y: 0, width: 0.499, height: 0.498)
                 : CGRect(x: 0, y: 0.502, width: 0.499, height: 0.498)
-            let wordTexture = SKTexture(
+            let sourceTexture = SKTexture(
                 rect: crop,
                 in: atlas
             )
-            wordTexture.filteringMode = .linear
-            let backdrop = SKSpriteNode(texture: wordTexture, color: .white, size: size)
+            sourceTexture.filteringMode = .linear
+
+            let preparedTexture = ArtSystem.retinaEnhancedTexture(
+                sourceTexture,
+                cacheKey: wordGardenBackdropCacheKey,
+                targetPoints: size,
+                sharpness: place == .storyHollow ? 0.20 : 0.22
+            ) ?? sourceTexture
+            let backdrop = SKSpriteNode(
+                texture: preparedTexture,
+                color: .white,
+                size: size
+            )
             backdrop.position = CGPoint(x: 640, y: 360)
             backdrop.zPosition = -100
+            backdrop.name = "wordGardenBackdrop"
+            backdrop.userData = NSMutableDictionary(dictionary: [
+                "retinaPrepared": true,
+                "sourceAsset": "WordGardenSourceAtlas",
+                "sourceCrop": wordGardenBackdropCacheKey
+            ])
             addChild(backdrop)
         }
+
+        buildWordGardenFidelityAccents()
 
         for (height, y) in [(CGFloat(62), CGFloat(684)), (CGFloat(96), CGFloat(42))] {
             let shade = ArtSystem.box(
@@ -143,6 +162,146 @@ import LearningCore
             )
             back.zPosition = 2050
         }
+    }
+
+    private var wordGardenBackdropCacheKey: String {
+        switch place {
+        case .flowerGate:
+            return "word-garden-flower-gate"
+        case .sunmillCrossing:
+            return "word-garden-sunmill"
+        case .storyHollow:
+            return "word-garden-story-hollow"
+        }
+    }
+
+    /// Device-resolution accents reinforce edges already present in the painting.
+    /// They deliberately stay behind the live learning objects and never own input.
+    private func buildWordGardenFidelityAccents() {
+        let root = SKNode()
+        root.name = "wordGardenRetinaAccents"
+        root.zPosition = -72
+
+        switch place {
+        case .flowerGate:
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 90, y: 170))
+            path.addCurve(
+                to: CGPoint(x: 1185, y: 178),
+                control1: CGPoint(x: 420, y: 150),
+                control2: CGPoint(x: 850, y: 195)
+            )
+            let pathRim = SKShapeNode(path: path)
+            pathRim.name = "wordGardenPathRim"
+            pathRim.strokeColor = UIColor(
+                red: 0.95,
+                green: 0.88,
+                blue: 0.56,
+                alpha: 0.15
+            )
+            pathRim.lineWidth = 2
+            root.addChild(pathRim)
+
+            let petalPoints = [
+                CGPoint(x: 1020, y: 520),
+                CGPoint(x: 1085, y: 555),
+                CGPoint(x: 1140, y: 505),
+                CGPoint(x: 1200, y: 545)
+            ]
+            for (index, point) in petalPoints.enumerated() {
+                let petal = SKShapeNode(
+                    ellipseOf: CGSize(width: 8, height: 4)
+                )
+                petal.position = point
+                petal.zRotation = index.isMultiple(of: 2) ? 0.55 : -0.45
+                petal.fillColor = UIColor(
+                    red: 1.0,
+                    green: 0.70,
+                    blue: 0.84,
+                    alpha: 0.32
+                )
+                petal.strokeColor = .clear
+                petal.name = "wordGardenPetalGlint"
+                root.addChild(petal)
+            }
+
+        case .sunmillCrossing:
+            let waterPath = CGMutablePath()
+            waterPath.move(to: CGPoint(x: 255, y: 198))
+            waterPath.addCurve(
+                to: CGPoint(x: 1180, y: 186),
+                control1: CGPoint(x: 520, y: 212),
+                control2: CGPoint(x: 880, y: 166)
+            )
+            let waterRim = SKShapeNode(path: waterPath)
+            waterRim.name = "sunmillWaterRim"
+            waterRim.strokeColor = UIColor(
+                red: 0.72,
+                green: 0.95,
+                blue: 1.0,
+                alpha: 0.20
+            )
+            waterRim.lineWidth = 2
+            waterRim.glowWidth = reducedMotion ? 0 : 1
+            root.addChild(waterRim)
+
+            for point in [
+                CGPoint(x: 475, y: 500),
+                CGPoint(x: 565, y: 535),
+                CGPoint(x: 690, y: 510)
+            ] {
+                let glint = SKShapeNode(circleOfRadius: 2)
+                glint.position = point
+                glint.fillColor = UIColor(
+                    red: 1.0,
+                    green: 0.91,
+                    blue: 0.54,
+                    alpha: 0.32
+                )
+                glint.strokeColor = .clear
+                glint.glowWidth = reducedMotion ? 0 : 2
+                glint.name = "sunmillSkyGlint"
+                root.addChild(glint)
+            }
+
+        case .storyHollow:
+            let hollowRim = SKShapeNode(
+                ellipseOf: CGSize(width: 245, height: 315)
+            )
+            hollowRim.position = CGPoint(x: 1045, y: 365)
+            hollowRim.fillColor = .clear
+            hollowRim.strokeColor = UIColor(
+                red: 0.72,
+                green: 0.82,
+                blue: 0.48,
+                alpha: 0.12
+            )
+            hollowRim.lineWidth = 2
+            hollowRim.name = "storyHollowRim"
+            root.addChild(hollowRim)
+
+            for point in [
+                CGPoint(x: 360, y: 575),
+                CGPoint(x: 510, y: 615),
+                CGPoint(x: 680, y: 580),
+                CGPoint(x: 835, y: 620)
+            ] {
+                let glint = SKShapeNode(circleOfRadius: 1.8)
+                glint.position = point
+                glint.fillColor = UIColor(
+                    red: 0.93,
+                    green: 0.88,
+                    blue: 1.0,
+                    alpha: 0.28
+                )
+                glint.strokeColor = .clear
+                glint.glowWidth = reducedMotion ? 0 : 2
+                glint.name = "storyHollowCanopyGlint"
+                root.addChild(glint)
+            }
+        }
+
+        addChild(root)
     }
 
     private func buildFlowerGateLandmark() {
