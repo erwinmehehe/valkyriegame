@@ -1651,6 +1651,99 @@ import LearningCore
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
         bugLantern.willLeave()
 
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            _ = state.recordPuzzle(
+                family[0],
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            _ = state.recordPuzzle(
+                family[0],
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(state.puzzleBugRepairAvailable)
+        state.travel(to: .bugLanternRepair)
+        let repairLab = PuzzlePalaceScene(state: state)
+        repairLab.reducedMotion = true
+        view.presentScene(repairLab)
+        try await capture(repairLab, in: view, name: "Puzzle-Palace-native-bug-repair")
+        XCTAssertNotNil(repairLab.childNode(withName: "repairLanternFixture"))
+        XCTAssertNotNil(repairLab.childNode(withName: "repairRail"))
+        let repairSteps = repairLab.children.filter {
+            $0.name?.hasPrefix("repairStep") == true
+                && !($0.name?.contains("Label") ?? false)
+        }
+        XCTAssertEqual(repairSteps.count, 4)
+        for step in repairSteps {
+            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().width, 130)
+            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().height, 100)
+            XCTAssertTrue(step.isAccessibilityElement)
+        }
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+
+        let repairEncounter = try XCTUnwrap(state.nextPuzzleBugRepairEncounter())
+        let firstRepairIndex = repairEncounter.swapIndices[0]
+        let secondRepairIndex = repairEncounter.swapIndices[1]
+        let firstRepairStep = try XCTUnwrap(
+            repairLab.childNode(withName: "repairStep\(firstRepairIndex)")
+        )
+        let secondRepairStep = try XCTUnwrap(
+            repairLab.childNode(withName: "repairStep\(secondRepairIndex)")
+        )
+        let firstRepairLabel = try XCTUnwrap(
+            repairLab.childNode(withName: "repairStepLabel\(firstRepairIndex)")
+        )
+        let secondRepairLabel = try XCTUnwrap(
+            repairLab.childNode(withName: "repairStepLabel\(secondRepairIndex)")
+        )
+        let firstStepX = firstRepairStep.position.x
+        let secondStepX = secondRepairStep.position.x
+        let firstLabelX = firstRepairLabel.position.x
+        let secondLabelX = secondRepairLabel.position.x
+
+        for index in repairEncounter.swapIndices {
+            let step = try XCTUnwrap(repairLab.childNode(withName: "repairStep\(index)"))
+            repairLab.handleTap(at: step.position)
+        }
+        let fixGear = try XCTUnwrap(repairLab.childNode(withName: "repairFix"))
+        repairLab.handleTap(at: fixGear.position)
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.debugSequence).evidence.last?.outcome,
+            .correct
+        )
+        XCTAssertEqual(firstRepairStep.position.x, secondStepX, accuracy: 0.001)
+        XCTAssertEqual(secondRepairStep.position.x, firstStepX, accuracy: 0.001)
+        XCTAssertEqual(firstRepairLabel.position.x, secondLabelX, accuracy: 0.001)
+        XCTAssertEqual(secondRepairLabel.position.x, firstLabelX, accuracy: 0.001)
+        repairLab.willLeave()
+
+        for family in PuzzlePalaceEncounterCatalog.bugRepairFamilies {
+            _ = state.recordPuzzle(
+                family[0],
+                outcome: .correct,
+                support: .independent,
+                attempts: 1,
+                responseTime: 1
+            )
+        }
+        XCTAssertTrue(state.puzzleBugRepairComplete)
+        state.travel(to: .bugLanternRepair)
+        let restoredRepairLab = PuzzlePalaceScene(state: state)
+        restoredRepairLab.reducedMotion = true
+        view.presentScene(restoredRepairLab)
+        XCTAssertNil(restoredRepairLab.childNode(withName: "repairFix"))
+        XCTAssertNil(restoredRepairLab.childNode(withName: "repairReset"))
+        XCTAssertNotNil(restoredRepairLab.childNode(withName: "repairHome"))
+        restoredRepairLab.willLeave()
+
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true
