@@ -2312,8 +2312,27 @@ import LearningCore
         attempts = 0
         support = .independent
         startedAt = Date()
-        mirrorAcceptingInput = true
         solved = false
+
+        // Practice leaves Valkyrie near the center wheel. Re-stage her before
+        // scored choices become active so her sprite can never cover mirror #1.
+        let needsRestaging = valkyrie.position.x > 390
+        mirrorAcceptingInput = !needsRestaging
+        if needsRestaging {
+            let actorTarget = CGPoint(x: 300, y: 175)
+            let tikoTarget = CGPoint(x: 405, y: 190)
+            if reducedMotion {
+                valkyrie.position = actorTarget
+                tiko.position = tikoTarget
+                mirrorAcceptingInput = true
+            } else {
+                valkyrie.walk(to: actorTarget) { [weak self] in
+                    self?.mirrorAcceptingInput = true
+                }
+                tiko.walk(to: tikoTarget) {}
+            }
+        }
+
         let source = tileShapeNode(rotationEncounter.source, tileSize: 28)
         source.position = CGPoint(x: 760, y: 535)
         source.zPosition = 610
