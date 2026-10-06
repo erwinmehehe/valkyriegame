@@ -106,33 +106,9 @@ import LearningCore
             addChild(steppingStone)
         }
 
-        for (x, y, scale) in [
-            (CGFloat(95), CGFloat(355), CGFloat(1.0)),
-            (CGFloat(190), CGFloat(455), CGFloat(0.78)),
-            (CGFloat(1080), CGFloat(410), CGFloat(0.88)),
-            (CGFloat(1185), CGFloat(500), CGFloat(0.68))
-        ] {
-            let trunk = ArtSystem.box(
-                CGSize(width: 38 * scale, height: 225 * scale),
-                color: UIColor(red: 0.24, green: 0.15, blue: 0.09, alpha: 0.84),
-                radius: 14
-            )
-            trunk.strokeColor = UIColor(red: 0.44, green: 0.29, blue: 0.14, alpha: 0.72)
-            trunk.lineWidth = 2
-            trunk.position = CGPoint(x: x, y: y)
-            trunk.zPosition = -70
-            addChild(trunk)
-
-            for offset in [CGFloat(-36), 0, 38] {
-                let leaf = SKShapeNode(ellipseOf: CGSize(width: 125 * scale, height: 82 * scale))
-                leaf.fillColor = UIColor(red: 0.11, green: 0.38, blue: 0.17, alpha: 0.78)
-                leaf.strokeColor = UIColor(red: 0.31, green: 0.61, blue: 0.28, alpha: 0.46)
-                leaf.lineWidth = 2
-                leaf.position = CGPoint(x: x + offset * scale, y: y + 120 * scale)
-                leaf.zPosition = -65
-                addChild(leaf)
-            }
-        }
+        // The high-resolution woodland crop already carries the grove canopy.
+        // Avoid synthetic ellipse trees here; they flatten the painted environment
+        // and compete with the actual habitat-learning objects.
 
         for (x, y) in [
             (CGFloat(385), CGFloat(520)),
