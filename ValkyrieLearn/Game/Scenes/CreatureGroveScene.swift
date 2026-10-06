@@ -42,60 +42,117 @@ import LearningCore
     }
 
     override func buildWorld() {
-        let sky = ArtSystem.box(
-            size,
-            color: UIColor(red: 0.48, green: 0.68, blue: 0.70, alpha: 1),
-            radius: 0
-        )
-        sky.strokeColor = .clear
-        sky.position = CGPoint(x: 640, y: 360)
-        sky.zPosition = -220
-        addChild(sky)
-
-        let grove = ArtSystem.box(
-            CGSize(width: 1280, height: 310),
-            color: UIColor(red: 0.17, green: 0.34, blue: 0.20, alpha: 1),
-            radius: 0
-        )
-        grove.strokeColor = .clear
-        grove.position = CGPoint(x: 640, y: 130)
-        grove.zPosition = -120
-        addChild(grove)
-
-        for (x, height) in [
-            (CGFloat(120), CGFloat(310)),
-            (CGFloat(245), CGFloat(360)),
-            (CGFloat(1000), CGFloat(345)),
-            (CGFloat(1160), CGFloat(320))
-        ] {
-            let trunk = ArtSystem.box(
-                CGSize(width: 34, height: height),
-                color: UIColor(red: 0.28, green: 0.20, blue: 0.12, alpha: 1),
-                radius: 12
+        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
+            // Reuse only the high-resolution woodland/story-hollow quadrant.
+            // The full source file is a multi-scene contact sheet.
+            let groveTexture = SKTexture(
+                rect: CGRect(x: 0, y: 0, width: 0.499, height: 0.498),
+                in: atlas
             )
-            trunk.position = CGPoint(x: x, y: 340)
-            trunk.zPosition = -80
-            addChild(trunk)
+            groveTexture.filteringMode = .linear
+            let backdrop = SKSpriteNode(
+                texture: groveTexture,
+                color: UIColor(red: 0.58, green: 0.82, blue: 0.58, alpha: 1),
+                size: size
+            )
+            backdrop.colorBlendFactor = 0.10
+            backdrop.position = CGPoint(x: 640, y: 360)
+            backdrop.zPosition = -300
+            backdrop.name = "creatureGroveBackdropHD"
+            addChild(backdrop)
 
-            let crown = SKShapeNode(ellipseOf: CGSize(width: 190, height: 125))
-            crown.fillColor = UIColor(red: 0.16, green: 0.43, blue: 0.22, alpha: 1)
-            crown.strokeColor = UIColor(red: 0.27, green: 0.56, blue: 0.29, alpha: 0.8)
-            crown.lineWidth = 4
-            crown.position = CGPoint(x: x, y: 535 + (height - 310) * 0.3)
-            crown.zPosition = -75
-            addChild(crown)
+            let shade = ArtSystem.box(
+                size,
+                color: UIColor(white: 0.02, alpha: 0.18),
+                radius: 0
+            )
+            shade.strokeColor = .clear
+            shade.position = CGPoint(x: 640, y: 360)
+            shade.zPosition = -299
+            addChild(shade)
         }
 
-        let path = ArtSystem.box(
-            CGSize(width: 1120, height: 120),
-            color: UIColor(red: 0.43, green: 0.37, blue: 0.25, alpha: 1),
-            radius: 50
+        let groveWash = ArtSystem.box(
+            CGSize(width: 1280, height: 285),
+            color: UIColor(red: 0.05, green: 0.18, blue: 0.09, alpha: 0.28),
+            radius: 0
+        )
+        groveWash.strokeColor = .clear
+        groveWash.position = CGPoint(x: 640, y: 130)
+        groveWash.zPosition = -145
+        addChild(groveWash)
+
+        let path = ArtSystem.panel(
+            CGSize(width: 1120, height: 126),
+            fill: UIColor(red: 0.27, green: 0.23, blue: 0.15, alpha: 0.88),
+            stroke: UIColor(red: 0.61, green: 0.56, blue: 0.36, alpha: 0.82),
+            radius: 54,
+            lineWidth: 4,
+            shadowAlpha: 0.34
         )
         path.position = CGPoint(x: 640, y: 185)
-        path.strokeColor = UIColor(red: 0.61, green: 0.55, blue: 0.39, alpha: 1)
-        path.lineWidth = 4
         path.zPosition = 25
+        path.name = "grovePath"
         addChild(path)
+
+        for x in stride(from: CGFloat(160), through: CGFloat(1110), by: CGFloat(135)) {
+            let steppingStone = SKShapeNode(ellipseOf: CGSize(width: 72, height: 22))
+            steppingStone.fillColor = UIColor(red: 0.43, green: 0.39, blue: 0.28, alpha: 0.62)
+            steppingStone.strokeColor = UIColor(red: 0.70, green: 0.65, blue: 0.44, alpha: 0.32)
+            steppingStone.lineWidth = 1.5
+            steppingStone.position = CGPoint(x: x, y: 205 + (Int(x) / 135 % 2 == 0 ? 7 : -4))
+            steppingStone.zPosition = 29
+            addChild(steppingStone)
+        }
+
+        for (x, y, scale) in [
+            (CGFloat(95), CGFloat(355), CGFloat(1.0)),
+            (CGFloat(190), CGFloat(455), CGFloat(0.78)),
+            (CGFloat(1080), CGFloat(410), CGFloat(0.88)),
+            (CGFloat(1185), CGFloat(500), CGFloat(0.68))
+        ] {
+            let trunk = ArtSystem.box(
+                CGSize(width: 38 * scale, height: 225 * scale),
+                color: UIColor(red: 0.24, green: 0.15, blue: 0.09, alpha: 0.84),
+                radius: 14
+            )
+            trunk.strokeColor = UIColor(red: 0.44, green: 0.29, blue: 0.14, alpha: 0.72)
+            trunk.lineWidth = 2
+            trunk.position = CGPoint(x: x, y: y)
+            trunk.zPosition = -70
+            addChild(trunk)
+
+            for offset in [CGFloat(-36), 0, 38] {
+                let leaf = SKShapeNode(ellipseOf: CGSize(width: 125 * scale, height: 82 * scale))
+                leaf.fillColor = UIColor(red: 0.11, green: 0.38, blue: 0.17, alpha: 0.78)
+                leaf.strokeColor = UIColor(red: 0.31, green: 0.61, blue: 0.28, alpha: 0.46)
+                leaf.lineWidth = 2
+                leaf.position = CGPoint(x: x + offset * scale, y: y + 120 * scale)
+                leaf.zPosition = -65
+                addChild(leaf)
+            }
+        }
+
+        for (x, y) in [
+            (CGFloat(385), CGFloat(520)),
+            (CGFloat(515), CGFloat(585)),
+            (CGFloat(875), CGFloat(530)),
+            (CGFloat(1010), CGFloat(575))
+        ] {
+            let firefly = SKShapeNode(circleOfRadius: 5)
+            firefly.fillColor = UIColor(red: 1.0, green: 0.88, blue: 0.34, alpha: 0.88)
+            firefly.strokeColor = .clear
+            firefly.glowWidth = reducedMotion ? 0 : 7
+            firefly.position = CGPoint(x: x, y: y)
+            firefly.zPosition = 80
+            addChild(firefly)
+            if !reducedMotion {
+                firefly.run(.repeatForever(.sequence([
+                    .moveBy(x: 8, y: 7, duration: 1.6),
+                    .moveBy(x: -8, y: -7, duration: 1.6)
+                ])))
+            }
+        }
 
         addDuckObservation()
         addHabitatChoices()
@@ -107,88 +164,143 @@ import LearningCore
     }
 
     private func addDuckObservation() {
-        let perch = ArtSystem.box(
-            CGSize(width: 170, height: 82),
-            color: UIColor(red: 0.34, green: 0.24, blue: 0.14, alpha: 1),
-            radius: 18
-        )
-        perch.position = CGPoint(x: duckPoint.x, y: duckPoint.y + 35)
-        perch.name = "scienceGroveDuck"
-        perch.zPosition = 500
-        addChild(perch)
+        let root = SKNode()
+        root.position = duckPoint
+        root.name = "scienceGroveDuck"
+        root.zPosition = 520
 
-        let duck = ArtSystem.label("🦆", size: 56)
-        duck.position.y = 18
+        let rock = SKShapeNode(ellipseOf: CGSize(width: 185, height: 78))
+        rock.fillColor = UIColor(red: 0.24, green: 0.20, blue: 0.14, alpha: 0.94)
+        rock.strokeColor = UIColor(red: 0.58, green: 0.51, blue: 0.33, alpha: 0.86)
+        rock.lineWidth = 3
+        rock.position.y = 22
+        rock.name = "scienceGroveDuck"
+        root.addChild(rock)
+
+        let waterHalo = SKShapeNode(ellipseOf: CGSize(width: 150, height: 34))
+        waterHalo.fillColor = UIColor(red: 0.18, green: 0.55, blue: 0.61, alpha: 0.25)
+        waterHalo.strokeColor = UIColor(red: 0.50, green: 0.82, blue: 0.78, alpha: 0.52)
+        waterHalo.lineWidth = 2
+        waterHalo.position.y = 1
+        waterHalo.name = "scienceGroveDuck"
+        root.addChild(waterHalo)
+
+        let duck = ArtSystem.label("🦆", size: 58)
+        duck.position = CGPoint(x: -18, y: 48)
         duck.name = "scienceGroveDuck"
-        perch.addChild(duck)
+        root.addChild(duck)
 
-        let needs = ArtSystem.label("water · food · cover", size: 15)
-        needs.position.y = -30
+        let needs = ArtSystem.plaque(
+            CGSize(width: 138, height: 30),
+            fill: UIColor(red: 0.07, green: 0.16, blue: 0.12, alpha: 0.88),
+            stroke: UIColor(red: 0.52, green: 0.72, blue: 0.47, alpha: 0.58),
+            radius: 14
+        )
+        needs.position = CGPoint(x: 34, y: -30)
         needs.name = "scienceGroveDuck"
-        perch.addChild(needs)
+        root.addChild(needs)
+
+        let needsLabel = ArtSystem.label("water · food · cover", size: 12)
+        needsLabel.fontColor = UIColor(red: 0.90, green: 0.96, blue: 0.82, alpha: 1)
+        needsLabel.name = "scienceGroveDuck"
+        needs.addChild(needsLabel)
+
+        addChild(root)
     }
 
     private func addHabitatChoices() {
-        let title = ArtSystem.label("Choose a habitat", size: 18)
-        title.position = CGPoint(x: habitatPoint.x, y: habitatPoint.y + 115)
+        let title = ArtSystem.plaque(
+            CGSize(width: 180, height: 34),
+            fill: UIColor(red: 0.06, green: 0.18, blue: 0.13, alpha: 0.88),
+            stroke: UIColor(red: 0.53, green: 0.75, blue: 0.48, alpha: 0.62),
+            radius: 16
+        )
+        title.position = CGPoint(x: habitatPoint.x, y: habitatPoint.y + 120)
         title.zPosition = 520
         addChild(title)
 
-        let pond = ArtSystem.box(
+        let titleLabel = ArtSystem.label("CHOOSE A HABITAT", size: 13)
+        titleLabel.fontColor = UIColor(red: 0.93, green: 0.98, blue: 0.86, alpha: 1)
+        title.addChild(titleLabel)
+
+        let pond = ArtSystem.panel(
             CGSize(width: 150, height: 92),
-            color: UIColor(red: 0.18, green: 0.45, blue: 0.44, alpha: 1),
-            radius: 18
+            fill: UIColor(red: 0.09, green: 0.34, blue: 0.33, alpha: 0.95),
+            stroke: UIColor(red: 0.55, green: 0.82, blue: 0.64, alpha: 0.94),
+            radius: 24,
+            lineWidth: 3,
+            shadowAlpha: 0.28
         )
         pond.position = CGPoint(x: habitatPoint.x - 82, y: habitatPoint.y + 35)
         pond.name = "scienceHabitatPond"
         pond.zPosition = 520
-        pond.strokeColor = UIColor(red: 0.55, green: 0.78, blue: 0.63, alpha: 1)
-        pond.lineWidth = 3
-        let pondLabel = ArtSystem.label("pond + reeds", size: 16)
+        let pondIcon = ArtSystem.label("≈  ♒", size: 26)
+        pondIcon.position.y = 18
+        pondIcon.fontColor = UIColor(red: 0.66, green: 0.94, blue: 0.83, alpha: 1)
+        pondIcon.name = "scienceHabitatPond"
+        pond.addChild(pondIcon)
+        let pondLabel = ArtSystem.label("pond + reeds", size: 14)
+        pondLabel.position.y = -23
         pondLabel.name = "scienceHabitatPond"
         pond.addChild(pondLabel)
         addChild(pond)
 
-        let ridge = ArtSystem.box(
+        let ridge = ArtSystem.panel(
             CGSize(width: 150, height: 92),
-            color: UIColor(red: 0.49, green: 0.38, blue: 0.25, alpha: 1),
-            radius: 18
+            fill: UIColor(red: 0.36, green: 0.26, blue: 0.16, alpha: 0.95),
+            stroke: UIColor(red: 0.76, green: 0.63, blue: 0.38, alpha: 0.92),
+            radius: 24,
+            lineWidth: 3,
+            shadowAlpha: 0.28
         )
         ridge.position = CGPoint(x: habitatPoint.x + 82, y: habitatPoint.y + 35)
         ridge.name = "scienceHabitatRidge"
         ridge.zPosition = 520
-        ridge.strokeColor = UIColor(red: 0.72, green: 0.62, blue: 0.43, alpha: 1)
-        ridge.lineWidth = 3
-        let ridgeLabel = ArtSystem.label("dry bare ridge", size: 16)
+        let ridgeIcon = ArtSystem.label("△  ·", size: 28)
+        ridgeIcon.position.y = 18
+        ridgeIcon.fontColor = UIColor(red: 0.94, green: 0.78, blue: 0.48, alpha: 1)
+        ridgeIcon.name = "scienceHabitatRidge"
+        ridge.addChild(ridgeIcon)
+        let ridgeLabel = ArtSystem.label("dry bare ridge", size: 14)
+        ridgeLabel.position.y = -23
         ridgeLabel.name = "scienceHabitatRidge"
         ridge.addChild(ridgeLabel)
         addChild(ridge)
     }
 
     private func addBodyPartStation() {
-        let station = ArtSystem.box(
-            CGSize(width: 178, height: 132),
-            color: UIColor(red: 0.28, green: 0.35, blue: 0.29, alpha: 1),
-            radius: 18
+        let station = ArtSystem.medallion(
+            radius: 64,
+            fill: UIColor(red: 0.08, green: 0.22, blue: 0.18, alpha: 0.96),
+            stroke: UIColor(red: 0.62, green: 0.82, blue: 0.52, alpha: 0.92),
+            glow: reducedMotion ? 0 : 3
         )
         station.position = CGPoint(x: feetPoint.x, y: feetPoint.y + 55)
         station.name = "scienceWebbedFeet"
         station.zPosition = 520
-        station.strokeColor = UIColor(red: 0.59, green: 0.75, blue: 0.49, alpha: 1)
-        station.lineWidth = 3
 
-        let title = ArtSystem.label("Milo Inspect", size: 17)
-        title.position.y = 40
+        let glass = SKShapeNode(circleOfRadius: 38)
+        glass.fillColor = UIColor(red: 0.35, green: 0.76, blue: 0.74, alpha: 0.14)
+        glass.strokeColor = UIColor(red: 0.78, green: 0.94, blue: 0.86, alpha: 0.62)
+        glass.lineWidth = 2
+        glass.position.y = 8
+        glass.name = "scienceWebbedFeet"
+        station.addChild(glass)
+
+        let icon = ArtSystem.label("🦆", size: 30)
+        icon.position.y = 10
+        icon.name = "scienceWebbedFeet"
+        station.addChild(icon)
+
+        let title = ArtSystem.label("WEBBED FEET", size: 13)
+        title.position.y = 48
+        title.fontColor = UIColor(red: 0.93, green: 0.98, blue: 0.84, alpha: 1)
         title.name = "scienceWebbedFeet"
         station.addChild(title)
 
-        let feet = ArtSystem.label("webbed feet", size: 18)
-        feet.position.y = 5
-        feet.name = "scienceWebbedFeet"
-        station.addChild(feet)
-
-        let motion = ArtSystem.label("push water", size: 15)
-        motion.position.y = -30
+        let motion = ArtSystem.label("push water", size: 12)
+        motion.position.y = -43
+        motion.fontColor = UIColor(red: 0.78, green: 0.90, blue: 0.78, alpha: 1)
         motion.name = "scienceWebbedFeet"
         station.addChild(motion)
 
@@ -196,39 +308,59 @@ import LearningCore
     }
 
     private func addHabitatComparison() {
-        let board = ArtSystem.box(
-            CGSize(width: 230, height: 150),
-            color: UIColor(red: 0.29, green: 0.24, blue: 0.16, alpha: 1),
-            radius: 16
+        let board = ArtSystem.panel(
+            CGSize(width: 235, height: 150),
+            fill: UIColor(red: 0.16, green: 0.14, blue: 0.09, alpha: 0.94),
+            stroke: UIColor(red: 0.67, green: 0.58, blue: 0.35, alpha: 0.88),
+            radius: 28,
+            lineWidth: 3,
+            shadowAlpha: 0.30
         )
         board.position = CGPoint(x: comparePoint.x, y: comparePoint.y + 62)
         board.name = "scienceCompareBoard"
         board.zPosition = 515
-        board.strokeColor = UIColor(red: 0.62, green: 0.51, blue: 0.34, alpha: 1)
-        board.lineWidth = 4
 
-        let title = ArtSystem.label("Which place meets more needs?", size: 14)
+        let title = ArtSystem.label("WHICH PLACE MEETS MORE NEEDS?", size: 12)
         title.position.y = 52
+        title.fontColor = UIColor(red: 1.0, green: 0.92, blue: 0.72, alpha: 1)
         board.addChild(title)
 
-        let sheltered = SKShapeNode(rectOf: CGSize(width: 90, height: 62), cornerRadius: 12)
-        sheltered.fillColor = UIColor(red: 0.17, green: 0.46, blue: 0.35, alpha: 1)
-        sheltered.strokeColor = UIColor(red: 0.55, green: 0.79, blue: 0.58, alpha: 1)
-        sheltered.lineWidth = 3
+        let sheltered = ArtSystem.panel(
+            CGSize(width: 92, height: 64),
+            fill: UIColor(red: 0.10, green: 0.39, blue: 0.28, alpha: 0.97),
+            stroke: UIColor(red: 0.58, green: 0.85, blue: 0.60, alpha: 0.92),
+            radius: 18,
+            lineWidth: 3,
+            shadowAlpha: 0.18
+        )
         sheltered.position = CGPoint(x: -55, y: -12)
         sheltered.name = "scienceCompareShelteredPond"
-        let shelteredLabel = ArtSystem.label("pond edge", size: 14)
+        let shelteredIcon = ArtSystem.label("≈", size: 25)
+        shelteredIcon.position.y = 12
+        shelteredIcon.name = "scienceCompareShelteredPond"
+        sheltered.addChild(shelteredIcon)
+        let shelteredLabel = ArtSystem.label("pond edge", size: 12)
+        shelteredLabel.position.y = -18
         shelteredLabel.name = "scienceCompareShelteredPond"
         sheltered.addChild(shelteredLabel)
         board.addChild(sheltered)
 
-        let exposed = SKShapeNode(rectOf: CGSize(width: 90, height: 62), cornerRadius: 12)
-        exposed.fillColor = UIColor(red: 0.45, green: 0.36, blue: 0.24, alpha: 1)
-        exposed.strokeColor = UIColor(red: 0.70, green: 0.60, blue: 0.42, alpha: 1)
-        exposed.lineWidth = 3
+        let exposed = ArtSystem.panel(
+            CGSize(width: 92, height: 64),
+            fill: UIColor(red: 0.39, green: 0.29, blue: 0.17, alpha: 0.97),
+            stroke: UIColor(red: 0.76, green: 0.63, blue: 0.40, alpha: 0.90),
+            radius: 18,
+            lineWidth: 3,
+            shadowAlpha: 0.18
+        )
         exposed.position = CGPoint(x: 55, y: -12)
         exposed.name = "scienceCompareExposedRidge"
-        let exposedLabel = ArtSystem.label("bare ridge", size: 14)
+        let exposedIcon = ArtSystem.label("△", size: 24)
+        exposedIcon.position.y = 12
+        exposedIcon.name = "scienceCompareExposedRidge"
+        exposed.addChild(exposedIcon)
+        let exposedLabel = ArtSystem.label("bare ridge", size: 12)
+        exposedLabel.position.y = -18
         exposedLabel.name = "scienceCompareExposedRidge"
         exposed.addChild(exposedLabel)
         board.addChild(exposed)
@@ -237,14 +369,22 @@ import LearningCore
     }
 
     private func addFinaleStone() {
-        let stone = SKShapeNode(circleOfRadius: 48)
+        let stone = ArtSystem.medallion(
+            radius: 48,
+            fill: UIColor(red: 0.12, green: 0.26, blue: 0.18, alpha: 0.96),
+            stroke: groveRestored
+                ? UIColor(red: 0.74, green: 0.94, blue: 0.56, alpha: 1)
+                : UIColor(red: 0.50, green: 0.68, blue: 0.48, alpha: 0.82),
+            glow: groveRestored && !reducedMotion ? 10 : 0
+        )
         stone.position = finalePoint
         stone.name = "scienceGroveFinale"
         stone.zPosition = 540
-        stone.fillColor = UIColor(red: 0.28, green: 0.38, blue: 0.31, alpha: 1)
-        stone.strokeColor = UIColor(red: 0.55, green: 0.70, blue: 0.50, alpha: 1)
-        stone.lineWidth = 4
-        let label = ArtSystem.label("✦", size: 34)
+
+        let label = ArtSystem.label(groveRestored ? "✦" : "◇", size: 34)
+        label.fontColor = groveRestored
+            ? UIColor(red: 1.0, green: 0.88, blue: 0.38, alpha: 1)
+            : UIColor(red: 0.80, green: 0.87, blue: 0.74, alpha: 0.82)
         label.name = "scienceGroveFinale"
         stone.addChild(label)
         addChild(stone)
@@ -253,30 +393,76 @@ import LearningCore
     private func renderPond() {
         pondNode.removeFromParent()
         pondNode = SKNode()
-        pondNode.position = CGPoint(x: 690, y: 395)
+        pondNode.position = CGPoint(x: 690, y: 400)
         pondNode.zPosition = 120
+
+        let bank = SKShapeNode(ellipseOf: CGSize(width: 575, height: 168))
+        bank.fillColor = UIColor(red: 0.20, green: 0.24, blue: 0.14, alpha: 0.78)
+        bank.strokeColor = UIColor(red: 0.44, green: 0.52, blue: 0.27, alpha: 0.72)
+        bank.lineWidth = 4
+        pondNode.addChild(bank)
 
         let water = SKShapeNode(ellipseOf: CGSize(width: 530, height: 135))
         water.fillColor = groveRestored
-            ? UIColor(red: 0.20, green: 0.60, blue: 0.62, alpha: 0.88)
-            : UIColor(red: 0.22, green: 0.43, blue: 0.43, alpha: 0.62)
+            ? UIColor(red: 0.16, green: 0.58, blue: 0.64, alpha: 0.90)
+            : UIColor(red: 0.16, green: 0.37, blue: 0.42, alpha: 0.72)
         water.strokeColor = groveRestored
-            ? UIColor(red: 0.58, green: 0.87, blue: 0.76, alpha: 1)
-            : UIColor(red: 0.36, green: 0.57, blue: 0.52, alpha: 0.8)
+            ? UIColor(red: 0.62, green: 0.91, blue: 0.82, alpha: 0.94)
+            : UIColor(red: 0.42, green: 0.65, blue: 0.61, alpha: 0.72)
         water.lineWidth = 4
+        water.position.y = 2
         pondNode.addChild(water)
 
-        if groveRestored {
-            for x in stride(from: CGFloat(-225), through: CGFloat(225), by: CGFloat(75)) {
+        let reflection = SKShapeNode(ellipseOf: CGSize(width: 380, height: 44))
+        reflection.fillColor = UIColor(red: 0.72, green: 0.93, blue: 0.91, alpha: groveRestored ? 0.14 : 0.08)
+        reflection.strokeColor = .clear
+        reflection.position = CGPoint(x: -40, y: 22)
+        pondNode.addChild(reflection)
+
+        for (x, y) in [
+            (CGFloat(-235), CGFloat(-32)),
+            (CGFloat(-185), CGFloat(54)),
+            (CGFloat(215), CGFloat(-24)),
+            (CGFloat(175), CGFloat(52))
+        ] {
+            let stone = SKShapeNode(ellipseOf: CGSize(width: 52, height: 26))
+            stone.fillColor = UIColor(red: 0.34, green: 0.34, blue: 0.25, alpha: 0.90)
+            stone.strokeColor = UIColor(red: 0.59, green: 0.58, blue: 0.42, alpha: 0.55)
+            stone.lineWidth = 2
+            stone.position = CGPoint(x: x, y: y)
+            pondNode.addChild(stone)
+        }
+
+        let reedColor = groveRestored
+            ? UIColor(red: 0.32, green: 0.70, blue: 0.29, alpha: 1)
+            : UIColor(red: 0.30, green: 0.47, blue: 0.26, alpha: 0.72)
+        for x in stride(from: CGFloat(-230), through: CGFloat(230), by: CGFloat(70)) {
+            for offset in [CGFloat(-6), 5] {
                 let reed = ArtSystem.box(
-                    CGSize(width: 7, height: 52 + abs(x.truncatingRemainder(dividingBy: 30))),
-                    color: UIColor(red: 0.31, green: 0.66, blue: 0.28, alpha: 1),
-                    radius: 3
+                    CGSize(width: 5, height: 42 + CGFloat(Int(abs(x + offset)) % 22)),
+                    color: reedColor,
+                    radius: 2
                 )
-                reed.position = CGPoint(x: x, y: 65)
+                reed.position = CGPoint(x: x + offset, y: 66)
+                reed.zRotation = offset < 0 ? -0.06 : 0.05
                 pondNode.addChild(reed)
             }
+        }
 
+        for (x, y) in [
+            (CGFloat(-120), CGFloat(5)),
+            (CGFloat(5), CGFloat(-18)),
+            (CGFloat(120), CGFloat(12))
+        ] {
+            let pad = SKShapeNode(ellipseOf: CGSize(width: 46, height: 21))
+            pad.fillColor = UIColor(red: 0.24, green: 0.58, blue: 0.28, alpha: groveRestored ? 0.90 : 0.58)
+            pad.strokeColor = UIColor(red: 0.48, green: 0.78, blue: 0.42, alpha: 0.66)
+            pad.lineWidth = 2
+            pad.position = CGPoint(x: x, y: y)
+            pondNode.addChild(pad)
+        }
+
+        if groveRestored {
             for (x, y) in [
                 (CGFloat(-150), CGFloat(20)),
                 (CGFloat(-30), CGFloat(-15)),
