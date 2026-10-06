@@ -42,16 +42,34 @@ import LearningCore
     }
 
     override func buildWorld() {
-        if let backdrop = ArtSystem.paintedBackdrop(
-            "WordGardenSourceAtlas",
-            size: size,
-            tint: UIColor(red: 0.58, green: 0.82, blue: 0.58, alpha: 1),
-            blend: 0.10,
-            dim: 0.18
-        ) {
+        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
+            // Reuse only the high-resolution woodland/story-hollow quadrant.
+            // The full source file is a multi-scene contact sheet.
+            let groveTexture = SKTexture(
+                rect: CGRect(x: 0, y: 0, width: 0.499, height: 0.498),
+                in: atlas
+            )
+            groveTexture.filteringMode = .linear
+            let backdrop = SKSpriteNode(
+                texture: groveTexture,
+                color: UIColor(red: 0.58, green: 0.82, blue: 0.58, alpha: 1),
+                size: size
+            )
+            backdrop.colorBlendFactor = 0.10
+            backdrop.position = CGPoint(x: 640, y: 360)
             backdrop.zPosition = -300
             backdrop.name = "creatureGroveBackdropHD"
             addChild(backdrop)
+
+            let shade = ArtSystem.box(
+                size,
+                color: UIColor(white: 0.02, alpha: 0.18),
+                radius: 0
+            )
+            shade.strokeColor = .clear
+            shade.position = CGPoint(x: 640, y: 360)
+            shade.zPosition = -299
+            addChild(shade)
         }
 
         let groveWash = ArtSystem.box(
