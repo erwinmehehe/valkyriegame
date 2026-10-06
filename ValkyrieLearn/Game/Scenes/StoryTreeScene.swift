@@ -69,56 +69,44 @@ import SpriteKit
     override func buildWorld() {
         super.buildWorld()
 
-        let gardenSign = hotspot(
-            "← Word Garden",
+        // World entrances are environmental beacons, not generic navigation buttons.
+        // Keep them visually offset from the painted travel route so Valkyrie never
+        // stands on top of a label while approaching a destination.
+        _ = destinationMarker(
+            "Word Garden",
+            symbol: "✿",
             name: "wordGarden",
-            at: CGPoint(x: 205, y: 165),
-            size: CGSize(width: 210, height: 56)
+            at: CGPoint(x: 150, y: 430),
+            tint: UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 1),
+            width: 150
         )
-        gardenSign.zPosition = 820
 
-        let puzzleSign = hotspot(
-            "Puzzle Palace ◈",
+        _ = destinationMarker(
+            "Puzzle Palace",
+            symbol: "◈",
             name: "puzzlePalace",
-            at: CGPoint(x: 580, y: 450),
-            size: CGSize(width: 205, height: 52)
+            at: CGPoint(x: 505, y: 515),
+            tint: UIColor(red: 0.62, green: 0.50, blue: 0.94, alpha: 1),
+            width: 168
         )
-        puzzleSign.zPosition = 530
 
-        let sign = hotspot(
-            "Math Castle →",
+        _ = destinationMarker(
+            "Math Castle",
+            symbol: "◆",
             name: "castle",
-            at: CGPoint(x: 795, y: 445),
-            size: CGSize(width: 210, height: 56)
+            at: CGPoint(x: 835, y: 535),
+            tint: UIColor(red: 0.95, green: 0.70, blue: 0.28, alpha: 1),
+            width: 160
         )
-        // Arrival feet are at y = 450 (actor depth 550); keep the sign behind them.
-        sign.zPosition = 540
-        let post = ArtSystem.box(
-            CGSize(width: 15, height: 95),
-            color: .init(red: 0.39, green: 0.24, blue: 0.12, alpha: 1),
-            radius: 3
-        )
-        post.position.y = -64
-        post.zPosition = -1
-        sign.addChild(post)
 
-        let scienceSign = hotspot(
-            state.scienceAdventure.groveRestored ? "Science Lab ✦" : "Science Lab →",
+        _ = destinationMarker(
+            state.scienceAdventure.groveRestored ? "Science Lab ✦" : "Science Lab",
+            symbol: "⚗",
             name: "scienceLab",
-            at: CGPoint(x: 580, y: 515),
-            size: CGSize(width: 205, height: 54)
+            at: CGPoint(x: 705, y: 585),
+            tint: UIColor(red: 0.42, green: 0.82, blue: 0.61, alpha: 1),
+            width: 164
         )
-        // Keep the Science Lab sign below Puzzle Palace where the signpost overlaps its tap area.
-        // The Science label itself remains tappable at (580, 515), while Puzzle Palace wins at (580, 450).
-        scienceSign.zPosition = 520
-        let sciencePost = ArtSystem.box(
-            CGSize(width: 14, height: 88),
-            color: .init(red: 0.24, green: 0.39, blue: 0.25, alpha: 1),
-            radius: 3
-        )
-        sciencePost.position.y = -60
-        sciencePost.zPosition = -1
-        scienceSign.addChild(sciencePost)
 
         _ = worldGear("✦", name: "pipWind", at: CGPoint(x: 315, y: 260), radius: 34)
 
@@ -143,14 +131,19 @@ import SpriteKit
         renderWordGardenLantern()
 
         if state.hasStoryReward(.moonLantern) && state.hasStoryReward(.wordGardenLantern) {
-            instruction.text = "Two earned lights are growing on the Story Tree. Science Lab is open too."
+            instruction.text = "Your lanterns are glowing. Choose where Valkyrie explores next."
         } else if state.hasStoryReward(.wordGardenLantern) {
-            instruction.text = "Word Garden sent home a Flower Lantern. Science Lab is open too."
+            instruction.text = "The Flower Lantern is home. Choose the next adventure."
         } else if state.hasStoryReward(.moonLantern) {
-            instruction.text = "The Story Tree grew a Moon Lantern. Science Lab is open too."
+            instruction.text = "The Moon Lantern is home. Choose the next adventure."
         } else {
-            instruction.text = "The Story Tree is waiting for its starlight. Math Castle, Word Garden, and Science Lab are ready to explore."
+            instruction.text = "The Story Tree needs starlight. Choose a world to explore."
         }
+
+        // Story Tree movement is constrained to an authored painted route. The
+        // destination beacons deliberately sit above that route, so generic
+        // interaction avoidance must not push Valkyrie into the surrounding chasm.
+        clearRegisteredInteractionZones()
     }
 
     private func renderMoonLantern() {
@@ -351,38 +344,42 @@ import SpriteKit
     func handleTap(at point: CGPoint) {
         switch targetName(at: point) {
         case "wordGarden":
+            selectionFeedback()
             let destination = CGPoint(x: 190, y: 170)
             if isNear(destination) {
                 state.travel(to: .wordGarden)
             } else {
-                instruction.text = "Walk back to the garden path, then tap the sign to enter."
+                instruction.text = "Follow the path to the garden light."
                 travel(to: destination)
             }
 
         case "castle":
+            selectionFeedback()
             let destination = CGPoint(x: 795, y: 450)
             if isNear(destination) {
                 state.travel(to: .mathCastle)
             } else {
-                instruction.text = "Walk to the castle sign, then tap it to enter."
+                instruction.text = "Follow the bridge toward the castle light."
                 travel(to: destination)
             }
 
         case "scienceLab":
+            selectionFeedback()
             let destination = CGPoint(x: 580, y: 450)
             if isNear(destination) {
                 state.enterScienceLab()
             } else {
-                instruction.text = "Walk to the Science Lab sign, then tap it to enter the Greenhouse."
+                instruction.text = "Follow the upper path toward Milo's green light."
                 travel(to: destination)
             }
 
         case "puzzlePalace":
+            selectionFeedback()
             let destination = CGPoint(x: 580, y: 450)
             if isNear(destination) {
                 state.travel(to: .puzzlePalace)
             } else {
-                instruction.text = "Follow the upper path to Tiko's palace sign."
+                instruction.text = "Follow the upper path toward Tiko's violet light."
                 travel(to: destination)
             }
 
@@ -402,6 +399,7 @@ import SpriteKit
             }
 
         case "moonLantern":
+            selectionFeedback()
             guard state.hasStoryReward(.moonLantern) else { return }
             _ = state.cycleStoryRewardPlacement(
                 .moonLantern,
@@ -413,6 +411,7 @@ import SpriteKit
             instruction.text = "The Moon Lantern found a new branch."
 
         case "wordGardenLantern":
+            selectionFeedback()
             guard state.hasStoryReward(.wordGardenLantern) else { return }
             _ = state.cycleStoryRewardPlacement(
                 .wordGardenLantern,

@@ -10,10 +10,10 @@ import LearningCore
         let scene = StoryTreeScene(state: state)
         scene.didMove(to: SKView())
 
-        XCTAssertEqual(scene.targetName(at: CGPoint(x: 580, y: 515)), "scienceLab")
+        XCTAssertEqual(scene.targetName(at: CGPoint(x: 705, y: 585)), "scienceLab")
 
         scene.valkyrie.position = CGPoint(x: 580, y: 450)
-        scene.handleTap(at: CGPoint(x: 580, y: 515))
+        scene.handleTap(at: CGPoint(x: 705, y: 585))
 
         XCTAssertEqual(state.world, .scienceLab)
         scene.willLeave()

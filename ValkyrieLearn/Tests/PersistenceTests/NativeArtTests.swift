@@ -5,6 +5,17 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeArtTests: XCTestCase {
+    private func waitUntil(
+        timeout: TimeInterval = 2,
+        _ condition: @escaping () -> Bool
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            try await Task.sleep(nanoseconds: 25_000_000)
+        }
+        XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
+    }
+
     func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
@@ -19,6 +30,27 @@ import LearningCore
         let gateFrame = gate.calculateAccumulatedFrame()
         for flower in scene.children where flower.name == "flowerChoice" {
             XCTAssertFalse(gateFrame.intersects(flower.calculateAccumulatedFrame()))
+        }
+    }
+
+    func testGlobalPolishLayoutKeepsHUDOutOfTheLearningStage() throws {
+        let layout = AdventureSceneLayout(size: CGSize(width: 1280, height: 720))
+        XCTAssertFalse(layout.topHUD.intersects(layout.interactionStage))
+        XCTAssertFalse(layout.instructionZone.intersects(layout.interactionStage))
+        XCTAssertGreaterThanOrEqual(layout.actorLane.height, 120)
+
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = StoryTreeScene(state: state)
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        for name in ["wordGarden", "puzzlePalace", "castle", "scienceLab"] {
+            let node = try XCTUnwrap(scene.childNode(withName: name))
+            let frame = node.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 60, "\(name) touch target is too narrow.")
+            XCTAssertGreaterThanOrEqual(frame.height, 60, "\(name) touch target is too short.")
+            XCTAssertTrue(node.isAccessibilityElement, "\(name) must expose an accessibility label.")
+            XCTAssertFalse((node.accessibilityLabel ?? "").isEmpty)
         }
     }
 
@@ -86,7 +118,7 @@ import LearningCore
             window.isHidden = true
         }
         scene.update(0) // Exercise real actor depth, not the initial z = 0 state.
-        XCTAssertEqual(scene.targetName(at: CGPoint(x: 390, y: 605)), "wind")
+        XCTAssertEqual(scene.targetName(at: CGPoint(x: 300, y: 615)), "wind")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 52, y: 669)), "home")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 595, y: 235)), "supply")
         XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == false) // Free workshop exit.
@@ -147,15 +179,15 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 1000, y: 200))
         XCTAssertNil(scene.valkyrie.action(forKey: "travel"))
         XCTAssertTrue(scene.isOnPath(CGPoint(x: 285, y: 235)))
-        scene.handleTap(at: CGPoint(x: 795, y: 445))
+        scene.handleTap(at: CGPoint(x: 835, y: 535))
         XCTAssertNotNil(scene.valkyrie.action(forKey: "travel"))
         XCTAssertEqual(state.world, .storyTree)
         scene.valkyrie.cancelTravel(); scene.pip.cancelTravel()
         scene.valkyrie.position = CGPoint(x: 795, y: 450)
         scene.update(0)
-        let sign = try XCTUnwrap(scene.childNode(withName: "castle"))
-        XCTAssertLessThan(sign.zPosition, scene.valkyrie.zPosition)
-        scene.handleTap(at: CGPoint(x: 795, y: 445))
+        let landmark = try XCTUnwrap(scene.childNode(withName: "castle"))
+        XCTAssertFalse(landmark is SKShapeNode, "Story Tree destinations should be landmark assemblies, not generic button boxes.")
+        scene.handleTap(at: CGPoint(x: 835, y: 535))
         XCTAssertEqual(state.world, .mathCastle)
         scene.willLeave()
     }
@@ -167,7 +199,7 @@ import LearningCore
         let story = StoryTreeScene(state: state)
         story.didMove(to: SKView())
         story.valkyrie.position = CGPoint(x: 190, y: 170)
-        story.handleTap(at: CGPoint(x: 205, y: 165))
+        story.handleTap(at: CGPoint(x: 150, y: 430))
         XCTAssertEqual(state.world, .wordGarden)
         story.willLeave()
 
@@ -303,7 +335,7 @@ import LearningCore
         story.didMove(to: SKView())
         XCTAssertNotNil(story.childNode(withName: "puzzlePalace"))
         story.valkyrie.position = CGPoint(x: 580, y: 450)
-        story.handleTap(at: CGPoint(x: 580, y: 450))
+        story.handleTap(at: CGPoint(x: 505, y: 515))
         XCTAssertEqual(state.world, .puzzlePalace)
         story.willLeave()
 
@@ -812,6 +844,9 @@ import LearningCore
         )
         scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
         scene.handleTap(at: choice.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count == 1
+        }
 
         let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
         XCTAssertEqual(evidence.count, 1)
@@ -951,11 +986,20 @@ import LearningCore
         let wrong = try XCTUnwrap(options.first { ($0.userData?["choiceIndex"] as? Int) != correctIndex })
         scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
         scene.handleTap(at: wrong.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 1
+        }
         scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
         scene.handleTap(at: wrong.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 2
+        }
         let correct = try XCTUnwrap(options.first { ($0.userData?["choiceIndex"] as? Int) == correctIndex })
         scene.valkyrie.position = CGPoint(x: correct.position.x - 180, y: 175)
         scene.handleTap(at: correct.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 3
+        }
         let evidence = state.profile.progress(for: PuzzleSkills.mentalRotation).evidence
         XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .incorrect, .correct])
         XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint, .demonstration])
@@ -1000,8 +1044,12 @@ import LearningCore
             let choice = try XCTUnwrap(scene.children.compactMap { $0 as? SKShapeNode }.first {
                 $0.name == "mirrorRotationChoice" && ($0.userData?["choiceIndex"] as? Int) == correctIndex
             })
+            let evidenceCount = state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count
             scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
             scene.handleTap(at: choice.position)
+            try await waitUntil {
+                state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == evidenceCount + 1
+            }
             scene.willLeave()
         }
         XCTAssertTrue(state.puzzleMirrorRotationComplete)
@@ -1027,7 +1075,7 @@ import LearningCore
         let home = StoryTreeScene(state: state); home.reducedMotion = true
         view.presentScene(home)
         try await capture(home, in: view, name: "Story-Tree-native")
-        home.handleTap(at: CGPoint(x: 795, y: 445))
+        home.handleTap(at: CGPoint(x: 835, y: 535))
         // Exercise the painted waypoint route before the arrival capture.
         try await Task.sleep(nanoseconds: 3_000_000_000)
         XCTAssertTrue(home.isNear(CGPoint(x: 795, y: 450)))
@@ -1363,12 +1411,19 @@ import LearningCore
             name: "Puzzle-Palace-native-mirror-hall"
         )
         XCTAssertTrue(state.puzzleMirrorHallAvailable)
-        XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallChamber"))
+        XCTAssertNil(mirrorHall.childNode(withName: "mirrorHallChamber"),
+                     "Mirror Hall should reveal the palace artwork instead of covering it with a modal panel.")
+        XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallRail"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorBeacon"))
-        XCTAssertEqual(
-            mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }.count,
-            3
-        )
+        let orientationChoices = mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }
+        XCTAssertEqual(orientationChoices.count, 3)
+        let actorFrame = mirrorHall.valkyrie.calculateAccumulatedFrame().insetBy(dx: 8, dy: 8)
+        for choice in orientationChoices {
+            XCTAssertFalse(
+                actorFrame.intersects(choice.calculateAccumulatedFrame()),
+                "Valkyrie must never obscure a scored mirror choice."
+            )
+        }
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.mentalRotation).state,
             .new
@@ -1385,7 +1440,17 @@ import LearningCore
         try await capture(rotationHall, in: view, name: "Puzzle-Palace-native-turn-practice")
         try finishMirrorPracticeIfNeeded(rotationHall)
         try await capture(rotationHall, in: view, name: "Puzzle-Palace-native-mental-rotation")
-        XCTAssertEqual(rotationHall.children.filter { $0.name == "mirrorRotationChoice" }.count, 3)
+        let rotationChoices = rotationHall.children.filter { $0.name == "mirrorRotationChoice" }
+        XCTAssertEqual(rotationChoices.count, 3)
+        let rotationActorFrame = rotationHall.valkyrie.calculateAccumulatedFrame().insetBy(dx: 8, dy: 8)
+        for choice in rotationChoices {
+            XCTAssertFalse(
+                rotationActorFrame.intersects(choice.calculateAccumulatedFrame()),
+                "Mental rotation answers must remain visually unobstructed."
+            )
+        }
+        XCTAssertNil(rotationHall.childNode(withName: "rotationQuarterMark0"),
+                     "The independent task should use one turn cue, not redundant quarter-dot UI.")
         rotationHall.willLeave()
 
         for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
@@ -1617,6 +1682,63 @@ import LearningCore
         let beacon = try XCTUnwrap(scene.childNode(withName: "routeDestinationBeacon") as? SKShapeNode)
         XCTAssertEqual(beacon.glowWidth, 0)
         scene.willLeave()
+    }
+
+
+    func testLandscapeIPadAspectFitKeepsTheDesignCanvasFullyVisible() {
+        let layout = AdventureSceneLayout(size: CGSize(width: 1280, height: 720))
+        let landscapeSurfaces = [
+            CGSize(width: 1024, height: 768),   // classic 4:3 iPad
+            CGSize(width: 1180, height: 820),   // modern 10.9-inch class
+            CGSize(width: 1366, height: 1024),  // large 4:3 class
+            CGSize(width: 1280, height: 720)    // screenshot/reference surface
+        ]
+
+        for surface in landscapeSurfaces {
+            let frame = layout.fittedFrame(in: surface)
+            XCTAssertGreaterThan(frame.width, 0)
+            XCTAssertGreaterThan(frame.height, 0)
+            XCTAssertGreaterThanOrEqual(frame.minX, -0.001)
+            XCTAssertGreaterThanOrEqual(frame.minY, -0.001)
+            XCTAssertLessThanOrEqual(frame.maxX, surface.width + 0.001)
+            XCTAssertLessThanOrEqual(frame.maxY, surface.height + 0.001)
+            XCTAssertEqual(frame.width / frame.height, 1280.0 / 720.0, accuracy: 0.001)
+        }
+    }
+
+    func testReducedMotionSuppressesDecorativeEntranceAndLandmarkPulsing() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        XCTAssertFalse(scene.valkyrie.hasActions())
+        XCTAssertFalse(scene.pip.hasActions())
+        let castle = try XCTUnwrap(scene.childNode(withName: "castle"))
+        let halo = try XCTUnwrap(castle.children.compactMap { $0 as? SKShapeNode }.first)
+        XCTAssertFalse(halo.hasActions(), "Reduced motion must disable landmark pulsing.")
+    }
+
+    func testSharedHUDAndPromptTextStayInsideSafeDesignBounds() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+        let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+        XCTAssertTrue(CGRect(origin: .zero, size: scene.size).contains(title.position))
+        XCTAssertTrue(CGRect(origin: .zero, size: scene.size).contains(feedback.position))
+        XCTAssertLessThanOrEqual(feedback.preferredMaxLayoutWidth, scene.layout.instructionZone.width)
+
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 830, y: 265))
+        let prompt = try XCTUnwrap(scene.childNode(withName: "questionPrompt") as? SKLabelNode)
+        XCTAssertEqual(prompt.numberOfLines, 2)
+        XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 440)
     }
 
 }
