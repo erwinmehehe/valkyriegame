@@ -772,12 +772,9 @@ import LearningCore
     private func showMemoryBridgeRoute() {
         guard state.puzzleMemoryBridgeAvailable,
               childNode(withName: "memoryBridgeRoute") == nil else { return }
-        let route = hotspot(
-            "Memory Bridge →",
-            name: "memoryBridgeRoute",
-            at: CGPoint(x: 1005, y: 165),
-            size: CGSize(width: 205, height: 58)
-        )
+        let route = worldGear("✦", name: "memoryBridgeRoute",
+                              at: CGPoint(x: 1010, y: 175), radius: 34,
+                              accessibilityLabel: "Continue to Memory Bridge")
         route.zPosition = 830
     }
 
@@ -785,12 +782,9 @@ import LearningCore
     private func showStopGoRoute() {
         guard state.puzzleStopGoAvailable,
               childNode(withName: "stopGoRoute") == nil else { return }
-        let route = hotspot(
-            "Stop/Go Orbs →",
-            name: "stopGoRoute",
-            at: CGPoint(x: 1000, y: 165),
-            size: CGSize(width: 205, height: 58)
-        )
+        let route = worldGear("✦", name: "stopGoRoute",
+                              at: CGPoint(x: 1010, y: 175), radius: 34,
+                              accessibilityLabel: "Continue to Stop Go Orbs")
         route.zPosition = 835
     }
 
@@ -861,12 +855,9 @@ import LearningCore
             addChild(light)
         }
 
-        let back = hotspot(
-            "← Memory Bridge",
-            name: "memoryBridgeBack",
-            at: CGPoint(x: 1090, y: 665),
-            size: CGSize(width: 210, height: 52)
-        )
+        let back = worldControl("‹", name: "memoryBridgeBack",
+                                at: CGPoint(x: 1180, y: 665), radius: 30,
+                                accessibilityLabel: "Back to Memory Bridge")
         back.zPosition = 2050
     }
 
@@ -1118,12 +1109,9 @@ import LearningCore
     private func showSortingPedestalRoute() {
         guard state.puzzleSortingAvailable,
               childNode(withName: "sortingPedestalRoute") == nil else { return }
-        let route = hotspot(
-            "Sorting Pedestal →",
-            name: "sortingPedestalRoute",
-            at: CGPoint(x: 1000, y: 165),
-            size: CGSize(width: 225, height: 58)
-        )
+        let route = worldGear("✦", name: "sortingPedestalRoute",
+                              at: CGPoint(x: 1010, y: 175), radius: 34,
+                              accessibilityLabel: "Continue to Sorting Pedestal")
         route.zPosition = 840
     }
 
@@ -1192,12 +1180,9 @@ import LearningCore
             addChild(light)
         }
 
-        let back = hotspot(
-            "← Stop/Go Orbs",
-            name: "stopGoBack",
-            at: CGPoint(x: 1090, y: 665),
-            size: CGSize(width: 205, height: 52)
-        )
+        let back = worldControl("‹", name: "stopGoBack",
+                                at: CGPoint(x: 1180, y: 665), radius: 30,
+                                accessibilityLabel: "Back to Stop Go Orbs")
         back.zPosition = 2050
     }
 
@@ -1517,12 +1502,9 @@ import LearningCore
     private func showResortVaultRoute() {
         guard state.puzzleResortAvailable,
               childNode(withName: "resortVaultRoute") == nil else { return }
-        let route = hotspot(
-            "Re-sort Vault →",
-            name: "resortVaultRoute",
-            at: CGPoint(x: 1000, y: 165),
-            size: CGSize(width: 205, height: 58)
-        )
+        let route = worldGear("✦", name: "resortVaultRoute",
+                              at: CGPoint(x: 1010, y: 175), radius: 34,
+                              accessibilityLabel: "Continue to Re-sort Vault")
         route.zPosition = 845
     }
 
@@ -1580,12 +1562,9 @@ import LearningCore
             addChild(light)
         }
 
-        let back = hotspot(
-            "← Sorting Pedestal",
-            name: "sortingBack",
-            at: CGPoint(x: 1080, y: 665),
-            size: CGSize(width: 220, height: 52)
-        )
+        let back = worldControl("‹", name: "sortingBack",
+                                at: CGPoint(x: 1180, y: 665), radius: 30,
+                                accessibilityLabel: "Back to Sorting Pedestal")
         back.zPosition = 2050
     }
 
@@ -1859,12 +1838,9 @@ import LearningCore
     private func showMirrorHallRoute() {
         guard state.puzzleMirrorHallAvailable,
               childNode(withName: "mirrorHallRoute") == nil else { return }
-        let route = hotspot(
-            "Mirror Hall →",
-            name: "mirrorHallRoute",
-            at: CGPoint(x: 1000, y: 165),
-            size: CGSize(width: 190, height: 58)
-        )
+        let route = worldGear("✦", name: "mirrorHallRoute",
+                              at: CGPoint(x: 1010, y: 175), radius: 34,
+                              accessibilityLabel: "Continue to Mirror Hall")
         route.zPosition = 845
     }
 
@@ -2454,8 +2430,9 @@ import LearningCore
             addChild(light)
         }
 
-        let back = hotspot("← Mirror Hall", name: "mirrorHallBack", at: CGPoint(x: 170, y: 665),
-                           size: CGSize(width: 180, height: 52))
+        let back = worldControl("‹", name: "mirrorHallBack",
+                                at: CGPoint(x: 1180, y: 665), radius: 30,
+                                accessibilityLabel: "Back to Mirror Hall")
         back.zPosition = 2050
     }
 
@@ -2581,9 +2558,9 @@ import LearningCore
                 } else {
                     self.instruction.text = "That plan worked. Tap the next tile map."
                     if self.childNode(withName: "pathNext") == nil {
-                        let next = self.hotspot("→", name: "pathNext",
-                                                at: CGPoint(x: 1160, y: 95),
-                                                size: CGSize(width: 105, height: 58))
+                        let next = self.worldGear("✦", name: "pathNext",
+                                                 at: CGPoint(x: 1160, y: 145), radius: 34,
+                                                 accessibilityLabel: "Next path map")
                         next.zPosition = 1500
                     }
                 }
@@ -2612,9 +2589,9 @@ import LearningCore
             title.text = "PATH PLANNING RESTORED"
         }
         if childNode(withName: "pathTilesHome") == nil {
-            let home = hotspot("⌂ Story Tree", name: "pathTilesHome",
-                               at: CGPoint(x: 1085, y: 180),
-                               size: CGSize(width: 220, height: 62))
+            let home = worldControl("⌂", name: "pathTilesHome",
+                                    at: CGPoint(x: 1120, y: 175), radius: 31,
+                                    accessibilityLabel: "Return to Story Tree")
             home.zPosition = 1500
         }
         instruction.text = "Tiko can see a safe route before moving. The next chamber can build on this planning skill."
