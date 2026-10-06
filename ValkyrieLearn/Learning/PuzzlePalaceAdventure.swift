@@ -571,6 +571,54 @@ public struct PuzzleSequenceEncounter: Identifiable, Equatable, Sendable {
     }
 }
 
+public struct PuzzleBugEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let prompt: String
+    public let intended: [PuzzleCommandStep]
+    public let shown: [PuzzleCommandStep]
+    public let brokenIndex: Int
+    public let transferContext: Bool
+    public let skillID = PuzzleSkills.debugSingleStep
+    public let mechanicID = PuzzlePalaceMechanicID.bugLantern
+    public let representation = Representation.pictorial
+
+    public init(
+        id: String,
+        prompt: String,
+        intended: [PuzzleCommandStep],
+        shown: [PuzzleCommandStep],
+        brokenIndex: Int,
+        transferContext: Bool = false
+    ) {
+        precondition(intended.count == 3 && shown.count == 3)
+        precondition(shown.indices.contains(brokenIndex))
+        precondition(intended.indices.contains(brokenIndex))
+        precondition(intended.enumerated().allSatisfy { index, step in
+            index == brokenIndex ? shown[index] != step : shown[index] == step
+        })
+        self.id = id
+        self.prompt = prompt
+        self.intended = intended
+        self.shown = shown
+        self.brokenIndex = brokenIndex
+        self.transferContext = transferContext
+    }
+
+    public func isBrokenStep(_ index: Int) -> Bool {
+        index == brokenIndex
+    }
+
+    public var fingerprint: String {
+        [
+            mechanicID,
+            skillID.rawValue,
+            intended.map(\.id).joined(separator: ","),
+            shown.map(\.id).joined(separator: ","),
+            String(brokenIndex)
+        ].joined(separator: "|")
+    }
+}
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -955,6 +1003,77 @@ public enum PuzzlePalaceEncounterCatalog {
         ]
     }()
 
+
+    public static let bugLanternFamilies: [[PuzzleBugEncounter]] = {
+        let takeKey = PuzzleCommandStep(id: "takeKey", glyph: "◆", title: "TAKE KEY")
+        let unlock = PuzzleCommandStep(id: "unlock", glyph: "◇", title: "UNLOCK")
+        let crossDoor = PuzzleCommandStep(id: "crossDoor", glyph: "→", title: "GO THROUGH")
+        let turnGear = PuzzleCommandStep(id: "turnGear", glyph: "↻", title: "TURN GEAR")
+
+        let placeCrystal = PuzzleCommandStep(id: "placeCrystal", glyph: "✦", title: "PLACE CRYSTAL")
+        let openDoor = PuzzleCommandStep(id: "openDoor", glyph: "▱", title: "OPEN DOOR")
+        let raiseBridge = PuzzleCommandStep(id: "raiseBridge", glyph: "↑", title: "RAISE BRIDGE")
+
+        let lowerBridge = PuzzleCommandStep(id: "lowerBridge", glyph: "↓", title: "LOWER BRIDGE")
+        let crossBridge = PuzzleCommandStep(id: "crossBridge", glyph: "→", title: "CROSS")
+
+        return [
+            [
+                .init(
+                    id: "puzzle.bugLantern.keyGateA",
+                    prompt: "The lantern found one broken command. Tap the step that stops Tiko from getting through the gate.",
+                    intended: [takeKey, unlock, crossDoor],
+                    shown: [takeKey, turnGear, crossDoor],
+                    brokenIndex: 1
+                ),
+                .init(
+                    id: "puzzle.bugLantern.keyGateB",
+                    prompt: "One command does not belong in this gate plan. Find the broken step.",
+                    intended: [takeKey, unlock, crossDoor],
+                    shown: [raiseBridge, unlock, crossDoor],
+                    brokenIndex: 0,
+                    transferContext: true
+                )
+            ],
+            [
+                .init(
+                    id: "puzzle.bugLantern.crystalDoorA",
+                    prompt: "The crystal door plan has one bug. Which command prevents the useful sequence?",
+                    intended: [placeCrystal, turnGear, openDoor],
+                    shown: [placeCrystal, turnGear, crossDoor],
+                    brokenIndex: 2,
+                    transferContext: true
+                ),
+                .init(
+                    id: "puzzle.bugLantern.crystalDoorB",
+                    prompt: "The lantern is flickering at one bad command. Tap the broken step.",
+                    intended: [placeCrystal, turnGear, openDoor],
+                    shown: [placeCrystal, lowerBridge, openDoor],
+                    brokenIndex: 1,
+                    transferContext: true
+                )
+            ],
+            [
+                .init(
+                    id: "puzzle.bugLantern.bridgeA",
+                    prompt: "Tiko's bridge plan has exactly one broken command. Find it before he runs the plan.",
+                    intended: [lowerBridge, crossBridge, raiseBridge],
+                    shown: [lowerBridge, crossBridge, openDoor],
+                    brokenIndex: 2,
+                    transferContext: true
+                ),
+                .init(
+                    id: "puzzle.bugLantern.bridgeB",
+                    prompt: "One step makes this bridge plan fail. Which command is the bug?",
+                    intended: [lowerBridge, crossBridge, raiseBridge],
+                    shown: [unlock, crossBridge, raiseBridge],
+                    brokenIndex: 0,
+                    transferContext: true
+                )
+            ]
+        ]
+    }()
+
 }
 
 public enum PuzzlePalaceDirector {
@@ -1264,9 +1383,10 @@ public enum PuzzlePalaceDirector {
 
 
     public static func canEnterCommandGears(profile: LearnerProfile) -> Bool {
-        // Curriculum prerequisite for action sequencing is visual sequence memory.
-        // Path Tiles is a neighboring narrative chamber, not a mastery prerequisite.
+        // Puzzle Palace progression is planning -> sequencing. Command Gears only
+        // opens after Path Tiles planning is independently complete.
         memoryBridgeComplete(profile: profile)
+            && pathTilesComplete(profile: profile)
     }
 
     public static func nextCommandGearsEncounter(profile: LearnerProfile) -> PuzzleSequenceEncounter? {
@@ -1305,9 +1425,51 @@ public enum PuzzlePalaceDirector {
             == PuzzlePalaceEncounterCatalog.commandGearFamilies.count
     }
 
-    /// Completion contract for the currently implemented Puzzle Palace restoration.
-    /// Keep this centralized so a future Bug Lantern/debugging room can extend the
-    /// finale gate without changing reward or Story Tree persistence code.
+    public static func canEnterBugLantern(profile: LearnerProfile) -> Bool {
+        // Single-step debugging sits after planning and sequencing.
+        pathTilesComplete(profile: profile)
+            && commandGearsComplete(profile: profile)
+    }
+
+    public static func nextBugLanternEncounter(profile: LearnerProfile) -> PuzzleBugEncounter? {
+        guard canEnterBugLantern(profile: profile), !bugLanternComplete(profile: profile) else { return nil }
+        let evidence = profile.progress(for: PuzzleSkills.debugSingleStep).evidence
+        let independent = Set(
+            evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        let seen = Set(evidence.map(\.encounterID))
+
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            guard !family.contains(where: { independent.contains($0.id) }) else { continue }
+            if let fresh = family.first(where: { !seen.contains($0.id) }) {
+                return fresh
+            }
+            return family.first { $0.id != evidence.last?.encounterID } ?? family.first
+        }
+        return nil
+    }
+
+    public static func bugLanternIndependentSuccessCount(profile: LearnerProfile) -> Int {
+        let independent = Set(
+            profile.progress(for: PuzzleSkills.debugSingleStep).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        return PuzzlePalaceEncounterCatalog.bugLanternFamilies.filter { family in
+            family.contains { independent.contains($0.id) }
+        }.count
+    }
+
+    public static func bugLanternComplete(profile: LearnerProfile) -> Bool {
+        bugLanternIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.bugLanternFamilies.count
+    }
+
+    /// Completion contract for the implemented Puzzle Palace restoration.
+    /// The finale now waits for the Bug Lantern so the world progression reaches
+    /// debugging instead of ending early at command sequencing.
     public static func palaceRestorationComplete(profile: LearnerProfile) -> Bool {
         runeGateComplete(profile: profile)
             && memoryBridgeComplete(profile: profile)
@@ -1318,6 +1480,7 @@ public enum PuzzlePalaceDirector {
             && mirrorRotationComplete(profile: profile)
             && pathTilesComplete(profile: profile)
             && commandGearsComplete(profile: profile)
+            && bugLanternComplete(profile: profile)
     }
 
     public static func independentSortSuccessCount(
