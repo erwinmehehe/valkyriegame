@@ -669,7 +669,15 @@ import LearningCore
     private func refresh() {
         guard let runtime = state.runtime else {
             mechanic?.removeFromParent(); mechanic = nil; renderedEncounterID = nil
-            updatePower(false); return
+            children.filter {
+                ($0.name?.hasPrefix("workshop") == true) || $0.name == "workshopRack" || $0.name == "wind"
+            }.forEach {
+                $0.isHidden = false
+                $0.alpha = 0.72
+            }
+            childNode(withName: "next")?.isHidden = false
+            updatePower(false)
+            return
         }
         if renderedEncounterID != runtime.encounter.id || mechanic == nil {
             mechanic?.removeAllActions(); mechanic?.removeFromParent()
