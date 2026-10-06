@@ -1305,6 +1305,21 @@ public enum PuzzlePalaceDirector {
             == PuzzlePalaceEncounterCatalog.commandGearFamilies.count
     }
 
+    /// Completion contract for the currently implemented Puzzle Palace restoration.
+    /// Keep this centralized so a future Bug Lantern/debugging room can extend the
+    /// finale gate without changing reward or Story Tree persistence code.
+    public static func palaceRestorationComplete(profile: LearnerProfile) -> Bool {
+        runeGateComplete(profile: profile)
+            && memoryBridgeComplete(profile: profile)
+            && stopGoComplete(profile: profile)
+            && sortingPedestalComplete(profile: profile)
+            && changedRuleResortComplete(profile: profile)
+            && mirrorHallComplete(profile: profile)
+            && mirrorRotationComplete(profile: profile)
+            && pathTilesComplete(profile: profile)
+            && commandGearsComplete(profile: profile)
+    }
+
     public static func independentSortSuccessCount(
         for encounters: [PuzzleSortEncounter],
         skill: SkillID,

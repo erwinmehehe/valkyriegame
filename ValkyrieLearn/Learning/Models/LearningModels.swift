@@ -36,6 +36,7 @@ public enum Outcome: String, Codable, Sendable { case correct, incorrect }
 public enum StoryRewardID: String, Codable, CaseIterable, Hashable, Sendable {
     case moonLantern
     case wordGardenLantern
+    case puzzlePalaceLantern
 }
 
 public enum CartOperation: String, Codable, CaseIterable, Sendable {

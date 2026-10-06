@@ -226,7 +226,7 @@ import LearningCore
                 return
             }
             if state.puzzleCommandGearsComplete {
-                finishCommandGears()
+                finishCommandGears(celebrate: false)
             } else {
                 sequenceEncounter = state.nextPuzzleCommandGearsEncounter()
                 buildCommandGearsEncounter()
@@ -2941,7 +2941,7 @@ import LearningCore
                 self.valkyrie.pose(.celebrate)
                 self.tiko.pose(.celebrate)
                 if self.state.puzzleCommandGearsComplete {
-                    self.finishCommandGears()
+                    self.finishCommandGears(celebrate: self.state.puzzlePalaceComplete)
                 } else {
                     self.instruction.text = attemptSupport == .independent
                         ? "That chain worked! Tap the lantern for another command machine."
@@ -3013,7 +3013,7 @@ import LearningCore
         }
     }
 
-    private func finishCommandGears() {
+    private func finishCommandGears(celebrate: Bool = false) {
         commandAcceptingInput = false
         clearCommandSourceGears()
         commandSteps.removeAll()
@@ -3035,7 +3035,52 @@ import LearningCore
                                     accessibilityLabel: "Return to Story Tree")
             home.zPosition = 1500
         }
-        instruction.text = "Tiko can put actions in a useful order. A strange lantern is flickering deeper in the palace."
+
+        if state.puzzlePalaceComplete {
+            renderPuzzlePalaceFinale(celebrate: celebrate)
+            instruction.text = "The Palace is glowing again. Tiko's violet lantern is waiting at the Story Tree."
+        } else {
+            instruction.text = "The Command Engine is restored. Other Palace rooms still need Valkyrie and Tiko."
+        }
+    }
+
+    private func renderPuzzlePalaceFinale(celebrate: Bool) {
+        guard childNode(withName: "palaceFinaleLantern") == nil else { return }
+
+        let root = SKNode()
+        root.name = "palaceFinaleLantern"
+        root.position = CGPoint(x: 975, y: 455)
+        root.zPosition = 930
+
+        let halo = SKShapeNode(circleOfRadius: 62)
+        halo.fillColor = UIColor(red: 0.52, green: 0.40, blue: 0.92, alpha: 0.17)
+        halo.strokeColor = UIColor(red: 0.78, green: 0.68, blue: 1.0, alpha: 0.92)
+        halo.lineWidth = 2
+        halo.glowWidth = 16
+        root.addChild(halo)
+
+        let cage = SKShapeNode(rectOf: CGSize(width: 68, height: 82), cornerRadius: 21)
+        cage.fillColor = UIColor(red: 0.15, green: 0.13, blue: 0.31, alpha: 0.96)
+        cage.strokeColor = UIColor(red: 0.78, green: 0.67, blue: 1.0, alpha: 1)
+        cage.lineWidth = 4
+        root.addChild(cage)
+
+        let mark = ArtSystem.label("◈", size: 38)
+        mark.fontColor = UIColor(red: 0.94, green: 0.89, blue: 1.0, alpha: 1)
+        root.addChild(mark)
+        addChild(root)
+
+        if !reducedMotion {
+            halo.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.50, duration: 0.85),
+                .fadeAlpha(to: 1.0, duration: 0.85)
+            ])))
+        }
+
+        guard celebrate else { return }
+        tiko.pose(.celebrate)
+        valkyrie.pose(.celebrate)
+        focusMoment(on: root.position, hold: 0.75)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {

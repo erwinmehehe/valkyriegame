@@ -1799,4 +1799,46 @@ import LearningCore
         XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 440)
     }
 
+    func testPuzzlePalaceLanternPersistsAndMovesOnStoryTree() throws {
+        let container = try LearningStore.container(inMemory: true)
+        let store = try LearningStore(context: ModelContext(container))
+        var profile = try store.loadProfile()
+        XCTAssertTrue(profile.unlockStoryReward(.puzzlePalaceLantern))
+        try store.save(
+            profile: profile,
+            adventure: MathAdventure(continuingLearner: true),
+            sound: true,
+            reducedMotion: false,
+            world: "storyTree"
+        )
+
+        let state = try AppState(context: ModelContext(container))
+        XCTAssertTrue(state.hasStoryReward(.puzzlePalaceLantern))
+        XCTAssertFalse(state.hasStoryReward(.moonLantern))
+        XCTAssertFalse(state.hasStoryReward(.wordGardenLantern))
+
+        let tree = StoryTreeScene(state: state)
+        tree.reducedMotion = true
+        tree.didMove(to: SKView())
+        let lantern = try XCTUnwrap(tree.childNode(withName: "puzzlePalaceLantern"))
+        let before = state.storyRewardPlacement(.puzzlePalaceLantern)
+        tree.handleTap(at: lantern.position)
+        XCTAssertNotEqual(state.storyRewardPlacement(.puzzlePalaceLantern), before)
+        tree.willLeave()
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertTrue(restored.hasStoryReward(.puzzlePalaceLantern))
+        XCTAssertEqual(
+            restored.storyRewardPlacement(.puzzlePalaceLantern),
+            state.storyRewardPlacement(.puzzlePalaceLantern)
+        )
+
+        let restoredTree = StoryTreeScene(state: restored)
+        restoredTree.reducedMotion = true
+        restoredTree.didMove(to: SKView())
+        XCTAssertNotNil(restoredTree.childNode(withName: "puzzlePalaceLantern"))
+        restoredTree.willLeave()
+    }
+
+
 }

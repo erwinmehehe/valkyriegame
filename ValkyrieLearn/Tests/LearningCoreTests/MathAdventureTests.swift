@@ -252,4 +252,66 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(next.skillID, MathSkills.quantity)
     }
 
+    func testReasoningDepthUsesOnlyObservablePhysicalEvidence() throws {
+        let catalog = MathCastleEncounterCatalog.reasoningDepth
+        XCTAssertGreaterThanOrEqual(catalog.count, 8)
+        XCTAssertEqual(Set(catalog.map(\.fingerprint)).count, catalog.count)
+        XCTAssertTrue(catalog.allSatisfy { MathManipulativeSupport.supports($0) })
+        XCTAssertTrue(catalog.allSatisfy { $0.challengeDepth > 0 })
+        XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.equivalence10 })
+        XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.sameTotalDifferentWay })
+        XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.reasoning })
+        XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.whatChanged })
+        XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.storyAddition10 })
+        XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.subtractWithin20 })
+        XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.explainComparison })
+
+        // Do not claim skills that the current one-answer manipulatives cannot
+        // directly observe yet.
+        XCTAssertFalse(catalog.contains { $0.skillID == MathSkills.chooseStrategy })
+        XCTAssertFalse(catalog.contains { $0.skillID == MathSkills.multipleSolutions })
+    }
+
+    func testFifteenMinuteSessionPlanHasVarietyAndNaturalStops() throws {
+        var profile = LearnerProfile()
+        profile.markPlacementReady(Set(MathSkillCatalog.descriptors.map(\.id)))
+
+        // A strong learner should have both ordinary and deeper reasoning content
+        // available without forcing a separate worksheet mode.
+        let plan = try MathCastleEncounterCatalog.sessionPlan(
+            for: profile,
+            encounterCount: 12,
+            now: epoch
+        )
+
+        XCTAssertEqual(plan.encounters.count, 12)
+        let encounters = plan.encounters.map(\.encounter)
+        XCTAssertEqual(Set(encounters.map(\.fingerprint)).count, encounters.count)
+
+        var longestMechanicRun = 0
+        var currentRun = 0
+        var previousMechanic: String?
+        for encounter in encounters {
+            if encounter.mechanicID == previousMechanic {
+                currentRun += 1
+            } else {
+                previousMechanic = encounter.mechanicID
+                currentRun = 1
+            }
+            longestMechanicRun = max(longestMechanicRun, currentRun)
+        }
+        XCTAssertLessThanOrEqual(longestMechanicRun, 2)
+        XCTAssertGreaterThanOrEqual(Set(encounters.map(\.mechanicID)).count, 3)
+        XCTAssertGreaterThanOrEqual(
+            plan.explorationBreakCount,
+            2,
+            "A 12-encounter / roughly 15-minute session should expose natural stopping or exploration beats."
+        )
+        XCTAssertTrue(
+            encounters.contains { $0.representation == .reasoning || $0.representation == .story },
+            "A strong learner's longer session should include reasoning or transfer, not only concrete repetition."
+        )
+    }
+
+
 }
