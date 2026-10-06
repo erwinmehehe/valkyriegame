@@ -106,6 +106,7 @@ import SpriteKit
         let root = SKNode()
 
         let sprite = SKSpriteNode(texture: texture, color: tint, size: size)
+        sprite.position = CGPoint(x: size.width / 2, y: size.height / 2)
         sprite.colorBlendFactor = max(0, min(1, blend))
         sprite.name = "paintedBackdrop"
         root.addChild(sprite)
@@ -117,6 +118,7 @@ import SpriteKit
                 radius: 0
             )
             wash.strokeColor = .clear
+            wash.position = CGPoint(x: size.width / 2, y: size.height / 2)
             wash.zPosition = 1
             root.addChild(wash)
         }
