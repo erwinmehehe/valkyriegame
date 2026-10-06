@@ -2230,58 +2230,183 @@ import LearningCore
         route.zPosition = 845
     }
 
+    private func buildMirrorHallConceptAccents() {
+        let root = SKNode()
+        root.name = "mirrorHallConceptAccents"
+        root.zPosition = 108
+        root.isUserInteractionEnabled = false
+
+        let compass = SKShapeNode(circleOfRadius: 92)
+        compass.fillColor = UIColor(red: 0.18, green: 0.17, blue: 0.34, alpha: 0.16)
+        compass.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.52)
+        compass.lineWidth = 3
+        compass.position = CGPoint(x: 765, y: 188)
+        compass.name = "mirrorHallFloorCompass"
+        root.addChild(compass)
+
+        let innerCompass = SKShapeNode(circleOfRadius: 48)
+        innerCompass.fillColor = .clear
+        innerCompass.strokeColor = UIColor(red: 0.65, green: 0.80, blue: 1.0, alpha: 0.34)
+        innerCompass.lineWidth = 2
+        innerCompass.name = "mirrorHallFloorCompass"
+        compass.addChild(innerCompass)
+
+        for index in 0..<8 {
+            let ray = SKShapeNode(rectOf: CGSize(width: 4, height: index.isMultiple(of: 2) ? 74 : 52), cornerRadius: 2)
+            ray.fillColor = index.isMultiple(of: 2)
+                ? UIColor(red: 0.96, green: 0.73, blue: 0.30, alpha: 0.54)
+                : UIColor(red: 0.55, green: 0.72, blue: 0.98, alpha: 0.30)
+            ray.strokeColor = .clear
+            ray.position = CGPoint(x: 0, y: 38)
+            ray.zRotation = CGFloat(index) * .pi / 4
+            ray.name = "mirrorHallFloorCompass"
+            compass.addChild(ray)
+        }
+
+        for (index, point) in mirrorChoicePoints.enumerated() {
+            let arch = SKShapeNode(ellipseOf: CGSize(width: 205, height: 286))
+            arch.fillColor = UIColor(red: 0.11, green: 0.12, blue: 0.28, alpha: 0.08)
+            arch.strokeColor = UIColor(red: 0.48, green: 0.62, blue: 0.96, alpha: 0.22)
+            arch.lineWidth = 5
+            arch.position = CGPoint(x: point.x, y: point.y + 2)
+            arch.name = "mirrorHallBackdropArch\(index)"
+            root.addChild(arch)
+
+            let pool = SKShapeNode(ellipseOf: CGSize(width: 198, height: 42))
+            pool.fillColor = UIColor(red: 0.31, green: 0.44, blue: 0.86, alpha: 0.10)
+            pool.strokeColor = UIColor(red: 0.84, green: 0.69, blue: 0.36, alpha: 0.28)
+            pool.lineWidth = 2
+            pool.position = CGPoint(x: point.x, y: 274)
+            pool.name = "mirrorHallBackdropArch\(index)"
+            root.addChild(pool)
+        }
+
+        let farGate = SKShapeNode(rectOf: CGSize(width: 132, height: 184), cornerRadius: 58)
+        farGate.fillColor = UIColor(red: 0.08, green: 0.14, blue: 0.30, alpha: 0.18)
+        farGate.strokeColor = UIColor(red: 0.55, green: 0.82, blue: 1.0, alpha: 0.34)
+        farGate.lineWidth = 4
+        farGate.position = CGPoint(x: 1140, y: 498)
+        farGate.name = "mirrorHallFarGate"
+        root.addChild(farGate)
+
+        addChild(root)
+    }
+
     private func decorateMirrorGlass(_ mirror: SKShapeNode) {
-        let shine = SKShapeNode(rectOf: CGSize(width: 8, height: 84), cornerRadius: 4)
+        mirror.fillColor = UIColor(red: 0.11, green: 0.22, blue: 0.39, alpha: 0.52)
+        mirror.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.30, alpha: 0.96)
+        mirror.lineWidth = 7
+
+        let innerGlass = SKShapeNode(ellipseOf: CGSize(width: 116, height: 148))
+        innerGlass.fillColor = UIColor(red: 0.38, green: 0.69, blue: 0.92, alpha: 0.11)
+        innerGlass.strokeColor = UIColor(white: 1.0, alpha: 0.24)
+        innerGlass.lineWidth = 2
+        innerGlass.name = "mirrorStationGlass"
+        mirror.addChild(innerGlass)
+
+        let shine = SKShapeNode(rectOf: CGSize(width: 10, height: 92), cornerRadius: 5)
         shine.fillColor = .white.withAlphaComponent(0.16)
         shine.strokeColor = .clear
-        shine.position = CGPoint(x: -54, y: 8)
-        shine.zRotation = -0.15
+        shine.position = CGPoint(x: -42, y: 10)
+        shine.zRotation = -0.14
+        shine.name = "mirrorStationGlass"
         mirror.addChild(shine)
-        let finial = SKShapeNode(circleOfRadius: 8)
-        finial.fillColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
-        finial.strokeColor = .clear
-        finial.position.y = 88
-        mirror.addChild(finial)
+
+        for x in [CGFloat(-77), CGFloat(77)] {
+            let rail = SKShapeNode(rectOf: CGSize(width: 10, height: 136), cornerRadius: 5)
+            rail.fillColor = UIColor(red: 0.78, green: 0.55, blue: 0.24, alpha: 0.94)
+            rail.strokeColor = UIColor(red: 1.0, green: 0.83, blue: 0.45, alpha: 0.62)
+            rail.lineWidth = 1.5
+            rail.position = CGPoint(x: x, y: -4)
+            rail.name = "mirrorStationFrame"
+            mirror.addChild(rail)
+
+            let jewel = SKShapeNode(circleOfRadius: 8)
+            jewel.fillColor = UIColor(red: 0.36, green: 0.73, blue: 1.0, alpha: 0.96)
+            jewel.strokeColor = UIColor(red: 0.95, green: 0.84, blue: 0.42, alpha: 0.96)
+            jewel.lineWidth = 2
+            jewel.position = CGPoint(x: x, y: 52)
+            jewel.name = "mirrorStationFrame"
+            mirror.addChild(jewel)
+        }
+
+        let crown = SKShapeNode(path: {
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: 30))
+            path.addLine(to: CGPoint(x: -20, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -30))
+            path.addLine(to: CGPoint(x: 20, y: 0))
+            path.closeSubpath()
+            return path
+        }())
+        crown.position = CGPoint(x: 0, y: 116)
+        crown.fillColor = UIColor(red: 0.48, green: 0.76, blue: 1.0, alpha: 0.84)
+        crown.strokeColor = UIColor(red: 0.98, green: 0.76, blue: 0.34, alpha: 1)
+        crown.lineWidth = 4
+        crown.glowWidth = reducedMotion ? 0 : 5
+        crown.name = "mirrorStationCrystal"
+        mirror.addChild(crown)
+
+        let control = ArtSystem.medallion(
+            radius: 31,
+            fill: UIColor(red: 0.08, green: 0.13, blue: 0.31, alpha: 0.96),
+            stroke: UIColor(red: 0.91, green: 0.69, blue: 0.30, alpha: 0.94),
+            glow: reducedMotion ? 0 : 3
+        )
+        control.position = CGPoint(x: 0, y: -112)
+        control.name = "mirrorStationControl"
+        mirror.addChild(control)
+
+        let foot = SKShapeNode(ellipseOf: CGSize(width: 160, height: 28))
+        foot.fillColor = UIColor(red: 0.24, green: 0.19, blue: 0.32, alpha: 0.94)
+        foot.strokeColor = UIColor(red: 0.86, green: 0.65, blue: 0.30, alpha: 0.72)
+        foot.lineWidth = 3
+        foot.position = CGPoint(x: 0, y: -145)
+        foot.name = "mirrorStationFoot"
+        mirror.addChild(foot)
     }
 
     private func buildMirrorMachinery() {
         for (index, point) in mirrorChoicePoints.enumerated() {
-            let pedestal = SKShapeNode(rectOf: CGSize(width: 165, height: 32), cornerRadius: 8)
-            pedestal.fillColor = UIColor(red: 0.33, green: 0.29, blue: 0.27, alpha: 1)
-            pedestal.strokeColor = UIColor(red: 0.69, green: 0.58, blue: 0.38, alpha: 1)
-            pedestal.lineWidth = 3
-            pedestal.position = CGPoint(x: point.x, y: 231)
-            pedestal.zPosition = 130
+            let pedestal = ArtSystem.panel(
+                CGSize(width: 156, height: 34),
+                fill: UIColor(red: 0.20, green: 0.16, blue: 0.26, alpha: 0.94),
+                stroke: UIColor(red: 0.83, green: 0.62, blue: 0.28, alpha: 0.72),
+                radius: 15,
+                lineWidth: 2.5,
+                shadowAlpha: 0.16,
+                innerHighlight: UIColor(red: 0.80, green: 0.73, blue: 1.0, alpha: 0.05)
+            )
+            pedestal.position = CGPoint(x: point.x, y: 246)
+            pedestal.zPosition = 128
             pedestal.name = "mirrorPedestal\(index)"
             addChild(pedestal)
-            let stem = SKShapeNode(rectOf: CGSize(width: 24, height: 62), cornerRadius: 5)
-            stem.fillColor = pedestal.strokeColor
-            stem.strokeColor = .clear
-            stem.position = CGPoint(x: point.x, y: 260)
-            stem.zPosition = 130
-            addChild(stem)
-            let receiver = SKShapeNode(circleOfRadius: 12)
-            receiver.position = CGPoint(x: point.x, y: 230)
-            receiver.fillColor = .darkGray
-            receiver.strokeColor = .white.withAlphaComponent(0.6)
+
+            let receiver = SKShapeNode(circleOfRadius: 10)
+            receiver.position = CGPoint(x: point.x, y: 246)
+            receiver.fillColor = UIColor(red: 0.10, green: 0.16, blue: 0.26, alpha: 1)
+            receiver.strokeColor = UIColor(red: 0.76, green: 0.82, blue: 1.0, alpha: 0.52)
+            receiver.lineWidth = 2
             receiver.name = "mirrorReceiver\(index)"
             receiver.zPosition = 140
             addChild(receiver)
+
             let path = CGMutablePath()
-            path.move(to: CGPoint(x: 760, y: 470))
-            path.addLine(to: CGPoint(x: point.x, y: 420))
-            path.addLine(to: CGPoint(x: point.x, y: 245))
+            path.move(to: CGPoint(x: 765, y: 520))
+            path.addLine(to: CGPoint(x: point.x, y: 455))
+            path.addLine(to: CGPoint(x: point.x, y: 260))
             let beam = SKShapeNode(path: path)
-            beam.strokeColor = UIColor(red: 0.59, green: 0.93, blue: 1, alpha: 1)
-            beam.lineWidth = 6
-            beam.glowWidth = 8
+            beam.strokeColor = UIColor(red: 0.51, green: 0.83, blue: 1.0, alpha: 0.92)
+            beam.lineWidth = 4
+            beam.glowWidth = reducedMotion ? 0 : 7
             beam.name = "mirrorBeam\(index)"
             beam.zPosition = 120
-            beam.alpha = 0.08
+            beam.alpha = 0.06
             addChild(beam)
         }
-        let gear = ArtSystem.gear(radius: 37, symbol: "✦")
-        gear.position = CGPoint(x: 1170, y: 485)
+
+        let gear = ArtSystem.gear(radius: 33, symbol: "✦")
+        gear.position = CGPoint(x: 1140, y: 498)
         gear.name = "mirrorRestorationGear"
         gear.zPosition = 150
         addChild(gear)
@@ -2459,6 +2584,7 @@ import LearningCore
         floorRail.name = "mirrorHallRail"
         addChild(floorRail)
 
+        buildMirrorHallConceptAccents()
         buildMirrorMachinery()
 
         let beacon = SKShapeNode(circleOfRadius: 58)
@@ -2476,19 +2602,19 @@ import LearningCore
         beacon.addChild(glyph)
 
         let titlePlate = ArtSystem.plaque(
-            CGSize(width: 300, height: 42),
+            CGSize(width: 264, height: 38),
             fill: UIColor(red: 0.08, green: 0.09, blue: 0.19, alpha: 0.92),
             stroke: UIColor(red: 0.58, green: 0.73, blue: 0.98, alpha: 0.72),
             radius: 18
         )
-        titlePlate.position = CGPoint(x: 765, y: 646)
+        titlePlate.position = CGPoint(x: 765, y: 628)
         titlePlate.name = "mirrorHallTitlePlate"
         titlePlate.zPosition = 608
         addChild(titlePlate)
 
-        let title = ArtSystem.label("FOLLOW TIKO'S LIGHT", size: 18)
+        let title = ArtSystem.label("FOLLOW TIKO'S LIGHT", size: 16)
         title.fontColor = UIColor(red: 0.90, green: 0.96, blue: 1.0, alpha: 1)
-        title.position = CGPoint(x: 765, y: 646)
+        title.position = CGPoint(x: 765, y: 628)
         title.name = "mirrorHallTitle"
         title.zPosition = 610
         addChild(title)
@@ -2498,7 +2624,7 @@ import LearningCore
             sconce.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.35, alpha: 1)
             sconce.strokeColor = UIColor(red: 0.64, green: 0.79, blue: 0.98, alpha: 0.82)
             sconce.lineWidth = 3
-            sconce.position = CGPoint(x: 1010 + CGFloat(index) * 52, y: 595)
+            sconce.position = CGPoint(x: 713 + CGFloat(index) * 52, y: 590)
             sconce.name = "mirrorProgress\(index)"
             sconce.zPosition = 620
             addChild(sconce)
