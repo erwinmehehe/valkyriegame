@@ -522,23 +522,23 @@ import LearningCore
         root.zPosition = -62
         root.isUserInteractionEnabled = false
 
-        let dome = SKShapeNode(ellipseOf: CGSize(width: 980, height: 590))
+        let dome = SKShapeNode(ellipseOf: CGSize(width: 950, height: 560))
         dome.position = CGPoint(x: 720, y: 390)
         dome.fillColor = .clear
-        dome.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.31, alpha: 0.28)
-        dome.lineWidth = 7
+        dome.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.31, alpha: 0.16)
+        dome.lineWidth = 4
         dome.name = "decorativeScienceDome"
         root.addChild(dome)
 
-        let domeInner = SKShapeNode(ellipseOf: CGSize(width: 900, height: 520))
+        let domeInner = SKShapeNode(ellipseOf: CGSize(width: 875, height: 500))
         domeInner.position = dome.position
         domeInner.fillColor = .clear
-        domeInner.strokeColor = UIColor(red: 0.72, green: 0.91, blue: 0.86, alpha: 0.18)
-        domeInner.lineWidth = 3
+        domeInner.strokeColor = UIColor(red: 0.72, green: 0.91, blue: 0.86, alpha: 0.10)
+        domeInner.lineWidth = 2
         domeInner.name = "decorativeScienceDome"
         root.addChild(domeInner)
 
-        for (index, x) in [CGFloat(210), 475, 880, 1085].enumerated() {
+        for (index, x) in [CGFloat(235), 615, 1035].enumerated() {
             let hanger = SKNode()
             hanger.position = CGPoint(x: x, y: 585 - CGFloat(index % 2) * 34)
             hanger.name = "decorativeScienceHangingPlanter\(index)"
@@ -637,21 +637,21 @@ import LearningCore
         waterOrb.addChild(waterDrop)
 
         let board = ArtSystem.panel(
-            CGSize(width: 205, height: 126),
-            fill: UIColor(red: 0.07, green: 0.19, blue: 0.16, alpha: 0.82),
-            stroke: UIColor(red: 0.68, green: 0.52, blue: 0.25, alpha: 0.54),
-            radius: 12,
-            lineWidth: 3,
-            shadowAlpha: 0.12,
-            innerHighlight: UIColor(red: 0.76, green: 0.94, blue: 0.72, alpha: 0.04)
+            CGSize(width: 176, height: 106),
+            fill: UIColor(red: 0.07, green: 0.19, blue: 0.16, alpha: 0.62),
+            stroke: UIColor(red: 0.68, green: 0.52, blue: 0.25, alpha: 0.38),
+            radius: 14,
+            lineWidth: 2,
+            shadowAlpha: 0.06,
+            innerHighlight: UIColor(red: 0.76, green: 0.94, blue: 0.72, alpha: 0.03)
         )
-        board.position = CGPoint(x: 1080, y: 420)
+        board.position = CGPoint(x: 1070, y: 418)
         board.name = "decorativeScienceObservationBoard"
         root.addChild(board)
 
         for (index, symbol) in ["•", "↗", "✿"].enumerated() {
             let icon = ArtSystem.label(symbol, size: index == 1 ? 24 : 28)
-            icon.position = CGPoint(x: CGFloat(index - 1) * 62, y: 8)
+            icon.position = CGPoint(x: CGFloat(index - 1) * 52, y: 4)
             icon.fontColor = index == 2
                 ? UIColor(red: 0.80, green: 0.95, blue: 0.48, alpha: 0.92)
                 : UIColor(red: 0.75, green: 0.93, blue: 0.76, alpha: 0.86)
