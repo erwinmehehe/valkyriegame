@@ -2043,6 +2043,41 @@ import LearningCore
         let castle = try XCTUnwrap(scene.childNode(withName: "castle"))
         let halo = try XCTUnwrap(castle.children.compactMap { $0 as? SKShapeNode }.first)
         XCTAssertFalse(halo.hasActions(), "Reduced motion must disable landmark pulsing.")
+        XCTAssertNil(scene.childNode(withName: "decorativeAmbientLife"))
+    }
+
+    func testAmbientLifeAndSuccessBurstRespectReducedMotion() throws {
+        let livelyState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let lively = StoryTreeScene(state: livelyState)
+        lively.reducedMotion = false
+        lively.didMove(to: SKView())
+        defer { lively.willLeave() }
+
+        let ambient = try XCTUnwrap(lively.childNode(withName: "decorativeAmbientLife"))
+        XCTAssertGreaterThanOrEqual(ambient.children.count, 7)
+        XCTAssertTrue(
+            ambient.children.contains { $0.action(forKey: "ambientDrift") != nil },
+            "Live worlds should have subtle environmental motion."
+        )
+
+        lively.successFeedback()
+        let burst = try XCTUnwrap(lively.childNode(withName: "successBurst"))
+        XCTAssertTrue(burst.hasActions())
+        XCTAssertGreaterThanOrEqual(burst.children.count, 8)
+
+        let calmState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let calm = StoryTreeScene(state: calmState)
+        calm.reducedMotion = true
+        calm.didMove(to: SKView())
+        defer { calm.willLeave() }
+
+        XCTAssertNil(calm.childNode(withName: "decorativeAmbientLife"))
+        calm.successFeedback()
+        XCTAssertNil(calm.childNode(withName: "successBurst"))
     }
 
     func testSharedHUDAndPromptTextStayInsideSafeDesignBounds() throws {
