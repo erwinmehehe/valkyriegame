@@ -619,6 +619,65 @@ public struct PuzzleBugEncounter: Identifiable, Equatable, Sendable {
     }
 }
 
+public struct PuzzleRepairEncounter: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let prompt: String
+    public let correctOrder: [PuzzleCommandStep]
+    public let presented: [PuzzleCommandStep]
+    public let swapIndices: [Int]
+    public let transferContext: Bool
+    public let skillID = PuzzleSkills.debugSequence
+    public let mechanicID = PuzzlePalaceMechanicID.bugLantern
+    public let representation = Representation.pictorial
+
+    public init(
+        id: String,
+        prompt: String,
+        correctOrder: [PuzzleCommandStep],
+        presented: [PuzzleCommandStep],
+        swapIndices: [Int],
+        transferContext: Bool = false
+    ) {
+        precondition(correctOrder.count == 4 && presented.count == 4)
+        precondition(Set(correctOrder.map(\.id)).count == 4)
+        precondition(Set(presented.map(\.id)) == Set(correctOrder.map(\.id)))
+        precondition(swapIndices.count == 2)
+        precondition(Set(swapIndices).count == 2)
+        precondition(swapIndices.allSatisfy { presented.indices.contains($0) })
+        var repaired = presented
+        repaired.swapAt(swapIndices[0], swapIndices[1])
+        precondition(repaired == correctOrder)
+        self.id = id
+        self.prompt = prompt
+        self.correctOrder = correctOrder
+        self.presented = presented
+        self.swapIndices = swapIndices.sorted()
+        self.transferContext = transferContext
+    }
+
+    public func isCorrectSwap(_ indices: [Int]) -> Bool {
+        guard indices.count == 2, Set(indices).count == 2 else { return false }
+        return indices.sorted() == swapIndices
+    }
+
+    public func repaired(by indices: [Int]) -> [PuzzleCommandStep]? {
+        guard isCorrectSwap(indices) else { return nil }
+        var result = presented
+        result.swapAt(indices[0], indices[1])
+        return result
+    }
+
+    public var fingerprint: String {
+        [
+            mechanicID,
+            skillID.rawValue,
+            correctOrder.map(\.id).joined(separator: ","),
+            presented.map(\.id).joined(separator: ","),
+            swapIndices.map(String.init).joined(separator: ",")
+        ].joined(separator: "|")
+    }
+}
+
 public enum PuzzlePalaceEncounterCatalog {
     /// v3.31 used three one-socket rune beats. The native version preserves
     /// those symbols but makes the repeating rule explicit enough to infer:
@@ -1074,6 +1133,79 @@ public enum PuzzlePalaceEncounterCatalog {
         ]
     }()
 
+
+    public static let bugRepairFamilies: [[PuzzleRepairEncounter]] = {
+        let takeKey = PuzzleCommandStep(id: "takeKey", glyph: "◆", title: "TAKE KEY")
+        let unlock = PuzzleCommandStep(id: "unlock", glyph: "◇", title: "UNLOCK")
+        let openGate = PuzzleCommandStep(id: "openGate", glyph: "▱", title: "OPEN GATE")
+        let crossDoor = PuzzleCommandStep(id: "crossDoor", glyph: "→", title: "GO THROUGH")
+
+        let placeCrystal = PuzzleCommandStep(id: "placeCrystal", glyph: "✦", title: "PLACE CRYSTAL")
+        let turnGear = PuzzleCommandStep(id: "turnGear", glyph: "↻", title: "TURN GEAR")
+        let openDoor = PuzzleCommandStep(id: "openDoor", glyph: "▱", title: "OPEN DOOR")
+
+        let lowerBridge = PuzzleCommandStep(id: "lowerBridge", glyph: "↓", title: "LOWER BRIDGE")
+        let crossBridge = PuzzleCommandStep(id: "crossBridge", glyph: "→", title: "CROSS")
+        let raiseBridge = PuzzleCommandStep(id: "raiseBridge", glyph: "↑", title: "RAISE BRIDGE")
+        let lightBeacon = PuzzleCommandStep(id: "lightBeacon", glyph: "✦", title: "LIGHT BEACON")
+
+        return [
+            [
+                .init(
+                    id: "puzzle.bugRepair.keyGateA",
+                    prompt: "Two commands traded places. Pick the two gears Tiko should swap to repair the whole gate plan.",
+                    correctOrder: [takeKey, unlock, openGate, crossDoor],
+                    presented: [takeKey, openGate, unlock, crossDoor],
+                    swapIndices: [1, 2]
+                ),
+                .init(
+                    id: "puzzle.bugRepair.keyGateB",
+                    prompt: "The lantern found a scrambled gate plan. Select the two commands that need to trade places.",
+                    correctOrder: [takeKey, unlock, openGate, crossDoor],
+                    presented: [unlock, takeKey, openGate, crossDoor],
+                    swapIndices: [0, 1],
+                    transferContext: true
+                )
+            ],
+            [
+                .init(
+                    id: "puzzle.bugRepair.crystalDoorA",
+                    prompt: "Repair this four-step crystal-door plan by swapping the two misplaced commands.",
+                    correctOrder: [placeCrystal, turnGear, openDoor, crossDoor],
+                    presented: [placeCrystal, openDoor, turnGear, crossDoor],
+                    swapIndices: [1, 2],
+                    transferContext: true
+                ),
+                .init(
+                    id: "puzzle.bugRepair.crystalDoorB",
+                    prompt: "Two gears are out of place. Which pair should trade positions so the whole plan works?",
+                    correctOrder: [placeCrystal, turnGear, openDoor, crossDoor],
+                    presented: [crossDoor, turnGear, openDoor, placeCrystal],
+                    swapIndices: [0, 3],
+                    transferContext: true
+                )
+            ],
+            [
+                .init(
+                    id: "puzzle.bugRepair.bridgeA",
+                    prompt: "Repair the bridge plan. Choose the two commands that must swap before Tiko runs it.",
+                    correctOrder: [lowerBridge, crossBridge, raiseBridge, lightBeacon],
+                    presented: [lowerBridge, raiseBridge, crossBridge, lightBeacon],
+                    swapIndices: [1, 2],
+                    transferContext: true
+                ),
+                .init(
+                    id: "puzzle.bugRepair.bridgeB",
+                    prompt: "The bridge plan is almost right, but two steps traded places. Find the pair.",
+                    correctOrder: [lowerBridge, crossBridge, raiseBridge, lightBeacon],
+                    presented: [lightBeacon, crossBridge, raiseBridge, lowerBridge],
+                    swapIndices: [0, 3],
+                    transferContext: true
+                )
+            ]
+        ]
+    }()
+
 }
 
 public enum PuzzlePalaceDirector {
@@ -1465,6 +1597,50 @@ public enum PuzzlePalaceDirector {
     public static func bugLanternComplete(profile: LearnerProfile) -> Bool {
         bugLanternIndependentSuccessCount(profile: profile)
             == PuzzlePalaceEncounterCatalog.bugLanternFamilies.count
+    }
+
+    public static func canEnterBugRepair(profile: LearnerProfile) -> Bool {
+        // Advanced debugging requires all three foundations explicitly:
+        // planning, command sequencing, and completed single-step debugging.
+        pathTilesComplete(profile: profile)
+            && commandGearsComplete(profile: profile)
+            && bugLanternComplete(profile: profile)
+    }
+
+    public static func nextBugRepairEncounter(profile: LearnerProfile) -> PuzzleRepairEncounter? {
+        guard canEnterBugRepair(profile: profile), !bugRepairComplete(profile: profile) else { return nil }
+        let evidence = profile.progress(for: PuzzleSkills.debugSequence).evidence
+        let independent = Set(
+            evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        let seen = Set(evidence.map(\.encounterID))
+
+        for family in PuzzlePalaceEncounterCatalog.bugRepairFamilies {
+            guard !family.contains(where: { independent.contains($0.id) }) else { continue }
+            if let fresh = family.first(where: { !seen.contains($0.id) }) {
+                return fresh
+            }
+            return family.first { $0.id != evidence.last?.encounterID } ?? family.first
+        }
+        return nil
+    }
+
+    public static func bugRepairIndependentSuccessCount(profile: LearnerProfile) -> Int {
+        let independent = Set(
+            profile.progress(for: PuzzleSkills.debugSequence).evidence
+                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
+                .map(\.encounterID)
+        )
+        return PuzzlePalaceEncounterCatalog.bugRepairFamilies.filter { family in
+            family.contains { independent.contains($0.id) }
+        }.count
+    }
+
+    public static func bugRepairComplete(profile: LearnerProfile) -> Bool {
+        bugRepairIndependentSuccessCount(profile: profile)
+            == PuzzlePalaceEncounterCatalog.bugRepairFamilies.count
     }
 
     /// Completion contract for the implemented Puzzle Palace restoration.
