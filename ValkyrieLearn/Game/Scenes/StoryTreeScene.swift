@@ -76,7 +76,7 @@ import SpriteKit
             "Word Garden",
             symbol: "✿",
             name: "wordGarden",
-            at: CGPoint(x: 150, y: 255),
+            at: CGPoint(x: 150, y: 430),
             tint: UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 1),
             width: 150
         )
