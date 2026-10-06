@@ -3465,9 +3465,9 @@ import LearningCore
             x: min(walkable.maxX, max(walkable.minX, destination.x)),
             y: min(walkable.maxY, max(walkable.minY, destination.y))
         )
+        state.audio.play("footstep")
         valkyrie.walk(to: point) { [weak self] in
-            guard let self else { return }
-            self.state.audio.play("footstep")
+            guard self != nil else { return }
             action?()
         }
         tiko.walk(to: CGPoint(x: max(100, point.x - 92), y: point.y + 12)) {}
@@ -3484,7 +3484,7 @@ import LearningCore
     }
 
     override func willLeave() {
-        if place == .mirrorHall { state.audio.stop(channel: .ambience) }
+        state.audio.stop(channel: .ambience)
         removeAction(forKey: "stopGoSignal")
         removeAction(forKey: "stopGoRetry")
         removeAction(forKey: "nextStopGo")
