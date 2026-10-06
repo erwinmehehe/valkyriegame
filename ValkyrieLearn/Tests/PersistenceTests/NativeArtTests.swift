@@ -1657,4 +1657,61 @@ import LearningCore
         scene.willLeave()
     }
 
+
+    func testLandscapeIPadAspectFitKeepsTheDesignCanvasFullyVisible() {
+        let layout = AdventureSceneLayout(size: CGSize(width: 1280, height: 720))
+        let landscapeSurfaces = [
+            CGSize(width: 1024, height: 768),   // classic 4:3 iPad
+            CGSize(width: 1180, height: 820),   // modern 10.9-inch class
+            CGSize(width: 1366, height: 1024),  // large 4:3 class
+            CGSize(width: 1280, height: 720)    // screenshot/reference surface
+        ]
+
+        for surface in landscapeSurfaces {
+            let frame = layout.fittedFrame(in: surface)
+            XCTAssertGreaterThan(frame.width, 0)
+            XCTAssertGreaterThan(frame.height, 0)
+            XCTAssertGreaterThanOrEqual(frame.minX, -0.001)
+            XCTAssertGreaterThanOrEqual(frame.minY, -0.001)
+            XCTAssertLessThanOrEqual(frame.maxX, surface.width + 0.001)
+            XCTAssertLessThanOrEqual(frame.maxY, surface.height + 0.001)
+            XCTAssertEqual(frame.width / frame.height, 1280.0 / 720.0, accuracy: 0.001)
+        }
+    }
+
+    func testReducedMotionSuppressesDecorativeEntranceAndLandmarkPulsing() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        XCTAssertFalse(scene.valkyrie.hasActions())
+        XCTAssertFalse(scene.pip.hasActions())
+        let castle = try XCTUnwrap(scene.childNode(withName: "castle"))
+        let halo = try XCTUnwrap(castle.children.compactMap { $0 as? SKShapeNode }.first)
+        XCTAssertFalse(halo.hasActions(), "Reduced motion must disable landmark pulsing.")
+    }
+
+    func testSharedHUDAndPromptTextStayInsideSafeDesignBounds() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+        let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+        XCTAssertTrue(CGRect(origin: .zero, size: scene.size).contains(title.position))
+        XCTAssertTrue(CGRect(origin: .zero, size: scene.size).contains(feedback.position))
+        XCTAssertLessThanOrEqual(feedback.preferredMaxLayoutWidth, scene.layout.instructionZone.width)
+
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 830, y: 265))
+        let prompt = try XCTUnwrap(scene.childNode(withName: "questionPrompt") as? SKLabelNode)
+        XCTAssertEqual(prompt.numberOfLines, 2)
+        XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 440)
+    }
+
 }
