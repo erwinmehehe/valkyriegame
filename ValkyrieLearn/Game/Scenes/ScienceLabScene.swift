@@ -112,7 +112,7 @@ import LearningCore
             red: 0.66,
             green: 0.53,
             blue: 0.34,
-            alpha: hasReferenceBackdrop ? 0.55 : 1
+            alpha: 1
         )
         path.lineWidth = 4
         path.zPosition = 20
