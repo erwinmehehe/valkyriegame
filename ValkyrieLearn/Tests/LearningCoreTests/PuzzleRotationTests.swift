@@ -599,9 +599,23 @@ final class PuzzleRotationTests: XCTestCase {
                    transfer: encounter.transferContext)
         }
 
-        XCTAssertTrue(PuzzlePalaceDirector.palaceRestorationComplete(profile: profile))
+        XCTAssertFalse(
+            PuzzlePalaceDirector.palaceRestorationComplete(profile: profile),
+            "The finale must not unlock before Advanced Bug Lantern sequence debugging is independently restored."
+        )
         XCTAssertNotEqual(profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
         XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+
+        for family in PuzzlePalaceEncounterCatalog.bugRepairFamilies {
+            let encounter = family[0]
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID,
+                   transfer: encounter.transferContext)
+        }
+
+        XCTAssertTrue(PuzzlePalaceDirector.bugRepairComplete(profile: profile))
+        XCTAssertTrue(PuzzlePalaceDirector.palaceRestorationComplete(profile: profile))
+        XCTAssertNotEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
     }
 
 
