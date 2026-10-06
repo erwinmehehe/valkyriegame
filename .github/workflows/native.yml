@@ -61,3 +61,38 @@ jobs:
           name: native-scene-review
           path: native-scene-review
           if-no-files-found: ignore
+      - name: Build compact native scene review
+        if: ${{ always() && !cancelled() }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, shutil
+
+          source = Path("native-scene-review")
+          compact = Path("native-scene-review-compact")
+          compact.mkdir(exist_ok=True)
+
+          pngs = sorted(source.rglob("*.png"))
+          if pngs:
+              count = min(16, len(pngs))
+              indices = sorted({round(i * (len(pngs) - 1) / max(1, count - 1)) for i in range(count)})
+              for index in indices:
+                  path = pngs[index]
+                  shutil.copy2(path, compact / path.name)
+              print("Compact review selected", len(indices), "of", len(pngs), "PNG screenshots")
+              for index in indices:
+                  print(index, pngs[index].name)
+
+          manifest = source / "manifest.json"
+          if manifest.exists():
+              shutil.copy2(manifest, compact / "manifest.json")
+              print("Manifest preview:")
+              print(manifest.read_text()[:12000])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && !cancelled() }}
+        with:
+          name: native-scene-review-compact
+          path: native-scene-review-compact
+          if-no-files-found: ignore
