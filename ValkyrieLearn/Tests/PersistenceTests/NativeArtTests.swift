@@ -1759,6 +1759,9 @@ import LearningCore
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallRail"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorBeacon"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallTitlePlate"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "decorativeMirrorHallConceptAccents"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "//decorativeMirrorHallFloorCompass"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "//decorativeMirrorHallBackdropArch0"))
         let orientationChoices = mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }
         XCTAssertEqual(orientationChoices.count, 3)
         let mirrorPools = mirrorHall.children.filter {
@@ -1770,6 +1773,15 @@ import LearningCore
             XCTAssertFalse(
                 actorFrame.intersects(choice.calculateAccumulatedFrame()),
                 "Valkyrie must never obscure a scored mirror choice."
+            )
+            XCTAssertNotNil(
+                choice.childNode(withName: "//decorativeMirrorStationCrystal"),
+                "Each scored mirror should read as a physical portal station."
+            )
+            XCTAssertEqual(
+                mirrorHall.targetName(at: choice.position),
+                "mirrorOrientationChoice",
+                "Decorative portal art must never steal the mirror tap."
             )
         }
         XCTAssertEqual(
@@ -2452,6 +2464,17 @@ import LearningCore
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterPipe"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSunPrism"))
         XCTAssertNotNil(greenhouse.childNode(withName: "sciencePrismBeam"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "decorativeScienceConceptAccents"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceDome"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceHangingPlanter0"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeSciencePlantCloche"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceExperimentRail"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceObservationBoard"))
+        XCTAssertEqual(
+            greenhouse.targetName(at: CGPoint(x: 685, y: 235)),
+            "scienceSeedBench",
+            "Greenhouse concept decoration must not steal the seed-bench tap."
+        )
         XCTAssertEqual(
             greenhouse.targetName(at: CGPoint(x: 430, y: 220)),
             "scienceWaterValve"
