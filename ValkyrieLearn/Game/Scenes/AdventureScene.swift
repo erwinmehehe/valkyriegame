@@ -1,4 +1,5 @@
 import SpriteKit
+import UIKit
 
 @MainActor class AdventureScene: SKScene {
     let state: AppState
@@ -31,6 +32,10 @@ import SpriteKit
         guard children.isEmpty else { return }
         let camera = SKCameraNode(); camera.position = CGPoint(x: 640, y: 360)
         addChild(camera); self.camera = camera
+        if !reducedMotion {
+            camera.setScale(1.025)
+            camera.run(.scale(to: 1.0, duration: 0.42), withKey: "sceneEntrance")
+        }
         buildWorld()
         valkyrie.position = CGPoint(x: 190, y: 170); pip.position = CGPoint(x: 380, y: 180)
         addChild(valkyrie); addChild(pip)
@@ -81,6 +86,8 @@ import SpriteKit
         control.fillColor = .init(red: 0.12, green: 0.12, blue: 0.2, alpha: 0.65)
         control.strokeColor = .init(white: 1, alpha: 0.3); control.lineWidth = 1
         control.position = point; control.name = name; control.zPosition = 2000
+        control.isAccessibilityElement = true
+        control.accessibilityLabel = text == "‹" || text == "⌂" ? "Back" : text
         control.addChild(ArtSystem.label(text, size: 27)); addChild(control); return control
     }
     @discardableResult
@@ -99,6 +106,8 @@ import SpriteKit
         node.strokeColor = UIColor(red: 1.0, green: 0.83, blue: 0.40, alpha: 0.72)
         node.lineWidth = 2
         node.name = name; node.position = point; node.zPosition = 740
+        node.isAccessibilityElement = true
+        node.accessibilityLabel = text
         let label = ArtSystem.label(text, size: 20)
         label.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
         label.name = name
@@ -112,6 +121,8 @@ import SpriteKit
         root.name = name
         root.position = point
         root.zPosition = 740
+        root.isAccessibilityElement = true
+        root.accessibilityLabel = text
 
         let glow = SKShapeNode(circleOfRadius: 31)
         glow.fillColor = accent.withAlphaComponent(0.14)
@@ -143,6 +154,15 @@ import SpriteKit
 
         addChild(root)
         return root
+    }
+
+    func tactileFeedback(success: Bool) {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        if success {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } else {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        }
     }
 
     func actorSafeDestination(near desired: CGPoint, avoiding protected: CGRect? = nil) -> CGPoint {
