@@ -29,6 +29,7 @@ import LearningCore
 
         milo.position = CGPoint(x: 320, y: 190)
         milo.reducedMotion = reducedMotion
+        milo.setScale(0.82)
         addChild(milo)
 
         valkyrie.position = CGPoint(x: 175, y: 175)
