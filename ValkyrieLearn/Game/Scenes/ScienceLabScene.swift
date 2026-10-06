@@ -78,8 +78,14 @@ import LearningCore
                 in: atlas
             )
             greenhouseTexture.filteringMode = .linear
+            let preparedTexture = ArtSystem.retinaEnhancedTexture(
+                greenhouseTexture,
+                cacheKey: "word-garden-upper-crop",
+                targetPoints: size,
+                sharpness: 0.22
+            ) ?? greenhouseTexture
             let scenic = SKSpriteNode(
-                texture: greenhouseTexture,
+                texture: preparedTexture,
                 color: UIColor(red: 0.72, green: 0.92, blue: 0.78, alpha: 1),
                 size: size
             )
@@ -88,6 +94,11 @@ import LearningCore
             scenic.zPosition = -230
             scenic.alpha = 0.94
             scenic.name = "scienceGreenhouseBackdropHD"
+            scenic.userData = NSMutableDictionary(dictionary: [
+                "retinaPrepared": true,
+                "sourceAsset": "WordGardenSourceAtlas",
+                "sourceCrop": "word-garden-upper-crop"
+            ])
             addChild(scenic)
 
             let scenicWash = ArtSystem.box(
