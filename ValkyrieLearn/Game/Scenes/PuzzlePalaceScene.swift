@@ -2378,6 +2378,7 @@ import LearningCore
                                responseTime: Date().timeIntervalSince(startedAt))
         guard correct else {
             support = support == .independent ? .lightHint : .demonstration
+            tactileFeedback(success: false)
             node.strokeColor = .systemRed
             nudge(node)
             tiko.pose(.react)
@@ -2398,6 +2399,7 @@ import LearningCore
             return
         }
         solved = true
+        tactileFeedback(success: true)
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorRotationProgress()
@@ -2539,6 +2541,7 @@ import LearningCore
                                responseTime: Date().timeIntervalSince(startedAt))
 
         guard correct else {
+            tactileFeedback(success: false)
             support = support == .independent ? .lightHint : .strongHint
             instruction.text = support == .lightHint
                 ? "Trace the whole route with your eyes first. A dark tile means the plan cannot work."
@@ -2554,6 +2557,7 @@ import LearningCore
         }
 
         solved = true
+        tactileFeedback(success: true)
         let route = activeEncounter.route(for: index)
         animateTikoAlongPath(route, encounter: activeEncounter)
         refreshPathTilesProgress(animated: true)
