@@ -96,12 +96,12 @@ import LearningCore
             crown.zPosition = -75
             addChild(crown)
             // Layered canopies break up the prototype's single-disc trees.
-            for (dx, dy, width, height) in [
+            for (dx, dy, width, crownHeight) in [
                 (CGFloat(-55), CGFloat(-24), CGFloat(115), CGFloat(86)),
                 (CGFloat(52), CGFloat(-10), CGFloat(132), CGFloat(100)),
                 (CGFloat(-13), CGFloat(42), CGFloat(122), CGFloat(98))
             ] {
-                let foliage = SKShapeNode(ellipseOf: CGSize(width: width, height: height))
+                let foliage = SKShapeNode(ellipseOf: CGSize(width: width, height: crownHeight))
                 foliage.position = CGPoint(
                     x: x + dx,
                     y: 535 + (height - 310) * 0.3 + dy
