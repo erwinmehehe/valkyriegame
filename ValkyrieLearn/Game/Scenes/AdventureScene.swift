@@ -273,7 +273,8 @@ struct AdventureSceneLayout {
         name: String,
         at point: CGPoint,
         tint: UIColor,
-        width: CGFloat = 168
+        width: CGFloat = 168,
+        plaqueOffsetY: CGFloat = -58
     ) -> SKNode {
         let root = SKNode()
         root.name = name
@@ -300,8 +301,9 @@ struct AdventureSceneLayout {
         plaque.fillColor = UIColor(red: 0.08, green: 0.07, blue: 0.15, alpha: 0.68)
         plaque.strokeColor = tint.withAlphaComponent(0.65)
         plaque.lineWidth = 1.5
-        plaque.position = CGPoint(x: 0, y: -58)
+        plaque.position = CGPoint(x: 0, y: plaqueOffsetY)
         plaque.name = name
+        plaque.userData = NSMutableDictionary(dictionary: ["destinationRole": "plaque"])
         root.addChild(plaque)
 
         let label = ArtSystem.label(title, size: 17)
