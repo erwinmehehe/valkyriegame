@@ -2225,7 +2225,8 @@ import LearningCore
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorHallProgress(animated: true)
-        state.audio.play("success")
+        successFeedback()
+        focusMoment(on: node.position)
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -2379,7 +2380,8 @@ import LearningCore
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorRotationProgress()
-        state.audio.play("success")
+        successFeedback()
+        focusMoment(on: node.position)
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
         if state.puzzleMirrorRotationComplete {
@@ -2550,7 +2552,8 @@ import LearningCore
         tiko.run(.sequence(actions + [
             .run { [weak self] in
                 guard let self else { return }
-                self.state.audio.play("success")
+                self.successFeedback()
+                self.focusMoment(on: CGPoint(x: 760, y: 420))
                 self.tiko.pose(.celebrate)
                 self.valkyrie.pose(.celebrate)
                 if self.state.puzzlePathTilesComplete {
