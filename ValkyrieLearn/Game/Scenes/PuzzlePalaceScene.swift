@@ -2461,11 +2461,11 @@ import LearningCore
         childNode(withName: "pathGrid")?.removeFromParent()
     }
 
-    private func buildPathTilesEncounter() {
+    private func buildPathTilesEncounter(resetSupport: Bool = true) {
         guard let pathEncounter else { return }
         clearPathTilesChoices()
         attempts = 0
-        support = .independent
+        if resetSupport { support = .independent }
         startedAt = Date()
         solved = false
         pathAcceptingInput = true
@@ -2545,7 +2545,7 @@ import LearningCore
             pathEncounter = state.nextPuzzlePathTilesEncounter()
             run(.sequence([
                 .wait(forDuration: reducedMotion ? 0 : 0.45),
-                .run { [weak self] in self?.buildPathTilesEncounter() }
+                .run { [weak self] in self?.buildPathTilesEncounter(resetSupport: false) }
             ]))
             return
         }
