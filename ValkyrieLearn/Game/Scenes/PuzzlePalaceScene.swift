@@ -736,7 +736,7 @@ import LearningCore
             plank.position = CGPoint(x: 545 + CGFloat(index) * 145, y: 375)
             plank.yScale = 0.58
             plank.alpha = 0.55
-            plank.name = "memoryBridgePlank(index)"
+            plank.name = "memoryBridgePlank\(index)"
             plank.zPosition = 270
             addChild(plank)
         }
@@ -761,7 +761,7 @@ import LearningCore
                 stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
             )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 58, y: 555)
-            light.name = "memoryProgress(index)"
+            light.name = "memoryProgress\(index)"
             light.zPosition = 520
             addChild(light)
         }
@@ -1193,7 +1193,7 @@ import LearningCore
                 stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
             )
             light.position = CGPoint(x: 970 + CGFloat(index) * 57, y: 555)
-            light.name = "stopGoProgress(index)"
+            light.name = "stopGoProgress\(index)"
             light.zPosition = 520
             addChild(light)
         }
@@ -1515,7 +1515,7 @@ import LearningCore
                 stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
             )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 55, y: 555)
-            light.name = "sortingProgress(index)"
+            light.name = "sortingProgress\(index)"
             light.zPosition = 520
             addChild(light)
         }
@@ -1527,7 +1527,7 @@ import LearningCore
                 stroke: UIColor(red: 0.56, green: 0.47, blue: 0.82, alpha: 0.66)
             )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 55, y: 515)
-            light.name = "switchProgress(index)"
+            light.name = "switchProgress\(index)"
             light.zPosition = 520
             addChild(light)
         }
@@ -3470,7 +3470,7 @@ import LearningCore
                 stroke: UIColor(red: 0.93, green: 0.66, blue: 0.24, alpha: 0.78)
             )
             lamp.position = CGPoint(x: 1090 + CGFloat(index) * 38, y: 535)
-            lamp.name = "bugProgress(index)"
+            lamp.name = "bugProgress\(index)"
             lamp.zPosition = 820
             addChild(lamp)
         }
