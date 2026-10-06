@@ -68,6 +68,40 @@ import LearningCore
             addChild(matte)
         }
 
+        // Use the high-resolution illustrated garden atlas as the greenhouse's
+        // distant scenery. The greenhouse frame, path and teaching objects remain
+        // native SpriteKit nodes in front, so this improves depth without changing
+        // any interaction or learning state.
+        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
+            let greenhouseTexture = SKTexture(
+                rect: CGRect(x: 0, y: 0.502, width: 0.499, height: 0.498),
+                in: atlas
+            )
+            greenhouseTexture.filteringMode = .linear
+            let scenic = SKSpriteNode(
+                texture: greenhouseTexture,
+                color: UIColor(red: 0.72, green: 0.92, blue: 0.78, alpha: 1),
+                size: size
+            )
+            scenic.colorBlendFactor = 0.08
+            scenic.position = CGPoint(x: 640, y: 360)
+            scenic.zPosition = -230
+            scenic.alpha = 0.94
+            scenic.name = "scienceGreenhouseBackdropHD"
+            addChild(scenic)
+
+            let scenicWash = ArtSystem.box(
+                size,
+                color: UIColor(red: 0.08, green: 0.28, blue: 0.19, alpha: 0.12),
+                radius: 0
+            )
+            scenicWash.strokeColor = .clear
+            scenicWash.position = CGPoint(x: 640, y: 360)
+            scenicWash.zPosition = -229
+            scenicWash.name = "scienceGreenhouseBackdropWash"
+            addChild(scenicWash)
+        }
+
         let ground = ArtSystem.box(
             CGSize(width: 1280, height: 260),
             color: UIColor(red: 0.18, green: 0.28, blue: 0.19, alpha: 0.98),
@@ -172,6 +206,62 @@ import LearningCore
                 house.addChild(leaves)
             }
         }
+
+        // Reflections, hanging vines and a warm crest give the greenhouse the
+        // same illustrated depth language as Story Tree and Word Garden while
+        // staying below all named interaction targets.
+        for (index, x) in [CGFloat(-280), CGFloat(-40), CGFloat(200)].enumerated() {
+            let reflection = SKShapeNode(path: {
+                let path = CGMutablePath()
+                path.move(to: CGPoint(x: x - 38, y: 185))
+                path.addLine(to: CGPoint(x: x + 44, y: -115))
+                return path
+            }())
+            reflection.strokeColor = UIColor(white: 1, alpha: index == 1 ? 0.13 : 0.20)
+            reflection.lineWidth = index == 1 ? 22 : 16
+            reflection.zPosition = 1
+            house.addChild(reflection)
+        }
+
+        for x in [CGFloat(-352), CGFloat(-180), CGFloat(192), CGFloat(350)] {
+            let vine = SKNode()
+            vine.position = CGPoint(x: x, y: 160)
+            vine.zPosition = 3
+
+            let stem = SKShapeNode(rectOf: CGSize(width: 5, height: 116), cornerRadius: 2)
+            stem.fillColor = UIColor(red: 0.20, green: 0.43, blue: 0.23, alpha: 0.88)
+            stem.strokeColor = .clear
+            stem.position.y = -56
+            vine.addChild(stem)
+
+            for index in 0..<4 {
+                let leaf = SKShapeNode(ellipseOf: CGSize(width: 37, height: 17))
+                leaf.position = CGPoint(
+                    x: index.isMultiple(of: 2) ? -16 : 16,
+                    y: -CGFloat(index) * 27 - 15
+                )
+                leaf.zRotation = index.isMultiple(of: 2) ? 0.36 : -0.36
+                leaf.fillColor = UIColor(red: 0.34, green: 0.66, blue: 0.34, alpha: 0.93)
+                leaf.strokeColor = UIColor(red: 0.61, green: 0.78, blue: 0.44, alpha: 0.50)
+                leaf.lineWidth = 1
+                vine.addChild(leaf)
+            }
+            house.addChild(vine)
+        }
+
+        let roofCrest = ArtSystem.plaque(
+            CGSize(width: 112, height: 28),
+            fill: UIColor(red: 0.38, green: 0.24, blue: 0.10, alpha: 0.96),
+            stroke: UIColor(red: 0.88, green: 0.68, blue: 0.29, alpha: 0.92),
+            radius: 12
+        )
+        roofCrest.position = CGPoint(x: 0, y: 246)
+        roofCrest.zPosition = 4
+        house.addChild(roofCrest)
+
+        let crestMark = ArtSystem.label("✦  LAB  ✦", size: 12)
+        crestMark.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.56, alpha: 1)
+        roofCrest.addChild(crestMark)
 
         addChild(house)
 
