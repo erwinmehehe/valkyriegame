@@ -5,6 +5,17 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeArtTests: XCTestCase {
+    private func waitUntil(
+        timeout: TimeInterval = 2,
+        _ condition: @escaping () -> Bool
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            try await Task.sleep(nanoseconds: 25_000_000)
+        }
+        XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
+    }
+
     func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
@@ -833,6 +844,9 @@ import LearningCore
         )
         scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
         scene.handleTap(at: choice.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count == 1
+        }
 
         let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
         XCTAssertEqual(evidence.count, 1)
@@ -972,11 +986,20 @@ import LearningCore
         let wrong = try XCTUnwrap(options.first { ($0.userData?["choiceIndex"] as? Int) != correctIndex })
         scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
         scene.handleTap(at: wrong.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 1
+        }
         scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
         scene.handleTap(at: wrong.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 2
+        }
         let correct = try XCTUnwrap(options.first { ($0.userData?["choiceIndex"] as? Int) == correctIndex })
         scene.valkyrie.position = CGPoint(x: correct.position.x - 180, y: 175)
         scene.handleTap(at: correct.position)
+        try await waitUntil {
+            state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 3
+        }
         let evidence = state.profile.progress(for: PuzzleSkills.mentalRotation).evidence
         XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .incorrect, .correct])
         XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint, .demonstration])
@@ -1021,8 +1044,12 @@ import LearningCore
             let choice = try XCTUnwrap(scene.children.compactMap { $0 as? SKShapeNode }.first {
                 $0.name == "mirrorRotationChoice" && ($0.userData?["choiceIndex"] as? Int) == correctIndex
             })
+            let evidenceCount = state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count
             scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
             scene.handleTap(at: choice.position)
+            try await waitUntil {
+                state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == evidenceCount + 1
+            }
             scene.willLeave()
         }
         XCTAssertTrue(state.puzzleMirrorRotationComplete)
