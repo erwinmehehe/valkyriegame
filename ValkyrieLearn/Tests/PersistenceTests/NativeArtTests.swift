@@ -2066,7 +2066,7 @@ import LearningCore
         let greenhouseState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
-        greenhouseState.travel(to: .scienceGreenhouse)
+        greenhouseState.travel(to: .scienceLab)
         let greenhouse = ScienceLabScene(state: greenhouseState)
         greenhouse.reducedMotion = true
         greenhouse.didMove(to: SKView())
