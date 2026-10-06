@@ -337,8 +337,12 @@ struct AdventureSceneLayout {
         avoiding extraZones: [CGRect] = []
     ) -> CGPoint {
         let combined = registeredInteractionZones + extraZones
-        let candidates: [CGFloat] = [0, -115, 115, -165, 165, -220, 220]
-        let actorFootprint = CGSize(width: 94, height: 76)
+        let candidates: [CGFloat] = [0, -115, 115, -165, 165, -220, 220, -280, 280]
+        let rendered = valkyrie.calculateAccumulatedFrame()
+        let actorFootprint = CGSize(
+            width: max(110, rendered.width * 0.88),
+            height: max(150, rendered.height * 0.88)
+        )
 
         for offset in candidates {
             let candidate = CGPoint(x: desired.x + offset, y: desired.y)
