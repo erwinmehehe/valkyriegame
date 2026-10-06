@@ -387,6 +387,8 @@ import LearningCore
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 300, y: 615)), "wind")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 52, y: 669)), "home")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 595, y: 235)), "supply")
+        XCTAssertNotNil(scene.childNode(withName: "mathWorkZone"))
+        XCTAssertNotNil(scene.childNode(withName: "//cartDropZone"))
         XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == false) // Free workshop exit.
         scene.valkyrie.position = CGPoint(x: 490, y: 175)
         scene.handleTap(at: CGPoint(x: 830, y: 265))
@@ -1681,8 +1683,13 @@ import LearningCore
                      "Mirror Hall should reveal the palace artwork instead of covering it with a modal panel.")
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallRail"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorBeacon"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallTitlePlate"))
         let orientationChoices = mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }
         XCTAssertEqual(orientationChoices.count, 3)
+        let mirrorPools = mirrorHall.children.filter {
+            $0.name?.hasPrefix("mirrorChoicePool") == true
+        }
+        XCTAssertEqual(mirrorPools.count, 3)
         let actorFrame = mirrorHall.valkyrie.calculateAccumulatedFrame().insetBy(dx: 8, dy: 8)
         for choice in orientationChoices {
             XCTAssertFalse(
@@ -1815,8 +1822,17 @@ import LearningCore
         try await capture(bugLantern, in: view, name: "Puzzle-Palace-native-bug-lantern")
         XCTAssertNotNil(bugLantern.childNode(withName: "bugLanternFixture"))
         XCTAssertNotNil(bugLantern.childNode(withName: "bugRail"))
+        let bugSockets = bugLantern.children.filter {
+            $0.name?.hasPrefix("bugStepSocket") == true
+        }
+        XCTAssertEqual(bugSockets.count, 3)
+        let bugFlowArrows = bugLantern.children.filter {
+            $0.name?.hasPrefix("bugFlowArrow") == true
+        }
+        XCTAssertEqual(bugFlowArrows.count, 2)
         let bugSteps = bugLantern.children.filter { $0.name?.hasPrefix("bugStep") == true
-            && !($0.name?.contains("Label") ?? false) }
+            && !($0.name?.contains("Label") ?? false)
+            && !($0.name?.contains("Socket") ?? false) }
         XCTAssertEqual(bugSteps.count, 3)
         for step in bugSteps {
             XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().width, 150)
@@ -2031,6 +2047,20 @@ import LearningCore
             try await capture(scale, in: view, name: name)
             scale.willLeave()
         }
+        let tenFrameState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        tenFrameState.reducedMotion = true
+        XCTAssertTrue(tenFrameState.startWorkshop(MathCastleEncounterCatalog.tenFrameGate[0]))
+        let tenFrame = MathCastleScene(state: tenFrameState)
+        tenFrame.reducedMotion = true
+        view.presentScene(tenFrame)
+        tenFrame.valkyrie.position = CGPoint(x: 490, y: 175)
+        tenFrame.pip.position = CGPoint(x: 385, y: 187)
+        tenFrame.handleTap(at: CGPoint(x: 820, y: 344))
+        try await capture(tenFrame, in: view, name: "Math-Castle-native-ten-frame")
+        tenFrame.willLeave()
+
         for (capacity, name) in [(false, "Math-Castle-native-bond"), (true, "Math-Castle-native-bond-capacity")] {
             let bondState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
             bondState.reducedMotion = true
@@ -2083,9 +2113,12 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 925, y: 280))
 
         let prompt = try XCTUnwrap(scene.childNode(withName: "questionPrompt") as? SKLabelNode)
+        let heading = try XCTUnwrap(scene.childNode(withName: "questionPromptHeading") as? SKLabelNode)
         let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
 
         XCTAssertFalse(prompt.isHidden)
+        XCTAssertFalse(heading.isHidden)
+        XCTAssertEqual(heading.text, "PIP'S WORK ORDER")
         XCTAssertTrue(prompt.text?.contains(encounter.prompt) == true)
         XCTAssertGreaterThan(prompt.position.y, 500)
         XCTAssertLessThan(feedback.position.y, 100)
@@ -2136,6 +2169,34 @@ import LearningCore
             .new
         )
         XCTAssertNotEqual(wrong, encounter.answer)
+    }
+
+    func testMathTenFrameUsesCrystalArtWithoutChangingCellTargets() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.tenFrameGate[0]))
+
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let cells = try XCTUnwrap(scene.childNode(withName: "//tenFrameCells"))
+        XCTAssertEqual(cells.children.count, 10)
+
+        for cell in cells.children {
+            let shape = try XCTUnwrap(cell as? SKShapeNode)
+            XCTAssertNotNil(
+                shape.children.compactMap { $0 as? SKSpriteNode }.first,
+                "Each ten-frame cell should render the shared crystal art."
+            )
+            XCTAssertTrue(
+                ["tenFrameCell", "tenFrameFixed", "tenFrameFilled", "tenFramePreview"].contains(shape.name ?? "")
+            )
+        }
+
+        let supply = try XCTUnwrap(scene.childNode(withName: "//tenFrameSupply"))
+        XCTAssertGreaterThanOrEqual(supply.calculateAccumulatedFrame().width, 90)
+        XCTAssertGreaterThanOrEqual(supply.calculateAccumulatedFrame().height, 90)
     }
 
     func testIncorrectMathAnswerKeepsPhysicalRouteClosed() async throws {
@@ -2308,9 +2369,22 @@ import LearningCore
 
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseBackdropHD"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseFrame"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//scienceGreenhouseGlass"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//scienceGreenhouseRidge"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSeedBench"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterValve"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//scienceWaterGauge"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterPipe"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSunPrism"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "sciencePrismBeam"))
+        XCTAssertEqual(
+            greenhouse.targetName(at: CGPoint(x: 430, y: 220)),
+            "scienceWaterValve"
+        )
+        XCTAssertEqual(
+            greenhouse.targetName(at: CGPoint(x: 940, y: 245)),
+            "scienceSunPrism"
+        )
         greenhouse.willLeave()
 
         let weatherState = try AppState(
@@ -2323,6 +2397,8 @@ import LearningCore
 
         XCTAssertNotNil(weather.childNode(withName: "weatherBackdropHD"))
         XCTAssertNotNil(weather.childNode(withName: "weatherTowerStructure"))
+        XCTAssertNotNil(weather.childNode(withName: "//weatherObservationGlass"))
+        XCTAssertNotNil(weather.childNode(withName: "//weatherTowerRoofTrim"))
         XCTAssertNotNil(weather.childNode(withName: "weatherTerrace"))
         XCTAssertNotNil(weather.childNode(withName: "scienceForecastBase"))
         XCTAssertNotNil(weather.childNode(withName: "scienceMorningWeather"))
@@ -2339,10 +2415,41 @@ import LearningCore
 
         XCTAssertNotNil(grove.childNode(withName: "creatureGroveBackdropHD"))
         XCTAssertNotNil(grove.childNode(withName: "grovePath"))
+        XCTAssertNotNil(grove.childNode(withName: "//grovePondBank"))
+        XCTAssertNotNil(grove.childNode(withName: "//grovePondShoreline"))
+        XCTAssertNotNil(grove.childNode(withName: "//grovePondRipple"))
         XCTAssertNotNil(grove.childNode(withName: "scienceGroveDuck"))
         XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
         XCTAssertNotNil(grove.childNode(withName: "scienceCompareBoard"))
         grove.willLeave()
+    }
+
+    func testLongPuzzleWorldTitleAndActorScaleStayPresentationSafe() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .sortingPedestal)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+        let backdrop = try XCTUnwrap(
+            scene.childNode(withName: "worldTitleBackdrop") as? SKShapeNode
+        )
+        let titleFrame = title.calculateAccumulatedFrame()
+        let backdropFrame = backdrop.calculateAccumulatedFrame().insetBy(dx: 14, dy: 7)
+
+        XCTAssertTrue(
+            backdropFrame.contains(titleFrame),
+            "Long Puzzle Palace destination titles must remain inside the shared title plaque."
+        )
+        XCTAssertGreaterThanOrEqual(backdropFrame.minX, 80)
+        XCTAssertLessThanOrEqual(backdropFrame.maxX, 620)
+        XCTAssertEqual(scene.valkyrie.xScale, 0.56, accuracy: 0.001)
+        XCTAssertEqual(scene.tiko.xScale, 0.92, accuracy: 0.001)
     }
 
     func testPolishedSharedControlsRetainLargeTouchGeometry() throws {
