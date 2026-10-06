@@ -40,165 +40,252 @@ import LearningCore
     }
 
     override func buildWorld() {
-        // The old V331WorldAtlas greenhouse was a low-resolution quadrant enlarged
-        // across the Retina gameplay surface. Keep the greenhouse fully vector-based
-        // so glass, frames, paths, controls and text remain crisp at every iPad size.
-        if let texture = ArtSystem.texture("StarlightIsles") {
-            let backdrop = SKSpriteNode(texture: texture, color: .white, size: size)
-            backdrop.position = CGPoint(x: 640, y: 360)
-            backdrop.zPosition = -240
+        if let backdrop = ArtSystem.paintedBackdrop(
+            "StarlightIsles",
+            size: size,
+            tint: UIColor(red: 0.48, green: 0.84, blue: 0.76, alpha: 1),
+            blend: 0.15,
+            dim: 0.12
+        ) {
+            backdrop.zPosition = -310
             backdrop.name = "scienceGreenhouseBackdrop"
-            backdrop.color = UIColor(red: 0.42, green: 0.78, blue: 0.72, alpha: 1)
-            backdrop.colorBlendFactor = 0.16
             addChild(backdrop)
-
-            let glassWash = ArtSystem.box(
-                size,
-                color: UIColor(red: 0.50, green: 0.82, blue: 0.80, alpha: 0.10),
-                radius: 0
-            )
-            glassWash.strokeColor = .clear
-            glassWash.position = CGPoint(x: 640, y: 360)
-            glassWash.zPosition = -225
-            addChild(glassWash)
-        } else {
-            let sky = ArtSystem.box(
-                size,
-                color: UIColor(red: 0.55, green: 0.75, blue: 0.82, alpha: 1),
-                radius: 0
-            )
-            sky.strokeColor = .clear
-            sky.position = CGPoint(x: 640, y: 360)
-            sky.zPosition = -200
-            sky.name = "scienceGreenhouseBackdrop"
-            addChild(sky)
         }
 
-        let ground = ArtSystem.box(
-            CGSize(width: 1280, height: 260),
-            color: UIColor(red: 0.20, green: 0.31, blue: 0.20, alpha: 1),
+        let glassWash = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.46, green: 0.82, blue: 0.78, alpha: 0.08),
             radius: 0
         )
-        ground.strokeColor = .clear
-        ground.position = CGPoint(x: 640, y: 120)
-        ground.zPosition = -120
-        addChild(ground)
-        
-        let house = SKNode()
-        house.position = CGPoint(x: 720, y: 390)
-        house.zPosition = -80
-        
-        let glass = ArtSystem.box(
-            CGSize(width: 860, height: 430),
-            color: UIColor(red: 0.78, green: 0.92, blue: 0.90, alpha: 0.22),
-            radius: 18
+        glassWash.strokeColor = .clear
+        glassWash.position = CGPoint(x: 640, y: 360)
+        glassWash.zPosition = -295
+        addChild(glassWash)
+
+        let floor = ArtSystem.panel(
+            CGSize(width: 1160, height: 142),
+            fill: UIColor(red: 0.24, green: 0.24, blue: 0.16, alpha: 0.90),
+            stroke: UIColor(red: 0.61, green: 0.57, blue: 0.35, alpha: 0.82),
+            radius: 48,
+            lineWidth: 4,
+            shadowAlpha: 0.34
         )
-        glass.strokeColor = UIColor(red: 0.87, green: 0.96, blue: 0.94, alpha: 0.9)
-        glass.lineWidth = 7
+        floor.position = CGPoint(x: 640, y: 190)
+        floor.zPosition = 22
+        floor.name = "greenhouseFloor"
+        addChild(floor)
+
+        let house = SKNode()
+        house.position = CGPoint(x: 705, y: 405)
+        house.zPosition = -80
+        house.name = "greenhouseStructure"
+
+        let glass = ArtSystem.panel(
+            CGSize(width: 865, height: 430),
+            fill: UIColor(red: 0.72, green: 0.92, blue: 0.88, alpha: 0.13),
+            stroke: UIColor(red: 0.78, green: 0.95, blue: 0.90, alpha: 0.76),
+            radius: 24,
+            lineWidth: 4,
+            shadowAlpha: 0.18
+        )
         house.addChild(glass)
-        
+
         for x in stride(from: CGFloat(-360), through: CGFloat(360), by: CGFloat(120)) {
             let frame = ArtSystem.box(
-                CGSize(width: 8, height: 410),
-                color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 0.9),
-                radius: 2
+                CGSize(width: 7, height: 410),
+                color: UIColor(red: 0.10, green: 0.31, blue: 0.29, alpha: 0.84),
+                radius: 3
             )
             frame.position.x = x
             frame.zPosition = 2
             house.addChild(frame)
         }
-        
+
+        for y in [CGFloat(-115), CGFloat(15), CGFloat(145)] {
+            let frame = ArtSystem.box(
+                CGSize(width: 815, height: 7),
+                color: UIColor(red: 0.10, green: 0.31, blue: 0.29, alpha: 0.72),
+                radius: 3
+            )
+            frame.position.y = y
+            frame.zPosition = 2
+            house.addChild(frame)
+        }
+
         let roofLeft = ArtSystem.box(
-            CGSize(width: 470, height: 10),
-            color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 1),
-            radius: 2
+            CGSize(width: 470, height: 11),
+            color: UIColor(red: 0.08, green: 0.28, blue: 0.27, alpha: 0.95),
+            radius: 3
         )
-        roofLeft.position = CGPoint(x: -190, y: 240)
+        roofLeft.position = CGPoint(x: -190, y: 242)
         roofLeft.zRotation = 0.22
         house.addChild(roofLeft)
-        
+
         let roofRight = ArtSystem.box(
-            CGSize(width: 470, height: 10),
-            color: UIColor(red: 0.18, green: 0.34, blue: 0.30, alpha: 1),
-            radius: 2
+            CGSize(width: 470, height: 11),
+            color: UIColor(red: 0.08, green: 0.28, blue: 0.27, alpha: 0.95),
+            radius: 3
         )
-        roofRight.position = CGPoint(x: 190, y: 240)
+        roofRight.position = CGPoint(x: 190, y: 242)
         roofRight.zRotation = -0.22
         house.addChild(roofRight)
-        
-        addChild(house)
-        let path = ArtSystem.box(
-            CGSize(width: 1110, height: 120),
-            color: UIColor(red: 0.50, green: 0.39, blue: 0.25, alpha: 1),
-            radius: 50
-        )
-        path.position = CGPoint(x: 640, y: 190)
-        path.strokeColor = UIColor(
-            red: 0.66,
-            green: 0.53,
-            blue: 0.34,
-            alpha: 1
-        )
-        path.lineWidth = 4
-        path.zPosition = 20
-        addChild(path)
 
-        let bench = ArtSystem.box(
-            CGSize(width: 300, height: 120),
-            color: UIColor(red: 0.34, green: 0.22, blue: 0.12, alpha: 1),
-            radius: 8
+        let roofPeak = ArtSystem.medallion(
+            radius: 15,
+            fill: UIColor(red: 0.86, green: 0.67, blue: 0.28, alpha: 0.96),
+            stroke: UIColor(red: 1.0, green: 0.87, blue: 0.50, alpha: 0.90)
         )
+        roofPeak.position = CGPoint(x: 0, y: 292)
+        house.addChild(roofPeak)
+
+        for x in [CGFloat(-250), CGFloat(0), CGFloat(250)] {
+            let lamp = SKNode()
+            lamp.position = CGPoint(x: x, y: 170)
+            let cord = ArtSystem.box(
+                CGSize(width: 4, height: 52),
+                color: UIColor(red: 0.28, green: 0.22, blue: 0.14, alpha: 0.9),
+                radius: 2
+            )
+            cord.position.y = 26
+            lamp.addChild(cord)
+            let glow = ArtSystem.medallion(
+                radius: 14,
+                fill: UIColor(red: 1.0, green: 0.78, blue: 0.31, alpha: 0.88),
+                stroke: UIColor(red: 1.0, green: 0.91, blue: 0.60, alpha: 0.88),
+                glow: reducedMotion ? 0 : 6
+            )
+            lamp.addChild(glow)
+            house.addChild(lamp)
+        }
+
+        addChild(house)
+
+        for x in [CGFloat(455), CGFloat(535), CGFloat(835), CGFloat(915)] {
+            let pot = ArtSystem.panel(
+                CGSize(width: 58, height: 34),
+                fill: UIColor(red: 0.34, green: 0.20, blue: 0.12, alpha: 0.96),
+                stroke: UIColor(red: 0.65, green: 0.42, blue: 0.20, alpha: 0.72),
+                radius: 10,
+                lineWidth: 2,
+                shadowAlpha: 0.18
+            )
+            pot.position = CGPoint(x: x, y: 345 + CGFloat(Int(x) % 3) * 16)
+            pot.zPosition = 120
+            addChild(pot)
+
+            let leaf = SKShapeNode(ellipseOf: CGSize(width: 50, height: 26))
+            leaf.fillColor = UIColor(red: 0.22, green: 0.60, blue: 0.29, alpha: 0.92)
+            leaf.strokeColor = UIColor(red: 0.44, green: 0.78, blue: 0.39, alpha: 0.56)
+            leaf.lineWidth = 2
+            leaf.position = CGPoint(x: x, y: pot.position.y + 34)
+            leaf.zRotation = x.truncatingRemainder(dividingBy: 2) == 0 ? 0.25 : -0.25
+            leaf.zPosition = 121
+            addChild(leaf)
+        }
+
+        let bench = ArtSystem.supplyTray(CGSize(width: 300, height: 118))
         bench.position = seedBenchPoint
         bench.name = "scienceSeedBench"
         bench.zPosition = 360
         addChild(bench)
 
-        let soil = ArtSystem.box(
-            CGSize(width: 230, height: 42),
-            color: UIColor(red: 0.24, green: 0.14, blue: 0.08, alpha: 1),
-            radius: 10
+        let soil = ArtSystem.panel(
+            CGSize(width: 230, height: 44),
+            fill: UIColor(red: 0.21, green: 0.12, blue: 0.07, alpha: 0.98),
+            stroke: UIColor(red: 0.52, green: 0.34, blue: 0.17, alpha: 0.72),
+            radius: 10,
+            lineWidth: 2,
+            shadowAlpha: 0.12
         )
         soil.position = CGPoint(x: 0, y: 28)
         soil.name = "scienceSeedBench"
         bench.addChild(soil)
 
-        let waterTank = ArtSystem.box(
-            CGSize(width: 118, height: 150),
-            color: UIColor(red: 0.18, green: 0.45, blue: 0.58, alpha: 1),
-            radius: 20
+        let benchLabel = ArtSystem.plaque(
+            CGSize(width: 118, height: 28),
+            fill: UIColor(red: 0.06, green: 0.18, blue: 0.14, alpha: 0.92),
+            stroke: UIColor(red: 0.50, green: 0.72, blue: 0.45, alpha: 0.62),
+            radius: 12
         )
-        waterTank.position = CGPoint(x: 355, y: 338)
-        waterTank.name = "scienceWaterTank"
-        waterTank.zPosition = 260
-        addChild(waterTank)
+        benchLabel.position = CGPoint(x: 0, y: -44)
+        benchLabel.name = "scienceSeedBench"
+        bench.addChild(benchLabel)
+        let benchText = ArtSystem.label("SEED BENCH", size: 11)
+        benchText.fontColor = UIColor(red: 0.90, green: 0.97, blue: 0.82, alpha: 1)
+        benchText.name = "scienceSeedBench"
+        benchLabel.addChild(benchText)
 
-        let tankLabel = ArtSystem.label("WATER", size: 18)
-        tankLabel.position.y = 8
+        let tankRoot = SKNode()
+        tankRoot.position = CGPoint(x: 355, y: 340)
+        tankRoot.zPosition = 260
+        tankRoot.name = "scienceWaterTank"
+        addChild(tankRoot)
+
+        let tank = ArtSystem.panel(
+            CGSize(width: 118, height: 150),
+            fill: UIColor(red: 0.08, green: 0.35, blue: 0.46, alpha: 0.96),
+            stroke: UIColor(red: 0.55, green: 0.85, blue: 0.92, alpha: 0.86),
+            radius: 28,
+            lineWidth: 4,
+            shadowAlpha: 0.26
+        )
+        tank.name = "scienceWaterTank"
+        tankRoot.addChild(tank)
+
+        let tankGlass = SKShapeNode(ellipseOf: CGSize(width: 74, height: 92))
+        tankGlass.fillColor = UIColor(red: 0.28, green: 0.70, blue: 0.82, alpha: 0.18)
+        tankGlass.strokeColor = UIColor(red: 0.66, green: 0.91, blue: 0.96, alpha: 0.48)
+        tankGlass.lineWidth = 2
+        tankGlass.name = "scienceWaterTank"
+        tankRoot.addChild(tankGlass)
+
+        let tankLabel = ArtSystem.label("WATER", size: 14)
+        tankLabel.position.y = 4
+        tankLabel.fontColor = UIColor(red: 0.84, green: 0.96, blue: 1.0, alpha: 1)
         tankLabel.name = "scienceWaterTank"
-        waterTank.addChild(tankLabel)
+        tankRoot.addChild(tankLabel)
 
         let pipe = ArtSystem.box(
-            CGSize(width: 260, height: 18),
-            color: UIColor(red: 0.22, green: 0.45, blue: 0.49, alpha: 1),
-            radius: 8
+            CGSize(width: 255, height: 15),
+            color: UIColor(red: 0.14, green: 0.42, blue: 0.46, alpha: 0.96),
+            radius: 7
         )
         pipe.position = CGPoint(x: 515, y: 300)
+        pipe.strokeColor = UIColor(red: 0.54, green: 0.78, blue: 0.77, alpha: 0.62)
+        pipe.lineWidth = 2
         pipe.zPosition = 250
         addChild(pipe)
 
-        let valve = SKShapeNode(circleOfRadius: 43)
+        let valve = ArtSystem.medallion(
+            radius: 43,
+            fill: UIColor(red: 0.08, green: 0.32, blue: 0.45, alpha: 0.98),
+            stroke: UIColor(red: 0.72, green: 0.94, blue: 1.0, alpha: 0.94),
+            glow: reducedMotion ? 0 : 3
+        )
         valve.position = waterValvePoint
         valve.name = "scienceWaterValve"
         valve.zPosition = 720
-        valve.fillColor = UIColor(red: 0.14, green: 0.42, blue: 0.56, alpha: 1)
-        valve.strokeColor = UIColor(red: 0.76, green: 0.93, blue: 1, alpha: 1)
-        valve.lineWidth = 5
-        valve.addChild(ArtSystem.label("💧", size: 34))
+        let drop = ArtSystem.label("💧", size: 32)
+        drop.name = "scienceWaterValve"
+        valve.addChild(drop)
         addChild(valve)
+
+        let prismPedestal = ArtSystem.panel(
+            CGSize(width: 110, height: 62),
+            fill: UIColor(red: 0.22, green: 0.18, blue: 0.12, alpha: 0.96),
+            stroke: UIColor(red: 0.83, green: 0.68, blue: 0.34, alpha: 0.86),
+            radius: 18,
+            lineWidth: 3,
+            shadowAlpha: 0.26
+        )
+        prismPedestal.position = CGPoint(x: sunPrismPoint.x, y: sunPrismPoint.y - 28)
+        prismPedestal.name = "scienceSunPrism"
+        prismPedestal.zPosition = 690
+        addChild(prismPedestal)
 
         let prism = SKShapeNode(path: {
             let p = CGMutablePath()
-            p.move(to: CGPoint(x: 0, y: 46))
+            p.move(to: CGPoint(x: 0, y: 48))
             p.addLine(to: CGPoint(x: -42, y: -32))
             p.addLine(to: CGPoint(x: 42, y: -32))
             p.closeSubpath()
@@ -207,15 +294,32 @@ import LearningCore
         prism.position = sunPrismPoint
         prism.name = "scienceSunPrism"
         prism.zPosition = 720
-        prism.fillColor = UIColor(red: 0.98, green: 0.83, blue: 0.28, alpha: 1)
+        prism.fillColor = UIColor(red: 0.98, green: 0.80, blue: 0.28, alpha: 0.96)
         prism.strokeColor = UIColor(red: 1, green: 0.96, blue: 0.72, alpha: 1)
         prism.lineWidth = 5
+        prism.glowWidth = reducedMotion ? 0 : 4
         addChild(prism)
 
-        let sun = ArtSystem.label("☀", size: 38)
-        sun.position = CGPoint(x: 1015, y: 390)
-        sun.fontColor = UIColor(red: 1, green: 0.88, blue: 0.35, alpha: 1)
-        sun.zPosition = 300
+        let beam = SKShapeNode(path: {
+            let p = CGMutablePath()
+            p.move(to: CGPoint(x: 1000, y: 430))
+            p.addLine(to: CGPoint(x: sunPrismPoint.x + 8, y: sunPrismPoint.y + 38))
+            return p
+        }())
+        beam.strokeColor = UIColor(red: 1.0, green: 0.91, blue: 0.45, alpha: 0.34)
+        beam.lineWidth = 12
+        beam.zPosition = 300
+        addChild(beam)
+
+        let sun = ArtSystem.medallion(
+            radius: 24,
+            fill: UIColor(red: 0.96, green: 0.67, blue: 0.19, alpha: 0.90),
+            stroke: UIColor(red: 1.0, green: 0.90, blue: 0.48, alpha: 0.94),
+            glow: reducedMotion ? 0 : 6
+        )
+        sun.position = CGPoint(x: 1015, y: 420)
+        sun.zPosition = 305
+        sun.addChild(ArtSystem.label("☀", size: 28))
         addChild(sun)
 
         gateNode = SKNode()
@@ -299,54 +403,61 @@ import LearningCore
     private func renderGate() {
         gateNode.removeAllChildren()
 
-        let left = ArtSystem.box(
-            CGSize(width: 18, height: 150),
-            color: UIColor(red: 0.21, green: 0.36, blue: 0.31, alpha: 1),
-            radius: 3
-        )
-        left.position.x = -52
-        left.name = "scienceWeatherGate"
-        gateNode.addChild(left)
+        let arch = SKShapeNode(rectOf: CGSize(width: 120, height: 154), cornerRadius: 52)
+        arch.fillColor = UIColor(red: 0.07, green: 0.22, blue: 0.18, alpha: 0.90)
+        arch.strokeColor = greenhouseComplete
+            ? UIColor(red: 0.90, green: 0.88, blue: 0.46, alpha: 0.96)
+            : UIColor(red: 0.45, green: 0.66, blue: 0.48, alpha: 0.82)
+        arch.lineWidth = 6
+        arch.name = "scienceWeatherGate"
+        gateNode.addChild(arch)
 
-        let right = ArtSystem.box(
-            CGSize(width: 18, height: 150),
-            color: UIColor(red: 0.21, green: 0.36, blue: 0.31, alpha: 1),
-            radius: 3
-        )
-        right.position.x = 52
-        right.name = "scienceWeatherGate"
-        gateNode.addChild(right)
+        let inner = SKShapeNode(rectOf: CGSize(width: 78, height: 108), cornerRadius: 34)
+        inner.fillColor = UIColor(red: 0.04, green: 0.12, blue: 0.10, alpha: 0.94)
+        inner.strokeColor = UIColor(white: 1, alpha: 0.10)
+        inner.lineWidth = 2
+        inner.name = "scienceWeatherGate"
+        gateNode.addChild(inner)
 
-        let top = ArtSystem.box(
-            CGSize(width: 122, height: 18),
-            color: UIColor(red: 0.21, green: 0.36, blue: 0.31, alpha: 1),
-            radius: 3
+        let sign = ArtSystem.plaque(
+            CGSize(width: 150, height: 34),
+            fill: UIColor(red: 0.06, green: 0.16, blue: 0.12, alpha: 0.94),
+            stroke: UIColor(red: 0.54, green: 0.72, blue: 0.46, alpha: 0.72),
+            radius: 15
         )
-        top.position.y = 66
-        top.name = "scienceWeatherGate"
-        gateNode.addChild(top)
-
-        let sign = ArtSystem.label(greenhouseComplete ? "Weather Tower →" : "Weather Tower", size: 17)
-        sign.position.y = 98
+        sign.position.y = 111
         sign.name = "scienceWeatherGate"
         gateNode.addChild(sign)
 
+        let signText = ArtSystem.label("WEATHER TOWER", size: 12)
+        signText.fontColor = UIColor(red: 0.92, green: 0.98, blue: 0.84, alpha: 1)
+        signText.name = "scienceWeatherGate"
+        sign.addChild(signText)
+
         if !greenhouseComplete {
-            let vines = ArtSystem.box(
-                CGSize(width: 78, height: 120),
-                color: UIColor(red: 0.16, green: 0.48, blue: 0.21, alpha: 0.72),
-                radius: 20
-            )
-            vines.name = "scienceWeatherGate"
-            gateNode.addChild(vines)
+            for x in [CGFloat(-28), CGFloat(0), CGFloat(28)] {
+                let vine = ArtSystem.box(
+                    CGSize(width: 8, height: 105),
+                    color: UIColor(red: 0.15, green: 0.49, blue: 0.22, alpha: 0.80),
+                    radius: 4
+                )
+                vine.position = CGPoint(x: x, y: -3)
+                vine.zRotation = x / 420
+                vine.name = "scienceWeatherGate"
+                gateNode.addChild(vine)
+            }
+            let lock = ArtSystem.label("✿", size: 34)
+            lock.fontColor = UIColor(red: 0.70, green: 0.88, blue: 0.52, alpha: 0.86)
+            lock.name = "scienceWeatherGate"
+            gateNode.addChild(lock)
         } else {
-            let glow = SKShapeNode(rectOf: CGSize(width: 96, height: 128), cornerRadius: 20)
-            glow.fillColor = UIColor(red: 0.92, green: 0.89, blue: 0.48, alpha: 0.08)
-            glow.strokeColor = UIColor(red: 0.95, green: 0.91, blue: 0.49, alpha: 0.8)
-            glow.lineWidth = 3
-            glow.glowWidth = reducedMotion ? 0 : 10
-            glow.name = "scienceWeatherGate"
-            gateNode.addChild(glow)
+            inner.fillColor = UIColor(red: 0.28, green: 0.58, blue: 0.66, alpha: 0.22)
+            inner.strokeColor = UIColor(red: 0.95, green: 0.91, blue: 0.49, alpha: 0.86)
+            inner.glowWidth = reducedMotion ? 0 : 12
+            let arrow = ArtSystem.label("→", size: 34)
+            arrow.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.50, alpha: 1)
+            arrow.name = "scienceWeatherGate"
+            gateNode.addChild(arrow)
         }
     }
 
