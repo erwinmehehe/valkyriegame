@@ -158,7 +158,7 @@ import UIKit
         ].joined(separator: "|")
         if let cached = retinaTextureCache[key] { return cached }
 
-        guard let sourceImage = source.cgImage() else { return source }
+        let sourceImage = source.cgImage()
         let targetWidth = max(
             sourceImage.width,
             Int(ceil(targetPoints.width * minimumScale))
