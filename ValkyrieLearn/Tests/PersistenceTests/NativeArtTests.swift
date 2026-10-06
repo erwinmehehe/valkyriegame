@@ -1960,4 +1960,58 @@ import LearningCore
     }
 
 
+
+    func testScienceAdventureScenesMeetProductionVisualStructure() throws {
+        let weatherState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        weatherState.travel(to: .scienceWeatherTower)
+        let weather = WeatherTowerScene(state: weatherState)
+        weather.reducedMotion = true
+        weather.didMove(to: SKView())
+
+        XCTAssertNotNil(weather.childNode(withName: "weatherBackdropHD"))
+        XCTAssertNotNil(weather.childNode(withName: "weatherTowerStructure"))
+        XCTAssertNotNil(weather.childNode(withName: "weatherTerrace"))
+        XCTAssertNotNil(weather.childNode(withName: "scienceForecastBase"))
+        XCTAssertNotNil(weather.childNode(withName: "scienceMorningWeather"))
+        XCTAssertNotNil(weather.childNode(withName: "scienceAfternoonWeather"))
+        weather.willLeave()
+
+        let groveState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        groveState.travel(to: .scienceCreatureGrove)
+        let grove = CreatureGroveScene(state: groveState)
+        grove.reducedMotion = true
+        grove.didMove(to: SKView())
+
+        XCTAssertNotNil(grove.childNode(withName: "creatureGroveBackdropHD"))
+        XCTAssertNotNil(grove.childNode(withName: "grovePath"))
+        XCTAssertNotNil(grove.childNode(withName: "scienceGroveDuck"))
+        XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
+        XCTAssertNotNil(grove.childNode(withName: "scienceCompareBoard"))
+        grove.willLeave()
+    }
+
+    func testPolishedSharedControlsRetainLargeTouchGeometry() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let homeDestination = try XCTUnwrap(scene.childNode(withName: "castle"))
+        XCTAssertGreaterThanOrEqual(homeDestination.calculateAccumulatedFrame().width, 60)
+        XCTAssertGreaterThanOrEqual(homeDestination.calculateAccumulatedFrame().height, 60)
+
+        let titleBackdrop = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop") as? SKShapeNode)
+        XCTAssertGreaterThan(titleBackdrop.lineWidth, 1)
+        let feedbackBackdrop = try XCTUnwrap(scene.childNode(withName: "instructionBackdrop") as? SKShapeNode)
+        XCTAssertGreaterThan(feedbackBackdrop.lineWidth, 1)
+    }
+
+
 }
