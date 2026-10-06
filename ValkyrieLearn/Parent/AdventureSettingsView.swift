@@ -15,7 +15,7 @@ import LearningCore
                         Label("Math progress", systemImage: "chart.bar.doc.horizontal")
                     }
 
-                    Text("See strengths, skills in progress, review needs, and what the adaptive system thinks is ready next.")
+                    Text("See what your child is strengthening, what may need review, and what the game is ready to introduce next.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -25,8 +25,11 @@ import LearningCore
                     Toggle("Reduced motion", isOn: $state.reducedMotion)
                 }
 
-                Section("Build notes") {
-                    Text("The illustrated Story Tree and Math Castle use the v3.31 art direction. Workshop examples remain unscored.")
+                Section("On this iPad") {
+                    Label("Progress is saved locally on this iPad.", systemImage: "ipad")
+                    Text("No account is required for this build.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 if let error = state.saveError {
