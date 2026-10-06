@@ -1841,4 +1841,36 @@ import LearningCore
     }
 
 
+    func testGameplayBackdropsAvoidLowResolutionReferenceAtlas() throws {
+        let scienceState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        scienceState.travel(to: .scienceLab)
+        let science = ScienceLabScene(state: scienceState)
+        science.reducedMotion = true
+        science.didMove(to: SKView())
+        XCTAssertNotNil(science.childNode(withName: "scienceGreenhouseBackdrop"))
+        XCTAssertNil(
+            science.childNode(withName: "scienceReferenceBackdrop"),
+            "The low-resolution v3.31 atlas must never be stretched behind Science Lab gameplay."
+        )
+        science.willLeave()
+
+        let puzzleState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        puzzleState.travel(to: .puzzlePalace)
+        let palace = PuzzlePalaceScene(state: puzzleState)
+        palace.reducedMotion = true
+        palace.didMove(to: SKView())
+        let backdrop = try XCTUnwrap(
+            palace.childNode(withName: "palaceBackdropHD") as? SKSpriteNode
+        )
+        let sourceSize = try XCTUnwrap(backdrop.texture?.size())
+        XCTAssertGreaterThanOrEqual(sourceSize.width, 1280)
+        XCTAssertGreaterThanOrEqual(sourceSize.height, 720)
+        palace.willLeave()
+    }
+
+
 }
