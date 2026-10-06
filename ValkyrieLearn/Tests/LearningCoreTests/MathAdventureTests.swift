@@ -256,7 +256,7 @@ final class MathAdventureTests: XCTestCase {
         let catalog = MathCastleEncounterCatalog.reasoningDepth
         XCTAssertGreaterThanOrEqual(catalog.count, 8)
         XCTAssertEqual(Set(catalog.map(\.fingerprint)).count, catalog.count)
-        XCTAssertTrue(catalog.allSatisfy(MathManipulativeSupport.supports))
+        XCTAssertTrue(catalog.allSatisfy { MathManipulativeSupport.supports($0) })
         XCTAssertTrue(catalog.allSatisfy { $0.challengeDepth > 0 })
         XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.equivalence10 })
         XCTAssertTrue(catalog.contains { $0.skillID == MathSkills.sameTotalDifferentWay })
@@ -303,7 +303,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertLessThanOrEqual(longestMechanicRun, 2)
         XCTAssertGreaterThanOrEqual(Set(encounters.map(\.mechanicID)).count, 3)
         XCTAssertGreaterThanOrEqual(
-            plan.beats.filter { $0 == .explorationBreak }.count,
+            plan.explorationBreakCount,
             2,
             "A 12-encounter / roughly 15-minute session should expose natural stopping or exploration beats."
         )
