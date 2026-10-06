@@ -675,9 +675,9 @@ import LearningCore
             }
             if let mechanic {
                 mechanic.zPosition = 815
-                if runtime.encounter.mechanicID == MathMechanicID.crystalCart {
-                    mechanic.position = CGPoint(x: 760, y: 300)
-                }
+                // CrystalCartMechanic owns scene-space positions internally
+                // (cart 830,265; supply 595,235). Translating the root would
+                // desynchronize the visible machine from its touch contract.
                 addChild(mechanic)
             }
             renderedEncounterID = runtime.encounter.id
