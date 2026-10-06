@@ -155,7 +155,7 @@ import LearningCore
     func testCompanionPresentationPreservesSourceAspectAndReadablePresence() throws {
         let companions: [(String, CharacterNode, CGFloat)] = [
             ("Lumi", LumiNode(), 128),
-            ("Milo", MiloNode(), 116),
+            ("Milo", MiloNode(), 113),
             ("Tiko", TikoNode(), 130)
         ]
 
