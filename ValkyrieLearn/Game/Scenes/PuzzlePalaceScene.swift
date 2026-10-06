@@ -365,11 +365,11 @@ import LearningCore
 
         let hall = ArtSystem.box(
             CGSize(width: 1080, height: 430),
-            color: UIColor(red: 0.09, green: 0.08, blue: 0.20, alpha: 0.78),
+            color: UIColor(red: 0.09, green: 0.08, blue: 0.20, alpha: 0.52),
             radius: 66
         )
-        hall.strokeColor = UIColor(red: 0.52, green: 0.43, blue: 0.78, alpha: 0.72)
-        hall.lineWidth = 4
+        hall.strokeColor = UIColor(red: 0.52, green: 0.43, blue: 0.78, alpha: 0.44)
+        hall.lineWidth = 3
         hall.position = CGPoint(x: 690, y: 390)
         hall.zPosition = -215
         hall.name = "puzzleArchitecture"
@@ -377,7 +377,7 @@ import LearningCore
 
         let floor = ArtSystem.box(
             CGSize(width: 1280, height: 205),
-            color: UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.98),
+            color: UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.88),
             radius: 0
         )
         floor.strokeColor = .clear
@@ -422,21 +422,21 @@ import LearningCore
 
         for x in [CGFloat(205), 405, 605, 805, 1005, 1205] {
             let pillar = ArtSystem.box(
-                CGSize(width: 46, height: 350),
-                color: UIColor(red: 0.12, green: 0.11, blue: 0.24, alpha: 1),
-                radius: 12
+                CGSize(width: 34, height: 330),
+                color: UIColor(red: 0.12, green: 0.11, blue: 0.24, alpha: 0.74),
+                radius: 11
             )
-            pillar.strokeColor = UIColor(red: 0.55, green: 0.44, blue: 0.78, alpha: 0.58)
-            pillar.lineWidth = 2
+            pillar.strokeColor = UIColor(red: 0.55, green: 0.44, blue: 0.78, alpha: 0.36)
+            pillar.lineWidth = 1.5
             pillar.position = CGPoint(x: x, y: 405)
             pillar.zPosition = -195
             pillar.name = "puzzlePillar"
             addChild(pillar)
 
-            let cap = SKShapeNode(circleOfRadius: 31)
-            cap.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.38, alpha: 1)
-            cap.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.32, alpha: 0.88)
-            cap.lineWidth = 4
+            let cap = SKShapeNode(circleOfRadius: 24)
+            cap.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.38, alpha: 0.76)
+            cap.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.32, alpha: 0.56)
+            cap.lineWidth = 2.5
             cap.position = CGPoint(x: x, y: 565)
             cap.zPosition = -190
             addChild(cap)
@@ -444,23 +444,25 @@ import LearningCore
 
         for x in [CGFloat(320), 690, 1060] {
             let arch = SKShapeNode(
-                rectOf: CGSize(width: 235, height: 285),
-                cornerRadius: 108
+                rectOf: CGSize(width: 215, height: 270),
+                cornerRadius: 100
             )
-            arch.fillColor = UIColor(red: 0.07, green: 0.09, blue: 0.18, alpha: 0.72)
-            arch.strokeColor = UIColor(red: 0.48, green: 0.67, blue: 0.88, alpha: 0.68)
-            arch.lineWidth = 4
+            arch.fillColor = UIColor(red: 0.07, green: 0.09, blue: 0.18, alpha: 0.34)
+            arch.strokeColor = UIColor(red: 0.48, green: 0.67, blue: 0.88, alpha: 0.36)
+            arch.lineWidth = 2
             arch.position = CGPoint(x: x, y: 410)
             arch.zPosition = -185
+            arch.name = "puzzleArch"
             addChild(arch)
 
             let inner = SKShapeNode(
-                rectOf: CGSize(width: 177, height: 225),
-                cornerRadius: 84
+                rectOf: CGSize(width: 164, height: 212),
+                cornerRadius: 80
             )
-            inner.fillColor = UIColor(red: 0.12, green: 0.18, blue: 0.31, alpha: 0.88)
-            inner.strokeColor = UIColor(red: 0.67, green: 0.55, blue: 0.91, alpha: 0.78)
-            inner.lineWidth = 4
+            inner.fillColor = UIColor(red: 0.12, green: 0.18, blue: 0.31, alpha: 0.42)
+            inner.strokeColor = UIColor(red: 0.67, green: 0.55, blue: 0.91, alpha: 0.42)
+            inner.lineWidth = 2
+            inner.name = "puzzleArch"
             arch.addChild(inner)
         }
 
@@ -483,12 +485,12 @@ import LearningCore
         }
 
         let dais = ArtSystem.box(
-            CGSize(width: 590, height: 58),
-            color: UIColor(red: 0.20, green: 0.15, blue: 0.31, alpha: 0.96),
-            radius: 24
+            CGSize(width: 560, height: 44),
+            color: UIColor(red: 0.20, green: 0.15, blue: 0.31, alpha: 0.70),
+            radius: 20
         )
-        dais.strokeColor = UIColor(red: 0.72, green: 0.57, blue: 0.30, alpha: 0.76)
-        dais.lineWidth = 4
+        dais.strokeColor = UIColor(red: 0.72, green: 0.57, blue: 0.30, alpha: 0.54)
+        dais.lineWidth = 3
         dais.position = CGPoint(x: 775, y: 228)
         dais.zPosition = -105
         dais.name = "puzzleStageDais"
@@ -2524,9 +2526,9 @@ import LearningCore
 
         for (index, direction) in orientationEncounter.choices.enumerated() {
             let focusPool = SKShapeNode(ellipseOf: CGSize(width: 172, height: 34))
-            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.26)
-            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.42)
-            focusPool.lineWidth = 2
+            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.14)
+            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.28)
+            focusPool.lineWidth = 1.5
             focusPool.position = CGPoint(
                 x: mirrorChoicePoints[index].x,
                 y: mirrorChoicePoints[index].y - 108
@@ -2745,9 +2747,9 @@ import LearningCore
         // badges or labels that compete with the actual spatial reasoning task.
         for (index, shape) in rotationEncounter.choices.enumerated() {
             let focusPool = SKShapeNode(ellipseOf: CGSize(width: 172, height: 34))
-            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.26)
-            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.42)
-            focusPool.lineWidth = 2
+            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.14)
+            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.28)
+            focusPool.lineWidth = 1.5
             focusPool.position = CGPoint(
                 x: mirrorChoicePoints[index].x,
                 y: mirrorChoicePoints[index].y - 108
@@ -3507,11 +3509,11 @@ import LearningCore
         for index in 0..<3 {
             let socket = ArtSystem.panel(
                 CGSize(width: 174, height: 126),
-                fill: UIColor(red: 0.10, green: 0.09, blue: 0.20, alpha: 0.62),
-                stroke: UIColor(red: 0.55, green: 0.46, blue: 0.78, alpha: 0.42),
+                fill: UIColor(red: 0.10, green: 0.09, blue: 0.20, alpha: 0.34),
+                stroke: UIColor(red: 0.55, green: 0.46, blue: 0.78, alpha: 0.28),
                 radius: 32,
-                lineWidth: 2,
-                shadowAlpha: 0.18,
+                lineWidth: 1.5,
+                shadowAlpha: 0.10,
                 innerHighlight: UIColor(red: 0.84, green: 0.72, blue: 1.0, alpha: 0.06)
             )
             socket.position = CGPoint(x: [CGFloat(555), 760, 965][index], y: 355)
