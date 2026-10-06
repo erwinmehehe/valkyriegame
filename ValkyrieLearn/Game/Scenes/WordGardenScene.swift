@@ -102,7 +102,7 @@ import LearningCore
 
             let preparedTexture = ArtSystem.retinaEnhancedTexture(
                 sourceTexture,
-                cacheKey: wordGardenBackdropCacheKey,
+                cacheKey: wordGardenTextureCacheKey,
                 targetPoints: size,
                 sharpness: place == .storyHollow ? 0.20 : 0.22
             ) ?? sourceTexture
@@ -117,7 +117,7 @@ import LearningCore
             backdrop.userData = NSMutableDictionary(dictionary: [
                 "retinaPrepared": true,
                 "sourceAsset": "WordGardenSourceAtlas",
-                "sourceCrop": wordGardenBackdropCacheKey
+                "sourceCrop": wordGardenBackdropKey
             ])
             addChild(backdrop)
         }
@@ -164,7 +164,7 @@ import LearningCore
         }
     }
 
-    private var wordGardenBackdropCacheKey: String {
+    private var wordGardenBackdropKey: String {
         switch place {
         case .flowerGate:
             return "word-garden-flower-gate"
@@ -172,6 +172,15 @@ import LearningCore
             return "word-garden-sunmill"
         case .storyHollow:
             return "word-garden-story-hollow"
+        }
+    }
+
+    private var wordGardenTextureCacheKey: String {
+        switch place {
+        case .flowerGate, .sunmillCrossing:
+            return "word-garden-upper-crop"
+        case .storyHollow:
+            return "word-garden-lower-crop"
         }
     }
 
