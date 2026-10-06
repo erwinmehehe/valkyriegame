@@ -881,7 +881,7 @@ import LearningCore
         updateChallengeGateAppearance()
         if evidence.outcome == .correct {
             successFeedback()
-            focusCamera(on: CGPoint(x: 1030, y: 300))
+            focusMoment(on: CGPoint(x: 1030, y: 300))
             pip.helpRoute(to: CGPoint(x: 975, y: 225), reducedMotion: reducedMotion)
             valkyrie.pose(.celebrate)
             showQuestion(nil)
