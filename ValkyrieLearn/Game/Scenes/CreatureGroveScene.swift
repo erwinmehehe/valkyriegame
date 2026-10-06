@@ -34,6 +34,7 @@ import LearningCore
         valkyrie.setScale(0.5)
         milo.position = CGPoint(x: 245, y: 190)
         milo.reducedMotion = reducedMotion
+        milo.setScale(0.82)
         addChild(milo)
 
         renderPond()
