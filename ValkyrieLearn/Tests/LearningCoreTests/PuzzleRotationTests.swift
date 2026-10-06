@@ -402,11 +402,21 @@ final class PuzzleRotationTests: XCTestCase {
         }
     }
 
-    private func recordRepairPrerequisites(in profile: inout LearnerProfile) {
-        recordCommandPrerequisiteForBug(in: &profile)
-        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
-            recordBug(family[0], in: &profile)
-        }
+    private func recordRepair(
+        _ encounter: PuzzleRepairEncounter,
+        in profile: inout LearnerProfile,
+        support: SupportLevel = .independent,
+        outcome: Outcome = .correct
+    ) {
+        MasteryEngine().record(LearningEvidence(
+            encounterID: encounter.id,
+            skillID: encounter.skillID,
+            outcome: outcome,
+            supportLevel: support,
+            representation: encounter.representation,
+            mechanicID: encounter.mechanicID,
+            transferContext: encounter.transferContext
+        ), in: &profile)
     }
 
     func testBugRepairCatalogIsARealTwoStepSwapRepair() {
