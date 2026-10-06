@@ -2524,14 +2524,14 @@ import LearningCore
     }
 
     private func resolvePathChoice(_ index: Int) {
-        guard place == .pathTiles, pathAcceptingInput, let pathEncounter,
-              pathEncounter.choices.indices.contains(index) else { return }
+        guard place == .pathTiles, pathAcceptingInput, let activeEncounter = pathEncounter,
+              activeEncounter.choices.indices.contains(index) else { return }
         pathAcceptingInput = false
         attempts += 1
         let attemptSupport = support
-        let correct = pathEncounter.isValidChoice(index)
+        let correct = activeEncounter.isValidChoice(index)
 
-        _ = state.recordPuzzle(pathEncounter, outcome: correct ? .correct : .incorrect,
+        _ = state.recordPuzzle(activeEncounter, outcome: correct ? .correct : .incorrect,
                                support: attemptSupport, attempts: attempts,
                                responseTime: Date().timeIntervalSince(startedAt))
 
@@ -2551,8 +2551,8 @@ import LearningCore
         }
 
         solved = true
-        let route = pathEncounter.route(for: index)
-        animateTikoAlongPath(route, encounter: pathEncounter)
+        let route = activeEncounter.route(for: index)
+        animateTikoAlongPath(route, encounter: activeEncounter)
         refreshPathTilesProgress(animated: true)
     }
 
