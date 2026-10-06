@@ -87,13 +87,13 @@ import LearningCore
         // It sits behind the live machinery and actors, so it reads as part of
         // the castle floor rather than another floating answer panel.
         let workZone = ArtSystem.panel(
-            CGSize(width: 610, height: 330),
-            fill: UIColor(red: 0.10, green: 0.14, blue: 0.20, alpha: 0.62),
-            stroke: UIColor(red: 0.76, green: 0.58, blue: 0.27, alpha: 0.58),
-            radius: 54,
-            lineWidth: 3,
-            shadowAlpha: 0.24,
-            innerHighlight: UIColor(red: 0.95, green: 0.78, blue: 0.42, alpha: 0.07)
+            CGSize(width: 640, height: 275),
+            fill: UIColor(red: 0.10, green: 0.14, blue: 0.20, alpha: 0.14),
+            stroke: UIColor(red: 0.76, green: 0.58, blue: 0.27, alpha: 0.34),
+            radius: 72,
+            lineWidth: 2,
+            shadowAlpha: 0.08,
+            innerHighlight: UIColor(red: 0.95, green: 0.78, blue: 0.42, alpha: 0.05)
         )
         workZone.position = CGPoint(x: 820, y: 350)
         workZone.zPosition = 5
