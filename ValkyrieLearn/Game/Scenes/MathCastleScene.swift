@@ -74,11 +74,20 @@ import LearningCore
 
     override func buildWorld() {
         super.buildWorld()
+        prepareCastleIllustrationForRetina()
+        buildCastleFidelityAccents()
+
         _ = worldControl("‹", name: "home", at: CGPoint(x: 52, y: 669))
-        // A source-textured courtyard supports the live actors and machinery.
-        if let floor = ArtSystem.sprite("CastleCourtyard", size: CGSize(width: 1280, height: 250)) {
+        // Keep the approved painted courtyard, but prepare enough physical pixels
+        // for the Retina surface before SpriteKit composites live gameplay over it.
+        if let floor = ArtSystem.retinaEnhancedSprite(
+            "CastleCourtyard",
+            size: CGSize(width: 1280, height: 250),
+            sharpness: 0.24
+        ) {
             floor.position = CGPoint(x: 640, y: 125)
             floor.zPosition = -80
+            floor.name = "castleCourtyardRetina"
             addChild(floor)
         }
         // The five workshop seals are mounted on one physical timber rack.
@@ -194,6 +203,106 @@ import LearningCore
         buildPhysicalProgression()
         updateChallengeGateAppearance()
         openOrder()
+    }
+
+    /// The current approved Math Castle painting is a 1x source for a 1280x720
+    /// point scene. Preserve that art direction, but prepare a cached 2x raster so
+    /// Retina compositing is not forced to magnify the 1x bitmap at presentation.
+    private func prepareCastleIllustrationForRetina() {
+        if let backdrop = childNode(withName: "worldBackdrop") as? SKSpriteNode,
+           let texture = ArtSystem.retinaEnhancedTexture(
+                "MathCastle",
+                targetPoints: size,
+                sharpness: 0.30
+           ) {
+            backdrop.texture = texture
+            backdrop.userData = NSMutableDictionary(dictionary: [
+                "retinaPrepared": true,
+                "sourceAsset": "MathCastle"
+            ])
+        }
+
+        for side in ["Left", "Right"] {
+            guard let foreground = childNode(
+                withName: "foreground" + side
+            ) as? SKSpriteNode else { continue }
+            let asset = "CastleForeground" + side
+            if let texture = ArtSystem.retinaEnhancedTexture(
+                asset,
+                targetPoints: foreground.size,
+                sharpness: 0.24
+            ) {
+                foreground.texture = texture
+            }
+        }
+    }
+
+    /// A few low-contrast native accents give the painted scene crisp visual
+    /// anchors at device resolution while leaving the illustration dominant.
+    private func buildCastleFidelityAccents() {
+        let root = SKNode()
+        root.name = "castleRetinaAccents"
+        root.zPosition = -70
+
+        let floorPath = CGMutablePath()
+        floorPath.move(to: CGPoint(x: 55, y: 176))
+        floorPath.addCurve(
+            to: CGPoint(x: 1225, y: 176),
+            control1: CGPoint(x: 390, y: 154),
+            control2: CGPoint(x: 875, y: 192)
+        )
+        let floorRim = SKShapeNode(path: floorPath)
+        floorRim.name = "castleFloorRim"
+        floorRim.strokeColor = UIColor(
+            red: 1.0,
+            green: 0.78,
+            blue: 0.34,
+            alpha: 0.18
+        )
+        floorRim.lineWidth = 2
+        floorRim.glowWidth = 1
+        root.addChild(floorRim)
+
+        let gateRim = SKShapeNode(
+            ellipseOf: CGSize(width: 150, height: 214)
+        )
+        gateRim.name = "castleGateRim"
+        gateRim.position = CGPoint(x: 1125, y: 565)
+        gateRim.fillColor = .clear
+        gateRim.strokeColor = UIColor(
+            red: 0.78,
+            green: 0.90,
+            blue: 1.0,
+            alpha: 0.16
+        )
+        gateRim.lineWidth = 2
+        gateRim.glowWidth = reducedMotion ? 0 : 2
+        root.addChild(gateRim)
+
+        let skyGlints = [
+            CGPoint(x: 255, y: 610),
+            CGPoint(x: 455, y: 570),
+            CGPoint(x: 650, y: 620),
+            CGPoint(x: 805, y: 565),
+            CGPoint(x: 985, y: 615),
+            CGPoint(x: 1180, y: 595)
+        ]
+        for (index, point) in skyGlints.enumerated() {
+            let glint = SKShapeNode(circleOfRadius: index.isMultiple(of: 2) ? 2.2 : 1.6)
+            glint.position = point
+            glint.fillColor = UIColor(
+                red: 0.90,
+                green: 0.95,
+                blue: 1.0,
+                alpha: 0.34
+            )
+            glint.strokeColor = .clear
+            glint.glowWidth = reducedMotion ? 0 : 2
+            glint.name = "castleSkyGlint"
+            root.addChild(glint)
+        }
+
+        addChild(root)
     }
 
     private func buildBridgeRoute() {

@@ -1,4 +1,6 @@
 import SpriteKit
+import CoreImage
+import UIKit
 
 // Final art uses <character>.atlas with named <action>_01, _02... frames.
 // This boundary is the only place gameplay needs to know whether an atlas exists.
@@ -7,7 +9,9 @@ import SpriteKit
     enum Environment { case isles, castle }
     private static var atlasCache: [String: SKTextureAtlas] = [:]
     private static var textureCache: [String: SKTexture] = [:]
+    private static var retinaTextureCache: [String: SKTexture] = [:]
     private static var frameCache: [String: [SKTexture]] = [:]
+    private static let imageContext = CIContext()
     static func frames(character: String, pose: Pose) -> [SKTexture] {
         let key = character + "|" + pose.rawValue
         if let cached = frameCache[key] { return cached }
@@ -45,6 +49,104 @@ import SpriteKit
     }
     static func sprite(_ name: String, size: CGSize) -> SKSpriteNode? {
         guard let texture = texture(name) else { return nil }
+        return SKSpriteNode(texture: texture, color: .white, size: size)
+    }
+
+    /// Builds a cached Retina-sized texture from approved source art without
+    /// replacing the illustration with synthetic geometry. This is an enhancement
+    /// path for legacy 1x paintings: high-quality resampling supplies the physical
+    /// pixel density and a restrained luminance sharpen restores edge separation.
+    /// It does not claim to create new source detail.
+    static func retinaEnhancedTexture(
+        _ name: String,
+        targetPoints: CGSize,
+        minimumScale: CGFloat = 2,
+        sharpness: CGFloat = 0.28
+    ) -> SKTexture? {
+        guard targetPoints.width > 0, targetPoints.height > 0, minimumScale >= 1 else {
+            return texture(name)
+        }
+
+        let key = [
+            name,
+            String(Int(targetPoints.width.rounded())),
+            String(Int(targetPoints.height.rounded())),
+            String(format: "%.2f", minimumScale),
+            String(format: "%.2f", sharpness)
+        ].joined(separator: "|")
+        if let cached = retinaTextureCache[key] { return cached }
+
+        let source = UIImage(named: name) ?? Bundle.main.url(
+            forResource: name,
+            withExtension: "webp"
+        ).flatMap { UIImage(contentsOfFile: $0.path) }
+        guard let sourceImage = source?.cgImage else { return texture(name) }
+
+        let targetWidth = max(
+            sourceImage.width,
+            Int(ceil(targetPoints.width * minimumScale))
+        )
+        let targetHeight = max(
+            sourceImage.height,
+            Int(ceil(targetPoints.height * minimumScale))
+        )
+
+        if sourceImage.width >= targetWidth, sourceImage.height >= targetHeight {
+            return texture(name)
+        }
+
+        guard let bitmap = CGContext(
+            data: nil,
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: targetWidth * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return texture(name)
+        }
+
+        bitmap.interpolationQuality = .high
+        bitmap.draw(
+            sourceImage,
+            in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight)
+        )
+        guard var prepared = bitmap.makeImage() else { return texture(name) }
+
+        if sharpness > 0,
+           let filter = CIFilter(name: "CISharpenLuminance") {
+            filter.setValue(CIImage(cgImage: prepared), forKey: kCIInputImageKey)
+            filter.setValue(min(0.65, sharpness), forKey: kCIInputSharpnessKey)
+            if let output = filter.outputImage,
+               let sharpened = imageContext.createCGImage(output, from: output.extent) {
+                prepared = sharpened
+            }
+        }
+
+        let image = UIImage(
+            cgImage: prepared,
+            scale: minimumScale,
+            orientation: .up
+        )
+        let enhanced = SKTexture(image: image)
+        enhanced.filteringMode = .linear
+        retinaTextureCache[key] = enhanced
+        return enhanced
+    }
+
+    static func retinaEnhancedSprite(
+        _ name: String,
+        size: CGSize,
+        minimumScale: CGFloat = 2,
+        sharpness: CGFloat = 0.28
+    ) -> SKSpriteNode? {
+        guard let texture = retinaEnhancedTexture(
+            name,
+            targetPoints: size,
+            minimumScale: minimumScale,
+            sharpness: sharpness
+        ) else { return nil }
         return SKSpriteNode(texture: texture, color: .white, size: size)
     }
 
