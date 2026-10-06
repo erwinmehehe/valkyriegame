@@ -305,18 +305,18 @@ import LearningCore
             let matte = SKSpriteNode(texture: puzzleTexture, color: .white, size: size)
             matte.position = CGPoint(x: 640, y: 360)
             matte.zPosition = -250
-            matte.alpha = 0.20
+            matte.alpha = 0.10
             matte.name = "puzzleLegacyMatte"
             addChild(matte)
         }
 
         let hall = ArtSystem.box(
             CGSize(width: 1080, height: 430),
-            color: UIColor(red: 0.10, green: 0.09, blue: 0.22, alpha: 0.90),
+            color: UIColor(red: 0.09, green: 0.08, blue: 0.20, alpha: 0.78),
             radius: 66
         )
-        hall.strokeColor = UIColor(red: 0.42, green: 0.34, blue: 0.68, alpha: 0.90)
-        hall.lineWidth = 8
+        hall.strokeColor = UIColor(red: 0.52, green: 0.43, blue: 0.78, alpha: 0.72)
+        hall.lineWidth = 4
         hall.position = CGPoint(x: 690, y: 390)
         hall.zPosition = -215
         hall.name = "puzzleArchitecture"
@@ -333,10 +333,23 @@ import LearningCore
         floor.name = "puzzleFloor"
         addChild(floor)
 
+        if let courtyard = ArtSystem.sprite(
+            "CastleCourtyard",
+            size: CGSize(width: 1280, height: 235)
+        ) {
+            courtyard.position = CGPoint(x: 640, y: 118)
+            courtyard.zPosition = -143
+            courtyard.alpha = 0.78
+            courtyard.color = UIColor(red: 0.55, green: 0.44, blue: 0.80, alpha: 1)
+            courtyard.colorBlendFactor = 0.28
+            courtyard.name = "puzzleFloorTexture"
+            addChild(courtyard)
+        }
+
         for x in stride(from: CGFloat(90), through: CGFloat(1190), by: CGFloat(140)) {
             let seam = ArtSystem.box(
                 CGSize(width: 3, height: 195),
-                color: UIColor(red: 0.36, green: 0.29, blue: 0.48, alpha: 0.26),
+                color: UIColor(red: 0.36, green: 0.29, blue: 0.48, alpha: 0.10),
                 radius: 1
             )
             seam.position = CGPoint(x: x, y: 108)
@@ -346,7 +359,7 @@ import LearningCore
         for y in [CGFloat(55), CGFloat(110), CGFloat(165)] {
             let seam = ArtSystem.box(
                 CGSize(width: 1260, height: 3),
-                color: UIColor(red: 0.36, green: 0.29, blue: 0.48, alpha: 0.24),
+                color: UIColor(red: 0.36, green: 0.29, blue: 0.48, alpha: 0.09),
                 radius: 1
             )
             seam.position = CGPoint(x: 640, y: y)
@@ -360,8 +373,8 @@ import LearningCore
                 color: UIColor(red: 0.12, green: 0.11, blue: 0.24, alpha: 1),
                 radius: 12
             )
-            pillar.strokeColor = UIColor(red: 0.55, green: 0.44, blue: 0.78, alpha: 0.72)
-            pillar.lineWidth = 4
+            pillar.strokeColor = UIColor(red: 0.55, green: 0.44, blue: 0.78, alpha: 0.58)
+            pillar.lineWidth = 2
             pillar.position = CGPoint(x: x, y: 405)
             pillar.zPosition = -195
             pillar.name = "puzzlePillar"
@@ -382,8 +395,8 @@ import LearningCore
                 cornerRadius: 108
             )
             arch.fillColor = UIColor(red: 0.07, green: 0.09, blue: 0.18, alpha: 0.72)
-            arch.strokeColor = UIColor(red: 0.48, green: 0.67, blue: 0.88, alpha: 0.78)
-            arch.lineWidth = 7
+            arch.strokeColor = UIColor(red: 0.48, green: 0.67, blue: 0.88, alpha: 0.68)
+            arch.lineWidth = 4
             arch.position = CGPoint(x: x, y: 410)
             arch.zPosition = -185
             addChild(arch)
@@ -399,29 +412,21 @@ import LearningCore
         }
 
         for (index, point) in [
-            CGPoint(x: 255, y: 565),
-            CGPoint(x: 505, y: 525),
-            CGPoint(x: 875, y: 525),
-            CGPoint(x: 1125, y: 565)
+            CGPoint(x: 255, y: 545),
+            CGPoint(x: 505, y: 515),
+            CGPoint(x: 875, y: 515),
+            CGPoint(x: 1125, y: 545)
         ].enumerated() {
-            let crystal = SKShapeNode(path: {
-                let p = CGMutablePath()
-                p.move(to: CGPoint(x: 0, y: 35))
-                p.addLine(to: CGPoint(x: 25, y: 0))
-                p.addLine(to: CGPoint(x: 0, y: -35))
-                p.addLine(to: CGPoint(x: -25, y: 0))
-                p.closeSubpath()
-                return p
-            }())
-            crystal.fillColor = index.isMultiple(of: 2)
-                ? UIColor(red: 0.42, green: 0.72, blue: 0.98, alpha: 0.92)
-                : UIColor(red: 0.70, green: 0.44, blue: 0.96, alpha: 0.92)
-            crystal.strokeColor = UIColor(white: 1, alpha: 0.76)
-            crystal.lineWidth = 3
-            crystal.glowWidth = 8
-            crystal.position = point
-            crystal.zPosition = -170
-            addChild(crystal)
+            if let crystal = ArtSystem.sprite(
+                "Crystal",
+                size: CGSize(width: 66, height: 96)
+            ) {
+                crystal.position = point
+                crystal.zPosition = -168
+                crystal.alpha = index.isMultiple(of: 2) ? 0.82 : 0.66
+                crystal.name = "puzzleCrystalFixture"
+                addChild(crystal)
+            }
         }
 
         let dais = ArtSystem.box(
