@@ -285,4 +285,87 @@ final class PuzzleRotationTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
     }
 
+    func testPalaceRestorationRequiresEveryImplementedRoom() {
+        var profile = LearnerProfile()
+
+        func record(
+            id: String,
+            skillID: SkillID,
+            representation: Representation,
+            mechanicID: String,
+            transfer: Bool = false
+        ) {
+            MasteryEngine().record(
+                LearningEvidence(
+                    encounterID: id,
+                    skillID: skillID,
+                    outcome: .correct,
+                    supportLevel: .independent,
+                    representation: representation,
+                    mechanicID: mechanicID,
+                    transferContext: transfer
+                ),
+                in: &profile
+            )
+        }
+
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.ruleSwitching {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID,
+                   transfer: encounter.transferContext)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID,
+                   transfer: encounter.transferContext)
+        }
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            let encounter = family[0]
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID,
+                   transfer: encounter.transferContext)
+        }
+
+        XCTAssertFalse(
+            PuzzlePalaceDirector.palaceRestorationComplete(profile: profile),
+            "The finale must not unlock before Command Gears is independently restored."
+        )
+
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            let encounter = family[0]
+            record(id: encounter.id, skillID: encounter.skillID,
+                   representation: encounter.representation, mechanicID: encounter.mechanicID,
+                   transfer: encounter.transferContext)
+        }
+
+        XCTAssertTrue(PuzzlePalaceDirector.palaceRestorationComplete(profile: profile))
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        XCTAssertEqual(profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+    }
+
+
 }
