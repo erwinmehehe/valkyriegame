@@ -2551,6 +2551,58 @@ import LearningCore
         grove.willLeave()
     }
 
+    func testRuneGateReadsAsPhysicalWorldInsteadOfFullscreenWorksheet() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .puzzlePalace)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let architecture = try XCTUnwrap(
+            scene.childNode(withName: "puzzleArchitecture") as? SKShapeNode
+        )
+        XCTAssertLessThan(
+            architecture.alpha,
+            0.10,
+            "Rune Gate should not be dominated by the old giant palace panel."
+        )
+
+        let gate = try XCTUnwrap(
+            scene.childNode(withName: "puzzleGate") as? SKShapeNode
+        )
+        let gateFrame = gate.calculateAccumulatedFrame()
+        XCTAssertLessThan(gateFrame.width, 190)
+        XCTAssertLessThan(gateFrame.height, 270)
+
+        let board = try XCTUnwrap(scene.childNode(withName: "runeBoard"))
+        XCTAssertLessThan(
+            board.calculateAccumulatedFrame().width,
+            520,
+            "The rune pattern should read as physical stones, not a wide quiz rail."
+        )
+
+        let choices = scene.children.filter { $0.name == "runeChoice" }
+        XCTAssertEqual(choices.count, 3)
+        for choice in choices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 88)
+            XCTAssertGreaterThanOrEqual(frame.height, 88)
+        }
+
+        let instructionBackdrop = try XCTUnwrap(
+            scene.childNode(withName: "instructionBackdrop")
+        )
+        XCTAssertLessThan(
+            instructionBackdrop.calculateAccumulatedFrame().width,
+            800,
+            "Puzzle Palace instructions should not span nearly the whole screen."
+        )
+    }
+
     func testLongPuzzleWorldTitleAndActorScaleStayPresentationSafe() throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
