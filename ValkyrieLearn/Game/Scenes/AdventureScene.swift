@@ -371,6 +371,74 @@ struct AdventureSceneLayout {
         ]))
     }
 
+    func clearAttentionCue() {
+        childNode(withName: "decorativeAttentionCue")?.removeFromParent()
+    }
+
+    func showAttentionCue(
+        at point: CGPoint,
+        tint: UIColor? = nil,
+        width: CGFloat = 118
+    ) {
+        clearAttentionCue()
+
+        let color = tint ?? ambientTint
+        let root = SKNode()
+        root.name = "decorativeAttentionCue"
+        root.position = point
+        root.zPosition = 175
+        root.isUserInteractionEnabled = false
+
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: width, height: 30))
+        shadow.fillColor = UIColor(white: 0.02, alpha: 0.18)
+        shadow.strokeColor = .clear
+        shadow.position.y = -4
+        shadow.isUserInteractionEnabled = false
+        root.addChild(shadow)
+
+        let ring = SKShapeNode(ellipseOf: CGSize(width: width, height: 34))
+        ring.fillColor = color.withAlphaComponent(0.06)
+        ring.strokeColor = color.withAlphaComponent(0.78)
+        ring.lineWidth = 3
+        ring.glowWidth = reducedMotion ? 0 : 7
+        ring.isUserInteractionEnabled = false
+        root.addChild(ring)
+
+        let inner = SKShapeNode(ellipseOf: CGSize(width: width * 0.58, height: 18))
+        inner.fillColor = color.withAlphaComponent(0.10)
+        inner.strokeColor = color.withAlphaComponent(0.34)
+        inner.lineWidth = 1.5
+        inner.isUserInteractionEnabled = false
+        root.addChild(inner)
+
+        let spark = ArtSystem.label("✦", size: 18)
+        spark.fontColor = color.withAlphaComponent(0.90)
+        spark.position.y = 24
+        spark.isUserInteractionEnabled = false
+        root.addChild(spark)
+
+        if !reducedMotion {
+            ring.run(.repeatForever(.sequence([
+                .group([
+                    .scaleX(to: 1.12, duration: 0.72),
+                    .scaleY(to: 1.12, duration: 0.72),
+                    .fadeAlpha(to: 0.38, duration: 0.72)
+                ]),
+                .group([
+                    .scaleX(to: 1.0, duration: 0.72),
+                    .scaleY(to: 1.0, duration: 0.72),
+                    .fadeAlpha(to: 1.0, duration: 0.72)
+                ])
+            ])), withKey: "attentionPulse")
+            spark.run(.repeatForever(.sequence([
+                .moveBy(x: 0, y: 5, duration: 0.55),
+                .moveBy(x: 0, y: -5, duration: 0.55)
+            ])), withKey: "attentionFloat")
+        }
+
+        addChild(root)
+    }
+
     @discardableResult
     func worldControl(
         _ text: String,
@@ -511,7 +579,7 @@ struct AdventureSceneLayout {
             var node: SKNode? = hit
             var depth = 0
             while let current = node, current !== self {
-                if let name = current.name, !name.isEmpty {
+                if let name = current.name, !name.isEmpty, !name.hasPrefix("decorative") {
                     var score = current.zPosition
                     var ancestor = current.parent
                     while let parent = ancestor, parent !== self {
@@ -678,6 +746,7 @@ struct AdventureSceneLayout {
 
     func willLeave() {
         leaving = true
+        clearAttentionCue()
         enumerateChildNodes(withName: "//*") { node, _ in
             node.removeAllActions()
         }
