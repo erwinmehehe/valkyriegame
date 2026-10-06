@@ -82,12 +82,13 @@ import LearningCore
         }
 
         let terrace = ArtSystem.panel(
-            CGSize(width: 1160, height: 142),
-            fill: UIColor(red: 0.20, green: 0.23, blue: 0.25, alpha: 0.91),
-            stroke: UIColor(red: 0.65, green: 0.57, blue: 0.38, alpha: 0.88),
-            radius: 46,
-            lineWidth: 4,
-            shadowAlpha: 0.36
+            CGSize(width: 1160, height: 122),
+            fill: UIColor(red: 0.14, green: 0.18, blue: 0.20, alpha: 0.78),
+            stroke: UIColor(red: 0.65, green: 0.57, blue: 0.38, alpha: 0.72),
+            radius: 40,
+            lineWidth: 3,
+            shadowAlpha: 0.24,
+            innerHighlight: UIColor(red: 0.85, green: 0.74, blue: 0.52, alpha: 0.05)
         )
         terrace.position = CGPoint(x: 640, y: 190)
         terrace.zPosition = 24
@@ -122,37 +123,54 @@ import LearningCore
         tower.name = "weatherTowerStructure"
 
         let shaft = ArtSystem.panel(
-            CGSize(width: 300, height: 390),
-            fill: UIColor(red: 0.16, green: 0.22, blue: 0.27, alpha: 0.94),
-            stroke: UIColor(red: 0.63, green: 0.72, blue: 0.74, alpha: 0.88),
-            radius: 34,
-            lineWidth: 5,
-            shadowAlpha: 0.34
+            CGSize(width: 274, height: 372),
+            fill: UIColor(red: 0.12, green: 0.20, blue: 0.24, alpha: 0.82),
+            stroke: UIColor(red: 0.61, green: 0.74, blue: 0.75, alpha: 0.72),
+            radius: 38,
+            lineWidth: 4,
+            shadowAlpha: 0.24,
+            innerHighlight: UIColor(red: 0.66, green: 0.92, blue: 0.95, alpha: 0.05)
         )
+        shaft.name = "weatherTowerShaft"
         tower.addChild(shaft)
 
-        for x in [CGFloat(-158), CGFloat(158)] {
+        let observationGlass = ArtSystem.panel(
+            CGSize(width: 184, height: 226),
+            fill: UIColor(red: 0.12, green: 0.36, blue: 0.43, alpha: 0.16),
+            stroke: UIColor(red: 0.62, green: 0.88, blue: 0.91, alpha: 0.48),
+            radius: 42,
+            lineWidth: 2,
+            shadowAlpha: 0.08,
+            innerHighlight: UIColor(white: 1, alpha: 0.05)
+        )
+        observationGlass.position = CGPoint(x: 0, y: 12)
+        observationGlass.name = "weatherObservationGlass"
+        tower.addChild(observationGlass)
+
+        for x in [CGFloat(-148), CGFloat(148)] {
             let buttress = ArtSystem.panel(
-                CGSize(width: 52, height: 340),
-                fill: UIColor(red: 0.12, green: 0.18, blue: 0.22, alpha: 0.94),
-                stroke: UIColor(red: 0.48, green: 0.58, blue: 0.60, alpha: 0.72),
-                radius: 18,
-                lineWidth: 3,
-                shadowAlpha: 0.26
+                CGSize(width: 34, height: 320),
+                fill: UIColor(red: 0.10, green: 0.17, blue: 0.20, alpha: 0.84),
+                stroke: UIColor(red: 0.45, green: 0.58, blue: 0.59, alpha: 0.56),
+                radius: 15,
+                lineWidth: 2,
+                shadowAlpha: 0.18
             )
-            buttress.position = CGPoint(x: x, y: -12)
+            buttress.position = CGPoint(x: x, y: -18)
+            buttress.name = "weatherTowerButtress"
             tower.addChild(buttress)
         }
 
-        for y in [CGFloat(-118), CGFloat(-18), CGFloat(82)] {
+        for y in [CGFloat(-112), CGFloat(-18), CGFloat(76)] {
             let band = ArtSystem.box(
-                CGSize(width: 320, height: 13),
-                color: UIColor(red: 0.48, green: 0.42, blue: 0.30, alpha: 0.96),
-                radius: 5
+                CGSize(width: 294, height: 9),
+                color: UIColor(red: 0.52, green: 0.43, blue: 0.27, alpha: 0.84),
+                radius: 4
             )
-            band.strokeColor = UIColor(red: 0.85, green: 0.69, blue: 0.38, alpha: 0.72)
-            band.lineWidth = 2
+            band.strokeColor = UIColor(red: 0.87, green: 0.69, blue: 0.38, alpha: 0.54)
+            band.lineWidth = 1
             band.position.y = y
+            band.name = "weatherTowerBand"
             tower.addChild(band)
         }
 
@@ -178,15 +196,25 @@ import LearningCore
             p.closeSubpath()
             return p
         }())
-        roof.fillColor = UIColor(red: 0.10, green: 0.25, blue: 0.29, alpha: 0.98)
-        roof.strokeColor = UIColor(red: 0.73, green: 0.67, blue: 0.43, alpha: 0.88)
-        roof.lineWidth = 6
+        roof.fillColor = UIColor(red: 0.08, green: 0.23, blue: 0.28, alpha: 0.92)
+        roof.strokeColor = UIColor(red: 0.76, green: 0.66, blue: 0.39, alpha: 0.76)
+        roof.lineWidth = 5
+        roof.name = "weatherTowerRoof"
         tower.addChild(roof)
+
+        let roofTrim = ArtSystem.box(
+            CGSize(width: 330, height: 8),
+            color: UIColor(red: 0.86, green: 0.68, blue: 0.34, alpha: 0.72),
+            radius: 4
+        )
+        roofTrim.position = CGPoint(x: 0, y: 171)
+        roofTrim.name = "weatherTowerRoofTrim"
+        tower.addChild(roofTrim)
 
         let cupola = ArtSystem.panel(
             CGSize(width: 105, height: 72),
-            fill: UIColor(red: 0.12, green: 0.31, blue: 0.35, alpha: 0.98),
-            stroke: UIColor(red: 0.73, green: 0.67, blue: 0.43, alpha: 0.88),
+            fill: UIColor(red: 0.12, green: 0.36, blue: 0.42, alpha: 0.82),
+            stroke: UIColor(red: 0.79, green: 0.69, blue: 0.42, alpha: 0.78),
             radius: 18,
             lineWidth: 4,
             shadowAlpha: 0.22
