@@ -1102,6 +1102,7 @@ public enum PuzzlePalaceDirector {
         memoryBridgeComplete(profile: profile)
             && canEnterMirrorHall(profile: profile)
             && mirrorHallComplete(profile: profile)
+            && mirrorRotationComplete(profile: profile)
     }
 
     public static func nextPathTilesEncounter(profile: LearnerProfile) -> PuzzlePathEncounter? {
