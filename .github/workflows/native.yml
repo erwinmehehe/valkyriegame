@@ -202,3 +202,30 @@ jobs:
           fi
           git commit -m "chore: encode native render for review [skip ci]"
           git push origin "HEAD:${GITHUB_HEAD_REF}"
+
+  publish-native-review-small:
+    if: github.event_name == 'pull_request'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Create chat-sized native render
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/native-render/pr65-native-contact-sheet.jpg
+          mkdir -p docs/native-render
+          sips -z 720 1280 docs/native-render/pr65-native-contact-sheet.jpg \
+            --out docs/native-render/pr65-native-contact-sheet-small.jpg >/dev/null
+          base64 -i docs/native-render/pr65-native-contact-sheet-small.jpg \
+            | tr -d '\n' > docs/native-render/pr65-native-contact-sheet-small.b64
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/native-render/pr65-native-contact-sheet-small.jpg \
+            docs/native-render/pr65-native-contact-sheet-small.b64
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore: publish chat-sized native render [skip ci]"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
