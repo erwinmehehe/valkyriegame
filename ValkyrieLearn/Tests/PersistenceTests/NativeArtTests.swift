@@ -2172,6 +2172,31 @@ import LearningCore
         grove.willLeave()
     }
 
+    func testLongPuzzleWorldTitleStaysInsideItsSharedPlaque() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .sortingPedestal)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+        let backdrop = try XCTUnwrap(
+            scene.childNode(withName: "worldTitleBackdrop") as? SKShapeNode
+        )
+        let titleFrame = title.calculateAccumulatedFrame()
+        let backdropFrame = backdrop.calculateAccumulatedFrame().insetBy(dx: 14, dy: 7)
+
+        XCTAssertTrue(
+            backdropFrame.contains(titleFrame),
+            "Long Puzzle Palace destination titles must remain inside the shared title plaque."
+        )
+        XCTAssertLessThanOrEqual(backdropFrame.maxX, 570)
+    }
+
     func testPolishedSharedControlsRetainLargeTouchGeometry() throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
