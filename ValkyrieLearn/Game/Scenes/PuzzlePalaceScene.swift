@@ -2236,26 +2236,26 @@ import LearningCore
         root.zPosition = 108
         root.isUserInteractionEnabled = false
 
-        let compass = SKShapeNode(circleOfRadius: 92)
-        compass.fillColor = UIColor(red: 0.18, green: 0.17, blue: 0.34, alpha: 0.16)
-        compass.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.52)
-        compass.lineWidth = 3
+        let compass = SKShapeNode(circleOfRadius: 76)
+        compass.fillColor = UIColor(red: 0.18, green: 0.17, blue: 0.34, alpha: 0.10)
+        compass.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.34)
+        compass.lineWidth = 2
         compass.position = CGPoint(x: 765, y: 188)
         compass.name = "decorativeMirrorHallFloorCompass"
         root.addChild(compass)
 
-        let innerCompass = SKShapeNode(circleOfRadius: 48)
+        let innerCompass = SKShapeNode(circleOfRadius: 38)
         innerCompass.fillColor = .clear
-        innerCompass.strokeColor = UIColor(red: 0.65, green: 0.80, blue: 1.0, alpha: 0.34)
-        innerCompass.lineWidth = 2
+        innerCompass.strokeColor = UIColor(red: 0.65, green: 0.80, blue: 1.0, alpha: 0.20)
+        innerCompass.lineWidth = 1.5
         innerCompass.name = "decorativeMirrorHallFloorCompass"
         compass.addChild(innerCompass)
 
         for index in 0..<8 {
-            let ray = SKShapeNode(rectOf: CGSize(width: 4, height: index.isMultiple(of: 2) ? 74 : 52), cornerRadius: 2)
+            let ray = SKShapeNode(rectOf: CGSize(width: 3, height: index.isMultiple(of: 2) ? 58 : 40), cornerRadius: 1.5)
             ray.fillColor = index.isMultiple(of: 2)
-                ? UIColor(red: 0.96, green: 0.73, blue: 0.30, alpha: 0.54)
-                : UIColor(red: 0.55, green: 0.72, blue: 0.98, alpha: 0.30)
+                ? UIColor(red: 0.96, green: 0.73, blue: 0.30, alpha: 0.34)
+                : UIColor(red: 0.55, green: 0.72, blue: 0.98, alpha: 0.18)
             ray.strokeColor = .clear
             ray.position = CGPoint(x: 0, y: 38)
             ray.zRotation = CGFloat(index) * .pi / 4
@@ -2264,18 +2264,18 @@ import LearningCore
         }
 
         for (index, point) in mirrorChoicePoints.enumerated() {
-            let arch = SKShapeNode(ellipseOf: CGSize(width: 205, height: 286))
-            arch.fillColor = UIColor(red: 0.11, green: 0.12, blue: 0.28, alpha: 0.08)
-            arch.strokeColor = UIColor(red: 0.48, green: 0.62, blue: 0.96, alpha: 0.22)
-            arch.lineWidth = 5
+            let arch = SKShapeNode(ellipseOf: CGSize(width: 182, height: 258))
+            arch.fillColor = UIColor(red: 0.11, green: 0.12, blue: 0.28, alpha: 0.04)
+            arch.strokeColor = UIColor(red: 0.48, green: 0.62, blue: 0.96, alpha: 0.12)
+            arch.lineWidth = 3
             arch.position = CGPoint(x: point.x, y: point.y + 2)
             arch.name = "decorativeMirrorHallBackdropArch\(index)"
             root.addChild(arch)
 
-            let pool = SKShapeNode(ellipseOf: CGSize(width: 198, height: 42))
-            pool.fillColor = UIColor(red: 0.31, green: 0.44, blue: 0.86, alpha: 0.10)
-            pool.strokeColor = UIColor(red: 0.84, green: 0.69, blue: 0.36, alpha: 0.28)
-            pool.lineWidth = 2
+            let pool = SKShapeNode(ellipseOf: CGSize(width: 172, height: 30))
+            pool.fillColor = UIColor(red: 0.31, green: 0.44, blue: 0.86, alpha: 0.06)
+            pool.strokeColor = UIColor(red: 0.84, green: 0.69, blue: 0.36, alpha: 0.16)
+            pool.lineWidth = 1.5
             pool.position = CGPoint(x: point.x, y: 274)
             pool.name = "decorativeMirrorHallBackdropArch\(index)"
             root.addChild(pool)
@@ -2293,9 +2293,9 @@ import LearningCore
     }
 
     private func decorateMirrorGlass(_ mirror: SKShapeNode) {
-        mirror.fillColor = UIColor(red: 0.11, green: 0.22, blue: 0.39, alpha: 0.52)
-        mirror.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.30, alpha: 0.96)
-        mirror.lineWidth = 7
+        mirror.fillColor = UIColor(red: 0.11, green: 0.22, blue: 0.39, alpha: 0.46)
+        mirror.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.30, alpha: 0.90)
+        mirror.lineWidth = 5
 
         let innerGlass = SKShapeNode(ellipseOf: CGSize(width: 116, height: 148))
         innerGlass.fillColor = UIColor(red: 0.38, green: 0.69, blue: 0.92, alpha: 0.11)
@@ -2313,10 +2313,10 @@ import LearningCore
         mirror.addChild(shine)
 
         for x in [CGFloat(-77), CGFloat(77)] {
-            let rail = SKShapeNode(rectOf: CGSize(width: 10, height: 136), cornerRadius: 5)
-            rail.fillColor = UIColor(red: 0.78, green: 0.55, blue: 0.24, alpha: 0.94)
-            rail.strokeColor = UIColor(red: 1.0, green: 0.83, blue: 0.45, alpha: 0.62)
-            rail.lineWidth = 1.5
+            let rail = SKShapeNode(rectOf: CGSize(width: 8, height: 124), cornerRadius: 4)
+            rail.fillColor = UIColor(red: 0.78, green: 0.55, blue: 0.24, alpha: 0.82)
+            rail.strokeColor = UIColor(red: 1.0, green: 0.83, blue: 0.45, alpha: 0.42)
+            rail.lineWidth = 1
             rail.position = CGPoint(x: x, y: -4)
             rail.name = "decorativeMirrorStationFrame"
             mirror.addChild(rail)
