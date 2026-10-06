@@ -30,6 +30,21 @@ struct AdventureSceneLayout {
             y: min(actorLane.maxY, max(actorLane.minY, point.y))
         )
     }
+
+    /// Aspect-fit frame used by the 1280x720 design canvas inside any landscape iPad view.
+    /// Tests exercise common 4:3, 1.44:1 and 16:9 surfaces so HUD and touch geometry
+    /// remain visible even when SpriteKit letterboxes the design canvas.
+    func fittedFrame(in viewSize: CGSize) -> CGRect {
+        guard viewSize.width > 0, viewSize.height > 0 else { return .zero }
+        let scale = min(viewSize.width / size.width, viewSize.height / size.height)
+        let fitted = CGSize(width: size.width * scale, height: size.height * scale)
+        return CGRect(
+            x: (viewSize.width - fitted.width) / 2,
+            y: (viewSize.height - fitted.height) / 2,
+            width: fitted.width,
+            height: fitted.height
+        )
+    }
 }
 
 @MainActor class AdventureScene: SKScene {
