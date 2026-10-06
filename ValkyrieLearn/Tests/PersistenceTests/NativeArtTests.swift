@@ -1388,6 +1388,26 @@ import LearningCore
         XCTAssertEqual(rotationHall.children.filter { $0.name == "mirrorRotationChoice" }.count, 3)
         rotationHall.willLeave()
 
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzlePathTilesAvailable)
+        state.travel(to: .pathTiles)
+        let pathTiles = PuzzlePalaceScene(state: state)
+        pathTiles.reducedMotion = true
+        view.presentScene(pathTiles)
+        try await capture(pathTiles, in: view, name: "Puzzle-Palace-native-path-tiles")
+        XCTAssertNotNil(pathTiles.childNode(withName: "pathTilesChamber"))
+        XCTAssertNotNil(pathTiles.childNode(withName: "pathGrid"))
+        XCTAssertEqual(
+            pathTiles.children.filter { $0.name?.hasPrefix("pathChoice") == true }.count,
+            3
+        )
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.actionSequencing).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        pathTiles.willLeave()
 
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
