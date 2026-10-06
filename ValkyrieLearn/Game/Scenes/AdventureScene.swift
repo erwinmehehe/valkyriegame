@@ -421,21 +421,28 @@ struct AdventureSceneLayout {
         }
     }
 
+    func focusMoment(on point: CGPoint, hold: TimeInterval = 0.45) {
+        guard !reducedMotion else { return }
+        focusCamera(on: point, duration: 0.20)
+        removeAction(forKey: "cameraReset")
+        run(.sequence([
+            .wait(forDuration: hold),
+            .run { [weak self] in self?.resetCamera(duration: 0.28) }
+        ]), withKey: "cameraReset")
+    }
+
     func successFeedback() {
         state.audio.play("success")
-        guard !reducedMotion else { return }
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
     }
 
     func errorFeedback() {
-        guard !reducedMotion else { return }
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.error)
     }
 
     func selectionFeedback() {
-        guard !reducedMotion else { return }
         let generator = UISelectionFeedbackGenerator()
         generator.selectionChanged()
     }
