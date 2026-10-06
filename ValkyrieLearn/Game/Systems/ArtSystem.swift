@@ -95,6 +95,118 @@ import SpriteKit
         }
         return tray
     }
+    static func paintedBackdrop(
+        _ asset: String,
+        size: CGSize,
+        tint: UIColor = .white,
+        blend: CGFloat = 0,
+        dim: CGFloat = 0
+    ) -> SKNode? {
+        guard let texture = texture(asset) else { return nil }
+        let root = SKNode()
+
+        let sprite = SKSpriteNode(texture: texture, color: tint, size: size)
+        sprite.colorBlendFactor = max(0, min(1, blend))
+        sprite.name = "paintedBackdrop"
+        root.addChild(sprite)
+
+        if dim > 0 {
+            let wash = box(
+                size,
+                color: UIColor(white: 0.02, alpha: max(0, min(0.8, dim))),
+                radius: 0
+            )
+            wash.strokeColor = .clear
+            wash.zPosition = 1
+            root.addChild(wash)
+        }
+
+        return root
+    }
+
+    static func panel(
+        _ size: CGSize,
+        fill: UIColor,
+        stroke: UIColor,
+        radius: CGFloat = 18,
+        lineWidth: CGFloat = 3,
+        shadowAlpha: CGFloat = 0.28,
+        innerHighlight: UIColor? = nil
+    ) -> SKShapeNode {
+        let node = SKShapeNode(rectOf: size, cornerRadius: radius)
+        node.fillColor = fill
+        node.strokeColor = stroke
+        node.lineWidth = lineWidth
+
+        if shadowAlpha > 0 {
+            let shadow = SKShapeNode(rectOf: size, cornerRadius: radius)
+            shadow.fillColor = UIColor(white: 0, alpha: shadowAlpha)
+            shadow.strokeColor = .clear
+            shadow.position = CGPoint(x: 0, y: -7)
+            shadow.zPosition = -3
+            node.addChild(shadow)
+        }
+
+        let highlight = SKShapeNode(
+            rectOf: CGSize(
+                width: max(8, size.width - 10),
+                height: max(8, size.height - 10)
+            ),
+            cornerRadius: max(4, radius - 5)
+        )
+        highlight.fillColor = .clear
+        highlight.strokeColor = innerHighlight ?? UIColor(white: 1, alpha: 0.10)
+        highlight.lineWidth = 1
+        highlight.zPosition = 2
+        node.addChild(highlight)
+        return node
+    }
+
+    static func medallion(
+        radius: CGFloat,
+        fill: UIColor,
+        stroke: UIColor,
+        glow: CGFloat = 0
+    ) -> SKShapeNode {
+        let node = SKShapeNode(circleOfRadius: radius)
+        node.fillColor = fill
+        node.strokeColor = stroke
+        node.lineWidth = 3
+        node.glowWidth = glow
+
+        let inset = SKShapeNode(circleOfRadius: max(4, radius - 7))
+        inset.fillColor = .clear
+        inset.strokeColor = UIColor(white: 1, alpha: 0.13)
+        inset.lineWidth = 1
+        inset.zPosition = 2
+        node.addChild(inset)
+
+        let shadow = SKShapeNode(circleOfRadius: radius)
+        shadow.fillColor = UIColor(white: 0, alpha: 0.24)
+        shadow.strokeColor = .clear
+        shadow.position.y = -6
+        shadow.zPosition = -2
+        node.addChild(shadow)
+        return node
+    }
+
+    static func plaque(
+        _ size: CGSize,
+        fill: UIColor,
+        stroke: UIColor,
+        radius: CGFloat = 16
+    ) -> SKShapeNode {
+        panel(
+            size,
+            fill: fill,
+            stroke: stroke,
+            radius: radius,
+            lineWidth: 3,
+            shadowAlpha: 0.24,
+            innerHighlight: UIColor(white: 1, alpha: 0.12)
+        )
+    }
+
     static func box(_ size: CGSize, color: UIColor, radius: CGFloat = 12) -> SKShapeNode {
         let node = SKShapeNode(rectOf: size, cornerRadius: radius)
         node.fillColor = color; node.strokeColor = color.withAlphaComponent(color.cgColor.alpha * 0.8)
