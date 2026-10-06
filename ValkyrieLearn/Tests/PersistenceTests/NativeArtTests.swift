@@ -187,6 +187,8 @@ import LearningCore
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 300, y: 615)), "wind")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 52, y: 669)), "home")
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 595, y: 235)), "supply")
+        XCTAssertNotNil(scene.childNode(withName: "mathWorkZone"))
+        XCTAssertNotNil(scene.childNode(withName: "//cartDropZone"))
         XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == false) // Free workshop exit.
         scene.valkyrie.position = CGPoint(x: 490, y: 175)
         scene.handleTap(at: CGPoint(x: 830, y: 265))
@@ -1883,9 +1885,12 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 925, y: 280))
 
         let prompt = try XCTUnwrap(scene.childNode(withName: "questionPrompt") as? SKLabelNode)
+        let heading = try XCTUnwrap(scene.childNode(withName: "questionPromptHeading") as? SKLabelNode)
         let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
 
         XCTAssertFalse(prompt.isHidden)
+        XCTAssertFalse(heading.isHidden)
+        XCTAssertEqual(heading.text, "PIP'S WORK ORDER")
         XCTAssertTrue(prompt.text?.contains(encounter.prompt) == true)
         XCTAssertGreaterThan(prompt.position.y, 500)
         XCTAssertLessThan(feedback.position.y, 100)
@@ -1936,6 +1941,34 @@ import LearningCore
             .new
         )
         XCTAssertNotEqual(wrong, encounter.answer)
+    }
+
+    func testMathTenFrameUsesCrystalArtWithoutChangingCellTargets() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(MathCastleEncounterCatalog.tenFrameGate[0]))
+
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let cells = try XCTUnwrap(scene.childNode(withName: "//tenFrameCells"))
+        XCTAssertEqual(cells.children.count, 10)
+
+        for cell in cells.children {
+            let shape = try XCTUnwrap(cell as? SKShapeNode)
+            XCTAssertNotNil(
+                shape.children.compactMap { $0 as? SKSpriteNode }.first,
+                "Each ten-frame cell should render the shared crystal art."
+            )
+            XCTAssertTrue(
+                ["tenFrameCell", "tenFrameFixed", "tenFrameFilled", "tenFramePreview"].contains(shape.name ?? "")
+            )
+        }
+
+        let supply = try XCTUnwrap(scene.childNode(withName: "//tenFrameSupply"))
+        XCTAssertGreaterThanOrEqual(supply.calculateAccumulatedFrame().width, 90)
+        XCTAssertGreaterThanOrEqual(supply.calculateAccumulatedFrame().height, 90)
     }
 
     func testIncorrectMathAnswerKeepsPhysicalRouteClosed() async throws {
