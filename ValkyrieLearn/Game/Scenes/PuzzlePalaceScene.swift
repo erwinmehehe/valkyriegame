@@ -3433,9 +3433,10 @@ import LearningCore
 
         let title = ArtSystem.label("FIND THE BROKEN COMMAND", size: 17)
         title.fontColor = UIColor(red: 1.0, green: 0.92, blue: 0.72, alpha: 0.98)
+        title.position = CGPoint(x: 760, y: 615)
         title.name = "bugLanternTitle"
         title.zPosition = 820
-        titlePlate.addChild(title)
+        addChild(title)
 
         for index in 0..<PuzzlePalaceEncounterCatalog.bugLanternFamilies.count {
             let lamp = ArtSystem.medallion(
