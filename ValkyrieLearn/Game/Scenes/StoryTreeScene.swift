@@ -22,6 +22,7 @@ import SpriteKit
     private var moved = false
     private var moonLanternNode: SKNode?
     private var wordGardenLanternNode: SKNode?
+    private var puzzlePalaceLanternNode: SKNode?
     private let moonLanternSlots = [
         CGPoint(x: 295, y: 500),
         CGPoint(x: 390, y: 555),
@@ -31,6 +32,11 @@ import SpriteKit
         CGPoint(x: 535, y: 535),
         CGPoint(x: 625, y: 505),
         CGPoint(x: 710, y: 540)
+    ]
+    private let puzzlePalaceLanternSlots = [
+        CGPoint(x: 335, y: 455),
+        CGPoint(x: 435, y: 485),
+        CGPoint(x: 555, y: 470)
     ]
 
     override func didMove(to view: SKView) {
@@ -130,9 +136,17 @@ import SpriteKit
         pip.name = "pipWind"
         renderMoonLantern()
         renderWordGardenLantern()
+        renderPuzzlePalaceLantern()
 
-        if state.hasStoryReward(.moonLantern) && state.hasStoryReward(.wordGardenLantern) {
+        let rewardCount = [
+            state.hasStoryReward(.moonLantern),
+            state.hasStoryReward(.wordGardenLantern),
+            state.hasStoryReward(.puzzlePalaceLantern)
+        ].filter { $0 }.count
+        if rewardCount >= 2 {
             instruction.text = "Your lanterns are glowing. Choose where Valkyrie explores next."
+        } else if state.hasStoryReward(.puzzlePalaceLantern) {
+            instruction.text = "Tiko's Palace Lantern is home. Choose the next adventure."
         } else if state.hasStoryReward(.wordGardenLantern) {
             instruction.text = "The Flower Lantern is home. Choose the next adventure."
         } else if state.hasStoryReward(.moonLantern) {
@@ -245,6 +259,57 @@ import SpriteKit
 
         addChild(lantern)
         wordGardenLanternNode = lantern
+    }
+
+    private func renderPuzzlePalaceLantern() {
+        puzzlePalaceLanternNode?.removeFromParent()
+        puzzlePalaceLanternNode = nil
+
+        guard state.hasStoryReward(.puzzlePalaceLantern),
+              !puzzlePalaceLanternSlots.isEmpty else { return }
+
+        let slot = state.storyRewardPlacement(.puzzlePalaceLantern)
+            % puzzlePalaceLanternSlots.count
+        let lantern = SKNode()
+        lantern.name = "puzzlePalaceLantern"
+        lantern.position = puzzlePalaceLanternSlots[slot]
+        lantern.zPosition = 905
+
+        let glow = SKShapeNode(circleOfRadius: 50)
+        glow.fillColor = UIColor(red: 0.62, green: 0.50, blue: 0.94, alpha: 0.18)
+        glow.strokeColor = .clear
+        glow.glowWidth = 12
+        glow.name = "puzzlePalaceLantern"
+        lantern.addChild(glow)
+
+        let hanger = SKShapeNode(rectOf: CGSize(width: 5, height: 28), cornerRadius: 2)
+        hanger.fillColor = UIColor(red: 0.42, green: 0.35, blue: 0.61, alpha: 1)
+        hanger.strokeColor = .clear
+        hanger.position = CGPoint(x: 0, y: 38)
+        hanger.name = "puzzlePalaceLantern"
+        lantern.addChild(hanger)
+
+        let body = SKShapeNode(rectOf: CGSize(width: 58, height: 66), cornerRadius: 18)
+        body.fillColor = UIColor(red: 0.18, green: 0.15, blue: 0.34, alpha: 0.97)
+        body.strokeColor = UIColor(red: 0.72, green: 0.62, blue: 1.0, alpha: 1)
+        body.lineWidth = 3
+        body.name = "puzzlePalaceLantern"
+        lantern.addChild(body)
+
+        let mark = ArtSystem.label("◈", size: 31)
+        mark.fontColor = UIColor(red: 0.88, green: 0.82, blue: 1.0, alpha: 1)
+        mark.name = "puzzlePalaceLantern"
+        lantern.addChild(mark)
+
+        if !reducedMotion {
+            glow.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.42, duration: 1.05),
+                .fadeAlpha(to: 1.0, duration: 1.05)
+            ])))
+        }
+
+        addChild(lantern)
+        puzzlePalaceLanternNode = lantern
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -422,6 +487,18 @@ import SpriteKit
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "The Flower Lantern found a new branch."
+
+        case "puzzlePalaceLantern":
+            selectionFeedback()
+            guard state.hasStoryReward(.puzzlePalaceLantern) else { return }
+            _ = state.cycleStoryRewardPlacement(
+                .puzzlePalaceLantern,
+                slotCount: puzzlePalaceLanternSlots.count
+            )
+            renderPuzzlePalaceLantern()
+            state.audio.play("success")
+            valkyrie.pose(.interact)
+            instruction.text = "Tiko's Palace Lantern found a new branch."
 
         default:
             walkIfValid(point)
