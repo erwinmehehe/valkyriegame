@@ -453,16 +453,20 @@ import LearningCore
             pillar.position = CGPoint(x: x, y: 405)
             pillar.zPosition = -195
             pillar.name = "puzzlePillar"
-            if place == .runeGate { pillar.alpha = 0.16 }
-            addChild(pillar)
+            if place != .runeGate {
+                addChild(pillar)
+            }
 
-            let cap = SKShapeNode(circleOfRadius: 31)
-            cap.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.38, alpha: 1)
-            cap.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.32, alpha: 0.88)
-            cap.lineWidth = 4
-            cap.position = CGPoint(x: x, y: 565)
-            cap.zPosition = -190
-            addChild(cap)
+            if place != .runeGate {
+                let cap = SKShapeNode(circleOfRadius: 31)
+                cap.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.38, alpha: 1)
+                cap.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.32, alpha: 0.88)
+                cap.lineWidth = 4
+                cap.position = CGPoint(x: x, y: 565)
+                cap.zPosition = -190
+                cap.name = "decorativePuzzlePillarCap"
+                addChild(cap)
+            }
         }
 
         for x in [CGFloat(320), 690, 1060] {
@@ -475,8 +479,9 @@ import LearningCore
             arch.lineWidth = 4
             arch.position = CGPoint(x: x, y: 410)
             arch.zPosition = -185
-            if place == .runeGate { arch.alpha = 0.12 }
-            addChild(arch)
+            if place != .runeGate {
+                addChild(arch)
+            }
 
             let inner = SKShapeNode(
                 rectOf: CGSize(width: 177, height: 225),
@@ -488,21 +493,23 @@ import LearningCore
             arch.addChild(inner)
         }
 
-        for (index, point) in [
-            CGPoint(x: 255, y: 545),
-            CGPoint(x: 505, y: 515),
-            CGPoint(x: 875, y: 515),
-            CGPoint(x: 1125, y: 545)
-        ].enumerated() {
-            if let crystal = ArtSystem.sprite(
-                "Crystal",
-                size: CGSize(width: 66, height: 96)
-            ) {
-                crystal.position = point
-                crystal.zPosition = -168
-                crystal.alpha = index.isMultiple(of: 2) ? 0.82 : 0.66
-                crystal.name = "puzzleCrystalFixture"
-                addChild(crystal)
+        if place != .runeGate {
+            for (index, point) in [
+                CGPoint(x: 255, y: 545),
+                CGPoint(x: 505, y: 515),
+                CGPoint(x: 875, y: 515),
+                CGPoint(x: 1125, y: 545)
+            ].enumerated() {
+                if let crystal = ArtSystem.sprite(
+                    "Crystal",
+                    size: CGSize(width: 66, height: 96)
+                ) {
+                    crystal.position = point
+                    crystal.zPosition = -168
+                    crystal.alpha = index.isMultiple(of: 2) ? 0.82 : 0.66
+                    crystal.name = "puzzleCrystalFixture"
+                    addChild(crystal)
+                }
             }
         }
 
@@ -516,8 +523,9 @@ import LearningCore
         dais.position = CGPoint(x: 775, y: 228)
         dais.zPosition = -105
         dais.name = "puzzleStageDais"
-        if place == .runeGate { dais.alpha = 0.20 }
-        addChild(dais)
+        if place != .runeGate {
+            addChild(dais)
+        }
     }
 
     private func buildRuneGate() {
