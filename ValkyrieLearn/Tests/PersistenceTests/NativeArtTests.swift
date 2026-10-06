@@ -2063,6 +2063,21 @@ import LearningCore
 
 
     func testScienceAdventureScenesMeetProductionVisualStructure() throws {
+        let greenhouseState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        greenhouseState.travel(to: .scienceGreenhouse)
+        let greenhouse = ScienceLabScene(state: greenhouseState)
+        greenhouse.reducedMotion = true
+        greenhouse.didMove(to: SKView())
+
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseBackdropHD"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseFrame"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceSeedBench"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterValve"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceSunPrism"))
+        greenhouse.willLeave()
+
         let weatherState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
