@@ -1873,4 +1873,41 @@ import LearningCore
     }
 
 
+    func testScienceAdventureWorldsUseIllustratedRetinaBackdrops() throws {
+        let weatherState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        weatherState.travel(to: .scienceWeatherTower)
+        let weather = WeatherTowerScene(state: weatherState)
+        weather.reducedMotion = true
+        weather.didMove(to: SKView())
+
+        let weatherRoot = try XCTUnwrap(weather.childNode(withName: "weatherBackdropHD"))
+        let weatherSprite = try XCTUnwrap(
+            weatherRoot.childNode(withName: "paintedBackdrop") as? SKSpriteNode
+        )
+        let weatherSource = try XCTUnwrap(weatherSprite.texture?.size())
+        XCTAssertGreaterThanOrEqual(weatherSource.width, 1280)
+        XCTAssertGreaterThanOrEqual(weatherSource.height, 720)
+        weather.willLeave()
+
+        let groveState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        groveState.travel(to: .scienceCreatureGrove)
+        let grove = CreatureGroveScene(state: groveState)
+        grove.reducedMotion = true
+        grove.didMove(to: SKView())
+
+        let groveRoot = try XCTUnwrap(grove.childNode(withName: "creatureGroveBackdropHD"))
+        let groveSprite = try XCTUnwrap(
+            groveRoot.childNode(withName: "paintedBackdrop") as? SKSpriteNode
+        )
+        let groveSource = try XCTUnwrap(groveSprite.texture?.size())
+        XCTAssertGreaterThanOrEqual(groveSource.width, 1600)
+        XCTAssertGreaterThanOrEqual(groveSource.height, 900)
+        grove.willLeave()
+    }
+
+
 }
