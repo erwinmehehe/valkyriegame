@@ -2034,7 +2034,10 @@ import LearningCore
 
     private func approachMirror(_ node: SKShapeNode, then operation: @escaping () -> Void) {
         guard mirrorAcceptingInput, !solved else { return }
-        let desired = CGPoint(x: node.position.x - 270, y: 175)
+        // Park beside the fixture, not in front of it. 220pt keeps Valkyrie's
+        // rendered body clear of the 148pt mirror while preserving immediate taps
+        // for a child who is already standing at the interaction station.
+        let desired = CGPoint(x: node.position.x - 220, y: 175)
         let destination = actorSafeDestination(
             near: desired,
             avoiding: node.calculateAccumulatedFrame().insetBy(dx: -45, dy: -40)
