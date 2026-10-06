@@ -39,6 +39,7 @@ import LearningCore
         renderPond()
         renderFinale()
         instruction.text = "Milo spotted a duck near the grove. Observe it before changing the habitat."
+        refreshGuidanceCue()
     }
 
     override func buildWorld() {
@@ -661,6 +662,7 @@ import LearningCore
 
         state.scienceObserveAnimal()
         instruction.text = "Milo observes that the duck uses water, finds food nearby, and needs places with cover. Which habitat offers those resources?"
+        refreshGuidanceCue()
     }
 
     private func chooseHabitat(_ choice: HabitatChoice) {
@@ -683,6 +685,7 @@ import LearningCore
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The bare ridge offers little water or cover. Compare that with the needs Milo observed."
         }
+        refreshGuidanceCue()
     }
 
     private func inspectBodyPart() {
@@ -695,6 +698,7 @@ import LearningCore
         valkyrie.pose(.interact)
         state.scienceInspectBodyPart()
         instruction.text = "The webbing spreads the foot's surface against the water. That can help the duck push water while swimming. Compare the habitats one more time."
+        refreshGuidanceCue()
     }
 
     private func compareHabitats(_ choice: HabitatChoice) {
@@ -714,5 +718,23 @@ import LearningCore
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The exposed ridge still lacks water and protective cover. Use the needs we observed, not just where the duck could stand."
         }
+        refreshGuidanceCue()
     }
+
+    private func refreshGuidanceCue() {
+        let tint = UIColor(red: 0.66, green: 0.91, blue: 0.52, alpha: 1)
+        switch groveStage {
+        case .arrive:
+            showAttentionCue(at: duckPoint, tint: tint)
+        case .animalObserved:
+            showAttentionCue(at: habitatPoint, tint: tint, width: 154)
+        case .habitatMatched:
+            showAttentionCue(at: feetPoint, tint: tint)
+        case .bodyPartObserved:
+            showAttentionCue(at: comparePoint, tint: tint, width: 150)
+        case .complete:
+            showAttentionCue(at: finalePoint, tint: tint, width: 102)
+        }
+    }
+
 }
