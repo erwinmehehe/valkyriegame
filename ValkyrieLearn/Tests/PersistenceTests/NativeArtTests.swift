@@ -1494,6 +1494,44 @@ import LearningCore
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
         pathTiles.willLeave()
 
+        XCTAssertTrue(state.puzzleCommandGearsAvailable)
+        state.travel(to: .commandGears)
+        let commandGears = PuzzlePalaceScene(state: state)
+        commandGears.reducedMotion = true
+        view.presentScene(commandGears)
+        try await capture(commandGears, in: view, name: "Puzzle-Palace-native-command-gears")
+        XCTAssertNotNil(commandGears.childNode(withName: "commandRail"))
+        XCTAssertEqual(
+            commandGears.children.filter { $0.name?.hasPrefix("commandSource") == true
+                && !($0.name?.contains("Label") ?? false) }.count,
+            3
+        )
+        for index in 0..<3 {
+            let socket = try XCTUnwrap(commandGears.childNode(withName: "commandSocket\(index)"))
+            XCTAssertGreaterThanOrEqual(socket.calculateAccumulatedFrame().width, 80)
+            XCTAssertGreaterThanOrEqual(socket.calculateAccumulatedFrame().height, 80)
+        }
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.actionSequencing).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+
+        let commandEncounter = try XCTUnwrap(state.nextPuzzleCommandGearsEncounter())
+        for step in commandEncounter.correctOrder {
+            let index = try XCTUnwrap(commandEncounter.presented.firstIndex(of: step))
+            let source = try XCTUnwrap(commandGears.childNode(withName: "commandSource\(index)"))
+            commandGears.handleTap(at: source.position)
+        }
+        let runGear = try XCTUnwrap(commandGears.childNode(withName: "commandRun"))
+        commandGears.handleTap(at: runGear.position)
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.actionSequencing).evidence.last?.outcome,
+            .correct
+        )
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).state, .new)
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+        commandGears.willLeave()
+
         state.travel(to: .mathCastle)
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
         let castle = MathCastleScene(state: state); castle.reducedMotion = true
