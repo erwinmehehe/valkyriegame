@@ -168,6 +168,58 @@ import LearningCore
         )
     }
 
+    func testStoryTreePreservesIllustrationWithRetinaPreparedRaster() throws {
+        XCTAssertFalse(
+            ArtSystem.isRetinaReady(
+                "StarlightIsles",
+                targetPoints: CGSize(width: 1280, height: 720)
+            ),
+            "The approved Starlight Isles source is still 1x and needs the preparation path."
+        )
+
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let backdrop = try XCTUnwrap(
+            scene.childNode(withName: "worldBackdrop") as? SKSpriteNode
+        )
+        XCTAssertEqual(
+            backdrop.userData?["sourceAsset"] as? String,
+            "StarlightIsles"
+        )
+        XCTAssertEqual(
+            backdrop.userData?["retinaPrepared"] as? Bool,
+            true
+        )
+        let backdropImage = try XCTUnwrap(backdrop.texture?.cgImage())
+        XCTAssertGreaterThanOrEqual(backdropImage.width, 2560)
+        XCTAssertGreaterThanOrEqual(backdropImage.height, 1440)
+
+        for side in ["Left", "Right"] {
+            let foreground = try XCTUnwrap(
+                scene.childNode(withName: "foreground" + side) as? SKSpriteNode
+            )
+            let image = try XCTUnwrap(foreground.texture?.cgImage())
+            XCTAssertGreaterThanOrEqual(image.width, 300)
+            XCTAssertGreaterThanOrEqual(image.height, 320)
+        }
+
+        XCTAssertNotNil(scene.childNode(withName: "storyTreeRetinaAccents"))
+        XCTAssertNotNil(scene.childNode(withName: "//storyBridgeRim"))
+        XCTAssertNotNil(scene.childNode(withName: "//storyRouteSpark"))
+        XCTAssertTrue(scene.isOnPath(CGPoint(x: 285, y: 235)))
+        XCTAssertFalse(scene.isOnPath(CGPoint(x: 1000, y: 200)))
+        XCTAssertFalse(
+            backdrop.isHidden,
+            "Retina preparation must preserve the illustrated Story Tree world."
+        )
+    }
+
     func testApprovedArtIsPackagedAndEveryActorPoseResolves() async throws {
         for name in ["StarlightIsles", "MathCastle", "CrystalCart", "Crystal", "IslesForegroundLeft", "CastleForegroundRight", "BridgeOakPlank", "BridgeGreenPlank", "BridgeTimber", "BridgeWorkOrder", "BridgeChannel", "BridgeDial", "V331WorldAtlas", "Lumi", "Tiko", "StoryBloom"] {
             XCTAssertNotNil(ArtSystem.texture(name), "Missing bundled image: \(name)")
