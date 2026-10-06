@@ -129,6 +129,8 @@ import LearningCore
     override func didMove(to view: SKView) {
         super.didMove(to: view)
         pip.removeFromParent()
+        valkyrie.setScale(0.56)
+        tiko.setScale(0.92)
         switch place {
         case .runeGate:
             valkyrie.position = CGPoint(x: 190, y: 175)
@@ -2460,8 +2462,19 @@ import LearningCore
         glyph.fontColor = UIColor(red: 0.92, green: 0.97, blue: 1.0, alpha: 1)
         beacon.addChild(glyph)
 
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: 300, height: 42),
+            fill: UIColor(red: 0.08, green: 0.09, blue: 0.19, alpha: 0.92),
+            stroke: UIColor(red: 0.58, green: 0.73, blue: 0.98, alpha: 0.72),
+            radius: 18
+        )
+        titlePlate.position = CGPoint(x: 765, y: 646)
+        titlePlate.name = "mirrorHallTitlePlate"
+        titlePlate.zPosition = 608
+        addChild(titlePlate)
+
         let title = ArtSystem.label("FOLLOW TIKO'S LIGHT", size: 18)
-        title.fontColor = UIColor(red: 0.87, green: 0.93, blue: 1.0, alpha: 1)
+        title.fontColor = UIColor(red: 0.90, green: 0.96, blue: 1.0, alpha: 1)
         title.position = CGPoint(x: 765, y: 646)
         title.name = "mirrorHallTitle"
         title.zPosition = 610
@@ -2510,6 +2523,18 @@ import LearningCore
         }
 
         for (index, direction) in orientationEncounter.choices.enumerated() {
+            let focusPool = SKShapeNode(ellipseOf: CGSize(width: 172, height: 34))
+            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.26)
+            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.42)
+            focusPool.lineWidth = 2
+            focusPool.position = CGPoint(
+                x: mirrorChoicePoints[index].x,
+                y: mirrorChoicePoints[index].y - 108
+            )
+            focusPool.name = "mirrorChoicePool\(index)"
+            focusPool.zPosition = 612
+            addChild(focusPool)
+
             let mirror = SKShapeNode(ellipseOf: CGSize(width: 142, height: 176))
             mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.58)
             mirror.strokeColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
@@ -2533,7 +2558,11 @@ import LearningCore
     }
 
     private func clearMirrorChoices() {
-        children.filter { $0.name == "mirrorOrientationChoice" || $0.name == "mirrorRotationChoice" }.forEach { $0.removeFromParent() }
+        children.filter {
+            $0.name == "mirrorOrientationChoice"
+                || $0.name == "mirrorRotationChoice"
+                || ($0.name?.hasPrefix("mirrorChoicePool") ?? false)
+        }.forEach { $0.removeFromParent() }
     }
 
     private func mirrorChoice(at point: CGPoint) -> (node: SKShapeNode, direction: PuzzleOrientation)? {
@@ -2715,6 +2744,18 @@ import LearningCore
         // One curved cue communicates direction and magnitude. Avoid extra dots,
         // badges or labels that compete with the actual spatial reasoning task.
         for (index, shape) in rotationEncounter.choices.enumerated() {
+            let focusPool = SKShapeNode(ellipseOf: CGSize(width: 172, height: 34))
+            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.26)
+            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.42)
+            focusPool.lineWidth = 2
+            focusPool.position = CGPoint(
+                x: mirrorChoicePoints[index].x,
+                y: mirrorChoicePoints[index].y - 108
+            )
+            focusPool.name = "mirrorChoicePool\(index)"
+            focusPool.zPosition = 612
+            addChild(focusPool)
+
             let mirror = SKShapeNode(ellipseOf: CGSize(width: 142, height: 176))
             mirror.fillColor = UIColor(red: 0.20, green: 0.34, blue: 0.43, alpha: 0.58)
             mirror.strokeColor = UIColor(red: 0.84, green: 0.71, blue: 0.43, alpha: 1)
@@ -3447,7 +3488,7 @@ import LearningCore
         lanternCore.addChild(bugGlyph)
 
         let titlePlate = ArtSystem.plaque(
-            CGSize(width: 300, height: 42),
+            CGSize(width: 330, height: 42),
             fill: UIColor(red: 0.09, green: 0.08, blue: 0.18, alpha: 0.90),
             stroke: UIColor(red: 0.79, green: 0.61, blue: 0.30, alpha: 0.68),
             radius: 18
@@ -3462,6 +3503,38 @@ import LearningCore
         title.name = "bugLanternTitle"
         title.zPosition = 820
         addChild(title)
+
+        for index in 0..<3 {
+            let socket = ArtSystem.panel(
+                CGSize(width: 174, height: 126),
+                fill: UIColor(red: 0.10, green: 0.09, blue: 0.20, alpha: 0.62),
+                stroke: UIColor(red: 0.55, green: 0.46, blue: 0.78, alpha: 0.42),
+                radius: 32,
+                lineWidth: 2,
+                shadowAlpha: 0.18,
+                innerHighlight: UIColor(red: 0.84, green: 0.72, blue: 1.0, alpha: 0.06)
+            )
+            socket.position = CGPoint(x: [CGFloat(555), 760, 965][index], y: 355)
+            socket.name = "bugStepSocket\(index)"
+            socket.zPosition = 832
+            addChild(socket)
+        }
+
+        for index in 0..<2 {
+            let arrowPlate = ArtSystem.medallion(
+                radius: 18,
+                fill: UIColor(red: 0.12, green: 0.10, blue: 0.22, alpha: 0.96),
+                stroke: UIColor(red: 0.86, green: 0.66, blue: 0.31, alpha: 0.82)
+            )
+            arrowPlate.position = CGPoint(x: index == 0 ? 658 : 863, y: 355)
+            arrowPlate.name = "bugFlowArrow\(index)"
+            arrowPlate.zPosition = 846
+
+            let arrow = ArtSystem.label("→", size: 18)
+            arrow.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.58, alpha: 1)
+            arrowPlate.addChild(arrow)
+            addChild(arrowPlate)
+        }
 
         for index in 0..<PuzzlePalaceEncounterCatalog.bugLanternFamilies.count {
             let lamp = ArtSystem.medallion(
@@ -3505,7 +3578,7 @@ import LearningCore
         let xs: [CGFloat] = [555, 760, 965]
         for (index, step) in bugEncounter.shown.enumerated() {
             let plate = ArtSystem.panel(
-                CGSize(width: 154, height: 106),
+                CGSize(width: 154, height: 120),
                 fill: UIColor(red: 0.10, green: 0.13, blue: 0.22, alpha: 0.97),
                 stroke: UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.76),
                 radius: 28,
@@ -3526,20 +3599,28 @@ import LearningCore
 
             let glyph = ArtSystem.label(step.glyph, size: 35)
             glyph.fontColor = .white
-            glyph.position.y = 9
+            glyph.position.y = 17
             glyph.name = plate.name
             plate.addChild(glyph)
+
+            let labelPlate = ArtSystem.plaque(
+                CGSize(width: 126, height: 30),
+                fill: UIColor(red: 0.07, green: 0.09, blue: 0.17, alpha: 0.94),
+                stroke: UIColor(red: 0.66, green: 0.57, blue: 0.84, alpha: 0.45),
+                radius: 12
+            )
+            labelPlate.position.y = -39
+            labelPlate.name = plate.name
+            plate.addChild(labelPlate)
+
+            let label = ArtSystem.label(step.title, size: 11)
+            label.fontColor = UIColor(red: 1.0, green: 0.92, blue: 0.72, alpha: 1)
+            label.name = plate.name
+            labelPlate.addChild(label)
 
             makeAccessible(plate, label: "Command \(index + 1): \(step.title)")
             addChild(plate)
             registerInteraction(plate, clearance: 18)
-
-            let label = ArtSystem.label(step.title, size: 13)
-            label.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.67, alpha: 1)
-            label.position = CGPoint(x: xs[index], y: 280)
-            label.name = "bugStepLabel\(index)"
-            label.zPosition = 850
-            addChild(label)
         }
 
         if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
