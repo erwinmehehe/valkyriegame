@@ -53,3 +53,26 @@ The approved V331_ART_MANIFEST.json and original resources remain unchanged.
 
 SpriteKit keeps quantity selection, drop footprints, equation text and traversal
 native. The same timber materials cover the crossing steps and their supports.
+
+
+## Companion presence pass
+
+Lumi, Milo and Tiko currently ship as small single-frame source images rather than
+full action atlases. The native renderer must therefore preserve each source
+texture's real aspect ratio instead of forcing Pip's atlas proportions onto every
+non-Valkyrie actor.
+
+Until dedicated HD companion atlases are produced:
+
+- Lumi renders at a readable fairy-companion scale in Word Garden instead of being
+  reduced to a decorative sticker.
+- Lumi, Milo and Tiko use subtle world-colored grounding auras so their silhouettes
+  remain legible against illustrated environments without becoming floating HUD.
+- Their authored interaction methods add short native reaction motion, while
+  reduced-motion mode keeps the reactions immediate and spatially stable.
+- The presentation layer does not claim additional source animation frames and does
+  not change curriculum, evidence, routing or progression.
+
+This is an interim game-feel correction. Dedicated Retina companion art with
+idle/walk/interact/react/celebrate coverage remains required for final visual
+acceptance.
