@@ -82,13 +82,13 @@ import LearningCore
         }
 
         let terrace = ArtSystem.panel(
-            CGSize(width: 1160, height: 122),
-            fill: UIColor(red: 0.14, green: 0.18, blue: 0.20, alpha: 0.78),
-            stroke: UIColor(red: 0.65, green: 0.57, blue: 0.38, alpha: 0.72),
-            radius: 40,
-            lineWidth: 3,
-            shadowAlpha: 0.24,
-            innerHighlight: UIColor(red: 0.85, green: 0.74, blue: 0.52, alpha: 0.05)
+            CGSize(width: 1160, height: 112),
+            fill: UIColor(red: 0.14, green: 0.18, blue: 0.20, alpha: 0.60),
+            stroke: UIColor(red: 0.65, green: 0.57, blue: 0.38, alpha: 0.56),
+            radius: 38,
+            lineWidth: 2.5,
+            shadowAlpha: 0.16,
+            innerHighlight: UIColor(red: 0.85, green: 0.74, blue: 0.52, alpha: 0.04)
         )
         terrace.position = CGPoint(x: 640, y: 190)
         terrace.zPosition = 24
