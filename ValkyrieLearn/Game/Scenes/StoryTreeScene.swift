@@ -139,6 +139,11 @@ import SpriteKit
         } else {
             instruction.text = "The Story Tree needs starlight. Choose a world to explore."
         }
+
+        // Story Tree movement is constrained to an authored painted route. The
+        // destination beacons deliberately sit above that route, so generic
+        // interaction avoidance must not push Valkyrie into the surrounding chasm.
+        clearRegisteredInteractionZones()
     }
 
     private func renderMoonLantern() {
