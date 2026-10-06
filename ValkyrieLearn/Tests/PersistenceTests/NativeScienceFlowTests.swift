@@ -131,13 +131,14 @@ import LearningCore
         scene.willLeave()
     }
 
-    func testGreenhouseUsesV331ReferenceArtAndAdventureScale() throws {
+    func testGreenhouseUsesSharpIllustratedArtAndAdventureScale() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let scene = ScienceLabScene(state: state)
         scene.reducedMotion = true
         scene.didMove(to: SKView())
 
-        XCTAssertNotNil(scene.childNode(withName: "scienceReferenceBackdrop"))
+        XCTAssertNotNil(scene.childNode(withName: "scienceGreenhouseBackdrop"))
+        XCTAssertNil(scene.childNode(withName: "scienceReferenceBackdrop"))
         XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
         XCTAssertEqual(scene.valkyrie.yScale, 0.5, accuracy: 0.001)
         XCTAssertFalse(ArtSystem.frames(character: "Milo", pose: .idle).isEmpty)
