@@ -122,13 +122,14 @@ struct AdventureSceneLayout {
     }
 
     private func buildHUD() {
-        let titlePlate = SKShapeNode(
-            rectOf: CGSize(width: 350, height: 50),
-            cornerRadius: 25
+        let titlePlate = ArtSystem.panel(
+            CGSize(width: 350, height: 50),
+            fill: UIColor(red: 0.055, green: 0.05, blue: 0.11, alpha: 0.82),
+            stroke: UIColor(red: 0.72, green: 0.76, blue: 0.92, alpha: 0.26),
+            radius: 25,
+            lineWidth: 1.5,
+            shadowAlpha: 0.30
         )
-        titlePlate.fillColor = UIColor(red: 0.08, green: 0.07, blue: 0.15, alpha: 0.58)
-        titlePlate.strokeColor = UIColor(white: 1, alpha: 0.13)
-        titlePlate.lineWidth = 1
         titlePlate.position = CGPoint(x: 215, y: 669)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
@@ -143,13 +144,14 @@ struct AdventureSceneLayout {
         title.name = "worldTitle"
         addChild(title)
 
-        let instructionPlate = SKShapeNode(
-            rectOf: CGSize(width: layout.instructionZone.width, height: 56),
-            cornerRadius: 28
+        let instructionPlate = ArtSystem.panel(
+            CGSize(width: layout.instructionZone.width, height: 56),
+            fill: UIColor(red: 0.045, green: 0.045, blue: 0.095, alpha: 0.84),
+            stroke: UIColor(red: 0.82, green: 0.80, blue: 0.68, alpha: 0.22),
+            radius: 28,
+            lineWidth: 1.5,
+            shadowAlpha: 0.32
         )
-        instructionPlate.fillColor = UIColor(red: 0.07, green: 0.06, blue: 0.14, alpha: 0.56)
-        instructionPlate.strokeColor = UIColor(white: 1, alpha: 0.12)
-        instructionPlate.lineWidth = 1
         instructionPlate.position = CGPoint(x: 640, y: 48)
         instructionPlate.zPosition = 1988
         instructionPlate.name = "instructionBackdrop"
@@ -225,10 +227,12 @@ struct AdventureSceneLayout {
         accessibilityLabel: String? = nil
     ) -> SKNode {
         let touchRadius = max(30, radius)
-        let control = SKShapeNode(circleOfRadius: touchRadius)
-        control.fillColor = UIColor(red: 0.10, green: 0.09, blue: 0.19, alpha: 0.72)
-        control.strokeColor = UIColor(white: 1, alpha: 0.34)
-        control.lineWidth = 1.5
+        let control = ArtSystem.medallion(
+            radius: touchRadius,
+            fill: UIColor(red: 0.075, green: 0.07, blue: 0.15, alpha: 0.92),
+            stroke: UIColor(red: 0.86, green: 0.82, blue: 0.68, alpha: 0.48),
+            glow: reducedMotion ? 0 : 2
+        )
         control.position = point
         control.name = name
         control.zPosition = 2000
@@ -264,13 +268,14 @@ struct AdventureSceneLayout {
         size requestedSize: CGSize = CGSize(width: 120, height: 64)
     ) -> SKNode {
         let size = CGSize(width: max(60, requestedSize.width), height: max(60, requestedSize.height))
-        let node = ArtSystem.box(
+        let node = ArtSystem.panel(
             size,
-            color: UIColor(red: 0.14, green: 0.12, blue: 0.24, alpha: 0.88),
-            radius: min(24, size.height * 0.38)
+            fill: UIColor(red: 0.095, green: 0.085, blue: 0.18, alpha: 0.94),
+            stroke: UIColor(red: 0.79, green: 0.76, blue: 0.66, alpha: 0.34),
+            radius: min(24, size.height * 0.38),
+            lineWidth: 2,
+            shadowAlpha: 0.28
         )
-        node.strokeColor = UIColor(white: 1, alpha: 0.25)
-        node.lineWidth = 1.5
         node.name = name
         node.position = point
         node.zPosition = 740
@@ -311,13 +316,15 @@ struct AdventureSceneLayout {
         emblem.name = name
         root.addChild(emblem)
 
-        let plaque = SKShapeNode(
-            rectOf: CGSize(width: max(120, width), height: 44),
-            cornerRadius: 22
+        let plaque = ArtSystem.panel(
+            CGSize(width: max(120, width), height: 44),
+            fill: UIColor(red: 0.055, green: 0.05, blue: 0.11, alpha: 0.88),
+            stroke: tint.withAlphaComponent(0.72),
+            radius: 22,
+            lineWidth: 2,
+            shadowAlpha: 0.28,
+            innerHighlight: tint.withAlphaComponent(0.14)
         )
-        plaque.fillColor = UIColor(red: 0.08, green: 0.07, blue: 0.15, alpha: 0.68)
-        plaque.strokeColor = tint.withAlphaComponent(0.65)
-        plaque.lineWidth = 1.5
         plaque.position = CGPoint(x: 0, y: plaqueOffsetY)
         plaque.name = name
         plaque.userData = NSMutableDictionary(dictionary: ["destinationRole": "plaque"])
