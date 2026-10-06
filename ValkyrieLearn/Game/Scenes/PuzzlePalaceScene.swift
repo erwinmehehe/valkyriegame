@@ -13,6 +13,7 @@ import LearningCore
         case mirrorHall
         case pathTiles
         case commandGears
+        case bugLantern
     }
 
     private let place: Place
@@ -26,6 +27,7 @@ import LearningCore
         case .mirrorHall: return "Puzzle Palace · Mirror Hall"
         case .pathTiles: return "Puzzle Palace · Path Tiles"
         case .commandGears: return "Puzzle Palace · Command Gears"
+        case .bugLantern: return "Puzzle Palace · Bug Lantern"
         }
     }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
@@ -58,6 +60,10 @@ import LearningCore
     private var sequenceEncounter: PuzzleSequenceEncounter?
     private var commandSteps: [PuzzleCommandStep] = []
     private var commandAcceptingInput = false
+    private var bugEncounter: PuzzleBugEncounter?
+    private var bugAcceptingInput = false
+    private var bugIdentifiedIndex: Int?
+    private var bugRepairReady = false
     private var mirrorAcceptingInput = false
     private var mirrorPracticeReady = false
     private var mirrorPracticeBusy = false
@@ -101,6 +107,8 @@ import LearningCore
             place = .pathTiles
         case .commandGears:
             place = .commandGears
+        case .bugLantern:
+            place = .bugLantern
         default:
             place = .runeGate
         }
@@ -137,6 +145,9 @@ import LearningCore
             valkyrie.position = CGPoint(x: 180, y: 175)
             tiko.position = CGPoint(x: 305, y: 190)
         case .commandGears:
+            valkyrie.position = CGPoint(x: 180, y: 175)
+            tiko.position = CGPoint(x: 305, y: 190)
+        case .bugLantern:
             valkyrie.position = CGPoint(x: 180, y: 175)
             tiko.position = CGPoint(x: 305, y: 190)
         }
@@ -222,7 +233,7 @@ import LearningCore
         case .commandGears:
             state.audio.play("palace_ambience", channel: .ambience, looping: true)
             guard state.puzzleCommandGearsAvailable else {
-                instruction.text = "Tiko needs the Memory Bridge before he can build command chains."
+                instruction.text = "Restore Path Tiles planning before Tiko builds command chains."
                 return
             }
             if state.puzzleCommandGearsComplete {
@@ -230,6 +241,18 @@ import LearningCore
             } else {
                 sequenceEncounter = state.nextPuzzleCommandGearsEncounter()
                 buildCommandGearsEncounter()
+            }
+        case .bugLantern:
+            state.audio.play("palace_ambience", channel: .ambience, looping: true)
+            guard state.puzzleBugLanternAvailable else {
+                instruction.text = "Restore Command Gears before the Bug Lantern can inspect a plan."
+                return
+            }
+            if state.puzzleBugLanternComplete {
+                finishBugLantern(celebrate: false)
+            } else {
+                bugEncounter = state.nextPuzzleBugLanternEncounter()
+                buildBugLanternEncounter()
             }
         }
     }
@@ -278,6 +301,9 @@ import LearningCore
         case .commandGears:
             buildCommandGearsWorld()
             refreshCommandGearsProgress(animated: false)
+        case .bugLantern:
+            buildBugLanternWorld()
+            refreshBugLanternProgress(animated: false)
         }
     }
 
@@ -3182,16 +3208,388 @@ import LearningCore
         }
         if childNode(withName: "commandHome") == nil {
             let home = worldControl("⌂", name: "commandHome",
-                                    at: CGPoint(x: 1110, y: 175), radius: 31,
+                                    at: CGPoint(x: 1075, y: 175), radius: 31,
                                     accessibilityLabel: "Return to Story Tree")
             home.zPosition = 1500
+        }
+        if state.puzzleBugLanternAvailable && childNode(withName: "bugLanternRoute") == nil {
+            let route = worldGear("✹", name: "bugLanternRoute",
+                                  at: CGPoint(x: 1170, y: 175), radius: 35,
+                                  accessibilityLabel: "Enter Bug Lantern")
+            route.zPosition = 1500
         }
 
         if state.puzzlePalaceComplete {
             renderPuzzlePalaceFinale(celebrate: celebrate)
             instruction.text = "The Palace is glowing again. Tiko's violet lantern is waiting at the Story Tree."
         } else {
-            instruction.text = "The Command Engine is restored. Other Palace rooms still need Valkyrie and Tiko."
+            instruction.text = "The Command Engine is restored. The Bug Lantern is ready for debugging."
+        }
+    }
+
+    private func buildBugLanternWorld() {
+        let rail = ArtSystem.box(
+            CGSize(width: 690, height: 24),
+            color: UIColor(red: 0.37, green: 0.26, blue: 0.14, alpha: 0.96),
+            radius: 8
+        )
+        rail.strokeColor = UIColor(red: 0.88, green: 0.68, blue: 0.32, alpha: 0.88)
+        rail.lineWidth = 2
+        rail.position = CGPoint(x: 760, y: 292)
+        rail.name = "bugRail"
+        rail.zPosition = 120
+        addChild(rail)
+
+        let lanternFrame = SKShapeNode(circleOfRadius: 76)
+        lanternFrame.fillColor = UIColor(red: 0.17, green: 0.12, blue: 0.24, alpha: 0.98)
+        lanternFrame.strokeColor = UIColor(red: 0.93, green: 0.66, blue: 0.24, alpha: 0.95)
+        lanternFrame.lineWidth = 8
+        lanternFrame.position = CGPoint(x: 760, y: 515)
+        lanternFrame.name = "bugLanternFixture"
+        lanternFrame.zPosition = 650
+        addChild(lanternFrame)
+
+        let lanternCore = SKShapeNode(circleOfRadius: 45)
+        lanternCore.fillColor = UIColor(red: 0.92, green: 0.55, blue: 0.16, alpha: 0.94)
+        lanternCore.strokeColor = UIColor(red: 1.0, green: 0.88, blue: 0.48, alpha: 1)
+        lanternCore.lineWidth = 4
+        lanternCore.glowWidth = 12
+        lanternCore.name = "bugLanternCore"
+        lanternFrame.addChild(lanternCore)
+
+        let bugGlyph = ArtSystem.label("✹", size: 34)
+        bugGlyph.fontColor = UIColor(red: 0.23, green: 0.10, blue: 0.18, alpha: 1)
+        bugGlyph.name = "bugLanternGlyph"
+        lanternCore.addChild(bugGlyph)
+
+        let title = ArtSystem.label("FIND THE BROKEN COMMAND", size: 21)
+        title.fontColor = UIColor(red: 0.96, green: 0.97, blue: 1.0, alpha: 0.98)
+        title.position = CGPoint(x: 760, y: 615)
+        title.name = "bugLanternTitle"
+        title.zPosition = 820
+        addChild(title)
+
+        for index in 0..<PuzzlePalaceEncounterCatalog.bugLanternFamilies.count {
+            let lamp = SKShapeNode(circleOfRadius: 12)
+            lamp.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.31, alpha: 1)
+            lamp.strokeColor = UIColor(red: 0.93, green: 0.66, blue: 0.24, alpha: 0.88)
+            lamp.lineWidth = 3
+            lamp.position = CGPoint(x: 1090 + CGFloat(index) * 38, y: 535)
+            lamp.name = "bugProgress\(index)"
+            lamp.zPosition = 820
+            addChild(lamp)
+        }
+
+        let back = worldControl("‹", name: "commandGearsBack",
+                                at: CGPoint(x: 1180, y: 665), radius: 30,
+                                accessibilityLabel: "Back to Command Gears")
+        back.zPosition = 2050
+    }
+
+    private func clearBugSteps() {
+        for index in 0..<3 {
+            childNode(withName: "bugStep\(index)")?.removeFromParent()
+            childNode(withName: "bugStepLabel\(index)")?.removeFromParent()
+        }
+        childNode(withName: "bugReplacement")?.removeFromParent()
+        bugIdentifiedIndex = nil
+        bugRepairReady = false
+    }
+
+    private func buildBugLanternEncounter(resetSupport: Bool = true) {
+        guard let bugEncounter else { return }
+        clearBugSteps()
+        attempts = 0
+        if resetSupport { support = .independent }
+        startedAt = Date()
+        solved = false
+        bugIdentifiedIndex = nil
+        bugRepairReady = false
+        bugAcceptingInput = true
+
+        let xs: [CGFloat] = [555, 760, 965]
+        for (index, step) in bugEncounter.shown.enumerated() {
+            let plate = SKShapeNode(
+                rectOf: CGSize(width: 154, height: 106),
+                cornerRadius: 28
+            )
+            plate.fillColor = UIColor(red: 0.12, green: 0.16, blue: 0.25, alpha: 0.98)
+            plate.strokeColor = UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.82)
+            plate.lineWidth = 4
+            plate.position = CGPoint(x: xs[index], y: 355)
+            plate.name = "bugStep\(index)"
+            plate.zPosition = 850
+            plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
+
+            let number = ArtSystem.label("\(index + 1)", size: 13)
+            number.fontColor = UIColor(white: 1, alpha: 0.40)
+            number.position = CGPoint(x: -58, y: 35)
+            number.name = plate.name
+            plate.addChild(number)
+
+            let glyph = ArtSystem.label(step.glyph, size: 35)
+            glyph.fontColor = .white
+            glyph.position.y = 9
+            glyph.name = plate.name
+            plate.addChild(glyph)
+
+            makeAccessible(plate, label: "Command \(index + 1): \(step.title)")
+            addChild(plate)
+            registerInteraction(plate, clearance: 18)
+
+            let label = ArtSystem.label(step.title, size: 13)
+            label.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.67, alpha: 1)
+            label.position = CGPoint(x: xs[index], y: 280)
+            label.name = "bugStepLabel\(index)"
+            label.zPosition = 850
+            addChild(label)
+        }
+
+        if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
+            core.fillColor = UIColor(red: 0.92, green: 0.55, blue: 0.16, alpha: 0.94)
+            core.glowWidth = 12
+        }
+        instruction.text = bugEncounter.prompt
+        tiko.pose(.interact)
+    }
+
+    private func resolveBugStep(_ index: Int) {
+        guard place == .bugLantern, bugAcceptingInput, !solved,
+              let activeEncounter = bugEncounter,
+              activeEncounter.shown.indices.contains(index),
+              let node = childNode(withName: "bugStep\(index)") as? SKShapeNode else { return }
+
+        bugAcceptingInput = false
+        attempts += 1
+        let attemptSupport = support
+        let correct = activeEncounter.isBrokenStep(index)
+
+        guard correct else {
+            _ = state.recordPuzzle(
+                activeEncounter,
+                outcome: .incorrect,
+                support: attemptSupport,
+                attempts: attempts,
+                responseTime: Date().timeIntervalSince(startedAt)
+            )
+            node.strokeColor = .systemRed
+            node.glowWidth = 7
+            errorFeedback()
+            support = support == .independent ? .lightHint : .strongHint
+            valkyrie.pose(.react)
+            tiko.pose(.react)
+            instruction.text = support == .lightHint
+                ? "Check what each command should make possible for the next one."
+                : "Compare the three steps to the goal. Only one command does not belong."
+            bugEncounter = state.nextPuzzleBugLanternEncounter()
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0 : 0.55),
+                .run { [weak self] in self?.buildBugLanternEncounter(resetSupport: false) }
+            ]))
+            return
+        }
+
+        bugIdentifiedIndex = index
+        node.strokeColor = .systemRed
+        node.glowWidth = 13
+        selectionFeedback()
+        instruction.text = "You found the broken command. Watch Tiko run the plan and see where it fails."
+        demonstrateBugFailure(at: index) { [weak self] in
+            self?.buildBugReplacement()
+        }
+    }
+
+    private func demonstrateBugFailure(at brokenIndex: Int, completion: @escaping () -> Void) {
+        let xs: [CGFloat] = [555, 760, 965]
+        let demonstrationY = CGFloat(205)
+        tiko.removeAllActions()
+
+        if reducedMotion {
+            tiko.position = CGPoint(x: xs[brokenIndex], y: demonstrationY)
+            tiko.pose(.react)
+            completion()
+            return
+        }
+
+        var actions: [SKAction] = []
+        for index in 0...brokenIndex {
+            actions.append(.run { [weak self] in self?.tiko.pose(.walk) })
+            actions.append(.move(
+                to: CGPoint(x: xs[index], y: demonstrationY),
+                duration: 0.30
+            ))
+        }
+        actions.append(.run { [weak self] in self?.tiko.pose(.react) })
+        actions.append(.wait(forDuration: 0.35))
+        actions.append(.run(completion))
+        tiko.run(.sequence(actions))
+    }
+
+    private func buildBugReplacement() {
+        guard place == .bugLantern, !solved,
+              let activeEncounter = bugEncounter,
+              let index = bugIdentifiedIndex else { return }
+
+        childNode(withName: "bugReplacement")?.removeFromParent()
+        let replacementStep = activeEncounter.intended[index]
+        let plate = SKShapeNode(
+            rectOf: CGSize(width: 184, height: 92),
+            cornerRadius: 26
+        )
+        plate.fillColor = UIColor(red: 0.12, green: 0.25, blue: 0.22, alpha: 0.98)
+        plate.strokeColor = UIColor(red: 0.45, green: 0.92, blue: 0.67, alpha: 0.96)
+        plate.lineWidth = 5
+        plate.position = CGPoint(x: 760, y: 205)
+        plate.name = "bugReplacement"
+        plate.zPosition = 1050
+
+        let number = ArtSystem.label("\(index + 1)", size: 13)
+        number.fontColor = UIColor(white: 1, alpha: 0.45)
+        number.position = CGPoint(x: -70, y: 29)
+        number.name = "bugReplacement"
+        plate.addChild(number)
+
+        let glyph = ArtSystem.label(replacementStep.glyph, size: 31)
+        glyph.fontColor = .white
+        glyph.position = CGPoint(x: -47, y: 0)
+        glyph.name = "bugReplacement"
+        plate.addChild(glyph)
+
+        let title = ArtSystem.label(replacementStep.title, size: 12)
+        title.fontColor = UIColor(red: 0.91, green: 1.0, blue: 0.91, alpha: 1)
+        title.position = CGPoint(x: 32, y: -4)
+        title.name = "bugReplacement"
+        plate.addChild(title)
+
+        makeAccessible(
+            plate,
+            label: "Replacement command: \(replacementStep.title). Install it in step \(index + 1)."
+        )
+        addChild(plate)
+        registerInteraction(plate, clearance: 18)
+        bugRepairReady = true
+        instruction.text = "Tiko got stuck at step \(index + 1). Install \(replacementStep.title) to repair the plan."
+    }
+
+    private func installBugReplacement() {
+        guard place == .bugLantern, bugRepairReady, !solved,
+              let activeEncounter = bugEncounter,
+              let index = bugIdentifiedIndex,
+              let replacement = childNode(withName: "bugReplacement") as? SKShapeNode,
+              let brokenPlate = childNode(withName: "bugStep\(index)") else { return }
+
+        bugRepairReady = false
+        let targetPosition = brokenPlate.position
+        let externalLabel = childNode(withName: "bugStepLabel\(index)")
+        let attemptSupport = support
+
+        let completeRepair = { [weak self, weak replacement, weak brokenPlate, weak externalLabel] in
+            guard let self, let replacement else { return }
+            brokenPlate?.removeFromParent()
+            externalLabel?.removeFromParent()
+            replacement.position = targetPosition
+            replacement.name = "bugStep\(index)"
+            for child in replacement.children {
+                child.name = replacement.name
+            }
+            replacement.strokeColor = .systemGreen
+            replacement.glowWidth = 12
+            self.makeAccessible(
+                replacement,
+                label: "Command \(index + 1): \(activeEncounter.intended[index].title), repaired"
+            )
+
+            _ = self.state.recordPuzzle(
+                activeEncounter,
+                outcome: .correct,
+                support: attemptSupport,
+                attempts: self.attempts,
+                responseTime: Date().timeIntervalSince(self.startedAt)
+            )
+
+            self.solved = true
+            self.successFeedback()
+            self.valkyrie.pose(.celebrate)
+            self.tiko.pose(.celebrate)
+
+            if let core = self.childNode(withName: "//bugLanternCore") as? SKShapeNode {
+                core.fillColor = .systemGreen
+                core.glowWidth = 18
+            }
+
+            self.refreshBugLanternProgress(animated: true)
+
+            if self.state.puzzleBugLanternComplete {
+                self.finishBugLantern(celebrate: true)
+            } else {
+                self.instruction.text = attemptSupport == .independent
+                    ? "You found and fixed the bug. Try a fresh plan."
+                    : "You repaired it with help. Try a fresh plan independently."
+                if self.childNode(withName: "bugNext") == nil {
+                    let next = self.worldGear(
+                        "✹",
+                        name: "bugNext",
+                        at: CGPoint(x: 1170, y: 165),
+                        radius: 34,
+                        accessibilityLabel: "Next broken plan"
+                    )
+                    next.zPosition = 1500
+                }
+            }
+        }
+
+        if reducedMotion {
+            replacement.position = targetPosition
+            completeRepair()
+        } else {
+            replacement.run(.sequence([
+                .move(to: targetPosition, duration: 0.30),
+                .run(completeRepair)
+            ]))
+        }
+    }
+
+    private func refreshBugLanternProgress(animated: Bool) {
+        let count = PuzzlePalaceDirector.bugLanternIndependentSuccessCount(profile: state.profile)
+        for index in 0..<PuzzlePalaceEncounterCatalog.bugLanternFamilies.count {
+            guard let lamp = childNode(withName: "bugProgress\(index)") as? SKShapeNode else { continue }
+            let active = index < count
+            lamp.fillColor = active ? .systemGreen : UIColor(red: 0.18, green: 0.22, blue: 0.31, alpha: 1)
+            lamp.glowWidth = active ? 8 : 0
+            if active && animated && !reducedMotion {
+                lamp.run(.sequence([
+                    .scale(to: 1.25, duration: 0.12),
+                    .scale(to: 1.0, duration: 0.16)
+                ]))
+            }
+        }
+    }
+
+    private func finishBugLantern(celebrate: Bool = false) {
+        bugAcceptingInput = false
+        clearBugSteps()
+        childNode(withName: "bugNext")?.removeFromParent()
+        refreshBugLanternProgress(animated: true)
+
+        if let title = childNode(withName: "bugLanternTitle") as? SKLabelNode {
+            title.text = "BUG LANTERN RESTORED"
+        }
+        if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
+            core.fillColor = .systemGreen
+            core.glowWidth = 18
+        }
+
+        if childNode(withName: "bugHome") == nil {
+            let home = worldControl("⌂", name: "bugHome",
+                                    at: CGPoint(x: 1110, y: 175), radius: 31,
+                                    accessibilityLabel: "Return to Story Tree")
+            home.zPosition = 1500
+        }
+        if state.puzzlePalaceComplete {
+            renderPuzzlePalaceFinale(celebrate: celebrate)
+            instruction.text = "The Palace is glowing again. Tiko's violet lantern is waiting at the Story Tree."
+        } else {
+            instruction.text = "Tiko can now diagnose and repair one broken command."
         }
     }
 
@@ -3398,6 +3796,30 @@ import LearningCore
         case "commandGearsRoute":
             guard state.puzzleCommandGearsAvailable else { return }
             state.travel(to: .commandGears)
+
+        case "bugLanternRoute":
+            guard state.puzzleBugLanternAvailable else { return }
+            state.travel(to: .bugLantern)
+
+        case "commandGearsBack":
+            state.travel(to: .commandGears)
+
+        case "bugHome":
+            state.travel(to: .storyTree)
+
+        case "bugReplacement":
+            installBugReplacement()
+
+        case "bugNext":
+            guard place == .bugLantern, solved, !state.puzzleBugLanternComplete else { return }
+            childNode(withName: "bugNext")?.removeFromParent()
+            bugEncounter = state.nextPuzzleBugLanternEncounter()
+            buildBugLanternEncounter()
+
+        case let name? where name.hasPrefix("bugStep"):
+            guard place == .bugLantern,
+                  let index = Int(name.replacingOccurrences(of: "bugStep", with: "")) else { return }
+            resolveBugStep(index)
 
         case "pathTilesBack":
             state.travel(to: .pathTiles)
