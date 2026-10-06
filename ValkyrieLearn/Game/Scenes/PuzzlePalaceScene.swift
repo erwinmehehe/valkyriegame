@@ -11,6 +11,7 @@ import LearningCore
         case sortingPedestal
         case resortVault
         case mirrorHall
+        case pathTiles
     }
 
     private let place: Place
@@ -22,6 +23,7 @@ import LearningCore
         case .sortingPedestal: return "Puzzle Palace · Sorting Pedestal"
         case .resortVault: return "Puzzle Palace · Re-sort Vault"
         case .mirrorHall: return "Puzzle Palace · Mirror Hall"
+        case .pathTiles: return "Puzzle Palace · Path Tiles"
         }
     }
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
@@ -49,6 +51,8 @@ import LearningCore
     private var resortAcceptingInput = false
     private var orientationEncounter: PuzzleOrientationEncounter?
     private var rotationEncounter: PuzzleRotationEncounter?
+    private var pathEncounter: PuzzlePathEncounter?
+    private var pathAcceptingInput = false
     private var mirrorAcceptingInput = false
     private var mirrorPracticeReady = false
     private var mirrorPracticeBusy = false
@@ -88,6 +92,8 @@ import LearningCore
             place = .resortVault
         case .mirrorHall:
             place = .mirrorHall
+        case .pathTiles:
+            place = .pathTiles
         default:
             place = .runeGate
         }
@@ -118,6 +124,9 @@ import LearningCore
             valkyrie.position = CGPoint(x: 180, y: 175)
             tiko.position = CGPoint(x: 295, y: 190)
         case .mirrorHall:
+            valkyrie.position = CGPoint(x: 180, y: 175)
+            tiko.position = CGPoint(x: 305, y: 190)
+        case .pathTiles:
             valkyrie.position = CGPoint(x: 180, y: 175)
             tiko.position = CGPoint(x: 305, y: 190)
         }
@@ -188,6 +197,18 @@ import LearningCore
                 orientationEncounter = state.nextPuzzleMirrorHallEncounter()
                 buildMirrorHallEncounter()
             }
+        case .pathTiles:
+            state.audio.play("palace_ambience", channel: .ambience, looping: true)
+            guard state.puzzlePathTilesAvailable else {
+                instruction.text = "Restore every Mirror Hall beam before Path Tiles opens."
+                return
+            }
+            if state.puzzlePathTilesComplete {
+                finishPathTiles()
+            } else {
+                pathEncounter = state.nextPuzzlePathTilesEncounter()
+                buildPathTilesEncounter()
+            }
         }
     }
 
@@ -239,6 +260,9 @@ import LearningCore
         case .mirrorHall:
             buildMirrorHallWorld()
             refreshMirrorHallProgress(animated: false)
+        case .pathTiles:
+            buildPathTilesWorld()
+            refreshPathTilesProgress(animated: false)
         }
     }
 
@@ -2043,11 +2067,16 @@ import LearningCore
             glyph.text = "✦"
         }
         if childNode(withName: "mirrorRestoredHome") == nil {
-            let home = hotspot("⌂", name: "mirrorRestoredHome", at: CGPoint(x: 1135, y: 165),
-                               size: CGSize(width: 110, height: 66))
+            let home = hotspot("⌂", name: "mirrorRestoredHome", at: CGPoint(x: 1060, y: 165),
+                               size: CGSize(width: 95, height: 66))
             home.zPosition = 1500
         }
-        instruction.text = "You restored the hall! Explore here, or take the home lantern to Story Tree."
+        if state.puzzlePathTilesAvailable && childNode(withName: "pathTilesRoute") == nil {
+            let route = hotspot("Path Tiles →", name: "pathTilesRoute", at: CGPoint(x: 1170, y: 165),
+                                size: CGSize(width: 150, height: 66))
+            route.zPosition = 1500
+        }
+        instruction.text = "The hall is restored. Tiko found a planning floor beyond the mirrors."
     }
 
     private func buildMirrorHallWorld() {
@@ -2392,6 +2421,200 @@ import LearningCore
         }
     }
 
+
+    private func buildPathTilesWorld() {
+        let chamber = SKShapeNode(rectOf: CGSize(width: 860, height: 360), cornerRadius: 54)
+        chamber.fillColor = UIColor(red: 0.08, green: 0.12, blue: 0.20, alpha: 0.24)
+        chamber.strokeColor = UIColor(red: 0.44, green: 0.82, blue: 0.92, alpha: 0.55)
+        chamber.lineWidth = 6
+        chamber.position = CGPoint(x: 760, y: 400)
+        chamber.name = "pathTilesChamber"
+        chamber.zPosition = 100
+        addChild(chamber)
+
+        let title = ArtSystem.label("PATH TILES", size: 34)
+        title.name = "pathTilesTitle"
+        title.position = CGPoint(x: 760, y: 610)
+        title.zPosition = 800
+        addChild(title)
+
+        for index in 0..<PuzzlePalaceEncounterCatalog.pathTileFamilies.count {
+            let light = SKShapeNode(circleOfRadius: 15)
+            light.fillColor = UIColor(red: 0.18, green: 0.24, blue: 0.34, alpha: 1)
+            light.strokeColor = UIColor(red: 0.44, green: 0.82, blue: 0.92, alpha: 0.8)
+            light.lineWidth = 3
+            light.position = CGPoint(x: 680 + CGFloat(index) * 80, y: 565)
+            light.name = "pathProgress\(index)"
+            light.zPosition = 820
+            addChild(light)
+        }
+
+        let back = hotspot("← Mirror Hall", name: "mirrorHallBack", at: CGPoint(x: 170, y: 665),
+                           size: CGSize(width: 180, height: 52))
+        back.zPosition = 2050
+    }
+
+    private func clearPathTilesChoices() {
+        for index in 0..<3 {
+            childNode(withName: "pathChoice\(index)")?.removeFromParent()
+        }
+        childNode(withName: "pathGrid")?.removeFromParent()
+    }
+
+    private func buildPathTilesEncounter() {
+        guard let pathEncounter else { return }
+        clearPathTilesChoices()
+        attempts = 0
+        support = .independent
+        startedAt = Date()
+        solved = false
+        pathAcceptingInput = true
+
+        let grid = SKNode()
+        grid.name = "pathGrid"
+        grid.position = CGPoint(x: 760, y: 420)
+        grid.zPosition = 500
+        addChild(grid)
+
+        let tileSize: CGFloat = 66
+        let originX = -CGFloat(pathEncounter.gridWidth - 1) * tileSize / 2
+        let originY = -CGFloat(pathEncounter.gridHeight - 1) * tileSize / 2
+
+        for y in 0..<pathEncounter.gridHeight {
+            for x in 0..<pathEncounter.gridWidth {
+                let tile = PuzzleTile(x: x, y: y)
+                let square = SKShapeNode(rectOf: CGSize(width: 58, height: 58), cornerRadius: 10)
+                square.position = CGPoint(x: originX + CGFloat(x) * tileSize,
+                                          y: originY + CGFloat(y) * tileSize)
+                square.lineWidth = 3
+                square.strokeColor = UIColor(red: 0.45, green: 0.72, blue: 0.86, alpha: 0.75)
+                if pathEncounter.blocked.contains(tile) {
+                    square.fillColor = UIColor(red: 0.12, green: 0.12, blue: 0.18, alpha: 1)
+                    let glyph = ArtSystem.label("✕", size: 24)
+                    glyph.fontColor = .systemRed
+                    square.addChild(glyph)
+                } else {
+                    square.fillColor = UIColor(red: 0.15, green: 0.28, blue: 0.38, alpha: 0.96)
+                }
+                if tile == pathEncounter.start {
+                    square.fillColor = UIColor(red: 0.21, green: 0.55, blue: 0.78, alpha: 1)
+                    let glyph = ArtSystem.label("T", size: 25)
+                    square.addChild(glyph)
+                } else if tile == pathEncounter.goal {
+                    square.fillColor = UIColor(red: 0.70, green: 0.52, blue: 0.16, alpha: 1)
+                    let glyph = ArtSystem.label("★", size: 28)
+                    square.addChild(glyph)
+                }
+                grid.addChild(square)
+            }
+        }
+
+        let choiceYs: [CGFloat] = [300, 225, 150]
+        for index in 0..<pathEncounter.choices.count {
+            let arrows = pathEncounter.choices[index].map(\.glyph).joined(separator: " ")
+            let choice = hotspot(arrows, name: "pathChoice\(index)",
+                                 at: CGPoint(x: 1085, y: choiceYs[index]),
+                                 size: CGSize(width: 260, height: 58))
+            choice.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
+            choice.zPosition = 900
+        }
+
+        instruction.text = pathEncounter.prompt
+        tiko.pose(.interact)
+    }
+
+    private func resolvePathChoice(_ index: Int) {
+        guard place == .pathTiles, pathAcceptingInput, let pathEncounter,
+              pathEncounter.choices.indices.contains(index) else { return }
+        pathAcceptingInput = false
+        attempts += 1
+        let attemptSupport = support
+        let correct = pathEncounter.isValidChoice(index)
+
+        _ = state.recordPuzzle(pathEncounter, outcome: correct ? .correct : .incorrect,
+                               support: attemptSupport, attempts: attempts,
+                               responseTime: Date().timeIntervalSince(startedAt))
+
+        guard correct else {
+            support = support == .independent ? .lightHint : .strongHint
+            instruction.text = support == .lightHint
+                ? "Trace the whole route with your eyes first. A dark tile means the plan cannot work."
+                : "Start at T, look all the way to ★, and reject any route that crosses ✕."
+            tiko.pose(.react)
+            valkyrie.pose(.react)
+            pathEncounter = state.nextPuzzlePathTilesEncounter()
+            run(.sequence([
+                .wait(forDuration: reducedMotion ? 0 : 0.45),
+                .run { [weak self] in self?.buildPathTilesEncounter() }
+            ]))
+            return
+        }
+
+        solved = true
+        let route = pathEncounter.route(for: index)
+        animateTikoAlongPath(route, encounter: pathEncounter)
+        refreshPathTilesProgress(animated: true)
+    }
+
+    private func animateTikoAlongPath(_ route: [PuzzleTile], encounter: PuzzlePathEncounter) {
+        let tileSize: CGFloat = 66
+        let originX = 760 - CGFloat(encounter.gridWidth - 1) * tileSize / 2
+        let originY = 420 - CGFloat(encounter.gridHeight - 1) * tileSize / 2
+        let actions: [SKAction] = route.dropFirst().map { tile in
+            .move(to: CGPoint(x: originX + CGFloat(tile.x) * tileSize,
+                              y: originY + CGFloat(tile.y) * tileSize),
+                  duration: reducedMotion ? 0 : 0.18)
+        }
+        tiko.run(.sequence(actions + [
+            .run { [weak self] in
+                guard let self else { return }
+                self.state.audio.play("success")
+                self.tiko.pose(.celebrate)
+                self.valkyrie.pose(.celebrate)
+                if self.state.puzzlePathTilesComplete {
+                    self.finishPathTiles()
+                } else {
+                    self.instruction.text = "That plan worked. Tap the next tile map."
+                    if self.childNode(withName: "pathNext") == nil {
+                        let next = self.hotspot("→", name: "pathNext",
+                                                at: CGPoint(x: 1160, y: 95),
+                                                size: CGSize(width: 105, height: 58))
+                        next.zPosition = 1500
+                    }
+                }
+            }
+        ]))
+    }
+
+    private func refreshPathTilesProgress(animated: Bool) {
+        let count = PuzzlePalaceDirector.pathTilesIndependentSuccessCount(profile: state.profile)
+        for index in 0..<PuzzlePalaceEncounterCatalog.pathTileFamilies.count {
+            guard let light = childNode(withName: "pathProgress\(index)") as? SKShapeNode else { continue }
+            light.fillColor = index < count ? .systemGreen : UIColor(red: 0.18, green: 0.24, blue: 0.34, alpha: 1)
+            light.glowWidth = index < count ? 9 : 0
+            if animated && index == max(0, count - 1) && !reducedMotion {
+                light.run(.sequence([.scale(to: 1.2, duration: 0.12), .scale(to: 1.0, duration: 0.16)]))
+            }
+        }
+    }
+
+    private func finishPathTiles() {
+        pathAcceptingInput = false
+        clearPathTilesChoices()
+        childNode(withName: "pathNext")?.removeFromParent()
+        refreshPathTilesProgress(animated: true)
+        if let title = childNode(withName: "pathTilesTitle") as? SKLabelNode {
+            title.text = "PATH PLANNING RESTORED"
+        }
+        if childNode(withName: "pathTilesHome") == nil {
+            let home = hotspot("⌂ Story Tree", name: "pathTilesHome",
+                               at: CGPoint(x: 1085, y: 180),
+                               size: CGSize(width: 220, height: 62))
+            home.zPosition = 1500
+        }
+        instruction.text = "Tiko can see a safe route before moving. The next chamber can build on this planning skill."
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let point = touches.first?.location(in: self) else { return }
         handleTap(at: point)
@@ -2542,6 +2765,27 @@ import LearningCore
 
         case "mirrorRestoredHome":
             state.travel(to: .storyTree)
+
+        case "pathTilesRoute":
+            guard place == .mirrorHall, state.puzzlePathTilesAvailable else { return }
+            state.travel(to: .pathTiles)
+
+        case "mirrorHallBack":
+            state.travel(to: .mirrorHall)
+
+        case "pathTilesHome":
+            state.travel(to: .storyTree)
+
+        case "pathNext":
+            guard place == .pathTiles, solved, !state.puzzlePathTilesComplete else { return }
+            childNode(withName: "pathNext")?.removeFromParent()
+            pathEncounter = state.nextPuzzlePathTilesEncounter()
+            buildPathTilesEncounter()
+
+        case let name? where name.hasPrefix("pathChoice"):
+            guard place == .pathTiles,
+                  let index = Int(name.replacingOccurrences(of: "pathChoice", with: "")) else { return }
+            resolvePathChoice(index)
 
         case "mirrorRotationChoice":
             guard place == .mirrorHall else { return }
