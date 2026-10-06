@@ -74,6 +74,8 @@ import SpriteKit
 
     override func buildWorld() {
         super.buildWorld()
+        prepareStoryTreeIllustrationForRetina()
+        buildStoryTreeFidelityAccents()
 
         // World entrances are environmental beacons, not generic navigation buttons.
         // Keep them visually offset from the painted travel route so Valkyrie never
@@ -159,6 +161,112 @@ import SpriteKit
         // destination beacons deliberately sit above that route, so generic
         // interaction avoidance must not push Valkyrie into the surrounding chasm.
         clearRegisteredInteractionZones()
+    }
+
+    /// Preserve the approved Starlight Isles illustration while preparing a
+    /// cached 2x raster for Retina presentation. The source remains the same art;
+    /// this only prevents the 1x bitmap from being enlarged at final composition.
+    private func prepareStoryTreeIllustrationForRetina() {
+        if let backdrop = childNode(withName: "worldBackdrop") as? SKSpriteNode,
+           let texture = ArtSystem.retinaEnhancedTexture(
+                "StarlightIsles",
+                targetPoints: size,
+                sharpness: 0.26
+           ) {
+            backdrop.texture = texture
+            backdrop.userData = NSMutableDictionary(dictionary: [
+                "retinaPrepared": true,
+                "sourceAsset": "StarlightIsles"
+            ])
+        }
+
+        for side in ["Left", "Right"] {
+            guard let foreground = childNode(
+                withName: "foreground" + side
+            ) as? SKSpriteNode else { continue }
+            let asset = "IslesForeground" + side
+            if let texture = ArtSystem.retinaEnhancedTexture(
+                asset,
+                targetPoints: foreground.size,
+                sharpness: 0.22
+            ) {
+                foreground.texture = texture
+            }
+        }
+    }
+
+    /// Add quiet device-resolution accents at existing landmarks and along the
+    /// authored painted route. These reinforce crispness without redrawing the
+    /// world or changing any hit target, waypoint, or destination geometry.
+    private func buildStoryTreeFidelityAccents() {
+        let root = SKNode()
+        root.name = "storyTreeRetinaAccents"
+        root.zPosition = -70
+
+        let bridgePath = CGMutablePath()
+        bridgePath.move(to: CGPoint(x: 470, y: 452))
+        bridgePath.addCurve(
+            to: CGPoint(x: 805, y: 452),
+            control1: CGPoint(x: 565, y: 463),
+            control2: CGPoint(x: 705, y: 447)
+        )
+        let bridgeRim = SKShapeNode(path: bridgePath)
+        bridgeRim.name = "storyBridgeRim"
+        bridgeRim.strokeColor = UIColor(
+            red: 1.0,
+            green: 0.84,
+            blue: 0.46,
+            alpha: 0.14
+        )
+        bridgeRim.lineWidth = 2
+        bridgeRim.glowWidth = reducedMotion ? 0 : 1
+        root.addChild(bridgeRim)
+
+        let routeSparkPoints = [
+            route[1],
+            route[3],
+            route[5],
+            route[7]
+        ]
+        for (index, point) in routeSparkPoints.enumerated() {
+            let spark = SKShapeNode(circleOfRadius: index.isMultiple(of: 2) ? 2.2 : 1.7)
+            spark.position = CGPoint(x: point.x, y: point.y + 15)
+            spark.fillColor = UIColor(
+                red: 1.0,
+                green: 0.90,
+                blue: 0.58,
+                alpha: 0.32
+            )
+            spark.strokeColor = .clear
+            spark.glowWidth = reducedMotion ? 0 : 2
+            spark.name = "storyRouteSpark"
+            root.addChild(spark)
+        }
+
+        let canopyGlints = [
+            CGPoint(x: 248, y: 555),
+            CGPoint(x: 350, y: 602),
+            CGPoint(x: 462, y: 565),
+            CGPoint(x: 612, y: 610),
+            CGPoint(x: 748, y: 575),
+            CGPoint(x: 880, y: 615)
+        ]
+        for (index, point) in canopyGlints.enumerated() {
+            let glint = SKShapeNode(circleOfRadius: index.isMultiple(of: 3) ? 2.4 : 1.5)
+            glint.position = point
+            glint.fillColor = UIColor(
+                red: 0.91,
+                green: 0.95,
+                blue: 1.0,
+                alpha: 0.30
+            )
+            glint.strokeColor = .clear
+            glint.glowWidth = reducedMotion ? 0 : 2
+            glint.name = "storyCanopyGlint"
+            root.addChild(glint)
+        }
+
+        addChild(root)
     }
 
     private func renderMoonLantern() {
