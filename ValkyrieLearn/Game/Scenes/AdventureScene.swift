@@ -122,6 +122,7 @@ struct AdventureSceneLayout {
     }
 
     private func buildHUD() {
+        let titleLeft: CGFloat = 88
         let titleWidth = min(
             CGFloat(520),
             max(CGFloat(350), CGFloat(worldTitle.count) * 11.5 + 70)
@@ -134,7 +135,7 @@ struct AdventureSceneLayout {
             lineWidth: 1.5,
             shadowAlpha: 0.30
         )
-        titlePlate.position = CGPoint(x: 40 + titleWidth / 2, y: 669)
+        titlePlate.position = CGPoint(x: titleLeft + titleWidth / 2, y: 669)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
@@ -143,7 +144,7 @@ struct AdventureSceneLayout {
         let title = ArtSystem.label(worldTitle, size: worldTitle.count > 28 ? 21 : 24)
         title.horizontalAlignmentMode = .left
         title.verticalAlignmentMode = .center
-        title.position = CGPoint(x: 66, y: 669)
+        title.position = CGPoint(x: titleLeft + 16, y: 669)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
