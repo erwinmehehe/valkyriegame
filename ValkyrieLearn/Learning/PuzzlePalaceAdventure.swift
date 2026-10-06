@@ -1643,9 +1643,9 @@ public enum PuzzlePalaceDirector {
             == PuzzlePalaceEncounterCatalog.bugRepairFamilies.count
     }
 
-    /// Completion contract for the implemented Puzzle Palace restoration.
-    /// The finale now waits for the Bug Lantern so the world progression reaches
-    /// debugging instead of ending early at command sequencing.
+    /// Completion contract for the full Puzzle Palace progression.
+    /// The finale waits for both debugging stages so the learning sequence ends at
+    /// multi-step plan repair rather than unlocking after single-step diagnosis.
     public static func palaceRestorationComplete(profile: LearnerProfile) -> Bool {
         runeGateComplete(profile: profile)
             && memoryBridgeComplete(profile: profile)
@@ -1657,6 +1657,7 @@ public enum PuzzlePalaceDirector {
             && pathTilesComplete(profile: profile)
             && commandGearsComplete(profile: profile)
             && bugLanternComplete(profile: profile)
+            && bugRepairComplete(profile: profile)
     }
 
     public static func independentSortSuccessCount(
