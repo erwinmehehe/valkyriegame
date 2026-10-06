@@ -173,6 +173,81 @@ import LearningCore
         }
     }
 
+    func testScienceWorldsReuseRetinaPreparedIllustratedBackdrops() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+
+        state.travel(to: .scienceLab)
+        let greenhouse = ScienceLabScene(state: state)
+        greenhouse.reducedMotion = true
+        greenhouse.didMove(to: SKView())
+        let greenhouseBackdrop = try XCTUnwrap(
+            greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(
+            greenhouseBackdrop.userData?["retinaPrepared"] as? Bool,
+            true
+        )
+        XCTAssertEqual(
+            greenhouseBackdrop.userData?["sourceCrop"] as? String,
+            "word-garden-upper-crop"
+        )
+        let greenhouseImage = try XCTUnwrap(greenhouseBackdrop.texture?.cgImage())
+        XCTAssertGreaterThanOrEqual(greenhouseImage.width, 2560)
+        XCTAssertGreaterThanOrEqual(greenhouseImage.height, 1440)
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceSeedBench"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterValve"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "scienceSunPrism"))
+        greenhouse.willLeave()
+
+        state.travel(to: .scienceWeatherTower)
+        let weather = WeatherTowerScene(state: state)
+        weather.reducedMotion = true
+        weather.didMove(to: SKView())
+        let weatherBackdrop = try XCTUnwrap(
+            weather.childNode(withName: "//weatherBackdropRetina") as? SKSpriteNode
+        )
+        XCTAssertEqual(
+            weatherBackdrop.userData?["retinaPrepared"] as? Bool,
+            true
+        )
+        XCTAssertEqual(
+            weatherBackdrop.userData?["sourceAsset"] as? String,
+            "StarlightIsles"
+        )
+        let weatherImage = try XCTUnwrap(weatherBackdrop.texture?.cgImage())
+        XCTAssertGreaterThanOrEqual(weatherImage.width, 2560)
+        XCTAssertGreaterThanOrEqual(weatherImage.height, 1440)
+        XCTAssertNotNil(weather.childNode(withName: "weatherTowerStructure"))
+        XCTAssertNotNil(weather.childNode(withName: "scienceForecastBase"))
+        XCTAssertNotNil(weather.childNode(withName: "scienceCreatureGate"))
+        weather.willLeave()
+
+        state.travel(to: .scienceCreatureGrove)
+        let grove = CreatureGroveScene(state: state)
+        grove.reducedMotion = true
+        grove.didMove(to: SKView())
+        let groveBackdrop = try XCTUnwrap(
+            grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(
+            groveBackdrop.userData?["retinaPrepared"] as? Bool,
+            true
+        )
+        XCTAssertEqual(
+            groveBackdrop.userData?["sourceCrop"] as? String,
+            "word-garden-lower-crop"
+        )
+        let groveImage = try XCTUnwrap(groveBackdrop.texture?.cgImage())
+        XCTAssertGreaterThanOrEqual(groveImage.width, 2560)
+        XCTAssertGreaterThanOrEqual(groveImage.height, 1440)
+        XCTAssertNotNil(grove.childNode(withName: "scienceGroveDuck"))
+        XCTAssertNotNil(grove.childNode(withName: "scienceHabitatPond"))
+        XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
+        grove.willLeave()
+    }
+
     func testMathCastlePreservesIllustrationWithRetinaPreparedRaster() throws {
         XCTAssertFalse(
             ArtSystem.isRetinaReady(
