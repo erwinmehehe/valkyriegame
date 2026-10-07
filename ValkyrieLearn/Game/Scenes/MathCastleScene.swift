@@ -279,6 +279,21 @@ import LearningCore
             startEnvironmentGearIdle(gear, index: index)
         }
 
+        for index in 0..<5 {
+            let halo = childNode(withName: "workshop\(index)")?
+                .childNode(withName: "workshopGearHalo")
+            if reducedMotion {
+                halo?.removeAction(forKey: "activeStationPulse")
+                halo?.removeAction(forKey: "stationFlash")
+            }
+        }
+        if let runtime = state.runtime {
+            updateWorkshopStationFocus(
+                mechanicID: runtime.encounter.mechanicID,
+                completed: runtime.completed
+            )
+        }
+
         powerLight?.removeAction(forKey: "ambientPowerPulse")
         if !reducedMotion, !wasPowered {
             powerLight?.run(
