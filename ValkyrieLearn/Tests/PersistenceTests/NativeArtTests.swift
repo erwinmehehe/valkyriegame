@@ -2650,6 +2650,73 @@ import LearningCore
         XCTAssertNil(calm.childNode(withName: "successBurst"))
     }
 
+    func testMathCastleMachineryFeelsAliveAndRespectsReducedMotion() throws {
+        let livelyState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(livelyState.startWorkshop(MathFoundation.workshopExamples[0]))
+        let lively = MathCastleScene(state: livelyState)
+        lively.reducedMotion = false
+        lively.didMove(to: SKView())
+        defer { lively.willLeave() }
+
+        let station = try XCTUnwrap(lively.childNode(withName: "workshop0"))
+        let stationRim = try XCTUnwrap(station.childNode(withName: "workshopRim_workshop0"))
+        let powerMount = try XCTUnwrap(lively.childNode(withName: "castlePowerMount"))
+        let environmentGear = try XCTUnwrap(lively.childNode(withName: "environmentGear0"))
+        XCTAssertNotNil(stationRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNotNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNotNil(environmentGear.action(forKey: "ambientSpin"))
+        // The quantity icon is a sibling of the moving brass rim, so it stays readable.
+        let icon = try XCTUnwrap(station.children.first { $0 is SKLabelNode })
+        XCTAssertFalse(icon.hasActions())
+
+        lively.handleTap(at: CGPoint(x: 140, y: 548))
+        XCTAssertNotNil(stationRim.action(forKey: "workshopTapSurge"))
+        lively.valkyrie.position = CGPoint(x: 490, y: 175)
+        lively.handleTap(at: CGPoint(x: 830, y: 265))
+        let core = try XCTUnwrap(lively.childNode(withName: "mathWorkZoneCore"))
+        XCTAssertNotNil(lively.camera?.action(forKey: "focus"))
+        XCTAssertNotNil(core.action(forKey: "activeMachineBreath"))
+
+        // Model the intermediate frame at which a child changes the setting.
+        core.alpha = 0.56
+        lively.reducedMotion = true
+        lively.update(1)
+        XCTAssertNil(stationRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNil(stationRim.action(forKey: "workshopTapSurge"))
+        XCTAssertNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNil(environmentGear.action(forKey: "ambientSpin"))
+        XCTAssertNil(core.action(forKey: "activeMachineBreath"))
+        XCTAssertEqual(core.alpha, 1, accuracy: 0.001)
+
+        lively.reducedMotion = false
+        lively.update(2)
+        XCTAssertNotNil(stationRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNotNil(core.action(forKey: "activeMachineBreath"))
+
+        let calmState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(calmState.startWorkshop(MathFoundation.workshopExamples[0]))
+        let calm = MathCastleScene(state: calmState)
+        calm.reducedMotion = true
+        calm.didMove(to: SKView())
+        defer { calm.willLeave() }
+        let calmRim = try XCTUnwrap(calm.childNode(withName: "//workshopRim_workshop0"))
+        let calmPower = try XCTUnwrap(calm.childNode(withName: "castlePowerMount"))
+        let calmGear = try XCTUnwrap(calm.childNode(withName: "environmentGear0"))
+        XCTAssertNil(calmRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNil(calmPower.action(forKey: "ambientSpin"))
+        XCTAssertNil(calmGear.action(forKey: "ambientSpin"))
+        calm.handleTap(at: CGPoint(x: 140, y: 548))
+        XCTAssertNil(calmRim.action(forKey: "workshopTapSurge"))
+        calm.valkyrie.position = CGPoint(x: 490, y: 175)
+        calm.handleTap(at: CGPoint(x: 830, y: 265))
+        XCTAssertNil(calm.camera?.action(forKey: "focus"))
+        XCTAssertNil(calm.childNode(withName: "mathWorkZoneCore")?.action(forKey: "activeMachineBreath"))
+    }
+
     func testSharedHUDAndPromptTextStayInsideSafeDesignBounds() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))

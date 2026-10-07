@@ -551,6 +551,7 @@ import LearningCore
 
         let powerMount = childNode(withName: "castlePowerMount")
         powerMount?.removeAction(forKey: "ambientSpin")
+        if reducedMotion { powerMount?.removeAction(forKey: "powerSurge") }
         powerMount?.zRotation = 0
 
         let workshopNames = [
@@ -559,6 +560,7 @@ import LearningCore
         for (index, name) in workshopNames.enumerated() {
             guard let rim = childNode(withName: "//workshopRim_\(name)") else { continue }
             rim.removeAction(forKey: "ambientWorkshopSpin")
+            if reducedMotion { rim.removeAction(forKey: "workshopTapSurge") }
             rim.zRotation = 0
             guard !reducedMotion else { continue }
 
@@ -577,6 +579,8 @@ import LearningCore
         for (index, gear) in environmentGears.enumerated() {
             gear.removeAction(forKey: "ambientSpin")
             if reducedMotion {
+                gear.removeAction(forKey: "powerSurge")
+                gear.removeAction(forKey: "poweredSpin")
                 gear.zRotation = 0
             } else {
                 let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
@@ -651,6 +655,9 @@ import LearningCore
         mechanic.removeAction(forKey: "activeMachineBreath")
         childNode(withName: "mathWorkZoneCore")?
             .removeAction(forKey: "activeMachineBreath")
+        // Stopping a loop mid-frame must also restore its static presentation.
+        mechanic.setScale(1)
+        childNode(withName: "mathWorkZoneCore")?.alpha = 1
 
         if active {
             focusCamera(on: CGPoint(x: 820, y: 310), duration: 0.34)
