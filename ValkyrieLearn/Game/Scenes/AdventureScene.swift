@@ -88,8 +88,6 @@ struct AdventureSceneLayout {
                     character.reducedMotion = reducedMotion
                 }
             }
-            valkyrie.pose(valkyrie.action(forKey: "travel") == nil ? .idle : .walk)
-            pip.pose(pip.action(forKey: "travel") == nil ? .idle : .walk)
             syncDecorativeMotion()
             if reducedMotion {
                 removeAction(forKey: "cameraReset")

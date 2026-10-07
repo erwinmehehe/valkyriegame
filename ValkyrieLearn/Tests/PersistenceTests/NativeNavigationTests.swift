@@ -179,6 +179,21 @@ import LearningCore
         XCTAssertEqual(scene.targetName(at: position), "scienceSeedBench")
     }
 
+    func testSceneMotionTogglePreservesValkyrieAndPipPoseDeadlines() throws {
+        let scene = StoryTreeScene(state: try makeState())
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.pose(.interact)
+        scene.pip.pose(.celebrate)
+        let valkyrieDeadline = try XCTUnwrap(scene.valkyrie.action(forKey: "operation"))
+        let pipDeadline = try XCTUnwrap(scene.pip.action(forKey: "operation"))
+        for reduced in [true, false] {
+            scene.reducedMotion = reduced
+            XCTAssertTrue(scene.valkyrie.action(forKey: "operation") === valkyrieDeadline)
+            XCTAssertTrue(scene.pip.action(forKey: "operation") === pipDeadline)
+        }
+    }
+
     func testLiveMotionTogglePreservesCompanionTravelAndInteractionDeadlines() throws {
         let milo = MiloNode()
         milo.walk(to: CGPoint(x: 400, y: 180)) {}
