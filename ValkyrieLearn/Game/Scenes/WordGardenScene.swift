@@ -650,9 +650,8 @@ import LearningCore
         guard let encounter else { return }
         resetAttemptState()
         clearQuestionAndChoices()
-        // Sunmill Crossing uses the persistent lower guidance plaque only.
-        // Avoid repeating the same instruction over the painted environment.
-        instruction.text = "Wake the crossing: remember the glowing mill-rune."
+        instruction.text = encounter.prompt
+        addPrompt(encounter.prompt)
 
         for (index, choice) in encounter.choices.enumerated() {
             let flower = flowerNode(letter: choice, index: index)
@@ -686,8 +685,9 @@ import LearningCore
         guard let encounter else { return }
         resetAttemptState()
         clearQuestionAndChoices()
-        instruction.text = encounter.prompt
-        addPrompt(encounter.prompt)
+        // Keep the painted crossing open and readable. The persistent lower
+        // guidance plaque is the single instruction surface in this room.
+        instruction.text = "Wake the crossing: remember the glowing mill-rune."
 
         for (index, choice) in encounter.choices.enumerated() {
             let leaf = sunmillChoiceNode(letter: choice, index: index)
