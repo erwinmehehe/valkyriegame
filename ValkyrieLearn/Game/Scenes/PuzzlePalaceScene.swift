@@ -448,22 +448,6 @@ import LearningCore
         base.name = "puzzleNativeBackdrop"
         addChild(base)
 
-        // Preserve the v3.31 palette as a distant matte only. The source quadrant is
-        // 160x90 pixels, so it must never be the full-strength playable environment.
-        if let atlas = ArtSystem.texture("V331WorldAtlas") {
-            let puzzleTexture = SKTexture(
-                rect: CGRect(x: 0.5, y: 0, width: 0.5, height: 0.5),
-                in: atlas
-            )
-            puzzleTexture.filteringMode = .linear
-            let matte = SKSpriteNode(texture: puzzleTexture, color: .white, size: designCanvasSize)
-            matte.position = CGPoint(x: 640, y: 360)
-            matte.zPosition = -250
-            matte.alpha = 0.10
-            matte.name = "puzzleLegacyMatte"
-            addChild(matte)
-        }
-
         let hall = ArtSystem.box(
             CGSize(width: 1080, height: 430),
             color: UIColor(red: 0.09, green: 0.08, blue: 0.20, alpha: 0.78),
@@ -746,6 +730,229 @@ import LearningCore
             daisInset.name = "puzzleStageInlay"
             addChild(daisInset)
         }
+
+        buildPalaceRoomIdentity(accent: accent)
+    }
+
+    /// Crisp, room-specific architecture layered behind the learning mechanic.
+    /// Every Puzzle Palace stop shares one visual language, but no longer looks
+    /// like the same prototype room with a different activity dropped on top.
+    private func buildPalaceRoomIdentity(accent: UIColor) {
+        let root = SKNode()
+        root.name = "puzzleRoomIdentity"
+        root.zPosition = -165
+        root.isUserInteractionEnabled = false
+
+        let motifs: [String]
+        switch place {
+        case .runeGate: motifs = ["✦", "◇", "◈"]
+        case .memoryBridge: motifs = ["Ⅰ", "Ⅱ", "Ⅲ"]
+        case .stopGoOrbs: motifs = ["●", "✦", "●"]
+        case .sortingPedestal: motifs = ["○", "◇", "○"]
+        case .resortVault: motifs = ["↻", "◇", "↺"]
+        case .mirrorHall: motifs = ["◁", "◇", "▷"]
+        case .pathTiles: motifs = ["↑", "→", "↑"]
+        case .commandGears: motifs = ["◆", "↻", "◇"]
+        case .bugLantern: motifs = ["!", "◇", "?"]
+        case .bugLanternRepair: motifs = ["↔", "◆", "↻"]
+        }
+
+        let farPortal = SKShapeNode(
+            rectOf: CGSize(width: 760, height: 270),
+            cornerRadius: 126
+        )
+        farPortal.position = CGPoint(x: 700, y: 420)
+        farPortal.fillColor = UIColor(red: 0.035, green: 0.035, blue: 0.095, alpha: 0.72)
+        farPortal.strokeColor = accent.withAlphaComponent(0.34)
+        farPortal.lineWidth = 5
+        farPortal.name = "puzzleRoomFarPortal"
+        root.addChild(farPortal)
+
+        let portalGlow = SKShapeNode(ellipseOf: CGSize(width: 600, height: 190))
+        portalGlow.fillColor = accent.withAlphaComponent(0.055)
+        portalGlow.strokeColor = accent.withAlphaComponent(0.12)
+        portalGlow.lineWidth = 3
+        portalGlow.position.y = -4
+        portalGlow.name = "decorativePuzzleRoomGlow"
+        portalGlow.userData = NSMutableDictionary(dictionary: [
+            "decorativeMotionRole": "pulse"
+        ])
+        farPortal.addChild(portalGlow)
+
+        for (index, x) in [CGFloat(-220), 0, 220].enumerated() {
+            let medallion = ArtSystem.medallion(
+                radius: index == 1 ? 38 : 29,
+                fill: UIColor(red: 0.08, green: 0.065, blue: 0.16, alpha: 0.94),
+                stroke: accent.withAlphaComponent(index == 1 ? 0.70 : 0.42),
+                glow: reducedMotion ? 0 : (index == 1 ? 3 : 1)
+            )
+            medallion.position = CGPoint(x: x, y: 66 + (index == 1 ? 18 : 0))
+            medallion.name = "decorativePuzzleRoomMotif"
+            let mark = ArtSystem.label(motifs[index], size: index == 1 ? 30 : 22)
+            mark.fontColor = UIColor(red: 1.0, green: 0.87, blue: 0.48, alpha: 0.90)
+            medallion.addChild(mark)
+            farPortal.addChild(medallion)
+        }
+
+        // Side buttresses stay behind Valkyrie but create a foreground-to-midground
+        // read that the old flat contact-sheet artwork never had.
+        for (index, x) in [CGFloat(70), 1210].enumerated() {
+            let buttress = ArtSystem.panel(
+                CGSize(width: 112, height: 430),
+                fill: UIColor(red: 0.075, green: 0.065, blue: 0.16, alpha: 0.96),
+                stroke: accent.withAlphaComponent(0.36),
+                radius: 38,
+                lineWidth: 3,
+                shadowAlpha: 0.24
+            )
+            buttress.position = CGPoint(x: x, y: 354)
+            buttress.zRotation = index == 0 ? -0.035 : 0.035
+            buttress.name = "puzzleRoomButtress"
+            root.addChild(buttress)
+
+            if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: 58, height: 86)) {
+                crystal.position = CGPoint(x: x, y: 505)
+                crystal.alpha = 0.76
+                crystal.name = "decorativePuzzleRoomCrystal"
+                root.addChild(crystal)
+            }
+        }
+
+        for (index, x) in [CGFloat(260), 480, 700, 920, 1140].enumerated() {
+            let lamp = SKShapeNode(circleOfRadius: index == 2 ? 9 : 6)
+            lamp.fillColor = accent.withAlphaComponent(index == 2 ? 0.78 : 0.52)
+            lamp.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.42, alpha: 0.68)
+            lamp.lineWidth = 1.5
+            lamp.glowWidth = reducedMotion ? 0 : CGFloat(index == 2 ? 8 : 4)
+            lamp.position = CGPoint(x: x, y: 610 - CGFloat(abs(index - 2)) * 12)
+            lamp.name = "decorativePuzzleRoomLamp"
+            root.addChild(lamp)
+        }
+
+        // Each room gets one unmistakable architectural signature.
+        switch place {
+        case .runeGate:
+            for x in stride(from: CGFloat(370), through: CGFloat(1010), by: CGFloat(128)) {
+                let rune = ArtSystem.label("◇", size: 26)
+                rune.position = CGPoint(x: x, y: 520 + sin(x / 90) * 18)
+                rune.fontColor = accent.withAlphaComponent(0.48)
+                rune.name = "decorativeRuneHallGlyph"
+                root.addChild(rune)
+            }
+
+        case .memoryBridge:
+            for y in stride(from: CGFloat(330), through: CGFloat(555), by: CGFloat(54)) {
+                for x in [CGFloat(330), 1080] {
+                    let bead = SKShapeNode(circleOfRadius: 8)
+                    bead.position = CGPoint(x: x, y: y)
+                    bead.fillColor = accent.withAlphaComponent(0.48)
+                    bead.strokeColor = .clear
+                    bead.name = "decorativeMemoryLantern"
+                    root.addChild(bead)
+                }
+            }
+            for y in [CGFloat(300), 350] {
+                let mist = SKShapeNode(ellipseOf: CGSize(width: 760, height: 72))
+                mist.position = CGPoint(x: 700, y: y)
+                mist.fillColor = UIColor(red: 0.42, green: 0.52, blue: 0.86, alpha: 0.035)
+                mist.strokeColor = .clear
+                mist.name = "decorativeMemoryMist"
+                root.addChild(mist)
+            }
+
+        case .stopGoOrbs:
+            for y in [CGFloat(340), 430, 520] {
+                let conduit = ArtSystem.box(
+                    CGSize(width: 760, height: 6),
+                    color: accent.withAlphaComponent(0.18),
+                    radius: 3
+                )
+                conduit.position = CGPoint(x: 700, y: y)
+                conduit.strokeColor = .clear
+                conduit.name = "decorativeStopGoConduit"
+                root.addChild(conduit)
+            }
+
+        case .sortingPedestal, .resortVault:
+            for x in [CGFloat(390), 700, 1010] {
+                let shelf = ArtSystem.panel(
+                    CGSize(width: 180, height: 72),
+                    fill: UIColor(red: 0.08, green: 0.12, blue: 0.18, alpha: 0.72),
+                    stroke: accent.withAlphaComponent(0.30),
+                    radius: 24,
+                    lineWidth: 2,
+                    shadowAlpha: 0.12
+                )
+                shelf.position = CGPoint(x: x, y: 470)
+                shelf.name = "decorativeSortingGallery"
+                root.addChild(shelf)
+            }
+
+        case .mirrorHall:
+            for x in [CGFloat(330), 500, 900, 1070] {
+                let shard = SKShapeNode(
+                    rectOf: CGSize(width: 54, height: 220),
+                    cornerRadius: 25
+                )
+                shard.position = CGPoint(x: x, y: 440)
+                shard.zRotation = x < 700 ? -0.10 : 0.10
+                shard.fillColor = UIColor(red: 0.58, green: 0.86, blue: 1.0, alpha: 0.055)
+                shard.strokeColor = accent.withAlphaComponent(0.30)
+                shard.lineWidth = 2
+                shard.name = "decorativeMirrorShard"
+                root.addChild(shard)
+            }
+
+        case .pathTiles:
+            for x in stride(from: CGFloat(360), through: CGFloat(1040), by: CGFloat(85)) {
+                let guide = ArtSystem.box(
+                    CGSize(width: 2, height: 260),
+                    color: accent.withAlphaComponent(0.12),
+                    radius: 1
+                )
+                guide.position = CGPoint(x: x, y: 410)
+                guide.zRotation = (x - 700) * 0.00045
+                guide.strokeColor = .clear
+                guide.name = "decorativePathGuide"
+                root.addChild(guide)
+            }
+
+        case .commandGears:
+            for (index, x) in [CGFloat(350), 520, 880, 1050].enumerated() {
+                let gear = ArtSystem.gear(radius: index.isMultiple(of: 2) ? 31 : 24)
+                gear.position = CGPoint(x: x, y: 455 + CGFloat(index % 2) * 70)
+                gear.setScale(0.9)
+                gear.alpha = 0.42
+                gear.name = "decorativeCommandGear"
+                root.addChild(gear)
+            }
+
+        case .bugLantern, .bugLanternRepair:
+            let cablePath = CGMutablePath()
+            cablePath.move(to: CGPoint(x: 300, y: 520))
+            cablePath.addCurve(
+                to: CGPoint(x: 1100, y: 390),
+                control1: CGPoint(x: 470, y: 310),
+                control2: CGPoint(x: 880, y: 610)
+            )
+            let cable = SKShapeNode(path: cablePath)
+            cable.strokeColor = accent.withAlphaComponent(0.30)
+            cable.lineWidth = 8
+            cable.name = "decorativeDiagnosticCable"
+            root.addChild(cable)
+
+            for x in [CGFloat(420), 700, 980] {
+                let status = SKShapeNode(circleOfRadius: 10)
+                status.position = CGPoint(x: x, y: 505)
+                status.fillColor = accent.withAlphaComponent(0.62)
+                status.strokeColor = UIColor(red: 1.0, green: 0.78, blue: 0.34, alpha: 0.62)
+                status.lineWidth = 2
+                status.name = "decorativeDiagnosticLamp"
+                root.addChild(status)
+            }
+        }
+
+        addChild(root)
     }
 
     private func buildRuneGate() {
