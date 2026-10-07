@@ -1099,7 +1099,7 @@ import LearningCore
                 instruction.text = "Field study complete. The evidence agrees, and the Weather Tower path is open."
             } else if let next = state.scienceNextFieldStudy(in: .greenhouse) {
                 let completed = state.scienceFieldStudyCompletedCount(in: .greenhouse)
-                instruction.text = "Evidence \\(completed)/\\(ScienceFieldStudyCatalog.greenhouse.count) confirmed. " + next.prompt
+                instruction.text = "Evidence \(completed)/\(ScienceFieldStudyCatalog.greenhouse.count) confirmed. " + next.prompt
             }
         } else {
             instruction.text = "That station does not match this evidence. Look back at what changed during the investigation."
