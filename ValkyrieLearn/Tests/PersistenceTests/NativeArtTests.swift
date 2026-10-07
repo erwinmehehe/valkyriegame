@@ -91,21 +91,20 @@ import LearningCore
         puzzle.didMove(to: SKView())
         defer { puzzle.willLeave() }
 
-        let puzzleMatte = try XCTUnwrap(
-            puzzle.childNode(withName: "puzzleLegacyMatte") as? SKSpriteNode
+        XCTAssertNil(
+            puzzle.childNode(withName: "puzzleLegacyMatte"),
+            "The low-resolution legacy atlas must not own the playable Puzzle Palace surface."
         )
-        XCTAssertEqual(puzzleMatte.alpha, CGFloat(0.10), accuracy: CGFloat(0.001))
-        XCTAssertNotNil(puzzle.childNode(withName: "puzzleNativeBackdrop"))
-        XCTAssertNotNil(puzzle.childNode(withName: "puzzleArchitecture"))
-        XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloor"))
-        XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloorTexture"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleIllustratedBackdrop"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleRoomIdentity"))
+        XCTAssertNil(
+            puzzle.childNode(withName: "puzzleNativeBackdrop"),
+            "Native palace geometry is now only a missing-asset fallback."
+        )
+        XCTAssertNil(puzzle.childNode(withName: "puzzleArchitecture"))
         XCTAssertNotNil(
             puzzle.childNode(withName: "puzzleGate"),
-            "The polished Rune Gate remains native SpriteKit structure even without the old stage dais."
-        )
-        XCTAssertNil(
-            puzzle.childNode(withName: "puzzleUpperVault"),
-            "Rune Gate keeps its open portal composition instead of inheriting the denser shared hall."
+            "Rune Gate gameplay remains live above the HD room illustration."
         )
 
         let palaceDepthState = try AppState(
@@ -117,18 +116,10 @@ import LearningCore
         palaceDepth.didMove(to: SKView())
         defer { palaceDepth.willLeave() }
 
-        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleUpperVault"))
-        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleVaultCornice"))
-        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleFloorSeal"))
-        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleStageInlay"))
-        XCTAssertEqual(
-            palaceDepth.children.filter { $0.name?.hasPrefix("puzzleAlcove") == true }.count,
-            3
-        )
-        XCTAssertEqual(
-            palaceDepth.children.filter { $0.name?.hasPrefix("puzzleCrystalSconce") == true }.count,
-            4
-        )
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleIllustratedBackdrop"))
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleRoomIdentity"))
+        XCTAssertNil(palaceDepth.childNode(withName: "puzzleNativeBackdrop"))
+        XCTAssertNil(palaceDepth.childNode(withName: "puzzleArchitecture"))
 
         let scienceState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
@@ -139,17 +130,17 @@ import LearningCore
         science.didMove(to: SKView())
         defer { science.willLeave() }
 
-        let scienceMatte = try XCTUnwrap(
-            science.childNode(withName: "scienceLegacyMatte") as? SKSpriteNode
+        XCTAssertNil(
+            science.childNode(withName: "scienceLegacyMatte"),
+            "The prototype atlas must not be composited into the production Greenhouse."
         )
-        XCTAssertEqual(scienceMatte.alpha, CGFloat(0.08), accuracy: CGFloat(0.001))
-        XCTAssertNotNil(science.childNode(withName: "scienceNativeBackdrop"))
+        XCTAssertNotNil(science.childNode(withName: "scienceGreenhouseBackdropHD"))
         XCTAssertNotNil(science.childNode(withName: "scienceGreenhouseFrame"))
         XCTAssertNotNil(science.childNode(withName: "scienceGround"))
         XCTAssertNotNil(science.childNode(withName: "scienceWaterBed"))
     }
 
-    func testPuzzlePalaceArchitectureMovesWithoutCompetingWithReducedMotion() throws {
+    func testPuzzlePalaceIllustratedBackdropDoesNotCompeteWithReducedMotion() throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
@@ -160,25 +151,20 @@ import LearningCore
         scene.didMove(to: SKView())
         defer { scene.willLeave() }
 
-        let crystal = try XCTUnwrap(
-            scene.children.first { $0.name == "puzzleCrystalFixture" }
+        let backdrop = try XCTUnwrap(
+            scene.childNode(withName: "puzzleIllustratedBackdrop") as? SKSpriteNode
         )
-        let alcoveGlow = try XCTUnwrap(
-            scene.childNode(withName: "//puzzleAlcoveGlow0")
-        )
-        let floorSeal = try XCTUnwrap(scene.childNode(withName: "puzzleFloorSeal"))
-
-        XCTAssertNotNil(crystal.action(forKey: "palaceCrystalFloat"))
-        XCTAssertNotNil(alcoveGlow.action(forKey: "palaceAlcoveBreath"))
-        XCTAssertNotNil(floorSeal.action(forKey: "palaceRoomBreath"))
-        XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
+        let identity = try XCTUnwrap(scene.childNode(withName: "puzzleRoomIdentity"))
+        XCTAssertFalse(backdrop.hasActions())
+        XCTAssertFalse(identity.hasActions())
+        XCTAssertNil(scene.childNode(withName: "puzzleNativeBackdrop"))
+        XCTAssertNil(scene.childNode(withName: "puzzleArchitecture"))
 
         scene.reducedMotion = true
         scene.update(0)
 
-        XCTAssertNil(crystal.action(forKey: "palaceCrystalFloat"))
-        XCTAssertNil(alcoveGlow.action(forKey: "palaceAlcoveBreath"))
-        XCTAssertNil(floorSeal.action(forKey: "palaceRoomBreath"))
+        XCTAssertFalse(backdrop.hasActions())
+        XCTAssertFalse(identity.hasActions())
         XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
         XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
     }
@@ -340,7 +326,7 @@ import LearningCore
         }
     }
 
-    func testScienceWorldsReuseRetinaPreparedIllustratedBackdrops() throws {
+    func testScienceWorldsUseCrispRetinaOrNativeBackdrops() throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
@@ -372,20 +358,13 @@ import LearningCore
         let weather = WeatherTowerScene(state: state)
         weather.reducedMotion = true
         weather.didMove(to: SKView())
-        let weatherBackdrop = try XCTUnwrap(
-            weather.childNode(withName: "//weatherBackdropRetina") as? SKSpriteNode
+        XCTAssertNotNil(weather.childNode(withName: "weatherObservatoryBackdrop"))
+        XCTAssertNotNil(weather.childNode(withName: "//weatherSkyBand0"))
+        XCTAssertNotNil(weather.childNode(withName: "//weatherObservatoryCornice"))
+        XCTAssertNil(
+            weather.childNode(withName: "//weatherBackdropRetina"),
+            "Weather Tower is now native SpriteKit environment art, not an enlarged 1x painting."
         )
-        XCTAssertEqual(
-            weatherBackdrop.userData?["retinaPrepared"] as? Bool,
-            true
-        )
-        XCTAssertEqual(
-            weatherBackdrop.userData?["sourceAsset"] as? String,
-            "StarlightIsles"
-        )
-        let weatherImage = try XCTUnwrap(weatherBackdrop.texture?.cgImage())
-        XCTAssertGreaterThanOrEqual(weatherImage.width, 2560)
-        XCTAssertGreaterThanOrEqual(weatherImage.height, 1440)
         XCTAssertNotNil(weather.childNode(withName: "weatherTowerStructure"))
         XCTAssertNotNil(weather.childNode(withName: "scienceForecastBase"))
         XCTAssertNotNil(weather.childNode(withName: "scienceCreatureGate"))
@@ -3116,7 +3095,7 @@ import LearningCore
         weather.reducedMotion = true
         weather.didMove(to: SKView())
 
-        XCTAssertNotNil(weather.childNode(withName: "weatherBackdropHD"))
+        XCTAssertNotNil(weather.childNode(withName: "weatherObservatoryBackdrop"))
         XCTAssertNotNil(weather.childNode(withName: "weatherTowerStructure"))
         XCTAssertNotNil(weather.childNode(withName: "//weatherObservationGlass"))
         XCTAssertNotNil(weather.childNode(withName: "//weatherTowerRoofTrim"))
@@ -3168,13 +3147,13 @@ import LearningCore
         scene.didMove(to: SKView())
         defer { scene.willLeave() }
 
-        let architecture = try XCTUnwrap(
-            scene.childNode(withName: "puzzleArchitecture") as? SKShapeNode
+        XCTAssertNotNil(
+            scene.childNode(withName: "puzzleIllustratedBackdrop"),
+            "Rune Gate should use its dedicated HD illustrated room."
         )
-        XCTAssertLessThan(
-            architecture.alpha,
-            0.10,
-            "Rune Gate should not be dominated by the old giant palace panel."
+        XCTAssertNil(
+            scene.childNode(withName: "puzzleArchitecture"),
+            "The old generic palace architecture should remain only as a missing-asset fallback."
         )
 
         let gate = try XCTUnwrap(
