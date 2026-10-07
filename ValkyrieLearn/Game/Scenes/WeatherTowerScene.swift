@@ -692,6 +692,8 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceObserveMorningWeather()
+        selectionFeedback()
+        focusMoment(on: morningPoint)
         instruction.text = "Morning: cloudy with rain. Milo says to compare another observation before forecasting."
         refreshGuidanceCue()
     }
@@ -704,6 +706,8 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceObserveAfternoonWeather()
+        selectionFeedback()
+        focusMoment(on: afternoonPoint)
         instruction.text = "Afternoon: cloudy with rain again. The same condition appeared twice. What is likely next?"
         refreshGuidanceCue()
     }
@@ -715,15 +719,19 @@ import LearningCore
         }
 
         state.scienceChooseForecast(choice)
+        selectionFeedback()
         valkyrie.pose(.interact)
         let targetAngle: CGFloat = choice == .sun ? -0.55 : 0.55
         forecastNeedle.run(.rotate(toAngle: targetAngle, duration: reducedMotion ? 0 : 0.25))
         renderCreatureGate()
 
         if choice == .rain {
-            state.audio.play("success")
+            successFeedback(at: creatureGatePoint)
+            focusMoment(on: creatureGatePoint, hold: 0.70)
             instruction.text = "Both observations were rainy, so rain is a reasonable next prediction—not a certainty. The Creature Grove route opened."
         } else {
+            errorFeedback()
+            focusMoment(on: forecastPoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "Sun could happen, but it does not match the pattern we observed. Compare the two rainy flags again."
         }
