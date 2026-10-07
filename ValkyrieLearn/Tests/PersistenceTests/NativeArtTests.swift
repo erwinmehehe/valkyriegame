@@ -164,10 +164,19 @@ import LearningCore
 
             XCTAssertNotNil(scene.childNode(withName: "wordGardenRetinaAccents"))
             XCTAssertNotNil(scene.childNode(withName: "//" + accentName))
-            XCTAssertNotNil(
-                scene.childNode(withName: "//questionPromptBackdrop"),
-                "Word Garden prompts need a contrast surface over the bright painting."
-            )
+            if world == .sunmillCrossing {
+                XCTAssertNil(
+                    scene.childNode(withName: "//questionPromptBackdrop"),
+                    "Sunmill Crossing should use one guidance surface instead of duplicating the prompt over the world."
+                )
+                XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
+                XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
+            } else {
+                XCTAssertNotNil(
+                    scene.childNode(withName: "//questionPromptBackdrop"),
+                    "Flower Gate and Story Hollow prompts need a contrast surface over the bright painting."
+                )
+            }
             XCTAssertFalse(
                 backdrop.isHidden,
                 "Retina preparation must preserve the painted Word Garden environment."
@@ -584,10 +593,40 @@ import LearningCore
         let sunmill = WordGardenScene(state: state)
         sunmill.didMove(to: SKView())
         XCTAssertNotNil(sunmill.childNode(withName: "sunmillWheel"))
+        XCTAssertNotNil(sunmill.childNode(withName: "sunmillTower"))
         XCTAssertNotNil(sunmill.childNode(withName: "sunmillWater"))
+        XCTAssertNotNil(sunmill.childNode(withName: "sunmillLightPath"))
+        XCTAssertNotNil(sunmill.childNode(withName: "decorativeSunmillChoiceBank"))
+        XCTAssertNotNil(sunmill.childNode(withName: "decorativeSunmillChoiceVine"))
         XCTAssertNotNil(sunmill.childNode(withName: "targetRune"))
-        XCTAssertTrue(sunmill.childNode(withName: "sunmillBridge")?.isHidden == true)
-        XCTAssertEqual(sunmill.children.filter { $0.name == "sunmillChoice" }.count, 4)
+        XCTAssertNil(
+            sunmill.childNode(withName: "questionPrompt"),
+            "Sunmill Crossing must not repeat the same learning prompt above and below the world."
+        )
+        XCTAssertFalse(
+            sunmill.childNode(withName: "sunmillBridge")?.isHidden ?? true,
+            "The sleeping crossing should remain visible so learning visibly restores it."
+        )
+        let sleepingPlank = try XCTUnwrap(
+            sunmill.childNode(withName: "//sunmillBridgePlank0")
+        )
+        XCTAssertLessThan(sleepingPlank.alpha, 0.25)
+        XCTAssertEqual(sunmill.valkyrie.xScale, 0.58, accuracy: 0.001)
+
+        let sunmillChoices = sunmill.children.filter { $0.name == "sunmillChoice" }
+        XCTAssertEqual(sunmillChoices.count, 4)
+        for choice in sunmillChoices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 100)
+            XCTAssertGreaterThanOrEqual(frame.height, 100)
+            XCTAssertNotNil(choice.childNode(withName: "decorativeSunmillChoiceStem"))
+            XCTAssertNotNil(choice.childNode(withName: "decorativeSunmillChoiceSocket"))
+            XCTAssertEqual(
+                sunmill.targetName(at: choice.position),
+                "sunmillChoice",
+                "Physical leaf decoration must never steal the literacy tap."
+            )
+        }
         XCTAssertEqual(
             state.nextSunmillEncounter()?.mechanicID,
             WordGardenMechanicID.sunmillPair
@@ -609,6 +648,15 @@ import LearningCore
         let awakeSunmill = WordGardenScene(state: state)
         awakeSunmill.didMove(to: SKView())
         XCTAssertFalse(awakeSunmill.childNode(withName: "sunmillBridge")?.isHidden ?? true)
+        XCTAssertGreaterThan(
+            awakeSunmill.childNode(withName: "//sunmillBridgePlank6")?.alpha ?? 0,
+            0.99,
+            "Completing the Sunmill should physically restore the whole crossing."
+        )
+        XCTAssertGreaterThan(
+            awakeSunmill.childNode(withName: "sunmillLightPath")?.alpha ?? 0,
+            0.9
+        )
         XCTAssertNotNil(awakeSunmill.childNode(withName: "storyHollowRoute"))
         awakeSunmill.valkyrie.position = CGPoint(x: 1015, y: 175)
         awakeSunmill.handleTap(at: CGPoint(x: 1010, y: 165))
