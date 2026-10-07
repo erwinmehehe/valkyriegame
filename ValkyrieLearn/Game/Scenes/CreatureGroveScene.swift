@@ -820,17 +820,22 @@ import LearningCore
         if groveStage == .complete,
            !groveRestored,
            let challenge = state.scienceNextFieldStudy(in: .creatureGrove),
-           let target,
-           challenge.choiceTargets.contains(target),
-           let stationPoint = groveFieldStudyPoint(for: target) {
-            if isNear(stationPoint, radius: 185) {
-                answerGroveFieldStudy(challenge, targetName: target)
-            } else {
-                instruction.text = "Walk to that grove evidence before choosing it."
-                let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 95))
-                travel(to: CGPoint(x: approachX, y: 180))
+           let target {
+            if challenge.choiceTargets.contains(target),
+               let stationPoint = groveFieldStudyPoint(for: target) {
+                if isNear(stationPoint, radius: 185) {
+                    answerGroveFieldStudy(challenge, targetName: target)
+                } else {
+                    instruction.text = "Walk to that grove evidence before choosing it."
+                    let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 95))
+                    travel(to: CGPoint(x: approachX, y: 180))
+                }
+                return
             }
-            return
+            if target != "scienceGroveHome" {
+                instruction.text = challenge.prompt
+                return
+            }
         }
 
         switch target {
