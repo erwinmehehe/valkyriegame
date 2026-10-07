@@ -51,8 +51,9 @@ import LearningCore
         supplyPlaque.name = "supply"
         addChild(supplyPlaque)
 
-        let supplyLabel = ArtSystem.label("CRYSTALS", size: 11)
-        supplyLabel.fontColor = UIColor(red: 0.88, green: 0.98, blue: 1.0, alpha: 1)
+        let supplyLabel = ArtSystem.label("CRYSTALS", size: 12)
+        supplyLabel.fontName = "AvenirNext-Bold"
+        supplyLabel.fontColor = UIColor(red: 0.90, green: 0.98, blue: 1.0, alpha: 1)
         supplyLabel.name = "supply"
         supplyPlaque.addChild(supplyLabel)
 
@@ -315,7 +316,8 @@ import LearningCore
         wholePlaque.name = "bondWholePlaque"
         addChild(wholePlaque)
 
-        let wholeCaption = ArtSystem.label("WHOLE", size: 10)
+        let wholeCaption = ArtSystem.label("WHOLE", size: 11)
+        wholeCaption.fontName = "AvenirNext-Bold"
         wholeCaption.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1)
         wholeCaption.name = "bondWholePlaque"
         wholePlaque.addChild(wholeCaption)
@@ -357,13 +359,16 @@ import LearningCore
             plaque.name = name
             addChild(plaque)
 
-            let label = ArtSystem.label(title, size: 10)
+            let label = ArtSystem.label(title, size: 11)
+            label.fontName = "AvenirNext-Bold"
             label.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.63, alpha: 1)
             label.name = name
             plaque.addChild(label)
         }
 
-        wholeLabel.fontSize = 30
+        wholeLabel.fontName = "AvenirNext-Heavy"
+        wholeLabel.fontSize = 32
+        wholeLabel.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.78, alpha: 1)
         wholeLabel.position = CGPoint(x: 0, y: 82)
         addChild(wholeLabel)
         addChild(knownContents)
@@ -533,8 +538,9 @@ import LearningCore
         supplyPlaque.name = "tenFrameSupply"
         addChild(supplyPlaque)
 
-        let supplyLabel = ArtSystem.label("ADD", size: 10)
-        supplyLabel.fontColor = UIColor(red: 0.88, green: 0.98, blue: 1.0, alpha: 1)
+        let supplyLabel = ArtSystem.label("ADD", size: 11)
+        supplyLabel.fontName = "AvenirNext-Bold"
+        supplyLabel.fontColor = UIColor(red: 0.90, green: 0.98, blue: 1.0, alpha: 1)
         supplyLabel.name = "tenFrameSupply"
         supplyPlaque.addChild(supplyLabel)
     }
