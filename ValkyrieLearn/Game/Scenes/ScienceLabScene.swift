@@ -1043,7 +1043,54 @@ import LearningCore
         refreshGuidanceCue()
     }
 
+    private func applyGreenhouseFocusState() {
+        func setAlpha(_ names: Set<String>, _ alpha: CGFloat) {
+            for node in children where {
+                guard let name = node.name else { return false }
+                return names.contains(name)
+            }() {
+                node.alpha = alpha
+            }
+        }
+
+        let benchNames: Set<String> = ["scienceSeedBench"]
+        let waterNames: Set<String> = [
+            "scienceWaterTank",
+            "scienceWaterPipe",
+            "scienceWaterValve"
+        ]
+        let lightNames: Set<String> = [
+            "scienceSunPrism",
+            "sciencePrismBeam"
+        ]
+        let gateNames: Set<String> = ["scienceWeatherGate"]
+
+        switch greenhouseStage {
+        case .arrive:
+            setAlpha(benchNames, 1.0)
+            setAlpha(waterNames, 0.42)
+            setAlpha(lightNames, 0.30)
+            setAlpha(gateNames, 0.34)
+        case .inspected:
+            setAlpha(benchNames, 0.72)
+            setAlpha(waterNames, 1.0)
+            setAlpha(lightNames, 0.34)
+            setAlpha(gateNames, 0.34)
+        case .watered:
+            setAlpha(benchNames, 0.72)
+            setAlpha(waterNames, 0.72)
+            setAlpha(lightNames, 1.0)
+            setAlpha(gateNames, 0.36)
+        case .lit:
+            setAlpha(benchNames, 0.74)
+            setAlpha(waterNames, 0.74)
+            setAlpha(lightNames, 0.74)
+            setAlpha(gateNames, 1.0)
+        }
+    }
+
     private func refreshGuidanceCue() {
+        applyGreenhouseFocusState()
         let tint = UIColor(red: 0.57, green: 0.93, blue: 0.63, alpha: 1)
         switch greenhouseStage {
         case .arrive:
