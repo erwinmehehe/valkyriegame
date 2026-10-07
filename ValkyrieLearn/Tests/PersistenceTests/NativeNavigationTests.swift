@@ -326,6 +326,123 @@ import LearningCore
         XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
     }
 
+    func testCreatureGroveRevealsOneEvidenceStepAtATime() throws {
+        let state = try makeState()
+        state.travel(to: .scienceCreatureGrove)
+        let scene = CreatureGroveScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let habitat = try XCTUnwrap(scene.childNode(withName: "scienceHabitatPond"))
+        let feet = try XCTUnwrap(scene.childNode(withName: "scienceWebbedFeet"))
+        let compare = try XCTUnwrap(scene.childNode(withName: "scienceCompareBoard"))
+        let finale = try XCTUnwrap(scene.childNode(withName: "scienceGroveFinale"))
+
+        XCTAssertEqual(scene.groveStage, .arrive)
+        XCTAssertLessThan(habitat.alpha, 0.01)
+        XCTAssertLessThan(feet.alpha, 0.01)
+        XCTAssertLessThan(compare.alpha, 0.01)
+        XCTAssertLessThan(finale.alpha, 0.01)
+
+        scene.valkyrie.position = CGPoint(x: 240, y: 180)
+        scene.handleTap(at: CGPoint(x: 335, y: 235))
+        XCTAssertEqual(scene.groveStage, .animalObserved)
+        XCTAssertEqual(habitat.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(feet.alpha, 0.01)
+
+        scene.valkyrie.position = CGPoint(x: 520, y: 180)
+        scene.handleTap(at: CGPoint(x: 528, y: 270))
+        XCTAssertEqual(scene.groveStage, .habitatMatched)
+        XCTAssertEqual(feet.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(compare.alpha, 0.01)
+
+        scene.valkyrie.position = CGPoint(x: 760, y: 180)
+        scene.handleTap(at: CGPoint(x: 840, y: 290))
+        XCTAssertEqual(scene.groveStage, .bodyPartObserved)
+        XCTAssertEqual(compare.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(finale.alpha, 0.01)
+
+        scene.valkyrie.position = CGPoint(x: 900, y: 180)
+        scene.handleTap(at: CGPoint(x: 975, y: 285))
+        XCTAssertEqual(scene.groveStage, .complete)
+        XCTAssertEqual(finale.alpha, 1.0, accuracy: 0.001)
+    }
+
+    func testPuzzleAndScienceUseExtraVerticalSpaceOnFourByThreeIPad() throws {
+        let state = try makeState()
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let cases: [(AppState.World, String, (AppState) -> AdventureScene)] = [
+            (.puzzlePalace, "home", { PuzzlePalaceScene(state: $0) }),
+            (.scienceLab, "scienceHome", { ScienceLabScene(state: $0) }),
+            (.scienceWeatherTower, "scienceWeatherHome", { WeatherTowerScene(state: $0) }),
+            (.scienceCreatureGrove, "scienceGroveHome", { CreatureGroveScene(state: $0) })
+        ]
+
+        for (world, homeName, makeScene) in cases {
+            state.travel(to: world)
+            let scene = makeScene(state)
+            scene.reducedMotion = true
+            scene.didMove(to: view)
+            XCTAssertEqual(scene.size.width, 1280, accuracy: 0.001)
+            XCTAssertEqual(scene.size.height, 960, accuracy: 0.001)
+            XCTAssertEqual(scene.verticalViewportInset, 120, accuracy: 0.001)
+
+            let title = try XCTUnwrap(scene.childNode(withName: "worldTitle"))
+            let home = try XCTUnwrap(scene.childNode(withName: homeName))
+            XCTAssertGreaterThan(title.position.y, 720)
+            XCTAssertGreaterThan(home.position.y, 720)
+            XCTAssertLessThan(scene.instruction.position.y, 0)
+            XCTAssertEqual(scene.valkyrie.position.y, 175, accuracy: 0.001)
+
+            scene.willLeave()
+        }
+
+        state.travel(to: .scienceLab)
+        let greenhouse = ScienceLabScene(state: state)
+        greenhouse.reducedMotion = true
+        greenhouse.didMove(to: view)
+        let greenhouseArt = try XCTUnwrap(
+            greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(greenhouseArt.size, CGSize(width: 1280, height: 720))
+        greenhouse.willLeave()
+
+        state.travel(to: .scienceWeatherTower)
+        let weather = WeatherTowerScene(state: state)
+        weather.reducedMotion = true
+        weather.didMove(to: view)
+        let weatherArt = try XCTUnwrap(
+            weather.childNode(withName: "//weatherBackdropRetina") as? SKSpriteNode
+        )
+        XCTAssertEqual(weatherArt.size, CGSize(width: 1280, height: 720))
+        weather.willLeave()
+
+        state.travel(to: .scienceCreatureGrove)
+        let grove = CreatureGroveScene(state: state)
+        grove.reducedMotion = true
+        grove.didMove(to: view)
+        let groveArt = try XCTUnwrap(
+            grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(groveArt.size, CGSize(width: 1280, height: 720))
+        grove.willLeave()
+    }
+
+    func testPuzzleAndScienceKeepOriginalCanvasOnSixteenByNine() throws {
+        let state = try makeState()
+        state.travel(to: .scienceLab)
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView(frame: CGRect(x: 0, y: 0, width: 1280, height: 720)))
+        defer { scene.willLeave() }
+
+        XCTAssertEqual(scene.size, CGSize(width: 1280, height: 720))
+        XCTAssertEqual(scene.verticalViewportInset, 0, accuracy: 0.001)
+        XCTAssertEqual(scene.childNode(withName: "worldTitle")?.position.y, 672)
+        XCTAssertEqual(scene.instruction.position.y, 46)
+    }
+
     func testScienceGuidanceKeepsItsTargetWhenMotionPreferenceChanges() throws {
         let state = try makeState()
         state.travel(to: .scienceLab)
