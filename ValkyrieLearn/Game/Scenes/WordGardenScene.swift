@@ -1202,7 +1202,8 @@ import LearningCore
         branchGlow.name = "storySequencePreview"
         preview.addChild(branchGlow)
 
-        for (index, glyphValue) in WordGardenEncounterCatalog.storyHollowPattern.enumerated() {
+        let activePattern = WordGardenEncounterCatalog.storyHollowPattern(for: encounter)
+        for (index, glyphValue) in activePattern.enumerated() {
             if let socket = childNode(withName: "storySlot\(index)") as? SKShapeNode {
                 socket.fillColor = UIColor(red: 0.36, green: 0.25, blue: 0.48, alpha: 0.98)
                 socket.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.38, alpha: 1)
@@ -1218,10 +1219,8 @@ import LearningCore
         targetRune = preview
         instruction.text = retryMessage ?? "Watch the tree remember its three seed-runes."
 
-        let targetIndex = WordGardenEncounterCatalog.storyHollowSequence.firstIndex {
-            $0.id == encounter.id
-        } ?? 0
-        let positionName = ["first", "middle", "last"][min(targetIndex, 2)]
+        let targetIndex = WordGardenEncounterCatalog.storyHollowPosition(for: encounter)
+        let positionName = ["first", "middle", "last"][targetIndex]
 
         run(
             .sequence([
@@ -1982,8 +1981,11 @@ import LearningCore
 
         childNode(withName: "storyStem")?.yScale = 0.48 + ratio * 0.52
 
-        for index in 0..<WordGardenEncounterCatalog.storyHollowPattern.count {
-            let filled = index < count
+        let visibleMemory = WordGardenEncounterCatalog.storyHollowVisiblePatternProgress(
+            independentCount: count
+        )
+        for index in 0..<WordGardenEncounterCatalog.storyHollowPatternLength {
+            let filled = index < visibleMemory.filledCount
 
             if let rootGlow = childNode(withName: "storyRootGlow\(index)") as? SKShapeNode {
                 rootGlow.alpha = filled ? 0.92 : 0.10
@@ -2001,9 +2003,7 @@ import LearningCore
             }
 
             if let glyph = childNode(withName: "//storySlotGlyph\(index)") as? SKLabelNode {
-                glyph.text = filled
-                    ? WordGardenEncounterCatalog.storyHollowPattern[index]
-                    : "·"
+                glyph.text = filled ? visibleMemory.pattern[index] : "·"
                 glyph.fontColor = filled
                     ? UIColor(red: 1.0, green: 0.95, blue: 0.82, alpha: 1)
                     : UIColor(red: 0.92, green: 0.86, blue: 0.72, alpha: 0.9)
