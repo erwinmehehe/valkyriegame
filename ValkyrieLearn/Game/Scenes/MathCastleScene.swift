@@ -174,7 +174,7 @@ import LearningCore
         gear.name = name
         gear.alpha = 0.86
         if let rotor = gear.children.first {
-            rotor.name = "workshopGearRotor"
+            rotor.name = "decorativeWorkshopGearRotor"
         }
         root.addChild(gear)
 
@@ -641,7 +641,7 @@ import LearningCore
 
         pip.name = "help"
         nextGear = worldGear("→", name: "next", at: CGPoint(x: 1200, y: 430), radius: 34)
-        nextGear?.children.first?.name = "nextGearRotor"
+        nextGear?.children.first?.name = "decorativeNextGearRotor"
         lever = makeLever()
 
         let workflow = SKShapeNode()
@@ -664,7 +664,7 @@ import LearningCore
         powerMount.position = CGPoint(x: 1105, y: 352)
         powerMount.zPosition = 39
         powerMount.name = "castlePowerMount"
-        powerMount.children.first?.name = "castlePowerRotor"
+        powerMount.children.first?.name = "decorativeCastlePowerRotor"
         addChild(powerMount)
 
         let light = SKShapeNode(circleOfRadius: 17)
