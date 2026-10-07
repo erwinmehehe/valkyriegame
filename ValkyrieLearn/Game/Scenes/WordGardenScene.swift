@@ -189,23 +189,16 @@ import LearningCore
             buildSoundFlowers()
         case .sunmillCrossing:
             buildSunmillLandmark()
-            let back = worldControl(
-                "‹",
+            buildWordGardenBackControl(
                 name: "flowerGateBack",
-                at: CGPoint(x: 1215, y: 669),
-                radius: 27,
                 accessibilityLabel: "Back to Flower Gate"
             )
-            back.zPosition = 2050
         case .storyHollow:
             buildStoryHollowLandmark()
-            let back = hotspot(
-                "← Sunmill",
+            buildWordGardenBackControl(
                 name: "sunmillBack",
-                at: CGPoint(x: 1110, y: 665),
-                size: CGSize(width: 185, height: 52)
+                accessibilityLabel: "Back to Sunmill Crossing"
             )
-            back.zPosition = 2050
         }
     }
 
@@ -233,6 +226,36 @@ import LearningCore
         root.addChild(hit)
 
         makeAccessible(root, label: "Back")
+        addChild(root)
+    }
+
+    private func buildWordGardenBackControl(
+        name: String,
+        accessibilityLabel: String
+    ) {
+        let root = SKNode()
+        root.name = name
+        root.position = CGPoint(x: 1215, y: 672)
+        root.zPosition = 2100
+
+        let medallion = ArtSystem.medallion(
+            radius: 22,
+            fill: UIColor(red: 0.05, green: 0.06, blue: 0.14, alpha: 0.92),
+            stroke: UIColor(red: 0.88, green: 0.68, blue: 0.34, alpha: 0.50),
+            glow: reducedMotion ? 0 : 1
+        )
+        medallion.name = name
+        medallion.addChild(ArtSystem.label("‹", size: 22))
+        root.addChild(medallion)
+
+        let hit = SKShapeNode(circleOfRadius: 30)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = name
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: accessibilityLabel)
         addChild(root)
     }
 
