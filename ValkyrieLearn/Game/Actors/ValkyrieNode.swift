@@ -84,6 +84,17 @@ import SpriteKit
         aura.position.y = 8
         aura.zPosition = -2
         aura.isUserInteractionEnabled = false
+
+        let inner = SKShapeNode(
+            ellipseOf: CGSize(width: width * 0.64, height: max(10, height * 0.52))
+        )
+        inner.name = "decorativeCompanionPresenceRing"
+        inner.fillColor = .clear
+        inner.strokeColor = color.withAlphaComponent(0.18)
+        inner.lineWidth = 1
+        inner.isUserInteractionEnabled = false
+        aura.addChild(inner)
+
         addChild(aura)
         return aura
     }
