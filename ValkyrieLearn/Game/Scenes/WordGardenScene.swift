@@ -82,9 +82,7 @@ import LearningCore
         lumi.reducedMotion = reducedMotion
         addChild(lumi)
 
-        if place == .sunmillCrossing {
-            applySunmillHUDPolish()
-        }
+        applyWordGardenHUDPolish()
 
         switch place {
         case .flowerGate: configureFlowerGate()
@@ -93,15 +91,41 @@ import LearningCore
         }
     }
 
-    private func applySunmillHUDPolish() {
+    private func applyWordGardenHUDPolish() {
+        childNode(withName: "worldTitleBackdrop")?.removeFromParent()
+        childNode(withName: "worldTitle")?.removeFromParent()
+
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: 360, height: 42),
+            fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
+            stroke: UIColor(red: 0.88, green: 0.68, blue: 0.34, alpha: 0.54),
+            radius: 15
+        )
+        titlePlate.position = CGPoint(x: 285, y: 672)
+        titlePlate.zPosition = 1988
+        titlePlate.name = "worldTitleBackdrop"
+        addChild(titlePlate)
+
+        let title = ArtSystem.label(worldTitle, size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
+        title.horizontalAlignmentMode = .left
+        title.position = CGPoint(x: 115, y: 672)
+        title.zPosition = 2000
+        title.name = "worldTitle"
+        addChild(title)
+
         if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
-            instructionBackdrop.xScale = 0.70
-            instructionBackdrop.position = CGPoint(x: 755, y: 48)
-            instructionBackdrop.alpha = 0.92
+            instructionBackdrop.xScale = 0.65
+            instructionBackdrop.yScale = 0.80
+            instructionBackdrop.position = CGPoint(x: 735, y: 46)
+            instructionBackdrop.alpha = 0.90
         }
-        instruction.position = CGPoint(x: 755, y: 48)
-        instruction.fontSize = 19
-        instruction.preferredMaxLayoutWidth = 720
+        instruction.position = CGPoint(x: 735, y: 46)
+        instruction.fontName = "AvenirNext-Medium"
+        instruction.fontSize = 18
+        instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
+        instruction.preferredMaxLayoutWidth = 610
         instruction.numberOfLines = 2
     }
 
@@ -152,8 +176,7 @@ import LearningCore
             addChild(shade)
         }
 
-        let home = worldControl("⌂", name: "home", at: CGPoint(x: 52, y: 669), radius: 26)
-        home.zPosition = 2100
+        buildWordGardenHomeControl()
 
         switch place {
         case .flowerGate:
@@ -179,6 +202,33 @@ import LearningCore
             )
             back.zPosition = 2050
         }
+    }
+
+    private func buildWordGardenHomeControl() {
+        let root = SKNode()
+        root.name = "home"
+        root.position = CGPoint(x: 52, y: 672)
+        root.zPosition = 2100
+
+        let medallion = ArtSystem.medallion(
+            radius: 22,
+            fill: UIColor(red: 0.05, green: 0.06, blue: 0.14, alpha: 0.92),
+            stroke: UIColor(red: 0.88, green: 0.68, blue: 0.34, alpha: 0.50),
+            glow: reducedMotion ? 0 : 1
+        )
+        medallion.name = "home"
+        medallion.addChild(ArtSystem.label("‹", size: 22))
+        root.addChild(medallion)
+
+        let hit = SKShapeNode(circleOfRadius: 30)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = "home"
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Back")
+        addChild(root)
     }
 
     private var wordGardenBackdropKey: String {
@@ -768,21 +818,30 @@ import LearningCore
 
     private func addPrompt(_ text: String) {
         childNode(withName: "questionPrompt")?.removeFromParent()
-        let prompt = ArtSystem.label(text, size: 25)
+        let prompt = ArtSystem.label(text, size: text.count > 60 ? 17 : 18)
         prompt.name = "questionPrompt"
+        prompt.fontName = "AvenirNext-Medium"
         prompt.position = CGPoint(x: 660, y: 610)
-        prompt.preferredMaxLayoutWidth = 820
+        prompt.preferredMaxLayoutWidth = 560
         prompt.numberOfLines = 2
-        prompt.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.91, alpha: 1)
+        prompt.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.86, alpha: 1)
         prompt.zPosition = 2000
 
-        let plate = ArtSystem.panel(
-            CGSize(width: 900, height: 76),
-            fill: UIColor(red: 0.035, green: 0.045, blue: 0.075, alpha: 0.68),
-            stroke: UIColor(white: 1.0, alpha: 0.12),
-            radius: 24,
-            lineWidth: 1.5,
-            shadowAlpha: 0.24
+        let tint: UIColor
+        switch place {
+        case .flowerGate:
+            tint = UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 1)
+        case .sunmillCrossing:
+            tint = UIColor(red: 0.95, green: 0.70, blue: 0.28, alpha: 1)
+        case .storyHollow:
+            tint = UIColor(red: 0.62, green: 0.50, blue: 0.94, alpha: 1)
+        }
+
+        let plate = ArtSystem.plaque(
+            CGSize(width: 650, height: 78),
+            fill: UIColor(red: 0.04, green: 0.055, blue: 0.095, alpha: 0.82),
+            stroke: tint.withAlphaComponent(0.48),
+            radius: 20
         )
         plate.name = "questionPromptBackdrop"
         plate.zPosition = -2
