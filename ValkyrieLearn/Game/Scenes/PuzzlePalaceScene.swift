@@ -284,7 +284,9 @@ import LearningCore
 
     private func applyPuzzleHUDPolish() {
         if let titleBackdrop = childNode(withName: "worldTitleBackdrop") {
-            titleBackdrop.xScale = 0.90
+            // Keep the shared plaque wide enough for long Puzzle Palace destinations.
+            // The instruction plaque carries the compact HUD treatment below.
+            titleBackdrop.xScale = 1.0
         }
 
         if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
