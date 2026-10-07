@@ -64,8 +64,9 @@ import LearningCore
     override func didMove(to view: SKView) {
         super.didMove(to: view)
         pip.removeFromParent()
-        valkyrie.setScale(place == .sunmillCrossing ? 0.58 : 0.5)
-        lumi.setScale(place == .sunmillCrossing ? 0.90 : 0.82)
+        let usesJourneyScale = place == .sunmillCrossing || place == .storyHollow
+        valkyrie.setScale(usesJourneyScale ? 0.58 : 0.5)
+        lumi.setScale(usesJourneyScale ? 0.90 : 0.82)
 
         switch place {
         case .flowerGate:
@@ -82,8 +83,8 @@ import LearningCore
         lumi.reducedMotion = reducedMotion
         addChild(lumi)
 
-        if place == .sunmillCrossing {
-            applySunmillHUDPolish()
+        if place == .sunmillCrossing || place == .storyHollow {
+            applyWordGardenJourneyHUDPolish()
         }
 
         switch place {
@@ -93,7 +94,7 @@ import LearningCore
         }
     }
 
-    private func applySunmillHUDPolish() {
+    private func applyWordGardenJourneyHUDPolish() {
         if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
             instructionBackdrop.xScale = 0.70
             instructionBackdrop.position = CGPoint(x: 755, y: 48)
@@ -171,11 +172,12 @@ import LearningCore
             back.zPosition = 2050
         case .storyHollow:
             buildStoryHollowLandmark()
-            let back = hotspot(
-                "← Sunmill",
+            let back = worldControl(
+                "‹",
                 name: "sunmillBack",
-                at: CGPoint(x: 1110, y: 665),
-                size: CGSize(width: 185, height: 52)
+                at: CGPoint(x: 1215, y: 669),
+                radius: 27,
+                accessibilityLabel: "Back to Sunmill Crossing"
             )
             back.zPosition = 2050
         }
@@ -591,61 +593,203 @@ import LearningCore
     }
 
     private func buildStoryHollowLandmark() {
-        let hollow = SKShapeNode(rectOf: CGSize(width: 250, height: 320), cornerRadius: 115)
-        hollow.fillColor = UIColor(red: 0.20, green: 0.12, blue: 0.19, alpha: 0.72)
-        hollow.strokeColor = UIColor(red: 0.36, green: 0.49, blue: 0.25, alpha: 0.95)
-        hollow.lineWidth = 11
-        hollow.position = CGPoint(x: 1045, y: 365)
+        // Story Hollow is a living memory tree. The permanent branch, seed and
+        // root network carry the sequence challenge so the lesson belongs to
+        // the environment instead of floating over the painting.
+        let rootNetwork = SKNode()
+        rootNetwork.name = "storyRootNetwork"
+        rootNetwork.zPosition = 285
+        addChild(rootNetwork)
+
+        let groundRootsPath = CGMutablePath()
+        groundRootsPath.move(to: CGPoint(x: 455, y: 155))
+        groundRootsPath.addCurve(
+            to: CGPoint(x: 1065, y: 165),
+            control1: CGPoint(x: 610, y: 120),
+            control2: CGPoint(x: 880, y: 205)
+        )
+        groundRootsPath.move(to: CGPoint(x: 620, y: 160))
+        groundRootsPath.addCurve(
+            to: CGPoint(x: 1125, y: 205),
+            control1: CGPoint(x: 760, y: 210),
+            control2: CGPoint(x: 990, y: 130)
+        )
+        let groundRoots = SKShapeNode(path: groundRootsPath)
+        groundRoots.strokeColor = UIColor(red: 0.30, green: 0.45, blue: 0.20, alpha: 0.74)
+        groundRoots.lineWidth = 13
+        groundRoots.name = "decorativeStoryGroundRoots"
+        rootNetwork.addChild(groundRoots)
+
+        let memoryBranchPath = CGMutablePath()
+        memoryBranchPath.move(to: CGPoint(x: 1090, y: 480))
+        memoryBranchPath.addCurve(
+            to: CGPoint(x: 690, y: 455),
+            control1: CGPoint(x: 990, y: 520),
+            control2: CGPoint(x: 835, y: 425)
+        )
+        let memoryBranch = SKShapeNode(path: memoryBranchPath)
+        memoryBranch.strokeColor = UIColor(red: 0.31, green: 0.48, blue: 0.24, alpha: 0.94)
+        memoryBranch.lineWidth = 15
+        memoryBranch.name = "storyMemoryBranch"
+        memoryBranch.zPosition = 470
+        addChild(memoryBranch)
+
+        let archPath = CGMutablePath()
+        archPath.move(to: CGPoint(x: 910, y: 190))
+        archPath.addLine(to: CGPoint(x: 910, y: 345))
+        archPath.addQuadCurve(
+            to: CGPoint(x: 1035, y: 548),
+            control: CGPoint(x: 910, y: 505)
+        )
+        archPath.addQuadCurve(
+            to: CGPoint(x: 1160, y: 345),
+            control: CGPoint(x: 1160, y: 505)
+        )
+        archPath.addLine(to: CGPoint(x: 1160, y: 190))
+        archPath.closeSubpath()
+
+        let hollow = SKShapeNode(path: archPath)
+        hollow.fillColor = UIColor(red: 0.18, green: 0.12, blue: 0.16, alpha: 0.68)
+        hollow.strokeColor = UIColor(red: 0.35, green: 0.50, blue: 0.24, alpha: 0.95)
+        hollow.lineWidth = 13
         hollow.name = "storyHollow"
-        hollow.zPosition = 320
+        hollow.zPosition = 330
         addChild(hollow)
 
-        let inner = SKShapeNode(rectOf: CGSize(width: 145, height: 215), cornerRadius: 68)
-        inner.fillColor = UIColor(red: 0.08, green: 0.07, blue: 0.13, alpha: 0.96)
+        let openingPath = CGMutablePath()
+        openingPath.move(to: CGPoint(x: 955, y: 205))
+        openingPath.addLine(to: CGPoint(x: 955, y: 345))
+        openingPath.addQuadCurve(
+            to: CGPoint(x: 1035, y: 472),
+            control: CGPoint(x: 955, y: 445)
+        )
+        openingPath.addQuadCurve(
+            to: CGPoint(x: 1115, y: 345),
+            control: CGPoint(x: 1115, y: 445)
+        )
+        openingPath.addLine(to: CGPoint(x: 1115, y: 205))
+        openingPath.closeSubpath()
+
+        let inner = SKShapeNode(path: openingPath)
+        inner.fillColor = UIColor(red: 0.06, green: 0.055, blue: 0.11, alpha: 0.94)
         inner.strokeColor = UIColor(red: 0.57, green: 0.42, blue: 0.23, alpha: 0.82)
         inner.lineWidth = 5
-        inner.position.y = -15
         inner.name = "storyHollow"
+        inner.zPosition = 1
         hollow.addChild(inner)
+
+        let doorGlow = SKShapeNode(path: openingPath)
+        doorGlow.fillColor = .clear
+        doorGlow.strokeColor = UIColor(red: 0.87, green: 0.71, blue: 1.0, alpha: 0.34)
+        doorGlow.lineWidth = 5
+        doorGlow.glowWidth = reducedMotion ? 0 : 4
+        doorGlow.alpha = 0.22
+        doorGlow.name = "storyHollowDoorGlow"
+        doorGlow.zPosition = 345
+        addChild(doorGlow)
+
+        for (index, x) in [CGFloat(936), CGFloat(1134)].enumerated() {
+            let trunk = SKShapeNode(rectOf: CGSize(width: 34, height: 270), cornerRadius: 15)
+            trunk.position = CGPoint(x: x, y: 325)
+            trunk.zRotation = index == 0 ? -0.035 : 0.035
+            trunk.fillColor = UIColor(red: 0.31, green: 0.21, blue: 0.12, alpha: 0.82)
+            trunk.strokeColor = UIColor(red: 0.43, green: 0.56, blue: 0.24, alpha: 0.56)
+            trunk.lineWidth = 3
+            trunk.name = "decorativeStoryTrunk"
+            trunk.zPosition = 350
+            addChild(trunk)
+        }
 
         let moon = ArtSystem.label("☾", size: 46)
         moon.fontColor = UIColor(red: 0.90, green: 0.82, blue: 1.0, alpha: 0.92)
-        moon.position.y = 72
+        moon.position = CGPoint(x: 1035, y: 392)
         moon.name = "hollowMoon"
-        hollow.addChild(moon)
+        moon.zPosition = 380
+        addChild(moon)
 
-        let seed = SKShapeNode(circleOfRadius: 22)
-        seed.fillColor = UIColor(red: 1.0, green: 0.86, blue: 0.36, alpha: 0.82)
+        let seed = SKShapeNode(ellipseOf: CGSize(width: 48, height: 64))
+        seed.fillColor = UIColor(red: 1.0, green: 0.82, blue: 0.32, alpha: 0.78)
         seed.strokeColor = UIColor(red: 1.0, green: 0.96, blue: 0.64, alpha: 1)
         seed.lineWidth = 4
         seed.glowWidth = 3
-        seed.position = CGPoint(x: 705, y: 235)
+        seed.position = CGPoint(x: 705, y: 270)
+        seed.zRotation = -0.16
         seed.name = "wordSeed"
-        seed.zPosition = 500
+        seed.zPosition = 505
         addChild(seed)
 
-        let stem = SKShapeNode(rectOf: CGSize(width: 11, height: 92), cornerRadius: 5)
+        let stem = SKShapeNode(rectOf: CGSize(width: 11, height: 105), cornerRadius: 5)
         stem.fillColor = UIColor(red: 0.26, green: 0.50, blue: 0.27, alpha: 1)
         stem.strokeColor = .clear
-        stem.position = CGPoint(x: 705, y: 182)
+        stem.position = CGPoint(x: 705, y: 210)
         stem.name = "storyStem"
-        stem.zPosition = 250
+        stem.zPosition = 300
         addChild(stem)
 
-        for index in 0..<WordGardenEncounterCatalog.storyHollowPattern.count {
-            let socket = SKShapeNode(circleOfRadius: 28)
-            socket.fillColor = UIColor(red: 0.21, green: 0.18, blue: 0.29, alpha: 0.94)
-            socket.strokeColor = UIColor(red: 0.71, green: 0.61, blue: 0.40, alpha: 0.75)
+        let slotPoints = [
+            CGPoint(x: 735, y: 458),
+            CGPoint(x: 855, y: 478),
+            CGPoint(x: 970, y: 470)
+        ]
+
+        for (index, point) in slotPoints.enumerated() {
+            let socket = SKShapeNode(ellipseOf: CGSize(width: 68, height: 58))
+            socket.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.30, alpha: 0.92)
+            socket.strokeColor = UIColor(red: 0.69, green: 0.62, blue: 0.40, alpha: 0.72)
             socket.lineWidth = 3
-            socket.position = CGPoint(x: 585 + CGFloat(index) * 120, y: 345)
+            socket.position = point
+            socket.zRotation = index == 1 ? 0.08 : (index == 0 ? -0.10 : 0.04)
             socket.name = "storySlot\(index)"
-            socket.zPosition = 520
+            socket.zPosition = 525
             addChild(socket)
 
             let glyph = ArtSystem.label("·", size: 34)
             glyph.fontColor = UIColor(red: 0.92, green: 0.86, blue: 0.72, alpha: 0.9)
             glyph.name = "storySlotGlyph\(index)"
             socket.addChild(glyph)
+
+            let sprout = SKShapeNode(ellipseOf: CGSize(width: 26, height: 12))
+            sprout.position = CGPoint(x: point.x - 18, y: point.y + 34)
+            sprout.zRotation = -0.42 + CGFloat(index) * 0.36
+            sprout.fillColor = UIColor(red: 0.48, green: 0.67, blue: 0.29, alpha: 0.72)
+            sprout.strokeColor = .clear
+            sprout.name = "decorativeStoryBranchLeaf"
+            sprout.zPosition = 510
+            addChild(sprout)
+
+            let glowPath = CGMutablePath()
+            glowPath.move(to: CGPoint(x: 705, y: 260))
+            glowPath.addCurve(
+                to: point,
+                control1: CGPoint(x: 720 + CGFloat(index) * 42, y: 315),
+                control2: CGPoint(x: point.x - 58, y: 395)
+            )
+            let rootGlow = SKShapeNode(path: glowPath)
+            rootGlow.fillColor = .clear
+            rootGlow.strokeColor = UIColor(red: 0.94, green: 0.72, blue: 0.34, alpha: 0.82)
+            rootGlow.lineWidth = 7
+            rootGlow.glowWidth = reducedMotion ? 0 : 4
+            rootGlow.alpha = 0.10
+            rootGlow.name = "storyRootGlow\(index)"
+            rootGlow.zPosition = 430
+            addChild(rootGlow)
+        }
+
+        for index in 0..<5 {
+            let bloom = SKShapeNode(ellipseOf: CGSize(width: 34, height: 18))
+            let angle = CGFloat(index) * 0.74 - 1.4
+            bloom.position = CGPoint(
+                x: 1028 + cos(angle) * 142,
+                y: 474 + sin(angle) * 68
+            )
+            bloom.zRotation = angle
+            bloom.fillColor = UIColor(red: 0.98, green: 0.57, blue: 0.74, alpha: 0.70)
+            bloom.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.46, alpha: 0.42)
+            bloom.lineWidth = 2
+            bloom.alpha = 0.12
+            bloom.name = "storyCanopyBloom\(index)"
+            bloom.zPosition = 455
+            addChild(bloom)
         }
     }
 
@@ -722,8 +866,7 @@ import LearningCore
         refreshStoryHollowProgress()
 
         guard state.storyHollowAvailable else {
-            instruction.text = "The Sunmill bridge is still sleeping."
-            addPrompt("Return to Sunmill Crossing and wake the bridge first.")
+            instruction.text = "Return to Sunmill Crossing and wake the bridge before the memory tree can open."
             return
         }
 
@@ -740,13 +883,15 @@ import LearningCore
         guard let encounter else { return }
         resetAttemptState()
         clearQuestionAndChoices()
-        instruction.text = encounter.prompt
-        addPrompt(encounter.prompt)
+        // Story Hollow uses the persistent lower guidance plaque and the tree's
+        // own memory branch as the sequence display.
+        instruction.text = "Watch the memory branch. Then restore the missing seed-rune."
 
         for (index, choice) in encounter.choices.enumerated() {
             let runeSeed = storyHollowChoiceNode(letter: choice, index: index)
             runeSeed.position = storyHollowChoicePoints[index]
             runeSeed.name = "storyHollowChoice"
+            runeSeed.zPosition = 620
             runeSeed.userData = NSMutableDictionary(dictionary: ["choice": choice])
             addChild(runeSeed)
         }
@@ -874,36 +1019,37 @@ import LearningCore
 
         let preview = SKNode()
         preview.name = "storySequencePreview"
-        preview.position = CGPoint(x: 755, y: 470)
-        preview.zPosition = 2010
+        preview.zPosition = 548
 
-        let vine = ArtSystem.box(
-            CGSize(width: 285, height: 8),
-            color: UIColor(red: 0.33, green: 0.55, blue: 0.29, alpha: 0.92),
-            radius: 4
+        let branchGlowPath = CGMutablePath()
+        branchGlowPath.move(to: CGPoint(x: 1090, y: 480))
+        branchGlowPath.addCurve(
+            to: CGPoint(x: 690, y: 455),
+            control1: CGPoint(x: 990, y: 520),
+            control2: CGPoint(x: 835, y: 425)
         )
-        vine.name = "storySequencePreview"
-        preview.addChild(vine)
+        let branchGlow = SKShapeNode(path: branchGlowPath)
+        branchGlow.strokeColor = UIColor(red: 0.92, green: 0.72, blue: 1.0, alpha: 0.82)
+        branchGlow.lineWidth = 6
+        branchGlow.glowWidth = reducedMotion ? 0 : 10
+        branchGlow.name = "storySequencePreview"
+        preview.addChild(branchGlow)
 
         for (index, glyphValue) in WordGardenEncounterCatalog.storyHollowPattern.enumerated() {
-            let bud = SKShapeNode(circleOfRadius: 39)
-            bud.fillColor = UIColor(red: 0.33, green: 0.23, blue: 0.43, alpha: 0.97)
-            bud.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.38, alpha: 1)
-            bud.lineWidth = 4
-            bud.glowWidth = 6
-            bud.position.x = CGFloat(index - 1) * 105
-            bud.name = "storySequencePreview"
-
-            let glyph = ArtSystem.label(glyphValue, size: 38)
-            glyph.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.82, alpha: 1)
-            glyph.name = "storySequencePreview"
-            bud.addChild(glyph)
-            preview.addChild(bud)
+            if let socket = childNode(withName: "storySlot\(index)") as? SKShapeNode {
+                socket.fillColor = UIColor(red: 0.36, green: 0.25, blue: 0.48, alpha: 0.98)
+                socket.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.38, alpha: 1)
+                socket.glowWidth = reducedMotion ? 0 : 8
+            }
+            if let glyph = childNode(withName: "//storySlotGlyph\(index)") as? SKLabelNode {
+                glyph.text = glyphValue
+                glyph.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.82, alpha: 1)
+            }
         }
 
         addChild(preview)
         targetRune = preview
-        instruction.text = retryMessage ?? encounter.prompt
+        instruction.text = retryMessage ?? "Watch the tree remember its three seed-runes."
 
         let targetIndex = WordGardenEncounterCatalog.storyHollowSequence.firstIndex {
             $0.id == encounter.id
@@ -912,17 +1058,21 @@ import LearningCore
 
         run(
             .sequence([
-                .wait(forDuration: 1.35),
+                .wait(forDuration: reducedMotion ? 0.35 : 1.35),
                 .run { [weak self, weak preview] in
-                    guard let self else { return }
-                    preview?.isHidden = true
+                    guard let self, !self.hasLeftScene else { return }
+                    preview?.removeFromParent()
+                    if self.targetRune === preview {
+                        self.targetRune = nil
+                    }
+                    self.refreshStoryHollowProgress()
                     self.acceptingChoices = true
                     self.showAttentionCue(
-                        at: CGPoint(x: 735, y: 155),
+                        at: CGPoint(x: 760, y: 165),
                         tint: UIColor(red: 0.88, green: 0.70, blue: 1.0, alpha: 1),
                         width: 190
                     )
-                    self.instruction.text = "Restore the \(positionName) seed-rune."
+                    self.instruction.text = "Restore the \(positionName) seed-rune from the roots."
                 }
             ]),
             withKey: "wordGardenPreview"
@@ -1027,30 +1177,58 @@ import LearningCore
     private func storyHollowChoiceNode(letter: String, index: Int) -> SKNode {
         let node = SKNode()
 
-        let seedStone = SKShapeNode(ellipseOf: CGSize(width: 104, height: 72))
-        seedStone.fillColor = UIColor(
-            red: 0.38 + CGFloat(index) * 0.025,
-            green: 0.29,
-            blue: 0.47,
-            alpha: 0.97
+        let rootPath = CGMutablePath()
+        rootPath.move(to: CGPoint(x: 0, y: -62))
+        rootPath.addCurve(
+            to: CGPoint(x: 0, y: -16),
+            control1: CGPoint(x: index.isMultiple(of: 2) ? -16 : 16, y: -48),
+            control2: CGPoint(x: index.isMultiple(of: 2) ? 10 : -10, y: -30)
         )
-        seedStone.strokeColor = UIColor(red: 0.86, green: 0.68, blue: 0.35, alpha: 1)
+        let root = SKShapeNode(path: rootPath)
+        root.strokeColor = UIColor(red: 0.29, green: 0.47, blue: 0.24, alpha: 0.95)
+        root.lineWidth = 10
+        root.name = "decorativeStoryChoiceRoot"
+        root.zPosition = -2
+        node.addChild(root)
+
+        let rootKnot = SKShapeNode(circleOfRadius: 15)
+        rootKnot.position = CGPoint(x: 0, y: -62)
+        rootKnot.fillColor = UIColor(red: 0.42, green: 0.30, blue: 0.17, alpha: 0.92)
+        rootKnot.strokeColor = UIColor(red: 0.66, green: 0.54, blue: 0.28, alpha: 0.74)
+        rootKnot.lineWidth = 3
+        rootKnot.name = "decorativeStoryChoiceRootKnot"
+        rootKnot.zPosition = -1
+        node.addChild(rootKnot)
+
+        let seedStone = SKShapeNode(ellipseOf: CGSize(width: 112, height: 78))
+        seedStone.fillColor = UIColor(red: 0.37, green: 0.28, blue: 0.47, alpha: 0.98)
+        seedStone.strokeColor = UIColor(red: 0.86, green: 0.68, blue: 0.35, alpha: 0.96)
         seedStone.lineWidth = 4
+        seedStone.glowWidth = 2
+        seedStone.zRotation = index.isMultiple(of: 2) ? -0.08 : 0.08
         seedStone.name = "storyHollowChoice"
         node.addChild(seedStone)
+
+        let innerSeed = SKShapeNode(ellipseOf: CGSize(width: 82, height: 52))
+        innerSeed.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.34, alpha: 0.44)
+        innerSeed.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.47, alpha: 0.18)
+        innerSeed.lineWidth = 2
+        innerSeed.name = "storyHollowChoice"
+        node.addChild(innerSeed)
 
         let glyph = ArtSystem.label(letter, size: 40)
         glyph.fontColor = UIColor(red: 1.0, green: 0.94, blue: 0.79, alpha: 1)
         glyph.name = "storyHollowChoice"
         node.addChild(glyph)
 
-        let root = SKShapeNode(rectOf: CGSize(width: 8, height: 34), cornerRadius: 4)
-        root.fillColor = UIColor(red: 0.31, green: 0.48, blue: 0.26, alpha: 1)
-        root.strokeColor = .clear
-        root.position.y = -49
-        root.zPosition = -1
-        root.name = "storyHollowChoice"
-        node.addChild(root)
+        let sprout = SKShapeNode(ellipseOf: CGSize(width: 32, height: 15))
+        sprout.position = CGPoint(x: index.isMultiple(of: 2) ? -34 : 34, y: 38)
+        sprout.zRotation = index.isMultiple(of: 2) ? 0.58 : -0.58
+        sprout.fillColor = UIColor(red: 0.49, green: 0.70, blue: 0.31, alpha: 0.90)
+        sprout.strokeColor = UIColor(red: 0.82, green: 0.82, blue: 0.39, alpha: 0.38)
+        sprout.lineWidth = 2
+        sprout.name = "decorativeStoryChoiceSprout"
+        node.addChild(sprout)
 
         return node
     }
@@ -1242,9 +1420,10 @@ import LearningCore
     }
 
     private func approachStoryHollowChoice(_ node: SKNode, value: String) {
+        interactionInFlight = true
         let destination = CGPoint(x: max(170, node.position.x - 105), y: 175)
         valkyrie.walk(to: destination) { [weak self] in
-            guard let self else { return }
+            guard let self, !self.hasLeftScene else { return }
             self.state.audio.play("footstep")
             self.valkyrie.pose(.interact)
             self.lumi.walk(
@@ -1374,6 +1553,8 @@ import LearningCore
     }
 
     private func resolveStoryHollow(choice: String, node: SKNode) {
+        guard !hasLeftScene, interactionInFlight, !solved else { return }
+        interactionInFlight = false
         guard let encounter else { return }
         attempts += 1
         let attemptSupport = support
@@ -1389,6 +1570,7 @@ import LearningCore
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
+            animateStoryMemoryTransfer(from: node)
             refreshStoryHollowProgress()
             state.audio.play("success")
             valkyrie.pose(.celebrate)
@@ -1554,35 +1736,107 @@ import LearningCore
         instruction.text = "The Sunmill is turning. Cross the bridge to Story Hollow."
     }
 
+    private func animateStoryMemoryTransfer(from node: SKNode) {
+        guard !reducedMotion else { return }
+
+        let mote = SKShapeNode(circleOfRadius: 8)
+        mote.position = node.position
+        mote.fillColor = UIColor(red: 1.0, green: 0.82, blue: 0.38, alpha: 1)
+        mote.strokeColor = UIColor(red: 0.95, green: 0.76, blue: 1.0, alpha: 0.90)
+        mote.lineWidth = 2
+        mote.glowWidth = 10
+        mote.name = "storyMemoryTransfer"
+        mote.zPosition = 900
+        addChild(mote)
+
+        let path = CGMutablePath()
+        path.move(to: node.position)
+        path.addCurve(
+            to: CGPoint(x: 705, y: 270),
+            control1: CGPoint(x: node.position.x, y: node.position.y + 70),
+            control2: CGPoint(x: 705, y: 205)
+        )
+        path.addCurve(
+            to: CGPoint(x: 1035, y: 430),
+            control1: CGPoint(x: 760, y: 345),
+            control2: CGPoint(x: 910, y: 390)
+        )
+
+        mote.run(.sequence([
+            .follow(path, asOffset: false, orientToPath: false, duration: 0.62),
+            .group([
+                .scale(to: 1.8, duration: 0.18),
+                .fadeOut(withDuration: 0.18)
+            ]),
+            .removeFromParent()
+        ]))
+    }
+
     private func refreshStoryHollowProgress() {
         let count = WordGardenDirector.independentSuccessCount(
             for: WordGardenEncounterCatalog.storyHollowSequence,
             profile: state.profile
         )
-        let ratio = CGFloat(count) / CGFloat(
-            max(1, WordGardenEncounterCatalog.storyHollowSequence.count)
-        )
+        let total = max(1, WordGardenEncounterCatalog.storyHollowSequence.count)
+        let ratio = min(1, CGFloat(count) / CGFloat(total))
 
         if let seed = childNode(withName: "wordSeed") as? SKShapeNode {
-            seed.setScale(0.72 + ratio * 0.72)
-            seed.alpha = 0.58 + ratio * 0.42
-            seed.glowWidth = 3 + ratio * 14
+            seed.setScale(0.78 + ratio * 0.42)
+            seed.alpha = 0.64 + ratio * 0.36
+            seed.glowWidth = 3 + ratio * 13
         }
 
-        childNode(withName: "storyStem")?.yScale = 0.45 + ratio * 0.55
+        childNode(withName: "storyStem")?.yScale = 0.48 + ratio * 0.52
 
         for index in 0..<WordGardenEncounterCatalog.storyHollowPattern.count {
             let filled = index < count
+
+            if let rootGlow = childNode(withName: "storyRootGlow\(index)") as? SKShapeNode {
+                rootGlow.alpha = filled ? 0.92 : 0.10
+                rootGlow.glowWidth = reducedMotion ? 0 : (filled ? 10 : 3)
+            }
+
             if let socket = childNode(withName: "storySlot\(index)") as? SKShapeNode {
+                socket.fillColor = filled
+                    ? UIColor(red: 0.35, green: 0.25, blue: 0.47, alpha: 0.98)
+                    : UIColor(red: 0.23, green: 0.18, blue: 0.30, alpha: 0.92)
                 socket.strokeColor = filled
                     ? UIColor(red: 0.98, green: 0.79, blue: 0.38, alpha: 1)
-                    : UIColor(red: 0.71, green: 0.61, blue: 0.40, alpha: 0.75)
-                socket.glowWidth = filled ? 8 : 0
+                    : UIColor(red: 0.69, green: 0.62, blue: 0.40, alpha: 0.72)
+                socket.glowWidth = reducedMotion ? 0 : (filled ? 9 : 0)
             }
+
             if let glyph = childNode(withName: "//storySlotGlyph\(index)") as? SKLabelNode {
                 glyph.text = filled
                     ? WordGardenEncounterCatalog.storyHollowPattern[index]
                     : "·"
+                glyph.fontColor = filled
+                    ? UIColor(red: 1.0, green: 0.95, blue: 0.82, alpha: 1)
+                    : UIColor(red: 0.92, green: 0.86, blue: 0.72, alpha: 0.9)
+            }
+        }
+
+        if let doorGlow = childNode(withName: "storyHollowDoorGlow") as? SKShapeNode {
+            doorGlow.alpha = 0.22 + ratio * 0.78
+            doorGlow.glowWidth = reducedMotion ? 0 : 4 + ratio * 12
+        }
+
+        if let branch = childNode(withName: "storyMemoryBranch") as? SKShapeNode {
+            branch.strokeColor = UIColor(
+                red: 0.31 + ratio * 0.18,
+                green: 0.48 + ratio * 0.22,
+                blue: 0.24,
+                alpha: 0.94
+            )
+            branch.glowWidth = reducedMotion ? 0 : ratio * 6
+        }
+
+        let visibleBlooms = Int(ceil(ratio * 5))
+        for index in 0..<5 {
+            let bloom = childNode(withName: "storyCanopyBloom\(index)")
+            bloom?.alpha = index < visibleBlooms ? 0.86 : 0.12
+            if index < visibleBlooms {
+                bloom?.setScale(0.88 + ratio * 0.18)
             }
         }
     }
@@ -1594,34 +1848,53 @@ import LearningCore
 
         if let hollow = childNode(withName: "storyHollow") as? SKShapeNode {
             hollow.strokeColor = UIColor(red: 0.56, green: 0.77, blue: 0.36, alpha: 1)
-            hollow.glowWidth = 16
+            hollow.glowWidth = reducedMotion ? 0 : 16
         }
+
+        if let doorGlow = childNode(withName: "storyHollowDoorGlow") as? SKShapeNode {
+            doorGlow.alpha = 1
+            doorGlow.strokeColor = UIColor(red: 0.88, green: 0.72, blue: 1.0, alpha: 0.96)
+            doorGlow.glowWidth = reducedMotion ? 0 : 18
+        }
+
         childNode(withName: "//hollowMoon")?.run(.sequence([
             .scale(to: reducedMotion ? 1.0 : 1.28, duration: 0.2),
             .scale(to: 1.0, duration: reducedMotion ? 0 : 0.2)
         ]))
 
         if childNode(withName: "storyBloom") == nil {
-            let bloom = ArtSystem.label("✿", size: 70)
-            bloom.fontColor = UIColor(red: 1.0, green: 0.66, blue: 0.81, alpha: 1)
-            bloom.position = CGPoint(x: 705, y: 315)
-            bloom.name = "storyBloom"
-            bloom.zPosition = 620
-            addChild(bloom)
+            let bloomRoot = SKNode()
+            bloomRoot.position = CGPoint(x: 705, y: 338)
+            bloomRoot.name = "storyBloom"
+            bloomRoot.zPosition = 640
+
+            if let bloom = ArtSystem.sprite("StoryBloom", size: CGSize(width: 116, height: 116)) {
+                bloom.name = "storyBloom"
+                bloomRoot.addChild(bloom)
+            } else {
+                let bloom = ArtSystem.label("✿", size: 74)
+                bloom.fontColor = UIColor(red: 1.0, green: 0.66, blue: 0.81, alpha: 1)
+                bloom.name = "storyBloom"
+                bloomRoot.addChild(bloom)
+            }
+            addChild(bloomRoot)
         }
 
         if childNode(withName: "storyTreeReturn") == nil {
-            let lantern = hotspot(
-                "Story Tree ✦",
+            let returnMarker = destinationMarker(
+                "Story Tree",
+                symbol: "✦",
                 name: "storyTreeReturn",
-                at: CGPoint(x: 1005, y: 165),
-                size: CGSize(width: 190, height: 58)
+                at: CGPoint(x: 1090, y: 195),
+                tint: UIColor(red: 1.0, green: 0.78, blue: 0.34, alpha: 1),
+                width: 138,
+                plaqueOffsetY: -52
             )
-            lantern.zPosition = 840
+            returnMarker.zPosition = 840
         }
 
         instruction.text = state.hasStoryReward(.wordGardenLantern)
-            ? "Story Hollow is awake. The Word Garden lantern is waiting at the Story Tree."
+            ? "The memory tree is awake. Follow its lantern home to the Story Tree."
             : "Story Hollow is awake."
     }
 
