@@ -50,7 +50,7 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 500, height: 88),
+        rectOf: CGSize(width: 500, height: 96),
         cornerRadius: 15
     )
     private let questionHeading = ArtSystem.label("PIP'S WORK ORDER", size: 13)
@@ -112,6 +112,35 @@ import LearningCore
         instruction.preferredMaxLayoutWidth = 680
     }
 
+    private func addCompactHomeControl() {
+        let root = SKNode()
+        root.name = "home"
+        root.position = CGPoint(x: 52, y: 672)
+        root.zPosition = 2000
+
+        let medallion = ArtSystem.medallion(
+            radius: 22,
+            fill: UIColor(red: 0.05, green: 0.06, blue: 0.14, alpha: 0.92),
+            stroke: UIColor(red: 0.90, green: 0.70, blue: 0.32, alpha: 0.52),
+            glow: reducedMotion ? 0 : 1
+        )
+        medallion.name = "home"
+        medallion.addChild(ArtSystem.label("‹", size: 22))
+        root.addChild(medallion)
+
+        // Keep a child-friendly 60pt hit target without making the back control
+        // visually compete with the world title.
+        let hit = SKShapeNode(circleOfRadius: 30)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = "home"
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Back")
+        addChild(root)
+    }
+
     private func addCompactWorkshopGear(
         _ symbol: String,
         name: String,
@@ -145,7 +174,7 @@ import LearningCore
         prepareCastleIllustrationForRetina()
         buildCastleFidelityAccents()
 
-        _ = worldControl("‹", name: "home", at: CGPoint(x: 52, y: 669))
+        addCompactHomeControl()
         // Keep the approved painted courtyard, but prepare enough physical pixels
         // for the Retina surface before SpriteKit composites live gameplay over it.
         if let floor = ArtSystem.retinaEnhancedSprite(
@@ -290,7 +319,7 @@ import LearningCore
             addChild(hanger)
         }
 
-        questionHeading.position = CGPoint(x: 800, y: 640)
+        questionHeading.position = CGPoint(x: 800, y: 643)
         questionHeading.fontName = "AvenirNext-Bold"
         questionHeading.fontSize = 14
         questionHeading.fontColor = UIColor(red: 1.0, green: 0.84, blue: 0.46, alpha: 1)
@@ -299,7 +328,7 @@ import LearningCore
         questionHeading.isHidden = true
         addChild(questionHeading)
 
-        questionLabel.position = CGPoint(x: 590, y: 604)
+        questionLabel.position = CGPoint(x: 590, y: 610)
         questionLabel.horizontalAlignmentMode = .left
         questionLabel.fontName = "AvenirNext-Medium"
         questionLabel.preferredMaxLayoutWidth = 420
@@ -969,6 +998,7 @@ import LearningCore
                 $0.alpha = 0.72
             }
             childNode(withName: "next")?.isHidden = false
+            lever?.isHidden = true
             updatePower(false)
             return
         }
@@ -993,7 +1023,7 @@ import LearningCore
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
 
-        let secondaryHidden = !state.workshop && !runtime.completed
+        let secondaryHidden = !runtime.completed && (engaged || !state.workshop)
         children.filter {
             ($0.name?.hasPrefix("workshop") == true) || $0.name == "workshopRack" || $0.name == "wind"
         }.forEach {
@@ -1001,6 +1031,7 @@ import LearningCore
             $0.isHidden = secondaryHidden
         }
         childNode(withName: "next")?.isHidden = !runtime.completed && !state.workshop
+        lever?.isHidden = !engaged || runtime.completed
         if engaged {
             let isBridge = runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
             showQuestion(isBridge ? nil : (
