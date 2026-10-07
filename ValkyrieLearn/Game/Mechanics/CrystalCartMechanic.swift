@@ -152,7 +152,7 @@ import LearningCore
         let pivot = ArtSystem.gear(radius: 27)
         pivot.position = CGPoint(x: 0, y: 40)
         pivot.zPosition = 2
-        pivot.name = "scalePivot"
+        pivot.name = "scaleBeam"
         addChild(pivot)
 
         let base = ArtSystem.supplyTray(CGSize(width: 126, height: 24))
