@@ -111,6 +111,17 @@ import LearningCore
     }
 
     override func buildWorld() {
+        let ambientBase = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.12, green: 0.28, blue: 0.38, alpha: 1),
+            radius: 0
+        )
+        ambientBase.strokeColor = .clear
+        ambientBase.position = CGPoint(x: 640, y: 360)
+        ambientBase.zPosition = -320
+        ambientBase.name = "weatherAmbientBase"
+        addChild(ambientBase)
+
         if let texture = ArtSystem.retinaEnhancedTexture(
             "StarlightIsles",
             targetPoints: designCanvasSize,
