@@ -10,15 +10,7 @@
         180
       ],
       "note": "2x2 v3.31 preview atlas; native Word Garden crops the top-left quadrant"
-    },
-    "ValkyrieLearn/Resources/Lumi.webp": {
-      "sourceKey": "comp_lumi",
-      "blobSHA": "f7683bcefa496a7321e3a9b4040247d7d0f24d17",
-      "sourceDimensions": [
-        84,
-        84
-      ]
     }
   },
-  "note": "Preserved embedded v3.31 reference pixels, not newly generated art. These preview-resolution assets are an interim native migration source until the original high-resolution Word Garden source sheets are available."
+  "note": "Preserved embedded v3.31 environment reference pixels. Lumi is now managed separately by COMPANION_ART_MANIFEST.json."
 }
