@@ -287,6 +287,19 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 850, y: 185)
         scene.handleTap(at: CGPoint(x: 940, y: 245))
         XCTAssertEqual(scene.greenhouseStage, .lit)
+        XCTAssertFalse(scene.greenhouseComplete)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        // Fresh Science v2 playthroughs now finish three physical
+        // Greenhouse field-study checks before the route opens.
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        scene.valkyrie.position = CGPoint(x: 850, y: 185)
+        scene.handleTap(at: CGPoint(x: 940, y: 245))
+
+        XCTAssertTrue(scene.greenhouseComplete)
         XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
     }
 
@@ -323,6 +336,17 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 825, y: 180)
         scene.handleTap(at: CGPoint(x: 985, y: 282))
         XCTAssertEqual(scene.weatherStage, .complete)
+        XCTAssertFalse(scene.creatureRouteOpen)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        // Retention checks reuse the morning flag and forecast vane before
+        // Creature Grove becomes the active route.
+        scene.valkyrie.position = CGPoint(x: 370, y: 180)
+        scene.handleTap(at: CGPoint(x: 470, y: 305))
+        scene.valkyrie.position = CGPoint(x: 825, y: 180)
+        scene.handleTap(at: CGPoint(x: 985, y: 282))
+
+        XCTAssertTrue(scene.creatureRouteOpen)
         XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
     }
 
@@ -366,6 +390,19 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 900, y: 180)
         scene.handleTap(at: CGPoint(x: 975, y: 285))
         XCTAssertEqual(scene.groveStage, .complete)
+        XCTAssertFalse(scene.groveRestored)
+        XCTAssertLessThan(finale.alpha, 0.01)
+
+        // Complete the three physical field-study checks that now sit
+        // between the main habitat comparison and the restored-grove finale.
+        scene.valkyrie.position = CGPoint(x: 520, y: 180)
+        scene.handleTap(at: CGPoint(x: 528, y: 270))
+        scene.valkyrie.position = CGPoint(x: 760, y: 180)
+        scene.handleTap(at: CGPoint(x: 840, y: 290))
+        scene.valkyrie.position = CGPoint(x: 900, y: 180)
+        scene.handleTap(at: CGPoint(x: 975, y: 285))
+
+        XCTAssertTrue(scene.groveRestored)
         XCTAssertEqual(finale.alpha, 1.0, accuracy: 0.001)
     }
 
