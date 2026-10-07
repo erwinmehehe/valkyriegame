@@ -195,13 +195,13 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        if title.frame.width > 338 {
-            title.fontSize *= 338 / title.frame.width
+        if title.frame.width > 298 {
+            title.fontSize *= 298 / title.frame.width
         }
 
         let titleWidth = min(
-            CGFloat(400),
-            max(CGFloat(355), title.frame.width + 60)
+            CGFloat(360),
+            max(CGFloat(350), title.frame.width + 58)
         )
         let titlePlate = ArtSystem.plaque(
             CGSize(width: titleWidth, height: 42),
