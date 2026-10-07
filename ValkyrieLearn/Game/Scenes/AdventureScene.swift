@@ -89,6 +89,29 @@ struct AdventureSceneLayout {
     let pip = PipNode()
     let instruction = ArtSystem.label("", size: 27)
     let layout = AdventureSceneLayout(size: CGSize(width: 1280, height: 720))
+    let designCanvasSize = CGSize(width: 1280, height: 720)
+
+    var verticalViewportInset: CGFloat {
+        max(0, (size.height - designCanvasSize.height) / 2)
+    }
+
+    /// Expands only the vertical canvas for taller landscape iPads.
+    /// The authored 1280×720 playfield stays centered, so characters and
+    /// interaction geometry are never stretched or horizontally cropped.
+    func prepareAdaptiveLandscapeCanvas(for view: SKView) {
+        let width = view.bounds.width
+        let height = view.bounds.height
+        guard width > 0, height > 0 else { return }
+
+        let aspect = width / height
+        guard aspect < (16.0 / 9.0) else {
+            size = designCanvasSize
+            return
+        }
+
+        let expandedHeight = min(CGFloat(960), max(CGFloat(720), designCanvasSize.width / aspect))
+        size = CGSize(width: designCanvasSize.width, height: expandedHeight)
+    }
 
     var walkable: CGRect { layout.actorLane }
     var environment: ArtSystem.Environment { .castle }
