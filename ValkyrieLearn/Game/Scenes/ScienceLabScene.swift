@@ -40,7 +40,14 @@ import LearningCore
         renderPlant()
         renderGate()
 
-        instruction.text = "Milo noticed something at the seed bench. Walk over and inspect it."
+        if greenhouseStage == .lit && !greenhouseComplete,
+           let challenge = state.scienceNextFieldStudy(in: .greenhouse) {
+            instruction.text = challenge.prompt
+        } else if greenhouseComplete {
+            instruction.text = "The Greenhouse study is complete. The Weather Tower path is open."
+        } else {
+            instruction.text = "Milo noticed something at the seed bench. Walk over and inspect it."
+        }
         refreshGuidanceCue()
     }
 
@@ -925,7 +932,30 @@ import LearningCore
     }
 
     func handleTap(at point: CGPoint) {
-        switch targetName(at: point) {
+        let target = targetName(at: point)
+
+        if greenhouseStage == .lit,
+           !greenhouseComplete,
+           let challenge = state.scienceNextFieldStudy(in: .greenhouse),
+           let target {
+            if challenge.choiceTargets.contains(target),
+               let stationPoint = greenhouseFieldStudyPoint(for: target) {
+                if isNear(stationPoint, radius: 145) {
+                    answerGreenhouseFieldStudy(challenge, targetName: target)
+                } else {
+                    instruction.text = "Walk to that evidence station before choosing it."
+                    let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 85))
+                    travel(to: CGPoint(x: approachX, y: 180))
+                }
+                return
+            }
+            if target != "scienceWeatherGate" && target != "scienceHome" {
+                instruction.text = challenge.prompt
+                return
+            }
+        }
+
+        switch target {
         case "scienceSeedBench":
             // The approach point is 120 horizontally and 50 vertically away:
             // its distance is exactly 130, so arrival must count as in reach.
@@ -1059,7 +1089,42 @@ import LearningCore
         renderGate()
         successFeedback(at: exitPoint)
         focusMoment(on: exitPoint, hold: 0.70)
-        instruction.text = "The pale sprout became greener in the light. Observation, prediction, test, result—the Weather Tower path opened."
+        if let challenge = state.scienceNextFieldStudy(in: .greenhouse) {
+            instruction.text = "The pale sprout became greener in the light. " + challenge.prompt
+        }
+        refreshGuidanceCue()
+    }
+
+    private func greenhouseFieldStudyPoint(for targetName: String) -> CGPoint? {
+        switch targetName {
+        case "scienceSeedBench": seedBenchPoint
+        case "scienceWaterValve": waterValvePoint
+        case "scienceSunPrism": sunPrismPoint
+        default: nil
+        }
+    }
+
+    private func answerGreenhouseFieldStudy(
+        _ challenge: ScienceFieldStudyChallenge,
+        targetName: String
+    ) {
+        valkyrie.pose(.interact)
+        milo.inspect(reducedMotion: reducedMotion)
+
+        let correct = state.scienceAnswerFieldStudy(challenge, targetName: targetName)
+        if correct {
+            state.audio.play("success")
+            if greenhouseComplete {
+                renderGate()
+                valkyrie.pose(.celebrate)
+                instruction.text = "Field study complete. The evidence agrees, and the Weather Tower path is open."
+            } else if let next = state.scienceNextFieldStudy(in: .greenhouse) {
+                let completed = state.scienceFieldStudyCompletedCount(in: .greenhouse)
+                instruction.text = "Evidence \(completed)/\(ScienceFieldStudyCatalog.greenhouse.count) confirmed. " + next.prompt
+            }
+        } else {
+            instruction.text = "That station does not match this evidence. Look back at what changed during the investigation."
+        }
         refreshGuidanceCue()
     }
 
@@ -1090,12 +1155,21 @@ import LearningCore
                 (["scienceWeatherGate"], 0.36)
             ]
         case .lit:
-            groups = [
-                (["scienceSeedBench"], 0.74),
-                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.74),
-                (["scienceSunPrism", "sciencePrismBeam"], 0.74),
-                (["scienceWeatherGate"], 1.0)
-            ]
+            if greenhouseComplete {
+                groups = [
+                    (["scienceSeedBench"], 0.74),
+                    (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.74),
+                    (["scienceSunPrism", "sciencePrismBeam"], 0.74),
+                    (["scienceWeatherGate"], 1.0)
+                ]
+            } else {
+                groups = [
+                    (["scienceSeedBench"], 1.0),
+                    (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 1.0),
+                    (["scienceSunPrism", "sciencePrismBeam"], 1.0),
+                    (["scienceWeatherGate"], 0.34)
+                ]
+            }
         }
 
         for (names, alpha) in groups {
@@ -1109,6 +1183,11 @@ import LearningCore
         }
 
         guard !reducedMotion else { return }
+
+        if greenhouseStage == .lit && !greenhouseComplete {
+            focusMoment(on: CGPoint(x: 685, y: 245), hold: 0.52)
+            return
+        }
 
         let activeName: String
         let activePoint: CGPoint
@@ -1163,7 +1242,11 @@ import LearningCore
         case .watered:
             showAttentionCue(at: sunPrismPoint, tint: tint)
         case .lit:
-            showAttentionCue(at: exitPoint, tint: tint, width: 104)
+            if greenhouseComplete {
+                showAttentionCue(at: exitPoint, tint: tint, width: 104)
+            } else {
+                showAttentionCue(at: CGPoint(x: 685, y: 245), tint: tint, width: 620)
+            }
         }
     }
 
