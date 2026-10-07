@@ -99,7 +99,19 @@ import LearningCore
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleArchitecture"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloor"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloorTexture"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleUpperVault"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleVaultCornice"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloorSeal"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleStageDais"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleStageInlay"))
+        XCTAssertEqual(
+            puzzle.children.filter { $0.name?.hasPrefix("puzzleAlcove") == true }.count,
+            3
+        )
+        XCTAssertEqual(
+            puzzle.children.filter { $0.name?.hasPrefix("puzzleCrystalSconce") == true }.count,
+            4
+        )
 
         let scienceState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
