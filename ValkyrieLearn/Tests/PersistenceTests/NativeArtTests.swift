@@ -2587,6 +2587,10 @@ import LearningCore
             lively.childNode(withName: "mathWorkZoneCore")?
                 .action(forKey: "stationArrival")
         )
+        XCTAssertNotNil(
+            lively.childNode(withName: "questionPromptPlate")?
+                .action(forKey: "workOrderReveal")
+        )
 
         lively.reducedMotion = true
         lively.update(1)
@@ -2626,6 +2630,10 @@ import LearningCore
         XCTAssertNil(
             calm.childNode(withName: "mathWorkZoneCore")?
                 .action(forKey: "stationArrival")
+        )
+        XCTAssertNil(
+            calm.childNode(withName: "questionPromptPlate")?
+                .action(forKey: "workOrderReveal")
         )
     }
 
