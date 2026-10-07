@@ -615,8 +615,8 @@ import LearningCore
             control2: CGPoint(x: 990, y: 130)
         )
         let groundRoots = SKShapeNode(path: groundRootsPath)
-        groundRoots.strokeColor = UIColor(red: 0.30, green: 0.45, blue: 0.20, alpha: 0.74)
-        groundRoots.lineWidth = 13
+        groundRoots.strokeColor = UIColor(red: 0.34, green: 0.24, blue: 0.13, alpha: 0.58)
+        groundRoots.lineWidth = 9
         groundRoots.name = "decorativeStoryGroundRoots"
         rootNetwork.addChild(groundRoots)
 
@@ -628,8 +628,8 @@ import LearningCore
             control2: CGPoint(x: 835, y: 425)
         )
         let memoryBranch = SKShapeNode(path: memoryBranchPath)
-        memoryBranch.strokeColor = UIColor(red: 0.31, green: 0.48, blue: 0.24, alpha: 0.94)
-        memoryBranch.lineWidth = 15
+        memoryBranch.strokeColor = UIColor(red: 0.38, green: 0.27, blue: 0.14, alpha: 0.88)
+        memoryBranch.lineWidth = 12
         memoryBranch.name = "storyMemoryBranch"
         memoryBranch.zPosition = 470
         addChild(memoryBranch)
@@ -649,9 +649,9 @@ import LearningCore
         archPath.closeSubpath()
 
         let hollow = SKShapeNode(path: archPath)
-        hollow.fillColor = UIColor(red: 0.18, green: 0.12, blue: 0.16, alpha: 0.68)
-        hollow.strokeColor = UIColor(red: 0.35, green: 0.50, blue: 0.24, alpha: 0.95)
-        hollow.lineWidth = 13
+        hollow.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.12, alpha: 0.18)
+        hollow.strokeColor = UIColor(red: 0.38, green: 0.25, blue: 0.13, alpha: 0.88)
+        hollow.lineWidth = 11
         hollow.name = "storyHollow"
         hollow.zPosition = 330
         addChild(hollow)
@@ -671,9 +671,9 @@ import LearningCore
         openingPath.closeSubpath()
 
         let inner = SKShapeNode(path: openingPath)
-        inner.fillColor = UIColor(red: 0.06, green: 0.055, blue: 0.11, alpha: 0.94)
-        inner.strokeColor = UIColor(red: 0.57, green: 0.42, blue: 0.23, alpha: 0.82)
-        inner.lineWidth = 5
+        inner.fillColor = UIColor(red: 0.06, green: 0.055, blue: 0.11, alpha: 0.28)
+        inner.strokeColor = UIColor(red: 0.57, green: 0.42, blue: 0.23, alpha: 0.58)
+        inner.lineWidth = 4
         inner.name = "storyHollow"
         inner.zPosition = 1
         hollow.addChild(inner)
@@ -687,6 +687,43 @@ import LearningCore
         doorGlow.name = "storyHollowDoorGlow"
         doorGlow.zPosition = 345
         addChild(doorGlow)
+
+        let hollowVinePath = CGMutablePath()
+        hollowVinePath.move(to: CGPoint(x: 925, y: 205))
+        hollowVinePath.addCurve(
+            to: CGPoint(x: 1035, y: 535),
+            control1: CGPoint(x: 915, y: 390),
+            control2: CGPoint(x: 945, y: 520)
+        )
+        hollowVinePath.addCurve(
+            to: CGPoint(x: 1145, y: 205),
+            control1: CGPoint(x: 1125, y: 520),
+            control2: CGPoint(x: 1155, y: 390)
+        )
+        let hollowVine = SKShapeNode(path: hollowVinePath)
+        hollowVine.fillColor = .clear
+        hollowVine.strokeColor = UIColor(red: 0.35, green: 0.58, blue: 0.24, alpha: 0.82)
+        hollowVine.lineWidth = 7
+        hollowVine.name = "storyHollowVine"
+        hollowVine.zPosition = 365
+        addChild(hollowVine)
+
+        for (index, point) in [
+            CGPoint(x: 938, y: 355),
+            CGPoint(x: 980, y: 485),
+            CGPoint(x: 1090, y: 485),
+            CGPoint(x: 1130, y: 350)
+        ].enumerated() {
+            let leaf = SKShapeNode(ellipseOf: CGSize(width: 30, height: 14))
+            leaf.position = point
+            leaf.zRotation = index < 2 ? 0.55 : -0.55
+            leaf.fillColor = UIColor(red: 0.47, green: 0.68, blue: 0.30, alpha: 0.78)
+            leaf.strokeColor = UIColor(red: 0.81, green: 0.77, blue: 0.35, alpha: 0.28)
+            leaf.lineWidth = 1.5
+            leaf.name = "decorativeStoryHollowLeaf"
+            leaf.zPosition = 370
+            addChild(leaf)
+        }
 
         for (index, x) in [CGFloat(936), CGFloat(1134)].enumerated() {
             let trunk = SKShapeNode(rectOf: CGSize(width: 34, height: 270), cornerRadius: 15)
@@ -712,7 +749,7 @@ import LearningCore
         seed.strokeColor = UIColor(red: 1.0, green: 0.96, blue: 0.64, alpha: 1)
         seed.lineWidth = 4
         seed.glowWidth = 3
-        seed.position = CGPoint(x: 705, y: 270)
+        seed.position = CGPoint(x: 825, y: 270)
         seed.zRotation = -0.16
         seed.name = "wordSeed"
         seed.zPosition = 505
@@ -721,21 +758,44 @@ import LearningCore
         let stem = SKShapeNode(rectOf: CGSize(width: 11, height: 105), cornerRadius: 5)
         stem.fillColor = UIColor(red: 0.26, green: 0.50, blue: 0.27, alpha: 1)
         stem.strokeColor = .clear
-        stem.position = CGPoint(x: 705, y: 210)
+        stem.position = CGPoint(x: 825, y: 210)
         stem.name = "storyStem"
         stem.zPosition = 300
         addChild(stem)
 
         let slotPoints = [
-            CGPoint(x: 735, y: 458),
-            CGPoint(x: 855, y: 478),
-            CGPoint(x: 970, y: 470)
+            CGPoint(x: 820, y: 444),
+            CGPoint(x: 925, y: 468),
+            CGPoint(x: 1025, y: 450)
         ]
 
         for (index, point) in slotPoints.enumerated() {
-            let socket = SKShapeNode(ellipseOf: CGSize(width: 68, height: 58))
-            socket.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.30, alpha: 0.92)
-            socket.strokeColor = UIColor(red: 0.69, green: 0.62, blue: 0.40, alpha: 0.72)
+            let socketPath = CGMutablePath()
+            socketPath.move(to: CGPoint(x: 0, y: 33))
+            socketPath.addCurve(
+                to: CGPoint(x: 31, y: -3),
+                control1: CGPoint(x: 24, y: 23),
+                control2: CGPoint(x: 34, y: 10)
+            )
+            socketPath.addCurve(
+                to: CGPoint(x: 0, y: -29),
+                control1: CGPoint(x: 30, y: -20),
+                control2: CGPoint(x: 15, y: -29)
+            )
+            socketPath.addCurve(
+                to: CGPoint(x: -31, y: -3),
+                control1: CGPoint(x: -15, y: -29),
+                control2: CGPoint(x: -30, y: -20)
+            )
+            socketPath.addCurve(
+                to: CGPoint(x: 0, y: 33),
+                control1: CGPoint(x: -34, y: 10),
+                control2: CGPoint(x: -24, y: 23)
+            )
+            socketPath.closeSubpath()
+            let socket = SKShapeNode(path: socketPath)
+            socket.fillColor = UIColor(red: 0.30, green: 0.22, blue: 0.38, alpha: 0.88)
+            socket.strokeColor = UIColor(red: 0.75, green: 0.63, blue: 0.36, alpha: 0.72)
             socket.lineWidth = 3
             socket.position = point
             socket.zRotation = index == 1 ? 0.08 : (index == 0 ? -0.10 : 0.04)
@@ -758,10 +818,10 @@ import LearningCore
             addChild(sprout)
 
             let glowPath = CGMutablePath()
-            glowPath.move(to: CGPoint(x: 705, y: 260))
+            glowPath.move(to: CGPoint(x: 825, y: 260))
             glowPath.addCurve(
                 to: point,
-                control1: CGPoint(x: 720 + CGFloat(index) * 42, y: 315),
+                control1: CGPoint(x: 835 + CGFloat(index) * 30, y: 315),
                 control2: CGPoint(x: point.x - 58, y: 395)
             )
             let rootGlow = SKShapeNode(path: glowPath)
@@ -1029,9 +1089,9 @@ import LearningCore
             control2: CGPoint(x: 835, y: 425)
         )
         let branchGlow = SKShapeNode(path: branchGlowPath)
-        branchGlow.strokeColor = UIColor(red: 0.92, green: 0.72, blue: 1.0, alpha: 0.82)
-        branchGlow.lineWidth = 6
-        branchGlow.glowWidth = reducedMotion ? 0 : 10
+        branchGlow.strokeColor = UIColor(red: 1.0, green: 0.78, blue: 0.38, alpha: 0.62)
+        branchGlow.lineWidth = 4
+        branchGlow.glowWidth = reducedMotion ? 0 : 6
         branchGlow.name = "storySequencePreview"
         preview.addChild(branchGlow)
 
@@ -1200,19 +1260,44 @@ import LearningCore
         rootKnot.zPosition = -1
         node.addChild(rootKnot)
 
-        let seedStone = SKShapeNode(ellipseOf: CGSize(width: 112, height: 78))
-        seedStone.fillColor = UIColor(red: 0.37, green: 0.28, blue: 0.47, alpha: 0.98)
-        seedStone.strokeColor = UIColor(red: 0.86, green: 0.68, blue: 0.35, alpha: 0.96)
+        let seedPath = CGMutablePath()
+        seedPath.move(to: CGPoint(x: 0, y: 46))
+        seedPath.addCurve(
+            to: CGPoint(x: 54, y: -5),
+            control1: CGPoint(x: 38, y: 33),
+            control2: CGPoint(x: 58, y: 14)
+        )
+        seedPath.addCurve(
+            to: CGPoint(x: 0, y: -39),
+            control1: CGPoint(x: 48, y: -29),
+            control2: CGPoint(x: 24, y: -42)
+        )
+        seedPath.addCurve(
+            to: CGPoint(x: -54, y: -5),
+            control1: CGPoint(x: -24, y: -42),
+            control2: CGPoint(x: -48, y: -29)
+        )
+        seedPath.addCurve(
+            to: CGPoint(x: 0, y: 46),
+            control1: CGPoint(x: -58, y: 14),
+            control2: CGPoint(x: -38, y: 33)
+        )
+        seedPath.closeSubpath()
+
+        let seedStone = SKShapeNode(path: seedPath)
+        seedStone.fillColor = UIColor(red: 0.35, green: 0.27, blue: 0.44, alpha: 0.96)
+        seedStone.strokeColor = UIColor(red: 0.82, green: 0.66, blue: 0.34, alpha: 0.88)
         seedStone.lineWidth = 4
         seedStone.glowWidth = 2
-        seedStone.zRotation = index.isMultiple(of: 2) ? -0.08 : 0.08
+        seedStone.zRotation = index.isMultiple(of: 2) ? -0.07 : 0.07
         seedStone.name = "storyHollowChoice"
         node.addChild(seedStone)
 
-        let innerSeed = SKShapeNode(ellipseOf: CGSize(width: 82, height: 52))
-        innerSeed.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.34, alpha: 0.44)
-        innerSeed.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.47, alpha: 0.18)
-        innerSeed.lineWidth = 2
+        let innerSeed = SKShapeNode(ellipseOf: CGSize(width: 68, height: 42))
+        innerSeed.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.34, alpha: 0.30)
+        innerSeed.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.47, alpha: 0.12)
+        innerSeed.lineWidth = 1.5
+        innerSeed.position.y = -3
         innerSeed.name = "storyHollowChoice"
         node.addChild(innerSeed)
 
@@ -1752,9 +1837,9 @@ import LearningCore
         let path = CGMutablePath()
         path.move(to: node.position)
         path.addCurve(
-            to: CGPoint(x: 705, y: 270),
+            to: CGPoint(x: 825, y: 270),
             control1: CGPoint(x: node.position.x, y: node.position.y + 70),
-            control2: CGPoint(x: 705, y: 205)
+            control2: CGPoint(x: 825, y: 205)
         )
         path.addCurve(
             to: CGPoint(x: 1035, y: 430),
@@ -1823,10 +1908,10 @@ import LearningCore
 
         if let branch = childNode(withName: "storyMemoryBranch") as? SKShapeNode {
             branch.strokeColor = UIColor(
-                red: 0.31 + ratio * 0.18,
-                green: 0.48 + ratio * 0.22,
-                blue: 0.24,
-                alpha: 0.94
+                red: 0.38 + ratio * 0.08,
+                green: 0.27 + ratio * 0.25,
+                blue: 0.14 + ratio * 0.08,
+                alpha: 0.92
             )
             branch.glowWidth = reducedMotion ? 0 : ratio * 6
         }
@@ -1864,7 +1949,7 @@ import LearningCore
 
         if childNode(withName: "storyBloom") == nil {
             let bloomRoot = SKNode()
-            bloomRoot.position = CGPoint(x: 705, y: 338)
+            bloomRoot.position = CGPoint(x: 825, y: 338)
             bloomRoot.name = "storyBloom"
             bloomRoot.zPosition = 640
 
