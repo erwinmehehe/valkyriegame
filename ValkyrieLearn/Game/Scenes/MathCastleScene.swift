@@ -568,8 +568,9 @@ import LearningCore
         checkPlate.name = "submit"
         node.addChild(checkPlate)
 
-        let checkLabel = ArtSystem.label("CHECK", size: 12)
-        checkLabel.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1)
+        let checkLabel = ArtSystem.label("CHECK", size: 13)
+        checkLabel.fontName = "AvenirNext-Bold"
+        checkLabel.fontColor = UIColor(red: 1.0, green: 0.92, blue: 0.70, alpha: 1)
         checkLabel.name = "submit"
         checkPlate.addChild(checkLabel)
 
