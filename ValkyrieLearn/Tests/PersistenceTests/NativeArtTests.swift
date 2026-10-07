@@ -149,6 +149,40 @@ import LearningCore
         XCTAssertNotNil(science.childNode(withName: "scienceWaterBed"))
     }
 
+    func testPuzzlePalaceArchitectureMovesWithoutCompetingWithReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .sortingPedestal)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let crystal = try XCTUnwrap(
+            scene.children.first { $0.name == "puzzleCrystalFixture" }
+        )
+        let alcoveGlow = try XCTUnwrap(
+            scene.childNode(withName: "//puzzleAlcoveGlow0")
+        )
+        let floorSeal = try XCTUnwrap(scene.childNode(withName: "puzzleFloorSeal"))
+
+        XCTAssertNotNil(crystal.action(forKey: "palaceCrystalFloat"))
+        XCTAssertNotNil(alcoveGlow.action(forKey: "palaceAlcoveBreath"))
+        XCTAssertNotNil(floorSeal.action(forKey: "palaceRoomBreath"))
+        XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(crystal.action(forKey: "palaceCrystalFloat"))
+        XCTAssertNil(alcoveGlow.action(forKey: "palaceAlcoveBreath"))
+        XCTAssertNil(floorSeal.action(forKey: "palaceRoomBreath"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
+    }
+
     func testWordGardenPreservesPaintedAtlasCropsWithRetinaPreparedRaster() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
