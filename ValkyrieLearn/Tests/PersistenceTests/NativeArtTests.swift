@@ -2564,10 +2564,10 @@ import LearningCore
 
         let station = try XCTUnwrap(lively.childNode(withName: "workshop0"))
         let stationRotor = try XCTUnwrap(
-            station.childNode(withName: "//workshopGearRotor")
+            station.childNode(withName: "//decorativeWorkshopGearRotor")
         )
         let powerRotor = try XCTUnwrap(
-            lively.childNode(withName: "//castlePowerRotor")
+            lively.childNode(withName: "//decorativeCastlePowerRotor")
         )
         let environmentGear = try XCTUnwrap(
             lively.childNode(withName: "environmentGear0")
@@ -2615,10 +2615,10 @@ import LearningCore
 
         let calmRotor = try XCTUnwrap(
             calm.childNode(withName: "workshop0")?
-                .childNode(withName: "//workshopGearRotor")
+                .childNode(withName: "//decorativeWorkshopGearRotor")
         )
         let calmPowerRotor = try XCTUnwrap(
-            calm.childNode(withName: "//castlePowerRotor")
+            calm.childNode(withName: "//decorativeCastlePowerRotor")
         )
         let calmEnvironmentGear = try XCTUnwrap(
             calm.childNode(withName: "environmentGear0")
