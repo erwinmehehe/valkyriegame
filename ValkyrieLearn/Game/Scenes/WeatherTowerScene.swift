@@ -677,6 +677,17 @@ import LearningCore
                     travel(to: CGPoint(x: creatureGatePoint.x - 75, y: 180))
                 }
             } else {
+                errorFeedback()
+                switch weatherStage {
+                case .arrive:
+                    focusMoment(on: morningPoint)
+                case .morningObserved:
+                    focusMoment(on: afternoonPoint)
+                case .afternoonObserved:
+                    focusMoment(on: forecastPoint)
+                case .complete:
+                    focusMoment(on: creatureGatePoint)
+                }
                 instruction.text = "The cloud lock is still closed. Compare both observations and set the forecast vane."
             }
 
@@ -700,6 +711,8 @@ import LearningCore
 
     private func observeAfternoon() {
         guard weatherStage != .arrive else {
+            errorFeedback()
+            focusMoment(on: morningPoint)
             instruction.text = "Observe the morning flag first so we have something to compare."
             return
         }
@@ -714,6 +727,15 @@ import LearningCore
 
     private func chooseForecast(_ choice: ForecastChoice) {
         guard weatherStage == .afternoonObserved || weatherStage == .complete else {
+            errorFeedback()
+            switch weatherStage {
+            case .arrive:
+                focusMoment(on: morningPoint)
+            case .morningObserved:
+                focusMoment(on: afternoonPoint)
+            case .afternoonObserved, .complete:
+                focusMoment(on: forecastPoint)
+            }
             instruction.text = "The forecast vane needs two observations first."
             return
         }
