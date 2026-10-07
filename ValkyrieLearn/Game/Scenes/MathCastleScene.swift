@@ -287,6 +287,10 @@ import LearningCore
                 halo?.removeAction(forKey: "stationFlash")
             }
         }
+        if reducedMotion {
+            let hangers = children.filter { $0.name == "questionPromptHanger" }
+            resetWorkOrderPresentation(hangers)
+        }
         if let runtime = state.runtime {
             updateWorkshopStationFocus(
                 mechanicID: runtime.encounter.mechanicID,
