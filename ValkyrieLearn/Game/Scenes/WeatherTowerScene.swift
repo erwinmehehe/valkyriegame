@@ -23,6 +23,7 @@ import LearningCore
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
+    private var lastWeatherKineticReducedMotion: Bool?
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
@@ -626,6 +627,10 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         milo.zPosition = 1000 - milo.position.y
+
+        if lastWeatherKineticReducedMotion != reducedMotion {
+            applyWeatherFocusState()
+        }
     }
 
     override func willLeave() {
@@ -692,6 +697,7 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceObserveMorningWeather()
+        playWeatherStepReaction(at: morningPoint)
         instruction.text = "Morning: cloudy with rain. Milo says to compare another observation before forecasting."
         refreshGuidanceCue()
     }
@@ -704,6 +710,7 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceObserveAfternoonWeather()
+        playWeatherStepReaction(at: afternoonPoint)
         instruction.text = "Afternoon: cloudy with rain again. The same condition appeared twice. What is likely next?"
         refreshGuidanceCue()
     }
@@ -721,6 +728,7 @@ import LearningCore
         renderCreatureGate()
 
         if choice == .rain {
+            playWeatherStepReaction(at: forecastPoint)
             state.audio.play("success")
             instruction.text = "Both observations were rainy, so rain is a reasonable next prediction—not a certainty. The Creature Grove route opened."
         } else {
@@ -730,7 +738,73 @@ import LearningCore
         refreshGuidanceCue()
     }
 
+    private func applyWeatherFocusState() {
+        lastWeatherKineticReducedMotion = reducedMotion
+
+        func setGroup(_ name: String, alpha: CGFloat, active: Bool) {
+            for node in children where node.name == name {
+                node.removeAction(forKey: "weatherActiveBreath")
+                node.removeAction(forKey: "weatherActiveSpin")
+                node.alpha = alpha
+                node.setScale(1)
+
+                guard active, !reducedMotion else { continue }
+
+                if name == "scienceForecastBase" {
+                    node.run(
+                        .repeatForever(
+                            .sequence([
+                                .scale(to: 1.025, duration: 0.68),
+                                .scale(to: 1.0, duration: 0.68)
+                            ])
+                        ),
+                        withKey: "weatherActiveBreath"
+                    )
+                } else {
+                    node.run(
+                        .repeatForever(
+                            .sequence([
+                                .fadeAlpha(to: max(0.72, alpha * 0.78), duration: 0.72),
+                                .fadeAlpha(to: alpha, duration: 0.72)
+                            ])
+                        ),
+                        withKey: "weatherActiveBreath"
+                    )
+                }
+            }
+        }
+
+        switch weatherStage {
+        case .arrive:
+            setGroup("scienceMorningWeather", alpha: 1.0, active: true)
+            setGroup("scienceAfternoonWeather", alpha: 0.42, active: false)
+            setGroup("scienceForecastBase", alpha: 0.32, active: false)
+            setGroup("scienceCreatureGate", alpha: 0.34, active: false)
+        case .morningObserved:
+            setGroup("scienceMorningWeather", alpha: 0.72, active: false)
+            setGroup("scienceAfternoonWeather", alpha: 1.0, active: true)
+            setGroup("scienceForecastBase", alpha: 0.34, active: false)
+            setGroup("scienceCreatureGate", alpha: 0.34, active: false)
+        case .afternoonObserved:
+            setGroup("scienceMorningWeather", alpha: 0.72, active: false)
+            setGroup("scienceAfternoonWeather", alpha: 0.72, active: false)
+            setGroup("scienceForecastBase", alpha: 1.0, active: true)
+            setGroup("scienceCreatureGate", alpha: 0.36, active: false)
+        case .complete:
+            setGroup("scienceMorningWeather", alpha: 0.74, active: false)
+            setGroup("scienceAfternoonWeather", alpha: 0.74, active: false)
+            setGroup("scienceForecastBase", alpha: 0.74, active: false)
+            setGroup("scienceCreatureGate", alpha: 1.0, active: true)
+        }
+    }
+
+    private func playWeatherStepReaction(at point: CGPoint) {
+        guard !reducedMotion else { return }
+        focusMoment(on: point, hold: 0.62)
+    }
+
     private func refreshGuidanceCue() {
+        applyWeatherFocusState()
         let tint = UIColor(red: 0.62, green: 0.87, blue: 1.0, alpha: 1)
         switch weatherStage {
         case .arrive:
