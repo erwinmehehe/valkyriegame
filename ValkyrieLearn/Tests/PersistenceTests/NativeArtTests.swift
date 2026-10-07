@@ -2598,6 +2598,40 @@ import LearningCore
         XCTAssertGreaterThanOrEqual(pipGear.calculateAccumulatedFrame().height, 64)
     }
 
+    func testStoryTreeLivingHubMotionRespectsReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let gardenRim = try XCTUnwrap(
+            scene.childNode(withName: "//storyMarkerRim_wordGarden")
+        )
+        let castleRim = try XCTUnwrap(
+            scene.childNode(withName: "//storyMarkerRim_castle")
+        )
+        let storyLight = try XCTUnwrap(scene.childNode(withName: "storyLight"))
+
+        XCTAssertNotNil(gardenRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNotNil(castleRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNotNil(storyLight.action(forKey: "hubLightBreath"))
+
+        scene.handleTap(at: CGPoint(x: 150, y: 430))
+        XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(gardenRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNil(castleRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNil(storyLight.action(forKey: "hubLightBreath"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
+    }
+
     func testPuzzlePalaceLanternPersistsAndMovesOnStoryTree() throws {
         let container = try LearningStore.container(inMemory: true)
         let store = try LearningStore(context: ModelContext(container))
