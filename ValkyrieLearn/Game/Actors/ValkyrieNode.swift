@@ -141,13 +141,17 @@ import SpriteKit
             guard !reducedMotion else { bodyNode.setScale(1); bodyNode.position = .zero; return }
             let action: SKAction
             switch pose {
-            case .walk: action = .sequence([.moveBy(x: 0, y: 5, duration: 0.12), .moveBy(x: 0, y: -5, duration: 0.12)])
-            case .interact: action = .sequence([.rotate(toAngle: -0.12, duration: 0.15), .rotate(toAngle: 0, duration: 0.15)])
-            case .celebrate: action = .sequence([.scale(to: 1.06, duration: 0.2), .scale(to: 1, duration: 0.2)])
-            case .react: action = .sequence([.rotate(toAngle: 0.1, duration: 0.15), .rotate(toAngle: 0, duration: 0.15)])
-            case .idle: action = .sequence([.scaleY(to: 1.015, duration: 1), .scaleY(to: 1, duration: 1)])
+            case .walk: action = companionStep()
+            case .interact:
+                action = .sequence([
+                    eased(.rotate(toAngle: -0.10, duration: 0.14)),
+                    eased(.rotate(toAngle: 0, duration: 0.18))
+                ])
+            case .celebrate: action = celebrationMotion()
+            case .react: action = reactionMotion()
+            case .idle: action = idleMotion()
             }
-            bodyNode.run(.repeatForever(action), withKey: "pose")
+            bodyNode.run(action, withKey: "pose")
         }
     }
 
@@ -222,33 +226,30 @@ import SpriteKit
     }
 
     private func celebrationMotion() -> SKAction {
-        let rise: CGFloat
-        let tilt: CGFloat
-        let up: TimeInterval
-        let down: TimeInterval
+        let profile: (rise: CGFloat, tilt: CGFloat, up: TimeInterval, down: TimeInterval)
         switch character {
-        case "Valkyrie": (rise, tilt, up, down) = (18, -0.032, 0.19, 0.28)
-        case "Milo": (rise, tilt, up, down) = (13, -0.065, 0.13, 0.18)
-        case "Tiko": (rise, tilt, up, down) = (10, -0.038, 0.18, 0.24)
-        case "Pip": (rise, tilt, up, down) = (11, -0.080, 0.12, 0.17)
-        case "Lumi": (rise, tilt, up, down) = (15, -0.020, 0.24, 0.30)
-        default: (rise, tilt, up, down) = (14, -0.04, 0.18, 0.24)
+        case "Valkyrie": profile = (18, -0.032, 0.19, 0.28)
+        case "Milo": profile = (13, -0.065, 0.13, 0.18)
+        case "Tiko": profile = (10, -0.038, 0.18, 0.24)
+        case "Pip": profile = (11, -0.080, 0.12, 0.17)
+        case "Lumi": profile = (15, -0.020, 0.24, 0.30)
+        default: profile = (14, -0.04, 0.18, 0.24)
         }
 
         var actions: [SKAction] = [
             .group([
-                eased(.moveBy(x: 0, y: rise, duration: up)),
-                eased(.rotate(toAngle: tilt, duration: up))
+                eased(.moveBy(x: 0, y: profile.rise, duration: profile.up)),
+                eased(.rotate(toAngle: profile.tilt, duration: profile.up))
             ]),
             .group([
-                eased(.moveBy(x: 0, y: -rise, duration: down)),
-                eased(.rotate(toAngle: -tilt * 0.45, duration: down))
+                eased(.moveBy(x: 0, y: -profile.rise, duration: profile.down)),
+                eased(.rotate(toAngle: -profile.tilt * 0.45, duration: profile.down))
             ])
         ]
         if character == "Pip" || character == "Milo" {
             actions.append(.group([
                 eased(.moveBy(x: 0, y: 5, duration: 0.10)),
-                eased(.rotate(toAngle: tilt * 0.55, duration: 0.10))
+                eased(.rotate(toAngle: profile.tilt * 0.55, duration: 0.10))
             ]))
             actions.append(.group([
                 eased(.moveBy(x: 0, y: -5, duration: 0.12)),
@@ -261,21 +262,19 @@ import SpriteKit
     }
 
     private func reactionMotion() -> SKAction {
-        let first: CGFloat
-        let second: CGFloat
-        let beat: TimeInterval
+        let profile: (first: CGFloat, second: CGFloat, beat: TimeInterval)
         switch character {
-        case "Valkyrie": (first, second, beat) = (-0.032, 0.018, 0.13)
-        case "Milo": (first, second, beat) = (-0.075, 0.040, 0.10)
-        case "Tiko": (first, second, beat) = (-0.038, 0.020, 0.16)
-        case "Pip": (first, second, beat) = (-0.095, 0.070, 0.10)
-        case "Lumi": (first, second, beat) = (-0.025, 0.012, 0.18)
-        default: (first, second, beat) = (-0.04, 0.025, 0.12)
+        case "Valkyrie": profile = (-0.032, 0.018, 0.13)
+        case "Milo": profile = (-0.075, 0.040, 0.10)
+        case "Tiko": profile = (-0.038, 0.020, 0.16)
+        case "Pip": profile = (-0.095, 0.070, 0.10)
+        case "Lumi": profile = (-0.025, 0.012, 0.18)
+        default: profile = (-0.04, 0.025, 0.12)
         }
         return .sequence([
-            eased(.rotate(toAngle: first, duration: beat)),
-            eased(.rotate(toAngle: second, duration: beat)),
-            eased(.rotate(toAngle: 0, duration: beat + 0.04))
+            eased(.rotate(toAngle: profile.first, duration: profile.beat)),
+            eased(.rotate(toAngle: profile.second, duration: profile.beat)),
+            eased(.rotate(toAngle: 0, duration: profile.beat + 0.04))
         ])
     }
 
