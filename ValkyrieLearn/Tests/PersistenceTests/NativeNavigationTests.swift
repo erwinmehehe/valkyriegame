@@ -150,6 +150,8 @@ import LearningCore
             let plate = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
             XCTAssertTrue(plate.calculateAccumulatedFrame().contains(title.calculateAccumulatedFrame()),
                           "\(world) title must fit in its themed plate.")
+            XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(title.calculateAccumulatedFrame()),
+                           "World emblem must not cover its title text.")
             XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(scene.layout.interactionStage))
             XCTAssertNotEqual(scene.targetName(at: emblem.position), "decorativeWorldEmblem")
             scene.willLeave()
