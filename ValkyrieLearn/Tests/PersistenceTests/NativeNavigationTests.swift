@@ -184,10 +184,21 @@ import LearningCore
             (.storyTree, "✦", { StoryTreeScene(state: $0) }),
             (.mathCastle, "◆", { MathCastleScene(state: $0) }),
             (.wordGarden, "✿", { WordGardenScene(state: $0) }),
+            (.sunmillCrossing, "✿", { WordGardenScene(state: $0) }),
+            (.storyHollow, "✿", { WordGardenScene(state: $0) }),
             (.scienceLab, "⚗", { ScienceLabScene(state: $0) }),
             (.scienceWeatherTower, "⚗", { WeatherTowerScene(state: $0) }),
             (.scienceCreatureGrove, "⚗", { CreatureGroveScene(state: $0) }),
-            (.puzzlePalace, "◈", { PuzzlePalaceScene(state: $0) })
+            (.puzzlePalace, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.memoryBridge, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.stopGoOrbs, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.sortingPedestal, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.resortVault, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.mirrorHall, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.pathTiles, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.commandGears, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.bugLantern, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.bugLanternRepair, "◈", { PuzzlePalaceScene(state: $0) })
         ]
         for (world, symbol, makeScene) in cases {
             state.travel(to: world)

@@ -103,6 +103,32 @@ import LearningCore
             puzzle.childNode(withName: "puzzleGate"),
             "The polished Rune Gate remains native SpriteKit structure even without the old stage dais."
         )
+        XCTAssertNil(
+            puzzle.childNode(withName: "puzzleUpperVault"),
+            "Rune Gate keeps its open portal composition instead of inheriting the denser shared hall."
+        )
+
+        let palaceDepthState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        palaceDepthState.travel(to: .sortingPedestal)
+        let palaceDepth = PuzzlePalaceScene(state: palaceDepthState)
+        palaceDepth.reducedMotion = true
+        palaceDepth.didMove(to: SKView())
+        defer { palaceDepth.willLeave() }
+
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleUpperVault"))
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleVaultCornice"))
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleFloorSeal"))
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleStageInlay"))
+        XCTAssertEqual(
+            palaceDepth.children.filter { $0.name?.hasPrefix("puzzleAlcove") == true }.count,
+            3
+        )
+        XCTAssertEqual(
+            palaceDepth.children.filter { $0.name?.hasPrefix("puzzleCrystalSconce") == true }.count,
+            4
+        )
 
         let scienceState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
@@ -2795,7 +2821,18 @@ import LearningCore
             "Long Puzzle Palace destination titles must remain inside the shared title plaque."
         )
         XCTAssertGreaterThanOrEqual(backdropFrame.minX, 80)
-        XCTAssertLessThanOrEqual(backdropFrame.maxX, 620)
+        XCTAssertLessThanOrEqual(backdropFrame.maxX, 520)
+        XCTAssertEqual(title.fontName, "Georgia-Bold")
+        XCTAssertLessThanOrEqual(title.fontSize, 20)
+        let guidance = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+        let guidanceBackdrop = try XCTUnwrap(scene.childNode(withName: "instructionBackdrop"))
+        XCTAssertEqual(guidance.fontName, "AvenirNext-Medium")
+        XCTAssertLessThanOrEqual(guidance.fontSize, 18)
+        XCTAssertLessThanOrEqual(guidance.preferredMaxLayoutWidth, 620)
+        XCTAssertLessThanOrEqual(guidanceBackdrop.calculateAccumulatedFrame().width, 650)
+        let home = try XCTUnwrap(scene.childNode(withName: "home"))
+        XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().width, 60)
+        XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().height, 60)
         XCTAssertEqual(scene.valkyrie.xScale, 0.56, accuracy: 0.001)
         XCTAssertEqual(scene.tiko.xScale, 0.92, accuracy: 0.001)
     }
