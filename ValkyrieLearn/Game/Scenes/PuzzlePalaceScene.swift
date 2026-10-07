@@ -283,22 +283,73 @@ import LearningCore
     }
 
     private func applyPuzzleHUDPolish() {
-        if let titleBackdrop = childNode(withName: "worldTitleBackdrop") {
-            // Keep the shared plaque wide enough for long Puzzle Palace destinations.
-            // The instruction plaque carries the compact HUD treatment below.
-            titleBackdrop.xScale = 1.0
-        }
+        childNode(withName: "worldTitleBackdrop")?.removeFromParent()
+        childNode(withName: "worldTitle")?.removeFromParent()
+
+        let titleWidth = min(
+            CGFloat(400),
+            max(CGFloat(330), CGFloat(worldTitle.count) * 9.4 + 58)
+        )
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: titleWidth, height: 42),
+            fill: UIColor(red: 0.045, green: 0.055, blue: 0.13, alpha: 0.90),
+            stroke: UIColor(red: 0.72, green: 0.58, blue: 0.98, alpha: 0.54),
+            radius: 15
+        )
+        titlePlate.position = CGPoint(x: 100 + titleWidth / 2, y: 672)
+        titlePlate.zPosition = 1988
+        titlePlate.name = "worldTitleBackdrop"
+        addChild(titlePlate)
+
+        let title = ArtSystem.label(worldTitle, size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.82, alpha: 1)
+        title.horizontalAlignmentMode = .left
+        title.position = CGPoint(x: 115, y: 672)
+        title.zPosition = 2000
+        title.name = "worldTitle"
+        addChild(title)
 
         if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
-            instructionBackdrop.xScale = 0.72
+            instructionBackdrop.xScale = 0.65
+            instructionBackdrop.yScale = 0.80
             instructionBackdrop.position = CGPoint(x: 735, y: 46)
-            instructionBackdrop.alpha = 0.92
+            instructionBackdrop.alpha = 0.90
         }
 
         instruction.position = CGPoint(x: 735, y: 46)
-        instruction.fontSize = 19
-        instruction.preferredMaxLayoutWidth = 700
+        instruction.fontName = "AvenirNext-Medium"
+        instruction.fontSize = 18
+        instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
+        instruction.preferredMaxLayoutWidth = 620
         instruction.numberOfLines = 2
+    }
+
+    private func buildPuzzleHomeControl() {
+        let root = SKNode()
+        root.name = "home"
+        root.position = CGPoint(x: 52, y: 672)
+        root.zPosition = 2100
+
+        let medallion = ArtSystem.medallion(
+            radius: 22,
+            fill: UIColor(red: 0.05, green: 0.055, blue: 0.14, alpha: 0.94),
+            stroke: UIColor(red: 0.72, green: 0.58, blue: 0.98, alpha: 0.50),
+            glow: reducedMotion ? 0 : 1
+        )
+        medallion.name = "home"
+        medallion.addChild(ArtSystem.label("‹", size: 22))
+        root.addChild(medallion)
+
+        let hit = SKShapeNode(circleOfRadius: 30)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = "home"
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Back")
+        addChild(root)
     }
 
     override func buildWorld() {
@@ -316,8 +367,7 @@ import LearningCore
             addChild(shade)
         }
 
-        let home = worldControl("⌂", name: "home", at: CGPoint(x: 52, y: 669), radius: 26)
-        home.zPosition = 2100
+        buildPuzzleHomeControl()
 
         switch place {
         case .runeGate:
