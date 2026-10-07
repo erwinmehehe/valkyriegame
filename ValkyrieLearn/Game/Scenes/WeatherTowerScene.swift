@@ -23,6 +23,7 @@ import LearningCore
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
+    private var lastScienceKineticReducedMotion: Bool?
 
     override func didMove(to view: SKView) {
         prepareAdaptiveLandscapeCanvas(for: view)
@@ -703,6 +704,9 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         milo.zPosition = 1000 - milo.position.y
+        if lastScienceKineticReducedMotion != reducedMotion {
+            applyWeatherFocusState()
+        }
     }
 
     override func willLeave() {
@@ -838,40 +842,81 @@ import LearningCore
     }
 
     private func applyWeatherFocusState() {
-        func setAlpha(_ names: Set<String>, _ alpha: CGFloat) {
+        lastScienceKineticReducedMotion = reducedMotion
+
+        let groups: [(Set<String>, CGFloat)]
+        switch weatherStage {
+        case .arrive:
+            groups = [
+                (["scienceMorningWeather"], 1.0),
+                (["scienceAfternoonWeather"], 0.42),
+                (["scienceForecastBase"], 0.30),
+                (["scienceCreatureGate"], 0.34)
+            ]
+        case .morningObserved:
+            groups = [
+                (["scienceMorningWeather"], 0.72),
+                (["scienceAfternoonWeather"], 1.0),
+                (["scienceForecastBase"], 0.34),
+                (["scienceCreatureGate"], 0.34)
+            ]
+        case .afternoonObserved:
+            groups = [
+                (["scienceMorningWeather"], 0.72),
+                (["scienceAfternoonWeather"], 0.72),
+                (["scienceForecastBase"], 1.0),
+                (["scienceCreatureGate"], 0.36)
+            ]
+        case .complete:
+            groups = [
+                (["scienceMorningWeather"], 0.74),
+                (["scienceAfternoonWeather"], 0.74),
+                (["scienceForecastBase"], 0.74),
+                (["scienceCreatureGate"], 1.0)
+            ]
+        }
+
+        for (names, alpha) in groups {
             for node in children {
                 guard let name = node.name, names.contains(name) else { continue }
                 node.alpha = alpha
+                node.removeAction(forKey: "scienceFocusPulse")
+                node.setScale(1)
             }
         }
 
-        let morningNames: Set<String> = ["scienceMorningWeather"]
-        let afternoonNames: Set<String> = ["scienceAfternoonWeather"]
-        let forecastNames: Set<String> = ["scienceForecastBase"]
-        let gateNames: Set<String> = ["scienceCreatureGate"]
+        guard !reducedMotion else { return }
 
+        let activeName: String
+        let activePoint: CGPoint
         switch weatherStage {
         case .arrive:
-            setAlpha(morningNames, 1.0)
-            setAlpha(afternoonNames, 0.46)
-            setAlpha(forecastNames, 0.30)
-            setAlpha(gateNames, 0.34)
+            activeName = "scienceMorningWeather"
+            activePoint = morningPoint
         case .morningObserved:
-            setAlpha(morningNames, 0.72)
-            setAlpha(afternoonNames, 1.0)
-            setAlpha(forecastNames, 0.34)
-            setAlpha(gateNames, 0.34)
+            activeName = "scienceAfternoonWeather"
+            activePoint = afternoonPoint
         case .afternoonObserved:
-            setAlpha(morningNames, 0.72)
-            setAlpha(afternoonNames, 0.72)
-            setAlpha(forecastNames, 1.0)
-            setAlpha(gateNames, 0.36)
+            activeName = "scienceForecastBase"
+            activePoint = forecastPoint
         case .complete:
-            setAlpha(morningNames, 0.74)
-            setAlpha(afternoonNames, 0.74)
-            setAlpha(forecastNames, 0.74)
-            setAlpha(gateNames, 1.0)
+            activeName = "scienceCreatureGate"
+            activePoint = creatureGatePoint
         }
+
+        for node in children where node.name == activeName {
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .scale(to: 1.035, duration: 0.72),
+                        .scale(to: 1.0, duration: 0.72)
+                    ])
+                ),
+                withKey: "scienceFocusPulse"
+            )
+        }
+
+        focusMoment(on: activePoint, hold: 0.52)
     }
 
     private func refreshGuidanceCue() {

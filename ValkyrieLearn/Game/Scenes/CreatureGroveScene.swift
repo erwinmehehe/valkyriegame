@@ -1016,18 +1016,26 @@ import LearningCore
 
     private func refreshGuidanceCue() {
         let tint = UIColor(red: 0.66, green: 0.91, blue: 0.52, alpha: 1)
+        let focusPoint: CGPoint
         switch groveStage {
         case .arrive:
+            focusPoint = duckPoint
             showAttentionCue(at: duckPoint, tint: tint)
         case .animalObserved:
+            focusPoint = habitatPoint
             showAttentionCue(at: habitatPoint, tint: tint, width: 154)
         case .habitatMatched:
+            focusPoint = feetPoint
             showAttentionCue(at: feetPoint, tint: tint)
         case .bodyPartObserved:
+            focusPoint = comparePoint
             showAttentionCue(at: comparePoint, tint: tint, width: 150)
         case .complete:
+            focusPoint = finalePoint
             showAttentionCue(at: finalePoint, tint: tint, width: 102)
         }
+
+        focusMoment(on: focusPoint, hold: 0.50)
     }
 
 }
