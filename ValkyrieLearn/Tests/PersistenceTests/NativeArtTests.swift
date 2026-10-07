@@ -2552,6 +2552,75 @@ import LearningCore
         XCTAssertNil(calm.childNode(withName: "successBurst"))
     }
 
+    func testMathCastleMachineryFeelsAliveAndRespectsReducedMotion() throws {
+        let livelyState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(livelyState.startWorkshop(MathFoundation.workshopExamples[0]))
+        let lively = MathCastleScene(state: livelyState)
+        lively.reducedMotion = false
+        lively.didMove(to: SKView())
+        defer { lively.willLeave() }
+
+        let station = try XCTUnwrap(lively.childNode(withName: "workshop0"))
+        let stationRotor = try XCTUnwrap(
+            station.childNode(withName: "//workshopGearRotor")
+        )
+        let powerRotor = try XCTUnwrap(
+            lively.childNode(withName: "//castlePowerRotor")
+        )
+        let environmentGear = try XCTUnwrap(
+            lively.childNode(withName: "environmentGear0")
+        )
+
+        XCTAssertNotNil(stationRotor.action(forKey: "idleSpin"))
+        XCTAssertNotNil(powerRotor.action(forKey: "powerIdleSpin"))
+        XCTAssertNotNil(environmentGear.action(forKey: "ambientSpin"))
+
+        lively.handleTap(at: CGPoint(x: 140, y: 548))
+        XCTAssertNotNil(stationRotor.action(forKey: "stationKick"))
+
+        lively.valkyrie.position = CGPoint(x: 490, y: 175)
+        lively.handleTap(at: CGPoint(x: 830, y: 265))
+        XCTAssertNotNil(lively.camera?.action(forKey: "focus"))
+        XCTAssertNotNil(
+            lively.childNode(withName: "mathWorkZoneCore")?
+                .action(forKey: "stationArrival")
+        )
+
+        let calmState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(calmState.startWorkshop(MathFoundation.workshopExamples[0]))
+        let calm = MathCastleScene(state: calmState)
+        calm.reducedMotion = true
+        calm.didMove(to: SKView())
+        defer { calm.willLeave() }
+
+        let calmRotor = try XCTUnwrap(
+            calm.childNode(withName: "workshop0")?
+                .childNode(withName: "//workshopGearRotor")
+        )
+        let calmPowerRotor = try XCTUnwrap(
+            calm.childNode(withName: "//castlePowerRotor")
+        )
+        let calmEnvironmentGear = try XCTUnwrap(
+            calm.childNode(withName: "environmentGear0")
+        )
+
+        XCTAssertNil(calmRotor.action(forKey: "idleSpin"))
+        XCTAssertNil(calmPowerRotor.action(forKey: "powerIdleSpin"))
+        XCTAssertNil(calmEnvironmentGear.action(forKey: "ambientSpin"))
+
+        calm.valkyrie.position = CGPoint(x: 490, y: 175)
+        calm.handleTap(at: CGPoint(x: 830, y: 265))
+        XCTAssertNil(calm.camera?.action(forKey: "focus"))
+        XCTAssertNil(
+            calm.childNode(withName: "mathWorkZoneCore")?
+                .action(forKey: "stationArrival")
+        )
+    }
+
     func testSharedHUDAndPromptTextStayInsideSafeDesignBounds() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
