@@ -440,10 +440,10 @@ struct AdventureSceneLayout {
 
     private func playSuccessBurst(at point: CGPoint) {
         guard !reducedMotion else { return }
-        childNode(withName: "successBurst")?.removeFromParent()
+        childNode(withName: "decorativeSuccessBurst")?.removeFromParent()
 
         let root = SKNode()
-        root.name = "successBurst"
+        root.name = "decorativeSuccessBurst"
         root.position = point
         root.zPosition = 1850
         root.isUserInteractionEnabled = false
