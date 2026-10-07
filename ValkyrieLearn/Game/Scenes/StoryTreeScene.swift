@@ -41,7 +41,46 @@ import SpriteKit
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
+        polishStoryTreeHUD()
         pip.position = CGPoint(x: 250, y: 210)
+    }
+
+    private func polishStoryTreeHUD() {
+        childNode(withName: "worldTitleBackdrop")?.removeFromParent()
+        childNode(withName: "worldTitle")?.removeFromParent()
+
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: 340, height: 42),
+            fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
+            stroke: UIColor(red: 0.92, green: 0.72, blue: 0.34, alpha: 0.56),
+            radius: 15
+        )
+        titlePlate.position = CGPoint(x: 258, y: 672)
+        titlePlate.zPosition = 1988
+        titlePlate.name = "worldTitleBackdrop"
+        addChild(titlePlate)
+
+        let title = ArtSystem.label(worldTitle, size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
+        title.horizontalAlignmentMode = .left
+        title.position = CGPoint(x: 103, y: 672)
+        title.zPosition = 2000
+        title.name = "worldTitle"
+        addChild(title)
+
+        childNode(withName: "topVignette")?.alpha = 0.40
+
+        if let feedbackPlate = childNode(withName: "instructionBackdrop") {
+            feedbackPlate.xScale = 0.68
+            feedbackPlate.yScale = 0.80
+            feedbackPlate.position = CGPoint(x: 640, y: 44)
+        }
+        instruction.position = CGPoint(x: 640, y: 44)
+        instruction.fontName = "AvenirNext-Medium"
+        instruction.fontSize = 18
+        instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
+        instruction.preferredMaxLayoutWidth = 610
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -80,44 +119,44 @@ import SpriteKit
         // World entrances are environmental beacons, not generic navigation buttons.
         // Keep them visually offset from the painted travel route so Valkyrie never
         // stands on top of a label while approaching a destination.
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             "Word Garden",
             symbol: "✿",
             name: "wordGarden",
             at: CGPoint(x: 150, y: 430),
             tint: UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 1),
-            width: 150,
-            plaqueOffsetY: 72
+            width: 142,
+            plaqueOffsetY: 68
         )
 
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             "Puzzle Palace",
             symbol: "◈",
             name: "puzzlePalace",
             at: CGPoint(x: 505, y: 515),
             tint: UIColor(red: 0.62, green: 0.50, blue: 0.94, alpha: 1),
-            width: 168
+            width: 156
         )
 
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             "Math Castle",
             symbol: "◆",
             name: "castle",
             at: CGPoint(x: 835, y: 535),
             tint: UIColor(red: 0.95, green: 0.70, blue: 0.28, alpha: 1),
-            width: 160
+            width: 148
         )
 
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             state.scienceAdventure.groveRestored ? "Science Lab ✦" : "Science Lab",
             symbol: "⚗",
             name: "scienceLab",
             at: CGPoint(x: 705, y: 585),
             tint: UIColor(red: 0.42, green: 0.82, blue: 0.61, alpha: 1),
-            width: 164
+            width: 152
         )
 
-        _ = worldGear("✦", name: "pipWind", at: CGPoint(x: 315, y: 260), radius: 34)
+        buildPipWorkshopGear()
 
         let glow = SKShapeNode(circleOfRadius: 45)
         glow.fillColor = .init(red: 1, green: 0.82, blue: 0.3, alpha: 0.13)
@@ -161,6 +200,115 @@ import SpriteKit
         // destination beacons deliberately sit above that route, so generic
         // interaction avoidance must not push Valkyrie into the surrounding chasm.
         clearRegisteredInteractionZones()
+    }
+
+    @discardableResult
+    private func storyDestinationMarker(
+        _ title: String,
+        symbol: String,
+        name: String,
+        at point: CGPoint,
+        tint: UIColor,
+        width: CGFloat,
+        plaqueOffsetY: CGFloat = -54
+    ) -> SKNode {
+        let root = SKNode()
+        root.name = name
+        root.position = point
+        root.zPosition = 760
+
+        let halo = SKShapeNode(circleOfRadius: 29)
+        halo.fillColor = tint.withAlphaComponent(0.11)
+        halo.strokeColor = tint.withAlphaComponent(0.58)
+        halo.lineWidth = 2
+        halo.glowWidth = reducedMotion ? 0 : 6
+        halo.name = name
+        root.addChild(halo)
+
+        let medallion = ArtSystem.medallion(
+            radius: 23,
+            fill: UIColor(red: 0.05, green: 0.07, blue: 0.13, alpha: 0.88),
+            stroke: tint.withAlphaComponent(0.72),
+            glow: 0
+        )
+        medallion.name = name
+        root.addChild(medallion)
+
+        let emblem = ArtSystem.label(symbol, size: 24)
+        emblem.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
+        emblem.name = name
+        medallion.addChild(emblem)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: max(126, width), height: 38),
+            fill: UIColor(red: 0.045, green: 0.055, blue: 0.11, alpha: 0.86),
+            stroke: tint.withAlphaComponent(0.52),
+            radius: 13
+        )
+        plaque.position = CGPoint(x: 0, y: plaqueOffsetY)
+        plaque.name = name
+        plaque.userData = NSMutableDictionary(dictionary: ["destinationRole": "plaque"])
+        root.addChild(plaque)
+
+        let label = ArtSystem.label(title, size: 15)
+        label.fontName = "Georgia-Bold"
+        label.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
+        label.name = name
+        plaque.addChild(label)
+
+        let hit = SKShapeNode(circleOfRadius: 32)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = name
+        hit.zPosition = 3
+        root.addChild(hit)
+
+        makeAccessible(root, label: title)
+        addChild(root)
+        registerInteraction(root, clearance: 22)
+
+        if !reducedMotion {
+            halo.run(
+                .repeatForever(
+                    .sequence([
+                        .fadeAlpha(to: 0.54, duration: 1.3),
+                        .fadeAlpha(to: 1.0, duration: 1.3)
+                    ])
+                )
+            )
+        }
+        return root
+    }
+
+    private func buildPipWorkshopGear() {
+        let root = SKNode()
+        root.name = "pipWind"
+        root.position = CGPoint(x: 315, y: 260)
+        root.zPosition = 750
+
+        let base = SKShapeNode(ellipseOf: CGSize(width: 74, height: 28))
+        base.fillColor = UIColor(red: 0.16, green: 0.11, blue: 0.08, alpha: 0.56)
+        base.strokeColor = UIColor(red: 0.86, green: 0.63, blue: 0.26, alpha: 0.30)
+        base.lineWidth = 2
+        base.position.y = -29
+        base.name = "pipWind"
+        root.addChild(base)
+
+        let gear = ArtSystem.gear(radius: 25, symbol: "✦")
+        gear.name = "pipWind"
+        gear.zPosition = 1
+        root.addChild(gear)
+
+        let hit = SKShapeNode(circleOfRadius: 32)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = "pipWind"
+        hit.zPosition = 3
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Pip's workshop gear")
+        addChild(root)
+        registerInteraction(root, clearance: 18)
     }
 
     /// Preserve the approved Starlight Isles illustration while preparing a
