@@ -5,6 +5,32 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeScienceFlowTests: XCTestCase {
+
+    private func completeGreenhouseFieldStudy(_ scene: ScienceLabScene) {
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        scene.valkyrie.position = CGPoint(x: 850, y: 185)
+        scene.handleTap(at: CGPoint(x: 940, y: 245))
+    }
+
+    private func completeWeatherFieldStudy(_ scene: WeatherTowerScene) {
+        scene.valkyrie.position = CGPoint(x: 370, y: 180)
+        scene.handleTap(at: CGPoint(x: 470, y: 305))
+        scene.valkyrie.position = CGPoint(x: 825, y: 180)
+        scene.handleTap(at: CGPoint(x: 985, y: 282))
+    }
+
+    private func completeGroveFieldStudy(_ scene: CreatureGroveScene) {
+        scene.valkyrie.position = CGPoint(x: 610, y: 180)
+        scene.handleTap(at: CGPoint(x: 528, y: 270))
+        scene.valkyrie.position = CGPoint(x: 750, y: 180)
+        scene.handleTap(at: CGPoint(x: 840, y: 290))
+        scene.valkyrie.position = CGPoint(x: 920, y: 180)
+        scene.handleTap(at: CGPoint(x: 975, y: 285))
+    }
+
     func testStoryTreeScienceSignRoutesToGreenhouseWorld() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let scene = StoryTreeScene(state: state)
@@ -61,6 +87,8 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 850, y: 185)
         scene.handleTap(at: CGPoint(x: 940, y: 245))
         XCTAssertEqual(scene.greenhouseStage, .lit)
+        XCTAssertFalse(scene.greenhouseComplete)
+        completeGreenhouseFieldStudy(scene)
         XCTAssertTrue(scene.greenhouseComplete)
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 1145, y: 190)), "scienceWeatherGate")
         scene.handleTap(at: CGPoint(x: 1145, y: 190))
@@ -282,10 +310,40 @@ import LearningCore
 
         scene.handleTap(at: CGPoint(x: 985, y: 282))
         XCTAssertEqual(scene.selectedForecast, .rain)
-        XCTAssertTrue(scene.creatureRouteOpen)
+        XCTAssertFalse(scene.creatureRouteOpen)
         XCTAssertEqual(scene.weatherStage, .complete)
+        completeWeatherFieldStudy(scene)
+        XCTAssertTrue(scene.creatureRouteOpen)
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 1140, y: 190)), "scienceCreatureGate")
 
+        scene.willLeave()
+    }
+
+    func testWeatherFieldStudyRequiresBothCorrectRetentionChoices() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let scene = WeatherTowerScene(state: state)
+        scene.didMove(to: SKView())
+
+        scene.valkyrie.position = CGPoint(x: 370, y: 180)
+        scene.handleTap(at: CGPoint(x: 470, y: 305))
+        scene.valkyrie.position = CGPoint(x: 605, y: 180)
+        scene.handleTap(at: CGPoint(x: 700, y: 305))
+        scene.valkyrie.position = CGPoint(x: 825, y: 180)
+        scene.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertEqual(scene.weatherStage, .complete)
+        XCTAssertFalse(scene.creatureRouteOpen)
+
+        scene.valkyrie.position = CGPoint(x: 605, y: 180)
+        scene.handleTap(at: CGPoint(x: 700, y: 305))
+        XCTAssertFalse(scene.creatureRouteOpen)
+        XCTAssertEqual(state.scienceFieldStudyCompletedCount(in: .weatherTower), 0)
+
+        completeWeatherFieldStudy(scene)
+        XCTAssertTrue(scene.creatureRouteOpen)
+        XCTAssertEqual(
+            state.scienceFieldStudyCompletedCount(in: .weatherTower),
+            ScienceFieldStudyCatalog.weatherTower.count
+        )
         scene.willLeave()
     }
 
@@ -346,6 +404,8 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 700, y: 305))
         scene.valkyrie.position = CGPoint(x: 825, y: 180)
         scene.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertFalse(scene.creatureRouteOpen)
+        completeWeatherFieldStudy(scene)
         XCTAssertTrue(scene.creatureRouteOpen)
         scene.willLeave()
 
@@ -376,8 +436,10 @@ import LearningCore
 
         scene.handleTap(at: CGPoint(x: 985, y: 282))
         XCTAssertEqual(scene.selectedForecast, .rain)
-        XCTAssertTrue(scene.creatureRouteOpen)
+        XCTAssertFalse(scene.creatureRouteOpen)
         XCTAssertEqual(scene.weatherStage, .complete)
+        completeWeatherFieldStudy(scene)
+        XCTAssertTrue(scene.creatureRouteOpen)
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 1140, y: 190)), "scienceCreatureGate")
 
         scene.handleTap(at: CGPoint(x: 1140, y: 190))
@@ -472,6 +534,8 @@ import LearningCore
 
         scene.handleTap(at: CGPoint(x: 975, y: 285))
         XCTAssertEqual(scene.groveStage, .complete)
+        XCTAssertFalse(scene.groveRestored)
+        completeGroveFieldStudy(scene)
         XCTAssertTrue(scene.groveRestored)
         XCTAssertEqual(scene.targetName(at: CGPoint(x: 1150, y: 185)), "scienceGroveFinale")
 
@@ -536,6 +600,8 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 700, y: 305))
         scene.valkyrie.position = CGPoint(x: 825, y: 180)
         scene.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertFalse(scene.creatureRouteOpen)
+        completeWeatherFieldStudy(scene)
         XCTAssertTrue(scene.creatureRouteOpen)
         scene.willLeave()
 
@@ -561,6 +627,8 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 840, y: 290))
         scene.valkyrie.position = CGPoint(x: 920, y: 180)
         scene.handleTap(at: CGPoint(x: 975, y: 285))
+        XCTAssertFalse(scene.groveRestored)
+        completeGroveFieldStudy(scene)
         XCTAssertTrue(scene.groveRestored)
         scene.willLeave()
 
@@ -589,6 +657,9 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 840, y: 290))
         scene.valkyrie.position = CGPoint(x: 920, y: 180)
         scene.handleTap(at: CGPoint(x: 975, y: 285))
+        XCTAssertFalse(scene.groveRestored)
+        completeGroveFieldStudy(scene)
+        XCTAssertTrue(scene.groveRestored)
         scene.willLeave()
 
         state.travel(to: .storyTree)
