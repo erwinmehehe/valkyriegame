@@ -1079,13 +1079,16 @@ import LearningCore
 
         let encounter = try XCTUnwrap(state.nextPuzzleMemoryEncounter())
         try await Task.sleep(nanoseconds: 2_400_000_000)
-        for point in [
-            CGPoint(x: 505, y: 210),
-            CGPoint(x: 665, y: 250),
-            CGPoint(x: 825, y: 210)
-        ] {
-            scene.handleTap(at: point)
-            try await Task.sleep(nanoseconds: 350_000_000)
+        let pads = scene.children.filter { $0.name == "memoryPad" }
+        XCTAssertEqual(pads.count, encounter.choices.count)
+        for symbol in encounter.sequence {
+            let pad = try XCTUnwrap(
+                pads.first {
+                    ($0.userData?["symbol"] as? String) == symbol
+                }
+            )
+            scene.handleTap(at: pad.position)
+            try await Task.sleep(nanoseconds: 450_000_000)
         }
         try await Task.sleep(nanoseconds: 500_000_000)
 
