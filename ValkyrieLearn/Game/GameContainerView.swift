@@ -5,6 +5,8 @@ import SpriteKit
     @ObservedObject var state: AppState
     @State private var scene: AdventureScene?
     @State private var settings = false
+    @State private var worldTransitionOpacity = 0.0
+    @State private var worldTransitionGeneration = 0
     @Environment(\.accessibilityReduceMotion) private var systemReducedMotion
     @Environment(\.scenePhase) private var scenePhase
 
@@ -49,6 +51,14 @@ import SpriteKit
                         .allowsHitTesting(false)
                 }
 
+                if isLandscape {
+                    Color(red: 0.025, green: 0.035, blue: 0.075)
+                        .opacity(worldTransitionOpacity)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(worldTransitionOpacity > 0.01)
+                        .accessibilityHidden(true)
+                }
+
                 if !isLandscape {
                     VStack(spacing: 14) {
                         Image(systemName: "ipad.landscape")
@@ -72,7 +82,7 @@ import SpriteKit
         }
         .ignoresSafeArea()
         .onAppear { rebuild() }
-        .onChange(of: state.world) { _, _ in rebuild() }
+        .onChange(of: state.world) { _, _ in transitionToCurrentWorld() }
         .onChange(of: state.reducedMotion) { _, value in scene?.reducedMotion = value || systemReducedMotion }
         .onChange(of: systemReducedMotion) { _, value in scene?.reducedMotion = value || state.reducedMotion }
         .onChange(of: scenePhase) { _, phase in
@@ -82,6 +92,34 @@ import SpriteKit
             if presented { scene?.cancelPendingTap() }
         }
         .sheet(isPresented: $settings) { AdventureSettingsView(state: state) }
+    }
+
+    private func transitionToCurrentWorld() {
+        scene?.cancelPendingTap()
+        worldTransitionGeneration += 1
+        let generation = worldTransitionGeneration
+        let reduceMotion = state.reducedMotion || systemReducedMotion
+
+        guard !reduceMotion else {
+            worldTransitionOpacity = 0
+            rebuild()
+            return
+        }
+
+        withAnimation(.easeIn(duration: 0.14)) {
+            worldTransitionOpacity = 0.96
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard generation == worldTransitionGeneration else { return }
+
+            rebuild()
+
+            withAnimation(.easeOut(duration: 0.24)) {
+                worldTransitionOpacity = 0
+            }
+        }
     }
 
     private func rebuild() {
