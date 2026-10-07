@@ -1056,13 +1056,16 @@ import LearningCore
 
         let encounter = try XCTUnwrap(state.nextPuzzleMemoryEncounter())
         try await Task.sleep(nanoseconds: 2_400_000_000)
-        for point in [
-            CGPoint(x: 505, y: 210),
-            CGPoint(x: 665, y: 250),
-            CGPoint(x: 825, y: 210)
-        ] {
-            scene.handleTap(at: point)
-            try await Task.sleep(nanoseconds: 350_000_000)
+        let pads = scene.children.filter { $0.name == "memoryPad" }
+        XCTAssertEqual(pads.count, encounter.choices.count)
+        for symbol in encounter.sequence {
+            let pad = try XCTUnwrap(
+                pads.first {
+                    ($0.userData?["symbol"] as? String) == symbol
+                }
+            )
+            scene.handleTap(at: pad.position)
+            try await Task.sleep(nanoseconds: 450_000_000)
         }
         try await Task.sleep(nanoseconds: 500_000_000)
 
@@ -2595,6 +2598,34 @@ import LearningCore
 
 
     func testScienceAdventureScenesMeetProductionVisualStructure() throws {
+        func assertCompactScienceHUD(
+            _ scene: AdventureScene,
+            homeName: String,
+            maxTitleWidth: CGFloat
+        ) throws {
+            let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+            let titleBackdrop = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
+            let guidance = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+            let guidanceBackdrop = try XCTUnwrap(scene.childNode(withName: "instructionBackdrop"))
+            let home = try XCTUnwrap(scene.childNode(withName: homeName))
+
+            XCTAssertEqual(title.fontName, "Georgia-Bold")
+            XCTAssertLessThanOrEqual(title.fontSize, 20)
+            XCTAssertLessThanOrEqual(
+                titleBackdrop.calculateAccumulatedFrame().width,
+                maxTitleWidth
+            )
+            XCTAssertEqual(guidance.fontName, "AvenirNext-Medium")
+            XCTAssertLessThanOrEqual(guidance.fontSize, 18)
+            XCTAssertLessThanOrEqual(guidance.preferredMaxLayoutWidth, 620)
+            XCTAssertLessThanOrEqual(
+                guidanceBackdrop.calculateAccumulatedFrame().width,
+                670
+            )
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().width, 60)
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().height, 60)
+        }
+
         let greenhouseState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
@@ -2633,6 +2664,11 @@ import LearningCore
             "scienceSunPrism"
         )
         XCTAssertEqual(greenhouse.milo.xScale, 0.82, accuracy: 0.001)
+        try assertCompactScienceHUD(
+            greenhouse,
+            homeName: "scienceHome",
+            maxTitleWidth: 340
+        )
         greenhouse.willLeave()
 
         let weatherState = try AppState(
@@ -2652,6 +2688,11 @@ import LearningCore
         XCTAssertNotNil(weather.childNode(withName: "scienceMorningWeather"))
         XCTAssertNotNil(weather.childNode(withName: "scienceAfternoonWeather"))
         XCTAssertEqual(weather.milo.xScale, 0.82, accuracy: 0.001)
+        try assertCompactScienceHUD(
+            weather,
+            homeName: "scienceWeatherHome",
+            maxTitleWidth: 360
+        )
         weather.willLeave()
 
         let groveState = try AppState(
@@ -2671,6 +2712,11 @@ import LearningCore
         XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
         XCTAssertNotNil(grove.childNode(withName: "scienceCompareBoard"))
         XCTAssertEqual(grove.milo.xScale, 0.82, accuracy: 0.001)
+        try assertCompactScienceHUD(
+            grove,
+            homeName: "scienceGroveHome",
+            maxTitleWidth: 370
+        )
         grove.willLeave()
     }
 
