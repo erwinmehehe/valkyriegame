@@ -21,6 +21,7 @@ import LearningCore
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
+    private var lastScienceKineticReducedMotion: Bool?
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
@@ -922,6 +923,9 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         milo.zPosition = 1000 - milo.position.y
+        if lastScienceKineticReducedMotion != reducedMotion {
+            applyGreenhouseFocusState()
+        }
     }
 
     override func willLeave() {
@@ -1043,7 +1047,97 @@ import LearningCore
         refreshGuidanceCue()
     }
 
+    private func applyGreenhouseFocusState() {
+        lastScienceKineticReducedMotion = reducedMotion
+
+        let groups: [(Set<String>, CGFloat)]
+        switch greenhouseStage {
+        case .arrive:
+            groups = [
+                (["scienceSeedBench"], 1.0),
+                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.42),
+                (["scienceSunPrism", "sciencePrismBeam"], 0.30),
+                (["scienceWeatherGate"], 0.34)
+            ]
+        case .inspected:
+            groups = [
+                (["scienceSeedBench"], 0.72),
+                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 1.0),
+                (["scienceSunPrism", "sciencePrismBeam"], 0.34),
+                (["scienceWeatherGate"], 0.34)
+            ]
+        case .watered:
+            groups = [
+                (["scienceSeedBench"], 0.72),
+                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.72),
+                (["scienceSunPrism", "sciencePrismBeam"], 1.0),
+                (["scienceWeatherGate"], 0.36)
+            ]
+        case .lit:
+            groups = [
+                (["scienceSeedBench"], 0.74),
+                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.74),
+                (["scienceSunPrism", "sciencePrismBeam"], 0.74),
+                (["scienceWeatherGate"], 1.0)
+            ]
+        }
+
+        for (names, alpha) in groups {
+            for node in children {
+                guard let name = node.name, names.contains(name) else { continue }
+                node.alpha = alpha
+                node.removeAction(forKey: "scienceFocusPulse")
+                node.removeAction(forKey: "scienceActiveSpin")
+                node.setScale(1)
+            }
+        }
+
+        guard !reducedMotion else { return }
+
+        let activeName: String
+        let activePoint: CGPoint
+        switch greenhouseStage {
+        case .arrive:
+            activeName = "scienceSeedBench"
+            activePoint = seedBenchPoint
+        case .inspected:
+            activeName = "scienceWaterValve"
+            activePoint = waterValvePoint
+        case .watered:
+            activeName = "scienceSunPrism"
+            activePoint = sunPrismPoint
+        case .lit:
+            activeName = "scienceWeatherGate"
+            activePoint = exitPoint
+        }
+
+        for node in children where node.name == activeName {
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .scale(to: 1.035, duration: 0.70),
+                        .scale(to: 1.0, duration: 0.70)
+                    ])
+                ),
+                withKey: "scienceFocusPulse"
+            )
+        }
+
+        if greenhouseStage == .inspected,
+           let valve = childNode(withName: "scienceWaterValve") {
+            valve.run(
+                .repeatForever(
+                    .rotate(byAngle: -.pi * 2, duration: 8.5)
+                ),
+                withKey: "scienceActiveSpin"
+            )
+        }
+
+        focusMoment(on: activePoint, hold: 0.52)
+    }
+
     private func refreshGuidanceCue() {
+        applyGreenhouseFocusState()
         let tint = UIColor(red: 0.57, green: 0.93, blue: 0.63, alpha: 1)
         switch greenhouseStage {
         case .arrive:
