@@ -6,7 +6,6 @@
     "adventure-art/worlds.png": "d5c9751db4ce15fa8d754bd257b611095607ecb15d07163ad22d1ed177741c94",
     "adventure-art/valkyrie-poses.png": "a41a36ec998ea5453b1c25ee61b20c263b02b8514c58f5af55d46c894ab4dfcd",
     "adventure-art/valkyrie-garden-actions.png": "071ff087b5ae812e70571eb061863a3a55fb4f74a0d2ed6abb1690c4dd211d07",
-    "characters/pip.png": "bb04f91e950ae7470a4945de5c081c632ec71831ff08806545fcf370fae3b3bc",
     "adventure-art/props.png": "bab365e5c77e2ac13a99ca45af3128abc2c6f2a17322244131bba458ddb97146"
   },
   "outputs": {
@@ -71,41 +70,6 @@
       "size": [
         370,
         480
-      ]
-    },
-    "Pip.atlas/idle_01.png": {
-      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
-      "size": [
-        360,
-        420
-      ]
-    },
-    "Pip.atlas/walk_01.png": {
-      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
-      "size": [
-        360,
-        420
-      ]
-    },
-    "Pip.atlas/interact_01.png": {
-      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
-      "size": [
-        360,
-        420
-      ]
-    },
-    "Pip.atlas/celebrate_01.png": {
-      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
-      "size": [
-        360,
-        420
-      ]
-    },
-    "Pip.atlas/react_01.png": {
-      "sha256": "2e7d85f25711086d7f136f3b7ddddc6f45dcde2cbf4465913dd018f646446051",
-      "size": [
-        360,
-        420
       ]
     },
     "AdventureArt.xcassets/CrystalCart.imageset/art.png": {
