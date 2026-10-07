@@ -1,0 +1,70 @@
+{
+  "reference": "Approved HD companion mascot refresh 2026-10-07",
+  "note": "Production companion art is managed independently from preserved v3.31 reference artwork. Valkyrie is intentionally excluded.",
+  "outputs": {
+    "Milo.webp": {
+      "sha256": "01801df803a91541ec1cd2c6d39fca069ef32c19fbf28dec1f663ce3b108f78c",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 113
+    },
+    "Tiko.webp": {
+      "sha256": "d9d188433cf86e17343b9deba103327328c1237311008f872771bad74a88b6a8",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 130
+    },
+    "Lumi.webp": {
+      "sha256": "8383d470076a4e82fcd759189f85ff0cfdee87a1fb1991422a0765b17d1f83e1",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 128
+    },
+    "Pip.atlas/idle_01.png": {
+      "sha256": "0e2d34ad87fe1b3e829bad2502908306f520ad0edd3cf1eec235933eae791604",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 145
+    },
+    "Pip.atlas/walk_01.png": {
+      "sha256": "0e2d34ad87fe1b3e829bad2502908306f520ad0edd3cf1eec235933eae791604",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 145
+    },
+    "Pip.atlas/interact_01.png": {
+      "sha256": "0e2d34ad87fe1b3e829bad2502908306f520ad0edd3cf1eec235933eae791604",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 145
+    },
+    "Pip.atlas/react_01.png": {
+      "sha256": "0e2d34ad87fe1b3e829bad2502908306f520ad0edd3cf1eec235933eae791604",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 145
+    },
+    "Pip.atlas/celebrate_01.png": {
+      "sha256": "0e2d34ad87fe1b3e829bad2502908306f520ad0edd3cf1eec235933eae791604",
+      "size": [
+        320,
+        320
+      ],
+      "renderHeight": 145
+    }
+  }
+}
