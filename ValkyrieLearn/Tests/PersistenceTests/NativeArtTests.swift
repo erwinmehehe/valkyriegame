@@ -2599,6 +2599,10 @@ import LearningCore
             station.childNode(withName: "workshopGearHalo")?
                 .action(forKey: "activeStationPulse")
         )
+        XCTAssertNil(
+            lively.childNode(withName: "questionPromptPlate")?
+                .action(forKey: "workOrderReveal")
+        )
 
         let calmState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
