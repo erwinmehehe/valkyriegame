@@ -345,7 +345,7 @@ import LearningCore
             glow: reducedMotion ? 0 : 1
         )
         medallion.name = "home"
-        medallion.addChild(ArtSystem.label("‹", size: 22))
+        medallion.addChild(ArtSystem.label("⌂", size: 18))
         root.addChild(medallion)
 
         let hit = SKShapeNode(circleOfRadius: 30)
@@ -355,7 +355,7 @@ import LearningCore
         hit.zPosition = 2
         root.addChild(hit)
 
-        makeAccessible(root, label: "Back")
+        makeAccessible(root, label: "Return to Story Tree")
         addChild(root)
     }
 
@@ -1228,6 +1228,7 @@ import LearningCore
 
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
         _ = state.recordPuzzle(
             memoryEncounter,
@@ -1492,6 +1493,11 @@ import LearningCore
         stopGoAcceptingTap = false
         stopGoCurrentSignal = nil
         instruction.text = inhibitionEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 755, y: 365),
+            tint: UIColor(red: 0.78, green: 0.58, blue: 0.98, alpha: 1),
+            width: 175
+        )
         run(.sequence([
             .wait(forDuration: reducedMotion ? 0.20 : 0.55),
             .run { [weak self] in
@@ -1638,6 +1644,7 @@ import LearningCore
         stopGoCurrentSignal = nil
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
 
         _ = state.recordPuzzle(
@@ -1890,6 +1897,11 @@ import LearningCore
         sortAcceptingInput = false
         childNode(withName: "sortingObject")?.removeFromParent()
         instruction.text = sortEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 755, y: 225),
+            tint: UIColor(red: 0.52, green: 0.88, blue: 0.90, alpha: 1),
+            width: 250
+        )
 
         run(.sequence([
             .wait(forDuration: reducedMotion ? 0.16 : 0.45),
@@ -2063,6 +2075,7 @@ import LearningCore
         sortAcceptingInput = false
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
 
         _ = state.recordPuzzle(
@@ -2253,6 +2266,11 @@ import LearningCore
 
         updateResortRule(resortEncounter.initialRule)
         instruction.text = resortEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 755, y: 395),
+            tint: UIColor(red: 0.52, green: 0.88, blue: 0.90, alpha: 1),
+            width: 280
+        )
         presentResortObject()
     }
 
@@ -2400,6 +2418,7 @@ import LearningCore
 
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
         _ = state.recordPuzzle(
             resortEncounter,
@@ -2970,6 +2989,11 @@ import LearningCore
         }
 
         instruction.text = orientationEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 765, y: 390),
+            tint: UIColor(red: 0.58, green: 0.86, blue: 1.0, alpha: 1),
+            width: 300
+        )
         tiko.pose(.interact)
     }
 
@@ -3031,6 +3055,8 @@ import LearningCore
         }
 
         solved = true
+
+        clearAttentionCue()
         _ = state.recordPuzzle(
             orientationEncounter,
             outcome: .correct,
@@ -3187,6 +3213,11 @@ import LearningCore
             registerInteraction(mirror, clearance: 30)
         }
         instruction.text = "Imagine this turn. Tap the mirror with the matching shape."
+        showAttentionCue(
+            at: CGPoint(x: 765, y: 390),
+            tint: UIColor(red: 0.58, green: 0.86, blue: 1.0, alpha: 1),
+            width: 300
+        )
         buildVisualTurnCue(quarterTurns: rotationEncounter.quarterTurns)
         refreshMirrorRotationProgress()
         tiko.pose(.interact)
@@ -3224,6 +3255,7 @@ import LearningCore
             return
         }
         solved = true
+        clearAttentionCue()
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorRotationProgress()
@@ -3450,6 +3482,11 @@ import LearningCore
         }
 
         instruction.text = pathEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 420),
+            tint: UIColor(red: 0.54, green: 0.82, blue: 0.96, alpha: 1),
+            width: 320
+        )
         tiko.pose(.interact)
     }
 
@@ -3481,6 +3518,8 @@ import LearningCore
         }
 
         solved = true
+
+        clearAttentionCue()
         let route = activeEncounter.route(for: index)
         animateTikoAlongPath(route, encounter: activeEncounter)
         refreshPathTilesProgress(animated: true)
@@ -3656,6 +3695,11 @@ import LearningCore
         }
 
         instruction.text = sequenceEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 330),
+            tint: UIColor(red: 0.96, green: 0.72, blue: 0.34, alpha: 1),
+            width: 330
+        )
         tiko.pose(.interact)
     }
 
@@ -3739,6 +3783,7 @@ import LearningCore
             guard let self else { return }
             if correct {
                 self.solved = true
+                self.clearAttentionCue()
                 self.successFeedback()
                 self.refreshCommandGearsProgress(animated: true)
                 self.valkyrie.pose(.celebrate)
@@ -4044,6 +4089,11 @@ import LearningCore
             core.glowWidth = 12
         }
         instruction.text = bugEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 355),
+            tint: UIColor(red: 0.82, green: 0.60, blue: 0.98, alpha: 1),
+            width: 360
+        )
         tiko.pose(.interact)
     }
 
@@ -4204,6 +4254,8 @@ import LearningCore
             )
 
             self.solved = true
+
+            self.clearAttentionCue()
             self.successFeedback()
             self.valkyrie.pose(.celebrate)
             self.tiko.pose(.celebrate)
@@ -4430,6 +4482,11 @@ import LearningCore
 
         renderRepairSelection()
         instruction.text = repairEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 355),
+            tint: UIColor(red: 0.82, green: 0.60, blue: 0.98, alpha: 1),
+            width: 380
+        )
         tiko.pose(.interact)
     }
 
@@ -4499,6 +4556,7 @@ import LearningCore
             guard let self else { return }
             if correct {
                 self.solved = true
+                self.clearAttentionCue()
                 self.successFeedback()
                 self.valkyrie.pose(.celebrate)
                 self.tiko.pose(.celebrate)
@@ -5001,6 +5059,7 @@ import LearningCore
 
         if value == encounter.answer {
             solved = true
+            clearAttentionCue()
             pulse(node)
             fillSocket(with: value)
             _ = state.recordPuzzle(
