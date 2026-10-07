@@ -183,6 +183,53 @@ import LearningCore
         XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
     }
 
+    func testWordGardenAmbientMotionRespectsReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .wordGarden)
+
+        let flowerScene = WordGardenScene(state: state)
+        flowerScene.reducedMotion = false
+        flowerScene.didMove(to: SKView())
+
+        let flower = try XCTUnwrap(
+            flowerScene.children.first { $0.name == "flowerChoice" }
+        )
+        XCTAssertNotNil(flower.action(forKey: "gardenSway"))
+
+        flowerScene.reducedMotion = true
+        flowerScene.update(0)
+        XCTAssertNil(flower.action(forKey: "gardenSway"))
+        flowerScene.willLeave()
+
+        state.travel(to: .sunmillCrossing)
+        let sunmill = WordGardenScene(state: state)
+        sunmill.reducedMotion = false
+        sunmill.didMove(to: SKView())
+
+        let hubGlow = try XCTUnwrap(
+            sunmill.childNode(withName: "//sunmillHubGlow")
+        )
+        let water = try XCTUnwrap(
+            sunmill.childNode(withName: "sunmillWater")
+        )
+        let lightPath = try XCTUnwrap(
+            sunmill.childNode(withName: "sunmillLightPath")
+        )
+
+        XCTAssertNotNil(hubGlow.action(forKey: "ambientSunmillGlow"))
+        XCTAssertNotNil(water.action(forKey: "ambientWaterShimmer"))
+        XCTAssertNotNil(lightPath.action(forKey: "ambientLightShimmer"))
+
+        sunmill.reducedMotion = true
+        sunmill.update(0)
+        XCTAssertNil(hubGlow.action(forKey: "ambientSunmillGlow"))
+        XCTAssertNil(water.action(forKey: "ambientWaterShimmer"))
+        XCTAssertNil(lightPath.action(forKey: "ambientLightShimmer"))
+        sunmill.willLeave()
+    }
+
     func testWordGardenPreservesPaintedAtlasCropsWithRetinaPreparedRaster() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)

@@ -19,6 +19,8 @@ import LearningCore
     private var solved = false
     private var acceptingChoices = false
     private var targetRune: SKNode?
+    private var lastKineticReducedMotion: Bool?
+    private var lastKineticCompletionKey = ""
 
     private let flowerPoints = [
         CGPoint(x: 505, y: 245), CGPoint(x: 675, y: 280),
@@ -91,6 +93,111 @@ import LearningCore
         case .flowerGate: configureFlowerGate()
         case .sunmillCrossing: configureSunmill()
         case .storyHollow: configureStoryHollow()
+        }
+
+        syncWordGardenKinetics()
+    }
+
+    private var wordGardenKineticCompletionKey: String {
+        "\(place)-\(state.flowerGateComplete)-\(state.sunmillComplete)"
+    }
+
+    private func syncWordGardenKinetics() {
+        lastKineticReducedMotion = reducedMotion
+        lastKineticCompletionKey = wordGardenKineticCompletionKey
+
+        let livingNames: Set<String> = [
+            "flowerChoice",
+            "soundFlower",
+            "sunmillChoice",
+            "storyHollowChoice"
+        ]
+
+        for node in children {
+            guard let name = node.name, livingNames.contains(name) else { continue }
+            node.removeAction(forKey: "gardenSway")
+            node.zRotation = 0
+        }
+
+        childNode(withName: "sunmillWheel")?
+            .removeAction(forKey: "ambientSunmillSpin")
+        childNode(withName: "//sunmillHubGlow")?
+            .removeAction(forKey: "ambientSunmillGlow")
+        childNode(withName: "sunmillWater")?
+            .removeAction(forKey: "ambientWaterShimmer")
+        childNode(withName: "sunmillLightPath")?
+            .removeAction(forKey: "ambientLightShimmer")
+
+        guard !reducedMotion else { return }
+
+        let livingNodes = children.filter {
+            guard let name = $0.name else { return false }
+            return livingNames.contains(name)
+        }
+
+        for (index, node) in livingNodes.enumerated() {
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            let duration = 1.8 + Double(index % 4) * 0.18
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .group([
+                            .rotate(byAngle: direction * 0.018, duration: duration),
+                            .moveBy(x: direction * 2.0, y: 2.5, duration: duration)
+                        ]),
+                        .group([
+                            .rotate(byAngle: direction * -0.036, duration: duration * 2),
+                            .moveBy(x: direction * -4.0, y: -2.0, duration: duration * 2)
+                        ]),
+                        .group([
+                            .rotate(byAngle: direction * 0.018, duration: duration),
+                            .moveBy(x: direction * 2.0, y: -0.5, duration: duration)
+                        ])
+                    ])
+                ),
+                withKey: "gardenSway"
+            )
+        }
+
+        if let hubGlow = childNode(withName: "//sunmillHubGlow") {
+            hubGlow.run(
+                .repeatForever(
+                    .sequence([
+                        .fadeAlpha(to: 0.48, duration: 0.9),
+                        .fadeAlpha(to: 1.0, duration: 0.9)
+                    ])
+                ),
+                withKey: "ambientSunmillGlow"
+            )
+        }
+
+        childNode(withName: "sunmillWater")?.run(
+            .repeatForever(
+                .sequence([
+                    .fadeAlpha(to: 0.62, duration: 1.15),
+                    .fadeAlpha(to: 1.0, duration: 1.15)
+                ])
+            ),
+            withKey: "ambientWaterShimmer"
+        )
+
+        childNode(withName: "sunmillLightPath")?.run(
+            .repeatForever(
+                .sequence([
+                    .fadeAlpha(to: 0.50, duration: 0.82),
+                    .fadeAlpha(to: 1.0, duration: 0.82)
+                ])
+            ),
+            withKey: "ambientLightShimmer"
+        )
+
+        if state.sunmillComplete {
+            childNode(withName: "sunmillWheel")?.run(
+                .repeatForever(
+                    .rotate(byAngle: -.pi * 2, duration: 9.5)
+                ),
+                withKey: "ambientSunmillSpin"
+            )
         }
     }
 
@@ -1483,6 +1590,7 @@ import LearningCore
     }
 
     private func approachChoice(_ node: SKNode, value: String, sunmill: Bool) {
+        focusMoment(on: node.position, hold: 0.62)
         interactionInFlight = true
         let destination = CGPoint(x: max(170, node.position.x - 105), y: 175)
         valkyrie.walk(to: destination) { [weak self] in
@@ -1505,6 +1613,7 @@ import LearningCore
     }
 
     private func approachStoryHollowChoice(_ node: SKNode, value: String) {
+        focusMoment(on: node.position, hold: 0.62)
         interactionInFlight = true
         let destination = CGPoint(x: max(170, node.position.x - 105), y: 175)
         valkyrie.walk(to: destination) { [weak self] in
@@ -2019,6 +2128,11 @@ import LearningCore
         super.update(currentTime)
         lumi.reducedMotion = reducedMotion
         lumi.zPosition = 1000 - lumi.position.y
+
+        if lastKineticReducedMotion != reducedMotion
+            || lastKineticCompletionKey != wordGardenKineticCompletionKey {
+            syncWordGardenKinetics()
+        }
     }
 
     override func willLeave() {
