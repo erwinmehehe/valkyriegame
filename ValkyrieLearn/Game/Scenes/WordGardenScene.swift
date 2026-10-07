@@ -64,8 +64,8 @@ import LearningCore
     override func didMove(to view: SKView) {
         super.didMove(to: view)
         pip.removeFromParent()
-        valkyrie.setScale(0.5)
-        lumi.setScale(0.82)
+        valkyrie.setScale(place == .sunmillCrossing ? 0.58 : 0.5)
+        lumi.setScale(place == .sunmillCrossing ? 0.90 : 0.82)
 
         switch place {
         case .flowerGate:
@@ -145,11 +145,12 @@ import LearningCore
             buildSoundFlowers()
         case .sunmillCrossing:
             buildSunmillLandmark()
-            let back = hotspot(
-                "← Flower Gate",
+            let back = worldControl(
+                "‹",
                 name: "flowerGateBack",
-                at: CGPoint(x: 1110, y: 665),
-                size: CGSize(width: 205, height: 52)
+                at: CGPoint(x: 1215, y: 669),
+                radius: 27,
+                accessibilityLabel: "Back to Flower Gate"
             )
             back.zPosition = 2050
         case .storyHollow:
@@ -364,25 +365,94 @@ import LearningCore
     }
 
     private func buildSunmillLandmark() {
-        let water = SKShapeNode(rectOf: CGSize(width: 980, height: 86), cornerRadius: 43)
-        water.fillColor = UIColor(red: 0.25, green: 0.76, blue: 0.92, alpha: 0.24)
-        water.strokeColor = UIColor(red: 0.60, green: 0.94, blue: 1, alpha: 0.55)
-        water.lineWidth = 5
-        water.position = CGPoint(x: 700, y: 185)
-        water.zRotation = -0.035
+        // The crossing is a physical machine in the garden, not a quiz overlay.
+        // Water, mill, choices and bridge all share one visual cause-and-effect path.
+        let waterPath = CGMutablePath()
+        waterPath.move(to: CGPoint(x: 455, y: 185))
+        waterPath.addCurve(
+            to: CGPoint(x: 1195, y: 215),
+            control1: CGPoint(x: 670, y: 150),
+            control2: CGPoint(x: 955, y: 250)
+        )
+        let water = SKShapeNode(path: waterPath)
+        water.fillColor = .clear
+        water.strokeColor = UIColor(red: 0.42, green: 0.82, blue: 0.96, alpha: 0.32)
+        water.lineWidth = 62
+        water.glowWidth = 2
         water.name = "sunmillWater"
-        water.zPosition = 90
+        water.zPosition = 92
         addChild(water)
+
+        let bank = SKShapeNode(ellipseOf: CGSize(width: 650, height: 150))
+        bank.position = CGPoint(x: 775, y: 230)
+        bank.fillColor = UIColor(red: 0.10, green: 0.24, blue: 0.13, alpha: 0.22)
+        bank.strokeColor = UIColor(red: 0.58, green: 0.76, blue: 0.34, alpha: 0.34)
+        bank.lineWidth = 3
+        bank.name = "decorativeSunmillChoiceBank"
+        bank.zPosition = 260
+        addChild(bank)
+
+        let vinePath = CGMutablePath()
+        vinePath.move(to: CGPoint(x: 485, y: 168))
+        vinePath.addCurve(
+            to: CGPoint(x: 1060, y: 185),
+            control1: CGPoint(x: 620, y: 205),
+            control2: CGPoint(x: 880, y: 125)
+        )
+        let vine = SKShapeNode(path: vinePath)
+        vine.strokeColor = UIColor(red: 0.34, green: 0.54, blue: 0.20, alpha: 0.92)
+        vine.lineWidth = 10
+        vine.name = "decorativeSunmillChoiceVine"
+        vine.zPosition = 275
+        addChild(vine)
+
+        let tower = ArtSystem.box(
+            CGSize(width: 56, height: 245),
+            color: UIColor(red: 0.48, green: 0.31, blue: 0.15, alpha: 0.96),
+            radius: 16
+        )
+        tower.position = CGPoint(x: 330, y: 305)
+        tower.name = "sunmillTower"
+        tower.zPosition = 390
+        if let texture = ArtSystem.texture("BridgeTimber") {
+            tower.fillColor = .white
+            tower.fillTexture = texture
+            tower.strokeColor = .clear
+        }
+        addChild(tower)
 
         let wheel = SKNode()
         wheel.position = CGPoint(x: 330, y: 430)
         wheel.name = "sunmillWheel"
         wheel.zPosition = 420
 
-        let rim = SKShapeNode(circleOfRadius: 103)
-        rim.fillColor = UIColor(red: 0.35, green: 0.22, blue: 0.10, alpha: 0.45)
-        rim.strokeColor = UIColor(red: 0.82, green: 0.60, blue: 0.30, alpha: 1)
-        rim.lineWidth = 10
+        let outerGlow = SKShapeNode(circleOfRadius: 128)
+        outerGlow.fillColor = UIColor(red: 1.0, green: 0.66, blue: 0.30, alpha: 0.06)
+        outerGlow.strokeColor = UIColor(red: 1.0, green: 0.75, blue: 0.34, alpha: 0.24)
+        outerGlow.lineWidth = 3
+        outerGlow.glowWidth = reducedMotion ? 0 : 7
+        outerGlow.name = "sunmillWheel"
+        wheel.addChild(outerGlow)
+
+        for index in 0..<8 {
+            let angle = CGFloat(index) * .pi / 4
+            let petal = SKShapeNode(ellipseOf: CGSize(width: 54, height: 102))
+            petal.position = CGPoint(
+                x: sin(angle) * 118,
+                y: cos(angle) * 118
+            )
+            petal.zRotation = -angle
+            petal.fillColor = UIColor(red: 0.98, green: 0.48, blue: 0.66, alpha: 0.72)
+            petal.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.48, alpha: 0.72)
+            petal.lineWidth = 3
+            petal.name = "sunmillWheel"
+            wheel.addChild(petal)
+        }
+
+        let rim = SKShapeNode(circleOfRadius: 101)
+        rim.fillColor = UIColor(red: 0.28, green: 0.18, blue: 0.08, alpha: 0.58)
+        rim.strokeColor = UIColor(red: 0.88, green: 0.64, blue: 0.30, alpha: 1)
+        rim.lineWidth = 9
         rim.name = "sunmillWheel"
         wheel.addChild(rim)
 
@@ -392,41 +462,64 @@ import LearningCore
             arm.name = "sunmillWheel"
 
             let paddle = ArtSystem.box(
-                CGSize(width: 28, height: 150),
+                CGSize(width: 24, height: 136),
                 color: UIColor(red: 0.73, green: 0.50, blue: 0.25, alpha: 1),
                 radius: 8
             )
             if let texture = ArtSystem.texture("BridgeTimber") {
-                paddle.fillColor = .white; paddle.fillTexture = texture; paddle.strokeColor = .clear
+                paddle.fillColor = .white
+                paddle.fillTexture = texture
+                paddle.strokeColor = .clear
             }
-            paddle.position.y = 75
+            paddle.position.y = 68
             paddle.name = "sunmillWheel"
             arm.addChild(paddle)
             wheel.addChild(arm)
         }
 
-        let hub = SKShapeNode(circleOfRadius: 42)
-        hub.fillColor = UIColor(red: 0.97, green: 0.72, blue: 0.22, alpha: 1)
-        hub.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.52, alpha: 1)
+        let hub = SKShapeNode(circleOfRadius: 47)
+        hub.fillColor = UIColor(red: 0.98, green: 0.73, blue: 0.24, alpha: 1)
+        hub.strokeColor = UIColor(red: 1, green: 0.92, blue: 0.58, alpha: 1)
         hub.lineWidth = 5
-        if let texture = ArtSystem.texture("BridgeDial") {
-            hub.fillColor = .white; hub.fillTexture = texture; hub.strokeColor = .clear
-        }
         hub.name = "sunmillWheel"
         wheel.addChild(hub)
 
-        let sun = ArtSystem.label("☀", size: 43)
-        sun.fontColor = UIColor(red: 0.45, green: 0.25, blue: 0.08, alpha: 1)
+        let hubGlow = SKShapeNode(circleOfRadius: 60)
+        hubGlow.fillColor = .clear
+        hubGlow.strokeColor = UIColor(red: 1.0, green: 0.83, blue: 0.36, alpha: 0.42)
+        hubGlow.lineWidth = 3
+        hubGlow.glowWidth = reducedMotion ? 0 : 8
+        hubGlow.name = "sunmillHubGlow"
+        hubGlow.zPosition = -1
+        wheel.addChild(hubGlow)
+
+        let sun = ArtSystem.label("☀", size: 40)
+        sun.fontColor = UIColor(red: 0.45, green: 0.25, blue: 0.08, alpha: 0.92)
         sun.name = "sunmillWheel"
         wheel.addChild(sun)
-
         addChild(wheel)
 
+        let currentPath = CGMutablePath()
+        currentPath.move(to: CGPoint(x: 405, y: 365))
+        currentPath.addCurve(
+            to: CGPoint(x: 785, y: 238),
+            control1: CGPoint(x: 520, y: 350),
+            control2: CGPoint(x: 650, y: 255)
+        )
+        let current = SKShapeNode(path: currentPath)
+        current.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.36, alpha: 0.18)
+        current.lineWidth = 10
+        current.glowWidth = reducedMotion ? 0 : 5
+        current.name = "sunmillLightPath"
+        current.zPosition = 300
+        addChild(current)
+
         let bridge = SKNode()
-        bridge.position = CGPoint(x: 915, y: 205)
+        bridge.position = CGPoint(x: 925, y: 205)
         bridge.zRotation = -0.18
         bridge.name = "sunmillBridge"
         bridge.zPosition = 350
+
         for index in 0..<7 {
             let plank = ArtSystem.box(
                 CGSize(width: 52, height: 22),
@@ -434,29 +527,50 @@ import LearningCore
                 radius: 7
             )
             if let texture = ArtSystem.texture("BridgeOakPlank") {
-                plank.fillColor = .white; plank.fillTexture = texture; plank.strokeColor = .clear
+                plank.fillColor = .white
+                plank.fillTexture = texture
+                plank.strokeColor = .clear
             }
             plank.position.x = CGFloat(index - 3) * 55
-            plank.name = "sunmillBridge"
+            plank.alpha = 0.16
+            plank.name = "sunmillBridgePlank\(index)"
             bridge.addChild(plank)
         }
+
         for x in [CGFloat(-180), CGFloat(180)] {
-            let support = ArtSystem.box(CGSize(width: 16, height: 64), color: .brown, radius: 3)
+            let support = ArtSystem.box(
+                CGSize(width: 16, height: 64),
+                color: .brown,
+                radius: 3
+            )
             support.position = CGPoint(x: x, y: -28)
             support.zPosition = -1
+            support.alpha = 0.34
             if let texture = ArtSystem.texture("BridgeTimber") {
-                support.fillColor = .white; support.fillTexture = texture; support.strokeColor = .clear
+                support.fillColor = .white
+                support.fillTexture = texture
+                support.strokeColor = .clear
             }
+            support.name = "sunmillBridgeSupport"
             bridge.addChild(support)
         }
+
         let railPath = CGMutablePath()
         railPath.move(to: CGPoint(x: -180, y: 24))
-        railPath.addQuadCurve(to: CGPoint(x: 180, y: 24), control: CGPoint(x: 0, y: 8))
+        railPath.addQuadCurve(
+            to: CGPoint(x: 180, y: 24),
+            control: CGPoint(x: 0, y: 8)
+        )
         let rail = SKShapeNode(path: railPath)
         rail.strokeColor = UIColor(red: 0.78, green: 0.66, blue: 0.39, alpha: 1)
         rail.lineWidth = 4
+        rail.alpha = 0.18
+        rail.name = "sunmillBridgeRail"
         bridge.addChild(rail)
-        bridge.isHidden = true
+
+        // Keep the sleeping bridge visible as a destination. Learning restores it
+        // plank by plank instead of teleporting a completed bridge into the scene.
+        bridge.isHidden = false
         addChild(bridge)
     }
 
@@ -536,8 +650,9 @@ import LearningCore
         guard let encounter else { return }
         resetAttemptState()
         clearQuestionAndChoices()
-        instruction.text = encounter.prompt
-        addPrompt(encounter.prompt)
+        // Sunmill Crossing uses the persistent lower guidance plaque only.
+        // Avoid repeating the same instruction over the painted environment.
+        instruction.text = "Wake the crossing: remember the glowing mill-rune."
 
         for (index, choice) in encounter.choices.enumerated() {
             let flower = flowerNode(letter: choice, index: index)
@@ -554,8 +669,7 @@ import LearningCore
         refreshSunmillProgress(animated: false)
 
         guard state.sunmillAvailable else {
-            instruction.text = "Flower Gate still needs three independent rune matches before this crossing can turn."
-            addPrompt("Return to Flower Gate and wake all three vines.")
+            instruction.text = "Return to Flower Gate and wake all three vines before the Sunmill can turn."
             return
         }
 
@@ -677,12 +791,12 @@ import LearningCore
             rune.glowWidth = 3
             glyphSize = 30
         case .sunmillCrossing:
-            rune = SKShapeNode(circleOfRadius: 54)
-            rune.fillColor = UIColor(red: 0.92, green: 0.67, blue: 0.21, alpha: 0.96)
+            rune = SKShapeNode(circleOfRadius: 47)
+            rune.fillColor = UIColor(red: 0.98, green: 0.74, blue: 0.24, alpha: 0.90)
             rune.position = CGPoint(x: 330, y: 430)
             rune.lineWidth = 4
-            rune.glowWidth = 10
-            glyphSize = 52
+            rune.glowWidth = 7
+            glyphSize = 48
         case .storyHollow:
             rune = SKShapeNode(circleOfRadius: 54)
             rune.fillColor = UIColor(red: 0.44, green: 0.31, blue: 0.58, alpha: 0.96)
@@ -729,7 +843,7 @@ import LearningCore
                     )
                     self.instruction.text = self.place == .flowerGate
                         ? "Which flower matches the rune you saw?"
-                        : "Which leaf matches the mill-rune you saw?"
+                        : "Tap the matching leaf to turn the Sunmill."
                 }
             ]),
             withKey: "wordGardenPreview"
@@ -830,26 +944,63 @@ import LearningCore
     private func sunmillChoiceNode(letter: String, index: Int) -> SKNode {
         let node = SKNode()
 
-        let leafPath = CGMutablePath()
-        leafPath.move(to: CGPoint(x: -54, y: -18))
-        leafPath.addCurve(to: CGPoint(x: 54, y: 18), control1: CGPoint(x: -44, y: 46), control2: CGPoint(x: 30, y: 46))
-        leafPath.addCurve(to: CGPoint(x: -54, y: -18), control1: CGPoint(x: 44, y: -46), control2: CGPoint(x: -30, y: -46))
-        leafPath.closeSubpath()
-        let leaf = SKShapeNode(path: leafPath)
-        leaf.fillColor = UIColor(
-            red: 0.52,
-            green: 0.72 + CGFloat(index) * 0.035,
-            blue: 0.38,
-            alpha: 0.97
+        let stemPath = CGMutablePath()
+        stemPath.move(to: CGPoint(x: 0, y: -58))
+        stemPath.addCurve(
+            to: CGPoint(x: 0, y: -8),
+            control1: CGPoint(x: index.isMultiple(of: 2) ? -12 : 12, y: -44),
+            control2: CGPoint(x: index.isMultiple(of: 2) ? 8 : -8, y: -22)
         )
-        leaf.strokeColor = UIColor(red: 0.92, green: 0.85, blue: 0.46, alpha: 1)
+        let stem = SKShapeNode(path: stemPath)
+        stem.strokeColor = UIColor(red: 0.30, green: 0.50, blue: 0.19, alpha: 1)
+        stem.lineWidth = 8
+        stem.name = "decorativeSunmillChoiceStem"
+        stem.zPosition = -2
+        node.addChild(stem)
+
+        let socket = SKShapeNode(circleOfRadius: 17)
+        socket.position = CGPoint(x: 0, y: -61)
+        socket.fillColor = UIColor(red: 0.82, green: 0.58, blue: 0.23, alpha: 0.92)
+        socket.strokeColor = UIColor(red: 1.0, green: 0.84, blue: 0.44, alpha: 0.78)
+        socket.lineWidth = 3
+        socket.name = "decorativeSunmillChoiceSocket"
+        socket.zPosition = -1
+        node.addChild(socket)
+
+        let leafPath = CGMutablePath()
+        leafPath.move(to: CGPoint(x: -55, y: -18))
+        leafPath.addCurve(
+            to: CGPoint(x: 55, y: 18),
+            control1: CGPoint(x: -44, y: 46),
+            control2: CGPoint(x: 30, y: 46)
+        )
+        leafPath.addCurve(
+            to: CGPoint(x: -55, y: -18),
+            control1: CGPoint(x: 44, y: -46),
+            control2: CGPoint(x: -30, y: -46)
+        )
+        leafPath.closeSubpath()
+
+        let leaf = SKShapeNode(path: leafPath)
+        leaf.fillColor = UIColor(red: 0.47, green: 0.74, blue: 0.34, alpha: 0.98)
+        leaf.strokeColor = UIColor(red: 0.88, green: 0.84, blue: 0.42, alpha: 0.94)
         leaf.lineWidth = 4
-        leaf.zRotation = index.isMultiple(of: 2) ? -0.12 : 0.12
+        leaf.zRotation = index.isMultiple(of: 2) ? -0.10 : 0.10
         leaf.name = "sunmillChoice"
+        leaf.glowWidth = 2
         node.addChild(leaf)
 
+        let veinPath = CGMutablePath()
+        veinPath.move(to: CGPoint(x: -36, y: -8))
+        veinPath.addLine(to: CGPoint(x: 35, y: 9))
+        let vein = SKShapeNode(path: veinPath)
+        vein.strokeColor = UIColor(red: 0.30, green: 0.51, blue: 0.20, alpha: 0.62)
+        vein.lineWidth = 2
+        vein.name = "sunmillChoice"
+        node.addChild(vein)
+
         let label = ArtSystem.label(letter, size: 42)
-        label.fontColor = UIColor(red: 0.22, green: 0.16, blue: 0.12, alpha: 1)
+        label.fontColor = UIColor(red: 0.20, green: 0.15, blue: 0.10, alpha: 1)
         label.name = "sunmillChoice"
         node.addChild(label)
 
@@ -1304,6 +1455,8 @@ import LearningCore
             for: WordGardenEncounterCatalog.sunmillVisualShapes,
             profile: state.profile
         )
+        let total = max(1, WordGardenEncounterCatalog.sunmillVisualShapes.count)
+        let ratio = min(1, CGFloat(count) / CGFloat(total))
         let target = -CGFloat(count) * (2 * .pi / 3)
 
         if let wheel = childNode(withName: "sunmillWheel") {
@@ -1318,13 +1471,40 @@ import LearningCore
         }
 
         if let water = childNode(withName: "sunmillWater") as? SKShapeNode {
-            water.alpha = 0.45 + CGFloat(count) * 0.14
-            water.glowWidth = state.sunmillComplete ? 14 : CGFloat(count) * 3
+            water.alpha = 0.32 + ratio * 0.48
+            water.glowWidth = state.sunmillComplete ? 13 : ratio * 7
         }
 
-        if state.sunmillComplete {
-            childNode(withName: "sunmillBridge")?.isHidden = false
+        if let current = childNode(withName: "sunmillLightPath") as? SKShapeNode {
+            current.alpha = 0.20 + ratio * 0.75
+            current.glowWidth = reducedMotion ? 0 : 4 + ratio * 8
         }
+
+        if let hubGlow = childNode(withName: "//sunmillHubGlow") as? SKShapeNode {
+            hubGlow.alpha = 0.42 + ratio * 0.58
+            hubGlow.setScale(0.92 + ratio * 0.13)
+        }
+
+        let revealedPlanks = Int(ceil(ratio * 7))
+        for index in 0..<7 {
+            guard let plank = childNode(withName: "//sunmillBridgePlank\(index)") else { continue }
+            let restored = index < revealedPlanks
+            let targetAlpha: CGFloat = restored ? 1.0 : 0.16
+            if animated && !reducedMotion {
+                plank.run(.fadeAlpha(to: targetAlpha, duration: 0.32))
+            } else {
+                plank.alpha = targetAlpha
+            }
+        }
+
+        if let rail = childNode(withName: "//sunmillBridgeRail") {
+            rail.alpha = 0.18 + ratio * 0.82
+        }
+        for support in children.flatMap({ $0.children }).filter({ $0.name == "sunmillBridgeSupport" }) {
+            support.alpha = 0.34 + ratio * 0.66
+        }
+
+        childNode(withName: "sunmillBridge")?.isHidden = false
     }
 
     private func showStoryHollowRoute() {
