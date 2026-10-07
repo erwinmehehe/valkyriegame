@@ -50,7 +50,7 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 500, height: 96),
+        rectOf: CGSize(width: 470, height: 92),
         cornerRadius: 15
     )
     private let questionHeading = ArtSystem.label("PIP'S WORK ORDER", size: 13)
@@ -101,15 +101,15 @@ import LearningCore
         childNode(withName: "topVignette")?.alpha = 0.48
 
         if let feedbackPlate = childNode(withName: "instructionBackdrop") {
-            feedbackPlate.xScale = 0.78
-            feedbackPlate.yScale = 0.82
+            feedbackPlate.xScale = 0.69
+            feedbackPlate.yScale = 0.80
             feedbackPlate.position = CGPoint(x: 640, y: 44)
         }
         instruction.position = CGPoint(x: 640, y: 44)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
-        instruction.preferredMaxLayoutWidth = 680
+        instruction.preferredMaxLayoutWidth = 600
     }
 
     private func addCompactHomeControl() {
@@ -301,7 +301,7 @@ import LearningCore
         questionPlate.isHidden = true
         addChild(questionPlate)
 
-        for x in [550.0, 1050.0] {
+        for x in [565.0, 1035.0] {
             let hanger = ArtSystem.box(
                 CGSize(width: 9, height: 44),
                 color: .init(red: 0.39, green: 0.27, blue: 0.15, alpha: 1),
@@ -328,10 +328,10 @@ import LearningCore
         questionHeading.isHidden = true
         addChild(questionHeading)
 
-        questionLabel.position = CGPoint(x: 590, y: 610)
+        questionLabel.position = CGPoint(x: 600, y: 610)
         questionLabel.horizontalAlignmentMode = .left
         questionLabel.fontName = "AvenirNext-Medium"
-        questionLabel.preferredMaxLayoutWidth = 420
+        questionLabel.preferredMaxLayoutWidth = 400
         questionLabel.fontSize = 18
         questionLabel.numberOfLines = 2
         questionLabel.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.86, alpha: 1)
@@ -960,6 +960,9 @@ import LearningCore
             return
         }
         questionLabel.text = text
+        let longPrompt = text.count > 52
+        questionLabel.fontSize = longPrompt ? 17 : 18
+        questionLabel.position.y = longPrompt ? 607 : 610
         questionPlate.isHidden = false
         questionHeading.isHidden = false
         questionLabel.isHidden = false
@@ -1030,7 +1033,8 @@ import LearningCore
             $0.alpha = secondaryHidden ? 0.18 : 0.72
             $0.isHidden = secondaryHidden
         }
-        childNode(withName: "next")?.isHidden = !runtime.completed && !state.workshop
+        childNode(withName: "next")?.isHidden = (engaged && !runtime.completed)
+            || (!runtime.completed && !state.workshop)
         lever?.isHidden = !engaged || runtime.completed
         if engaged {
             let isBridge = runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
