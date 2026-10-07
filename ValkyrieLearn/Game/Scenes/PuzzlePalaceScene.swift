@@ -336,6 +336,26 @@ import LearningCore
 
 
     private func buildNativePalaceBackdrop() {
+        let accent: UIColor
+        switch place {
+        case .runeGate:
+            accent = UIColor(red: 0.72, green: 0.58, blue: 0.98, alpha: 1)
+        case .memoryBridge:
+            accent = UIColor(red: 0.48, green: 0.72, blue: 1.0, alpha: 1)
+        case .stopGoOrbs:
+            accent = UIColor(red: 0.72, green: 0.48, blue: 0.88, alpha: 1)
+        case .sortingPedestal, .resortVault:
+            accent = UIColor(red: 0.48, green: 0.82, blue: 0.82, alpha: 1)
+        case .mirrorHall:
+            accent = UIColor(red: 0.55, green: 0.82, blue: 1.0, alpha: 1)
+        case .pathTiles:
+            accent = UIColor(red: 0.52, green: 0.78, blue: 0.92, alpha: 1)
+        case .commandGears:
+            accent = UIColor(red: 0.88, green: 0.66, blue: 0.30, alpha: 1)
+        case .bugLantern, .bugLanternRepair:
+            accent = UIColor(red: 0.76, green: 0.55, blue: 0.92, alpha: 1)
+        }
+
         let base = ArtSystem.box(
             size,
             color: UIColor(red: 0.055, green: 0.055, blue: 0.13, alpha: 1),
@@ -365,15 +385,63 @@ import LearningCore
 
         let hall = ArtSystem.box(
             CGSize(width: 1080, height: 430),
-            color: UIColor(red: 0.09, green: 0.08, blue: 0.20, alpha: 0.78),
+            color: UIColor(red: 0.09, green: 0.08, blue: 0.20, alpha: 0.72),
             radius: 66
         )
-        hall.strokeColor = UIColor(red: 0.52, green: 0.43, blue: 0.78, alpha: 0.72)
+        hall.strokeColor = accent.withAlphaComponent(0.54)
         hall.lineWidth = 4
         hall.position = CGPoint(x: 690, y: 390)
         hall.zPosition = -215
         hall.name = "puzzleArchitecture"
         addChild(hall)
+
+        // Give the room a finished vaulted silhouette rather than a flat dark card.
+        let upperVault = ArtSystem.box(
+            CGSize(width: 980, height: 96),
+            color: UIColor(red: 0.075, green: 0.07, blue: 0.17, alpha: 0.80),
+            radius: 44
+        )
+        upperVault.strokeColor = .clear
+        upperVault.position = CGPoint(x: 690, y: 606)
+        upperVault.zPosition = -208
+        upperVault.name = "puzzleUpperVault"
+        addChild(upperVault)
+
+        let cornice = ArtSystem.box(
+            CGSize(width: 1030, height: 22),
+            color: UIColor(red: 0.18, green: 0.14, blue: 0.28, alpha: 0.98),
+            radius: 11
+        )
+        cornice.strokeColor = UIColor(red: 0.84, green: 0.65, blue: 0.31, alpha: 0.68)
+        cornice.lineWidth = 3
+        cornice.position = CGPoint(x: 690, y: 586)
+        cornice.zPosition = -192
+        cornice.name = "puzzleVaultCornice"
+        addChild(cornice)
+
+        let ribRotations: [CGFloat] = [-0.16, -0.08, 0, 0.08, 0.16]
+        for (index, x) in [CGFloat(260), 475, 690, 905, 1120].enumerated() {
+            let rib = ArtSystem.box(
+                CGSize(width: 13, height: 120),
+                color: UIColor(red: 0.24, green: 0.20, blue: 0.34, alpha: 0.82),
+                radius: 6
+            )
+            rib.strokeColor = accent.withAlphaComponent(0.34)
+            rib.lineWidth = 2
+            rib.position = CGPoint(x: x, y: 636)
+            rib.zRotation = ribRotations[index]
+            rib.zPosition = -200
+            rib.name = "puzzleVaultRib\(index)"
+            addChild(rib)
+
+            let ribGem = SKShapeNode(circleOfRadius: 8)
+            ribGem.fillColor = accent.withAlphaComponent(0.72)
+            ribGem.strokeColor = UIColor(red: 0.94, green: 0.78, blue: 0.38, alpha: 0.72)
+            ribGem.lineWidth = 2
+            ribGem.position = CGPoint(x: x, y: 584)
+            ribGem.zPosition = -189
+            addChild(ribGem)
+        }
 
         let floor = ArtSystem.box(
             CGSize(width: 1280, height: 205),
@@ -420,13 +488,37 @@ import LearningCore
             addChild(seam)
         }
 
+        // A low-perspective palace seal visually anchors the play space to the floor.
+        let seal = SKShapeNode(ellipseOf: CGSize(width: 330, height: 94))
+        seal.fillColor = UIColor(red: 0.12, green: 0.09, blue: 0.20, alpha: 0.26)
+        seal.strokeColor = accent.withAlphaComponent(0.42)
+        seal.lineWidth = 5
+        seal.position = CGPoint(x: 690, y: 104)
+        seal.zPosition = -132
+        seal.name = "puzzleFloorSeal"
+        addChild(seal)
+
+        let sealInner = SKShapeNode(ellipseOf: CGSize(width: 220, height: 60))
+        sealInner.fillColor = .clear
+        sealInner.strokeColor = UIColor(red: 0.88, green: 0.68, blue: 0.30, alpha: 0.38)
+        sealInner.lineWidth = 3
+        sealInner.zPosition = 1
+        seal.addChild(sealInner)
+
+        let sealCore = SKShapeNode(circleOfRadius: 13)
+        sealCore.fillColor = accent.withAlphaComponent(0.52)
+        sealCore.strokeColor = UIColor(red: 0.96, green: 0.80, blue: 0.40, alpha: 0.64)
+        sealCore.lineWidth = 2
+        sealCore.zPosition = 2
+        seal.addChild(sealCore)
+
         for x in [CGFloat(205), 405, 605, 805, 1005, 1205] {
             let pillar = ArtSystem.box(
                 CGSize(width: 46, height: 350),
                 color: UIColor(red: 0.12, green: 0.11, blue: 0.24, alpha: 1),
                 radius: 12
             )
-            pillar.strokeColor = UIColor(red: 0.55, green: 0.44, blue: 0.78, alpha: 0.58)
+            pillar.strokeColor = accent.withAlphaComponent(0.38)
             pillar.lineWidth = 2
             pillar.position = CGPoint(x: x, y: 405)
             pillar.zPosition = -195
@@ -442,26 +534,57 @@ import LearningCore
             addChild(cap)
         }
 
-        for x in [CGFloat(320), 690, 1060] {
+        for (index, x) in [CGFloat(320), 690, 1060].enumerated() {
             let arch = SKShapeNode(
                 rectOf: CGSize(width: 235, height: 285),
                 cornerRadius: 108
             )
-            arch.fillColor = UIColor(red: 0.07, green: 0.09, blue: 0.18, alpha: 0.72)
-            arch.strokeColor = UIColor(red: 0.48, green: 0.67, blue: 0.88, alpha: 0.68)
+            arch.fillColor = UIColor(red: 0.065, green: 0.075, blue: 0.16, alpha: 0.84)
+            arch.strokeColor = accent.withAlphaComponent(0.58)
             arch.lineWidth = 4
             arch.position = CGPoint(x: x, y: 410)
             arch.zPosition = -185
+            arch.name = "puzzleAlcove\(index)"
             addChild(arch)
+
+            let glow = SKShapeNode(ellipseOf: CGSize(width: 150, height: 190))
+            glow.fillColor = accent.withAlphaComponent(0.075)
+            glow.strokeColor = accent.withAlphaComponent(0.16)
+            glow.lineWidth = 2
+            glow.position = CGPoint(x: 0, y: 2)
+            glow.zPosition = -2
+            glow.name = "puzzleAlcoveGlow\(index)"
+            arch.addChild(glow)
 
             let inner = SKShapeNode(
                 rectOf: CGSize(width: 177, height: 225),
                 cornerRadius: 84
             )
-            inner.fillColor = UIColor(red: 0.12, green: 0.18, blue: 0.31, alpha: 0.88)
-            inner.strokeColor = UIColor(red: 0.67, green: 0.55, blue: 0.91, alpha: 0.78)
+            inner.fillColor = UIColor(red: 0.10, green: 0.14, blue: 0.27, alpha: 0.88)
+            inner.strokeColor = accent.withAlphaComponent(0.56)
             inner.lineWidth = 4
+            inner.name = "puzzleAlcoveInner\(index)"
             arch.addChild(inner)
+
+            let keystone = SKShapeNode(circleOfRadius: 10)
+            keystone.fillColor = UIColor(red: 0.88, green: 0.68, blue: 0.31, alpha: 0.92)
+            keystone.strokeColor = accent.withAlphaComponent(0.72)
+            keystone.lineWidth = 2
+            keystone.position = CGPoint(x: 0, y: 137)
+            keystone.zPosition = 2
+            arch.addChild(keystone)
+
+            let plinth = ArtSystem.box(
+                CGSize(width: 202, height: 18),
+                color: UIColor(red: 0.24, green: 0.18, blue: 0.34, alpha: 0.96),
+                radius: 7
+            )
+            plinth.strokeColor = UIColor(red: 0.82, green: 0.63, blue: 0.31, alpha: 0.58)
+            plinth.lineWidth = 2
+            plinth.position = CGPoint(x: 0, y: -151)
+            plinth.zPosition = 2
+            plinth.name = "puzzleAlcovePlinth\(index)"
+            arch.addChild(plinth)
         }
 
         for (index, point) in [
@@ -470,13 +593,30 @@ import LearningCore
             CGPoint(x: 875, y: 515),
             CGPoint(x: 1125, y: 545)
         ].enumerated() {
+            let mount = SKShapeNode(circleOfRadius: 25)
+            mount.fillColor = UIColor(red: 0.13, green: 0.11, blue: 0.24, alpha: 0.96)
+            mount.strokeColor = UIColor(red: 0.84, green: 0.65, blue: 0.31, alpha: 0.72)
+            mount.lineWidth = 3
+            mount.position = CGPoint(x: point.x, y: point.y - 22)
+            mount.zPosition = -171
+            mount.name = "puzzleCrystalSconce\(index)"
+            addChild(mount)
+
+            let halo = SKShapeNode(circleOfRadius: 34)
+            halo.fillColor = accent.withAlphaComponent(0.055)
+            halo.strokeColor = accent.withAlphaComponent(0.18)
+            halo.lineWidth = 2
+            halo.position = point
+            halo.zPosition = -170
+            addChild(halo)
+
             if let crystal = ArtSystem.sprite(
                 "Crystal",
                 size: CGSize(width: 66, height: 96)
             ) {
                 crystal.position = point
                 crystal.zPosition = -168
-                crystal.alpha = index.isMultiple(of: 2) ? 0.82 : 0.66
+                crystal.alpha = index.isMultiple(of: 2) ? 0.88 : 0.74
                 crystal.name = "puzzleCrystalFixture"
                 addChild(crystal)
             }
@@ -493,11 +633,45 @@ import LearningCore
         dais.zPosition = -105
         dais.name = "puzzleStageDais"
         addChild(dais)
+
+        let daisInset = ArtSystem.box(
+            CGSize(width: 520, height: 12),
+            color: accent.withAlphaComponent(0.18),
+            radius: 6
+        )
+        daisInset.strokeColor = accent.withAlphaComponent(0.34)
+        daisInset.lineWidth = 2
+        daisInset.position = CGPoint(x: 775, y: 236)
+        daisInset.zPosition = -102
+        daisInset.name = "puzzleStageInlay"
+        addChild(daisInset)
     }
 
     private func buildRuneGate() {
+        let gateGlow = SKShapeNode(
+            rectOf: CGSize(width: 252, height: 344),
+            cornerRadius: 120
+        )
+        gateGlow.fillColor = UIColor(red: 0.46, green: 0.34, blue: 0.72, alpha: 0.10)
+        gateGlow.strokeColor = UIColor(red: 0.76, green: 0.62, blue: 0.98, alpha: 0.28)
+        gateGlow.lineWidth = 4
+        gateGlow.position = CGPoint(x: 1090, y: 390)
+        gateGlow.zPosition = 348
+        addChild(gateGlow)
+
+        let threshold = ArtSystem.box(
+            CGSize(width: 265, height: 30),
+            color: UIColor(red: 0.25, green: 0.18, blue: 0.34, alpha: 0.98),
+            radius: 10
+        )
+        threshold.strokeColor = UIColor(red: 0.87, green: 0.68, blue: 0.31, alpha: 0.82)
+        threshold.lineWidth = 3
+        threshold.position = CGPoint(x: 1090, y: 220)
+        threshold.zPosition = 352
+        addChild(threshold)
+
         let arch = SKShapeNode(rectOf: CGSize(width: 220, height: 315), cornerRadius: 105)
-        arch.fillColor = UIColor(red: 0.20, green: 0.15, blue: 0.34, alpha: 0.72)
+        arch.fillColor = UIColor(red: 0.20, green: 0.15, blue: 0.34, alpha: 0.82)
         arch.strokeColor = UIColor(red: 0.63, green: 0.52, blue: 0.92, alpha: 1)
         arch.lineWidth = 11
         arch.position = CGPoint(x: 1090, y: 390)
@@ -505,19 +679,66 @@ import LearningCore
         arch.zPosition = 360
         addChild(arch)
 
+        for x in [CGFloat(-101), 101] {
+            let jamb = ArtSystem.box(
+                CGSize(width: 28, height: 226),
+                color: UIColor(red: 0.17, green: 0.12, blue: 0.28, alpha: 0.98),
+                radius: 8
+            )
+            jamb.strokeColor = UIColor(red: 0.82, green: 0.63, blue: 0.32, alpha: 0.60)
+            jamb.lineWidth = 2
+            jamb.position = CGPoint(x: x, y: -22)
+            jamb.zPosition = -1
+            arch.addChild(jamb)
+        }
+
         let door = SKShapeNode(rectOf: CGSize(width: 145, height: 225), cornerRadius: 66)
         door.fillColor = UIColor(red: 0.10, green: 0.08, blue: 0.18, alpha: 0.96)
         door.strokeColor = UIColor(red: 0.49, green: 0.41, blue: 0.74, alpha: 0.95)
         door.lineWidth = 5
         door.position.y = -24
         door.name = "puzzleGateDoor"
+        door.zPosition = 1
         arch.addChild(door)
+
+        for y in [CGFloat(-58), 8, 74] {
+            let panel = ArtSystem.box(
+                CGSize(width: 92, height: 34),
+                color: UIColor(red: 0.14, green: 0.11, blue: 0.24, alpha: 0.88),
+                radius: 12
+            )
+            panel.strokeColor = UIColor(red: 0.55, green: 0.46, blue: 0.78, alpha: 0.52)
+            panel.lineWidth = 2
+            panel.position = CGPoint(x: 0, y: y)
+            panel.zPosition = -1
+            door.addChild(panel)
+        }
+
+        let crown = ArtSystem.box(
+            CGSize(width: 118, height: 24),
+            color: UIColor(red: 0.30, green: 0.22, blue: 0.42, alpha: 0.96),
+            radius: 9
+        )
+        crown.strokeColor = UIColor(red: 0.88, green: 0.69, blue: 0.34, alpha: 0.72)
+        crown.lineWidth = 2
+        crown.position = CGPoint(x: 0, y: 138)
+        crown.zPosition = -1
+        arch.addChild(crown)
 
         let crest = ArtSystem.label("◈", size: 48)
         crest.fontColor = UIColor(red: 0.90, green: 0.82, blue: 1.0, alpha: 1)
         crest.position.y = 88
         crest.name = "puzzleGateCrest"
+        crest.zPosition = 2
         arch.addChild(crest)
+
+        let lock = SKShapeNode(circleOfRadius: 9)
+        lock.fillColor = UIColor(red: 0.88, green: 0.68, blue: 0.30, alpha: 0.94)
+        lock.strokeColor = UIColor(red: 0.98, green: 0.88, blue: 0.58, alpha: 0.92)
+        lock.lineWidth = 2
+        lock.position = CGPoint(x: 0, y: -96)
+        lock.zPosition = 2
+        arch.addChild(lock)
     }
 
     private func buildRunePath() {
