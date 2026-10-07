@@ -612,6 +612,14 @@ import LearningCore
         )
         XCTAssertLessThan(sleepingPlank.alpha, 0.25)
         XCTAssertEqual(sunmill.valkyrie.xScale, 0.58, accuracy: 0.001)
+        let sunmillInstructionBackdrop = try XCTUnwrap(
+            sunmill.childNode(withName: "instructionBackdrop")
+        )
+        XCTAssertLessThan(
+            sunmillInstructionBackdrop.calculateAccumulatedFrame().width,
+            800,
+            "Sunmill guidance should stay compact enough to leave the painted world dominant."
+        )
 
         let sunmillChoices = sunmill.children.filter { $0.name == "sunmillChoice" }
         XCTAssertEqual(sunmillChoices.count, 4)
@@ -659,7 +667,11 @@ import LearningCore
         )
         XCTAssertNotNil(awakeSunmill.childNode(withName: "storyHollowRoute"))
         awakeSunmill.valkyrie.position = CGPoint(x: 1015, y: 175)
-        awakeSunmill.handleTap(at: CGPoint(x: 1010, y: 165))
+        XCTAssertEqual(
+            awakeSunmill.targetName(at: CGPoint(x: 1095, y: 300)),
+            "storyHollowRoute"
+        )
+        awakeSunmill.handleTap(at: CGPoint(x: 1095, y: 300))
         XCTAssertEqual(state.world, .storyHollow)
         awakeSunmill.willLeave()
 
