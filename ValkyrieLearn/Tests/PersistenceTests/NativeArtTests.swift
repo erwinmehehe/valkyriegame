@@ -1699,6 +1699,8 @@ import LearningCore
         try await capture(home, in: view, name: "Story-Tree-native")
         home.handleTap(at: CGPoint(x: 835, y: 535))
         // Exercise the painted waypoint route before the arrival capture.
+        // Wait on the actual SpriteKit arrival condition instead of assuming
+        // a fixed wall-clock duration on a loaded macOS CI runner.
         try await waitUntil(timeout: 8) {
             home.isNear(CGPoint(x: 795, y: 450))
         }
