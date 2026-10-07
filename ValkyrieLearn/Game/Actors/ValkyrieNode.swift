@@ -7,7 +7,19 @@ import SpriteKit
     private var temporaryLabel: SKLabelNode?
     private var facing: CGFloat = 1
     private let renderHeight: CGFloat
-    var reducedMotion = false
+    private var currentPose: ArtSystem.Pose = .idle
+    var reducedMotion = false {
+        didSet {
+            guard reducedMotion != oldValue else { return }
+            // Refresh visual motion without cancelling travel, companion ability
+            // callbacks or the existing return-to-idle deadline.
+            pose(currentPose, rescheduleIdleReturn: false)
+            if reducedMotion, let aura = childNode(withName: "companionPresence") {
+                aura.removeAction(forKey: "presencePulse")
+                aura.setScale(1)
+            }
+        }
+    }
     init(character: String, color: UIColor, height: CGFloat) {
         self.character = character
         self.renderHeight = height
@@ -49,10 +61,12 @@ import SpriteKit
     }
 
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
-    func pose(_ pose: ArtSystem.Pose) {
-        removeAction(forKey: "operation")
-        bodyNode.removeAction(forKey: "pose")
-        bodyNode.removeAction(forKey: "helperHop")
+    func pose(_ pose: ArtSystem.Pose, rescheduleIdleReturn: Bool = true) {
+        currentPose = pose
+        if rescheduleIdleReturn { removeAction(forKey: "operation") }
+        for key in ["pose", "helperHop", "miloInspect", "tikoRuneFocus"] {
+            bodyNode.removeAction(forKey: key)
+        }
         atlasSprite?.removeAction(forKey: "pose")
         bodyNode.position = .zero; bodyNode.zRotation = 0; bodyNode.setScale(1)
         bodyNode.xScale = facing
@@ -97,7 +111,7 @@ import SpriteKit
                 case .interact: break // The existing atlas supplies Valkyrie's reaching pose.
                 }
             }
-            if pose == .interact || pose == .celebrate || pose == .react {
+            if rescheduleIdleReturn && (pose == .interact || pose == .celebrate || pose == .react) {
                 run(.sequence([.wait(forDuration: reducedMotion ? 0.25 : 0.75), .run { [weak self] in self?.pose(.idle) }]), withKey: "operation")
             }
         } else {

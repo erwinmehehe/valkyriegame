@@ -50,8 +50,8 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 500, height: 100),
-        cornerRadius: 16
+        rectOf: CGSize(width: 470, height: 92),
+        cornerRadius: 15
     )
     private let questionHeading = ArtSystem.label("PIP'S WORK ORDER", size: 13)
     private let questionLabel = ArtSystem.label("", size: 23)
@@ -70,7 +70,103 @@ import LearningCore
         // instead of letting the character dominate the learning object.
         valkyrie.setScale(0.58)
         pip.setScale(0.72)
+        polishMathCastleHUD()
         initialBuildComplete = true
+    }
+
+    private func polishMathCastleHUD() {
+        childNode(withName: "worldTitleBackdrop")?.removeFromParent()
+        childNode(withName: "worldTitle")?.removeFromParent()
+
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: 230, height: 42),
+            fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
+            stroke: UIColor(red: 0.90, green: 0.70, blue: 0.32, alpha: 0.58),
+            radius: 15
+        )
+        titlePlate.position = CGPoint(x: 205, y: 672)
+        titlePlate.zPosition = 1988
+        titlePlate.name = "worldTitleBackdrop"
+        addChild(titlePlate)
+
+        let title = ArtSystem.label(worldTitle, size: 22)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
+        title.horizontalAlignmentMode = .left
+        title.position = CGPoint(x: 105, y: 672)
+        title.zPosition = 2000
+        title.name = "worldTitle"
+        addChild(title)
+
+        childNode(withName: "topVignette")?.alpha = 0.48
+
+        if let feedbackPlate = childNode(withName: "instructionBackdrop") {
+            feedbackPlate.xScale = 0.69
+            feedbackPlate.yScale = 0.80
+            feedbackPlate.position = CGPoint(x: 640, y: 44)
+        }
+        instruction.position = CGPoint(x: 640, y: 44)
+        instruction.fontName = "AvenirNext-Medium"
+        instruction.fontSize = 18
+        instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
+        instruction.preferredMaxLayoutWidth = 600
+    }
+
+    private func addCompactHomeControl() {
+        let root = SKNode()
+        root.name = "home"
+        root.position = CGPoint(x: 52, y: 672)
+        root.zPosition = 2000
+
+        let medallion = ArtSystem.medallion(
+            radius: 22,
+            fill: UIColor(red: 0.05, green: 0.06, blue: 0.14, alpha: 0.92),
+            stroke: UIColor(red: 0.90, green: 0.70, blue: 0.32, alpha: 0.52),
+            glow: reducedMotion ? 0 : 1
+        )
+        medallion.name = "home"
+        medallion.addChild(ArtSystem.label("‹", size: 22))
+        root.addChild(medallion)
+
+        // Keep a child-friendly 60pt hit target without making the back control
+        // visually compete with the world title.
+        let hit = SKShapeNode(circleOfRadius: 30)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = "home"
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Back")
+        addChild(root)
+    }
+
+    private func addCompactWorkshopGear(
+        _ symbol: String,
+        name: String,
+        at point: CGPoint,
+        accessibilityLabel: String
+    ) {
+        let root = SKNode()
+        root.name = name
+        root.position = point
+        root.zPosition = 750
+
+        let gear = ArtSystem.gear(radius: 22, symbol: symbol)
+        gear.name = name
+        gear.alpha = 0.86
+        root.addChild(gear)
+
+        let hit = SKShapeNode(circleOfRadius: 30)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = name
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: accessibilityLabel)
+        registerInteraction(root, clearance: 14)
+        addChild(root)
     }
 
     override func buildWorld() {
@@ -78,7 +174,7 @@ import LearningCore
         prepareCastleIllustrationForRetina()
         buildCastleFidelityAccents()
 
-        _ = worldControl("‹", name: "home", at: CGPoint(x: 52, y: 669))
+        addCompactHomeControl()
         // Keep the approved painted courtyard, but prepare enough physical pixels
         // for the Retina surface before SpriteKit composites live gameplay over it.
         if let floor = ArtSystem.retinaEnhancedSprite(
@@ -92,55 +188,105 @@ import LearningCore
             addChild(floor)
         }
 
-        // Ground the active mechanic on a subtle shared workshop footprint while
-        // keeping the approved castle illustration dominant.
-        let workZone = ArtSystem.panel(
-            CGSize(width: 640, height: 275),
-            fill: UIColor(red: 0.10, green: 0.14, blue: 0.20, alpha: 0.14),
-            stroke: UIColor(red: 0.76, green: 0.58, blue: 0.27, alpha: 0.34),
-            radius: 72,
-            lineWidth: 2,
-            shadowAlpha: 0.08,
-            innerHighlight: UIColor(red: 0.95, green: 0.78, blue: 0.42, alpha: 0.05)
-        )
-        workZone.position = CGPoint(x: 820, y: 350)
+        // Ground the active mechanic on a low-perspective workshop dais instead of
+        // a translucent modal panel. The ellipse follows the painted courtyard and
+        // makes every manipulative feel physically installed in the castle.
+        let workZone = SKShapeNode(ellipseOf: CGSize(width: 650, height: 150))
+        workZone.fillColor = UIColor(red: 0.07, green: 0.11, blue: 0.18, alpha: 0.16)
+        workZone.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.34)
+        workZone.lineWidth = 3
+        workZone.position = CGPoint(x: 820, y: 246)
         workZone.zPosition = 5
         workZone.name = "mathWorkZone"
         addChild(workZone)
 
+        let workZoneCore = SKShapeNode(ellipseOf: CGSize(width: 540, height: 104))
+        workZoneCore.fillColor = UIColor(red: 0.08, green: 0.21, blue: 0.28, alpha: 0.08)
+        workZoneCore.strokeColor = UIColor(red: 0.47, green: 0.84, blue: 0.93, alpha: 0.20)
+        workZoneCore.lineWidth = 2
+        workZoneCore.position = CGPoint(x: 820, y: 246)
+        workZoneCore.zPosition = 6
+        workZoneCore.name = "mathWorkZoneCore"
+        addChild(workZoneCore)
+
         let workZoneRail = ArtSystem.box(
-            CGSize(width: 520, height: 5),
-            color: UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.34),
-            radius: 2
+            CGSize(width: 500, height: 7),
+            color: UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.42),
+            radius: 3
         )
-        workZoneRail.position = CGPoint(x: 820, y: 220)
+        workZoneRail.position = CGPoint(x: 820, y: 205)
         workZoneRail.strokeColor = .clear
         workZoneRail.zPosition = 7
         workZoneRail.name = "mathWorkZoneRail"
         addChild(workZoneRail)
-        // The five workshop seals are mounted on one physical timber rack.
-        let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
-        if let texture = ArtSystem.texture("BridgeOakPlank") { rack.fillColor = .white; rack.fillTexture = texture }
-        rack.position = CGPoint(x: 300, y: 520); rack.zPosition = 30
-        rack.alpha = 0.58; rack.name = "workshopRack"; addChild(rack)
-        for x in [150, 510] {
-            let post = ArtSystem.box(CGSize(width: 14, height: 142), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
-            if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture }
-            post.position = CGPoint(x: x - 30, y: 462); post.zPosition = 29
-            post.alpha = 0.55; post.name = "workshopRack"; addChild(post)
-        }
-        for (index, symbol) in ["◆", "⚖", "◉", "▦", "↔"].enumerated() {
-            let seal = worldGear(symbol, name: "workshop\(index)",
-                                 at: CGPoint(x: 140 + index * 80, y: 548), radius: 26,
-                                 accessibilityLabel: "Workshop station \(index + 1)")
-            seal.alpha = 0.68
-        }
-        let wind = worldGear("↻", name: "wind", at: CGPoint(x: 300, y: 615), radius: 30,
-                             accessibilityLabel: "Wind Pip's workshop gear")
-        wind.alpha = 0.72
 
-        // Present the active prompt as a castle work order instead of a HUD panel.
-        questionPlate.position = CGPoint(x: 800, y: 620)
+        // Compress the workshop selector into an in-world instrument rail. Keep
+        // the original centers and 60pt hit areas so this is a visual simplification,
+        // not an interaction change.
+        let rackBacking = ArtSystem.plaque(
+            CGSize(width: 390, height: 56),
+            fill: UIColor(red: 0.055, green: 0.085, blue: 0.14, alpha: 0.38),
+            stroke: UIColor(red: 0.87, green: 0.66, blue: 0.29, alpha: 0.30),
+            radius: 18
+        )
+        rackBacking.position = CGPoint(x: 300, y: 548)
+        rackBacking.zPosition = 28
+        rackBacking.alpha = 0.58
+        rackBacking.name = "workshopRackBacking"
+        addChild(rackBacking)
+
+        let rack = ArtSystem.box(
+            CGSize(width: 374, height: 10),
+            color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1),
+            radius: 3
+        )
+        if let texture = ArtSystem.texture("BridgeOakPlank") {
+            rack.fillColor = .white
+            rack.fillTexture = texture
+            rack.strokeColor = .clear
+        }
+        rack.position = CGPoint(x: 300, y: 519)
+        rack.zPosition = 30
+        rack.alpha = 0.62
+        rack.name = "workshopRack"
+        addChild(rack)
+
+        for x in [128, 472] {
+            let post = ArtSystem.box(
+                CGSize(width: 11, height: 78),
+                color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1),
+                radius: 3
+            )
+            if let texture = ArtSystem.texture("BridgeTimber") {
+                post.fillColor = .white
+                post.fillTexture = texture
+                post.strokeColor = .clear
+            }
+            post.position = CGPoint(x: x, y: 505)
+            post.zPosition = 29
+            post.alpha = 0.48
+            post.name = "workshopRack"
+            addChild(post)
+        }
+
+        for (index, symbol) in ["◆", "⚖", "◉", "▦", "↔"].enumerated() {
+            addCompactWorkshopGear(
+                symbol,
+                name: "workshop\(index)",
+                at: CGPoint(x: 140 + index * 80, y: 548),
+                accessibilityLabel: "Workshop station \(index + 1)"
+            )
+        }
+        addCompactWorkshopGear(
+            "↻",
+            name: "wind",
+            at: CGPoint(x: 300, y: 615),
+            accessibilityLabel: "Wind Pip's workshop gear"
+        )
+
+        // Keep the active prompt readable, but treat it like a compact hanging
+        // work order instead of a full-width HUD banner.
+        questionPlate.position = CGPoint(x: 800, y: 618)
         if let texture = ArtSystem.texture("BridgeWorkOrder") {
             questionPlate.fillColor = .white
             questionPlate.fillTexture = texture
@@ -155,9 +301,9 @@ import LearningCore
         questionPlate.isHidden = true
         addChild(questionPlate)
 
-        for x in [555.0, 1055.0] {
+        for x in [565.0, 1035.0] {
             let hanger = ArtSystem.box(
-                CGSize(width: 10, height: 58),
+                CGSize(width: 9, height: 44),
                 color: .init(red: 0.39, green: 0.27, blue: 0.15, alpha: 1),
                 radius: 2
             )
@@ -166,25 +312,29 @@ import LearningCore
                 hanger.fillTexture = texture
                 hanger.strokeColor = .clear
             }
-            hanger.position = CGPoint(x: x, y: 665)
+            hanger.position = CGPoint(x: x, y: 683)
             hanger.zPosition = 1994
             hanger.name = "questionPromptHanger"
             hanger.isHidden = true
             addChild(hanger)
         }
 
-        questionHeading.position = CGPoint(x: 800, y: 647)
-        questionHeading.fontColor = UIColor(red: 1.0, green: 0.82, blue: 0.42, alpha: 1)
+        questionHeading.position = CGPoint(x: 800, y: 643)
+        questionHeading.fontName = "AvenirNext-Bold"
+        questionHeading.fontSize = 14
+        questionHeading.fontColor = UIColor(red: 1.0, green: 0.84, blue: 0.46, alpha: 1)
         questionHeading.zPosition = 2001
         questionHeading.name = "questionPromptHeading"
         questionHeading.isHidden = true
         addChild(questionHeading)
 
-        questionLabel.position = CGPoint(x: 800, y: 608)
-        questionLabel.preferredMaxLayoutWidth = 440
-        questionLabel.fontSize = 19
+        questionLabel.position = CGPoint(x: 600, y: 610)
+        questionLabel.horizontalAlignmentMode = .left
+        questionLabel.fontName = "AvenirNext-Medium"
+        questionLabel.preferredMaxLayoutWidth = 400
+        questionLabel.fontSize = 18
         questionLabel.numberOfLines = 2
-        questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
+        questionLabel.fontColor = UIColor(red: 1.0, green: 0.97, blue: 0.86, alpha: 1)
         questionLabel.zPosition = 2000
         questionLabel.name = "questionPrompt"
         questionLabel.isHidden = true
@@ -210,10 +360,16 @@ import LearningCore
         workflow.name = "workOrderFlow"
         addChild(workflow)
 
-        let light = SKShapeNode(circleOfRadius: 27)
+        let powerMount = ArtSystem.gear(radius: 34)
+        powerMount.position = CGPoint(x: 1105, y: 352)
+        powerMount.zPosition = 39
+        powerMount.name = "castlePowerMount"
+        addChild(powerMount)
+
+        let light = SKShapeNode(circleOfRadius: 17)
         light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
         light.name = "castlePowerLight"
-        light.fillColor = .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+        light.fillColor = .init(red: 0.14, green: 0.18, blue: 0.29, alpha: 1)
         light.strokeColor = .init(red: 0.95, green: 0.71, blue: 0.32, alpha: 1)
         addChild(light); powerLight = light
         let portal = SKShapeNode(ellipseOf: CGSize(width: 115, height: 170))
@@ -441,8 +597,9 @@ import LearningCore
         checkPlate.name = "submit"
         node.addChild(checkPlate)
 
-        let checkLabel = ArtSystem.label("CHECK", size: 12)
-        checkLabel.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1)
+        let checkLabel = ArtSystem.label("CHECK", size: 13)
+        checkLabel.fontName = "AvenirNext-Bold"
+        checkLabel.fontColor = UIColor(red: 1.0, green: 0.92, blue: 0.70, alpha: 1)
         checkLabel.name = "submit"
         checkPlate.addChild(checkLabel)
 
@@ -803,6 +960,9 @@ import LearningCore
             return
         }
         questionLabel.text = text
+        let longPrompt = text.count > 52
+        questionLabel.fontSize = longPrompt ? 17 : 18
+        questionLabel.position.y = longPrompt ? 607 : 610
         questionPlate.isHidden = false
         questionHeading.isHidden = false
         questionLabel.isHidden = false
@@ -841,6 +1001,7 @@ import LearningCore
                 $0.alpha = 0.72
             }
             childNode(withName: "next")?.isHidden = false
+            lever?.isHidden = true
             updatePower(false)
             return
         }
@@ -865,14 +1026,16 @@ import LearningCore
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
 
-        let secondaryHidden = !state.workshop && !runtime.completed
+        let secondaryHidden = !runtime.completed && (engaged || !state.workshop)
         children.filter {
             ($0.name?.hasPrefix("workshop") == true) || $0.name == "workshopRack" || $0.name == "wind"
         }.forEach {
             $0.alpha = secondaryHidden ? 0.18 : 0.72
             $0.isHidden = secondaryHidden
         }
-        childNode(withName: "next")?.isHidden = !runtime.completed && !state.workshop
+        childNode(withName: "next")?.isHidden = (engaged && !runtime.completed)
+            || (!runtime.completed && !state.workshop)
+        lever?.isHidden = !engaged || runtime.completed
         if engaged {
             let isBridge = runtime.encounter.mechanicID == MathMechanicID.missingNumberBridge
             showQuestion(isBridge ? nil : (

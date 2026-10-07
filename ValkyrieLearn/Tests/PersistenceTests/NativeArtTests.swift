@@ -164,10 +164,19 @@ import LearningCore
 
             XCTAssertNotNil(scene.childNode(withName: "wordGardenRetinaAccents"))
             XCTAssertNotNil(scene.childNode(withName: "//" + accentName))
-            XCTAssertNotNil(
-                scene.childNode(withName: "//questionPromptBackdrop"),
-                "Word Garden prompts need a contrast surface over the bright painting."
-            )
+            if world == .sunmillCrossing {
+                XCTAssertNil(
+                    scene.childNode(withName: "//questionPromptBackdrop"),
+                    "Sunmill Crossing should use one guidance surface instead of duplicating the prompt over the world."
+                )
+                XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
+                XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
+            } else {
+                XCTAssertNotNil(
+                    scene.childNode(withName: "//questionPromptBackdrop"),
+                    "Flower Gate and Story Hollow prompts need a contrast surface over the bright painting."
+                )
+            }
             XCTAssertFalse(
                 backdrop.isHidden,
                 "Retina preparation must preserve the painted Word Garden environment."
@@ -468,12 +477,19 @@ import LearningCore
         XCTAssertNotNil(scene.childNode(withName: "mathWorkZone"))
         XCTAssertNotNil(scene.childNode(withName: "//cartDropZone"))
         XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == false) // Free workshop exit.
+        XCTAssertTrue(scene.childNode(withName: "//submit")?.isHidden == true)
         scene.valkyrie.position = CGPoint(x: 490, y: 175)
         scene.handleTap(at: CGPoint(x: 830, y: 265))
+        XCTAssertTrue(scene.childNode(withName: "workshopRackBacking")?.isHidden == true)
+        XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == true)
+        XCTAssertTrue(scene.childNode(withName: "//submit")?.isHidden == false)
         let target = try XCTUnwrap(state.runtime?.encounter.targetQuantity)
         for _ in 0..<target { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
         scene.handleTap(at: CGPoint(x: 1120, y: 250))
         XCTAssertTrue(state.runtime?.completed == true)
+        XCTAssertTrue(scene.childNode(withName: "//submit")?.isHidden == true)
+        XCTAssertTrue(scene.childNode(withName: "workshopRackBacking")?.isHidden == false)
+        XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == false)
         let powerLight = try XCTUnwrap(scene.childNode(withName: "castlePowerLight") as? SKShapeNode)
         XCTAssertEqual(powerLight.glowWidth, 16)
         let portal = try XCTUnwrap(scene.childNode(withName: "challengeGate") as? SKShapeNode)
@@ -584,10 +600,48 @@ import LearningCore
         let sunmill = WordGardenScene(state: state)
         sunmill.didMove(to: SKView())
         XCTAssertNotNil(sunmill.childNode(withName: "sunmillWheel"))
+        XCTAssertNotNil(sunmill.childNode(withName: "sunmillTower"))
         XCTAssertNotNil(sunmill.childNode(withName: "sunmillWater"))
+        XCTAssertNotNil(sunmill.childNode(withName: "sunmillLightPath"))
+        XCTAssertNotNil(sunmill.childNode(withName: "decorativeSunmillChoiceBank"))
+        XCTAssertNotNil(sunmill.childNode(withName: "decorativeSunmillChoiceVine"))
         XCTAssertNotNil(sunmill.childNode(withName: "targetRune"))
-        XCTAssertTrue(sunmill.childNode(withName: "sunmillBridge")?.isHidden == true)
-        XCTAssertEqual(sunmill.children.filter { $0.name == "sunmillChoice" }.count, 4)
+        XCTAssertNil(
+            sunmill.childNode(withName: "questionPrompt"),
+            "Sunmill Crossing must not repeat the same learning prompt above and below the world."
+        )
+        XCTAssertFalse(
+            sunmill.childNode(withName: "sunmillBridge")?.isHidden ?? true,
+            "The sleeping crossing should remain visible so learning visibly restores it."
+        )
+        let sleepingPlank = try XCTUnwrap(
+            sunmill.childNode(withName: "//sunmillBridgePlank0")
+        )
+        XCTAssertLessThan(sleepingPlank.alpha, 0.25)
+        XCTAssertEqual(sunmill.valkyrie.xScale, 0.58, accuracy: 0.001)
+        let sunmillInstructionBackdrop = try XCTUnwrap(
+            sunmill.childNode(withName: "instructionBackdrop")
+        )
+        XCTAssertLessThan(
+            sunmillInstructionBackdrop.calculateAccumulatedFrame().width,
+            800,
+            "Sunmill guidance should stay compact enough to leave the painted world dominant."
+        )
+
+        let sunmillChoices = sunmill.children.filter { $0.name == "sunmillChoice" }
+        XCTAssertEqual(sunmillChoices.count, 4)
+        for choice in sunmillChoices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 100)
+            XCTAssertGreaterThanOrEqual(frame.height, 100)
+            XCTAssertNotNil(choice.childNode(withName: "decorativeSunmillChoiceStem"))
+            XCTAssertNotNil(choice.childNode(withName: "decorativeSunmillChoiceSocket"))
+            XCTAssertEqual(
+                sunmill.targetName(at: choice.position),
+                "sunmillChoice",
+                "Physical leaf decoration must never steal the literacy tap."
+            )
+        }
         XCTAssertEqual(
             state.nextSunmillEncounter()?.mechanicID,
             WordGardenMechanicID.sunmillPair
@@ -609,9 +663,22 @@ import LearningCore
         let awakeSunmill = WordGardenScene(state: state)
         awakeSunmill.didMove(to: SKView())
         XCTAssertFalse(awakeSunmill.childNode(withName: "sunmillBridge")?.isHidden ?? true)
+        XCTAssertGreaterThan(
+            awakeSunmill.childNode(withName: "//sunmillBridgePlank6")?.alpha ?? 0,
+            0.99,
+            "Completing the Sunmill should physically restore the whole crossing."
+        )
+        XCTAssertGreaterThan(
+            awakeSunmill.childNode(withName: "sunmillLightPath")?.alpha ?? 0,
+            0.9
+        )
         XCTAssertNotNil(awakeSunmill.childNode(withName: "storyHollowRoute"))
         awakeSunmill.valkyrie.position = CGPoint(x: 1015, y: 175)
-        awakeSunmill.handleTap(at: CGPoint(x: 1010, y: 165))
+        XCTAssertEqual(
+            awakeSunmill.targetName(at: CGPoint(x: 1095, y: 300)),
+            "storyHollowRoute"
+        )
+        awakeSunmill.handleTap(at: CGPoint(x: 1095, y: 300))
         XCTAssertEqual(state.world, .storyHollow)
         awakeSunmill.willLeave()
 
@@ -899,15 +966,18 @@ import LearningCore
         defer { view.presentScene(nil); window.isHidden = true }
         let garden = WordGardenScene(state: state)
         view.presentScene(garden)
-        // Wait for SpriteKit's observable preview state, not wall-clock time:
-        // loaded simulators may advance SKActions later than a fixed sleep.
+        // Wait for the live preview state before approaching a current flower.
         try await waitUntil(timeout: 8) {
             garden.childNode(withName: "targetRune")?.isHidden == true
         }
-        garden.handleTap(at: CGPoint(x: 675, y: 228))
+        let flowers = garden.children.filter { $0.name == "flowerChoice" }
+        XCTAssertGreaterThanOrEqual(flowers.count, 2)
+        let firstFlower = try XCTUnwrap(flowers.first)
+        let secondFlower = try XCTUnwrap(flowers.dropFirst().first)
+        garden.handleTap(at: firstFlower.position)
         let firstTravel = garden.valkyrie.action(forKey: "travel")
         XCTAssertNotNil(firstTravel)
-        garden.handleTap(at: CGPoint(x: 505, y: 193))
+        garden.handleTap(at: secondFlower.position)
         XCTAssertTrue(garden.valkyrie.action(forKey: "travel") === firstTravel)
         garden.handleTap(at: CGPoint(x: 52, y: 669))
         XCTAssertEqual(state.world, .storyTree)
@@ -2183,6 +2253,8 @@ import LearningCore
                 XCTFail("Scale capture must render the requested mechanic"); continue
             }
             XCTAssertEqual(model.selected, index == 2 ? .equal : nil)
+            XCTAssertNotNil(scale.childNode(withName: "//scaleBase"))
+            XCTAssertNotNil(scale.childNode(withName: "//scaleBeam"))
             try await capture(scale, in: view, name: name)
             scale.willLeave()
         }
@@ -2258,10 +2330,24 @@ import LearningCore
         XCTAssertFalse(prompt.isHidden)
         XCTAssertFalse(heading.isHidden)
         XCTAssertEqual(heading.text, "PIP'S WORK ORDER")
+        XCTAssertEqual(heading.fontName, "AvenirNext-Bold")
+        XCTAssertEqual(prompt.fontName, "AvenirNext-Medium")
+        XCTAssertEqual(prompt.fontSize, encounter.prompt.count > 52 ? 17 : 18)
         XCTAssertTrue(prompt.text?.contains(encounter.prompt) == true)
         XCTAssertGreaterThan(prompt.position.y, 500)
         XCTAssertLessThan(feedback.position.y, 100)
         XCTAssertGreaterThan(prompt.position.y, feedback.position.y)
+        XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 400)
+        let promptPlate = try XCTUnwrap(scene.childNode(withName: "questionPromptPlate"))
+        let promptFrame = prompt.calculateAccumulatedFrame()
+        let plateFrame = promptPlate.calculateAccumulatedFrame()
+        XCTAssertGreaterThan(promptFrame.minY, plateFrame.minY + 6)
+        XCTAssertLessThan(promptFrame.maxY, plateFrame.maxY - 6)
+        XCTAssertNotNil(scene.childNode(withName: "mathWorkZoneCore"))
+        XCTAssertNotNil(scene.childNode(withName: "workshopRackBacking"))
+        XCTAssertNotNil(scene.childNode(withName: "castlePowerMount"))
+        XCTAssertNotNil(scene.childNode(withName: "//bondMachineBase"))
+        XCTAssertNotNil(scene.childNode(withName: "//bondWholePlaque"))
 
         scene.willLeave()
     }
@@ -2321,6 +2407,10 @@ import LearningCore
 
         let cells = try XCTUnwrap(scene.childNode(withName: "//tenFrameCells"))
         XCTAssertEqual(cells.children.count, 10)
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameGateFrame"))
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameGateInset"))
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameRowDivider"))
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameGateBadge"))
 
         for cell in cells.children {
             let shape = try XCTUnwrap(cell as? SKShapeNode)
@@ -2442,10 +2532,17 @@ import LearningCore
         defer { scene.willLeave() }
 
         let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+        let titleBackdrop = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
         let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+        let feedbackBackdrop = try XCTUnwrap(scene.childNode(withName: "instructionBackdrop"))
         XCTAssertTrue(CGRect(origin: .zero, size: scene.size).contains(title.position))
         XCTAssertTrue(CGRect(origin: .zero, size: scene.size).contains(feedback.position))
-        XCTAssertLessThanOrEqual(feedback.preferredMaxLayoutWidth, scene.layout.instructionZone.width)
+        XCTAssertEqual(title.fontName, "Georgia-Bold")
+        XCTAssertLessThanOrEqual(titleBackdrop.calculateAccumulatedFrame().width, 250)
+        XCTAssertEqual(feedback.fontName, "AvenirNext-Medium")
+        XCTAssertLessThanOrEqual(feedback.fontSize, 18)
+        XCTAssertLessThanOrEqual(feedback.preferredMaxLayoutWidth, 600)
+        XCTAssertLessThanOrEqual(feedbackBackdrop.calculateAccumulatedFrame().width, 680)
 
         scene.valkyrie.position = CGPoint(x: 490, y: 175)
         scene.handleTap(at: CGPoint(x: 830, y: 265))

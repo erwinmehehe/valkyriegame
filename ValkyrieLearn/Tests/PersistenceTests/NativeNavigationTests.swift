@@ -177,4 +177,42 @@ import LearningCore
         XCTAssertEqual(scene.targetName(at: position), "scienceSeedBench")
     }
 
+    func testLiveMotionTogglePreservesCompanionTravelAndInteractionDeadlines() throws {
+        let milo = MiloNode()
+        milo.walk(to: CGPoint(x: 400, y: 180)) {}
+        let travel = try XCTUnwrap(milo.action(forKey: "travel"))
+        XCTAssertNotNil(milo.bodyNode.action(forKey: "pose"))
+        milo.reducedMotion = true
+        XCTAssertTrue(milo.action(forKey: "travel") === travel)
+        XCTAssertNil(milo.bodyNode.action(forKey: "pose"))
+        milo.reducedMotion = false
+        XCTAssertNotNil(milo.bodyNode.action(forKey: "pose"))
+        XCTAssertTrue(milo.action(forKey: "travel") === travel)
+        milo.cancelTravel()
+
+        let lumi = LumiNode()
+        lumi.reach(to: CGPoint(x: 200, y: 220), reducedMotion: false) {}
+        let ability = try XCTUnwrap(lumi.action(forKey: "lumiReach"))
+        let deadline = try XCTUnwrap(lumi.action(forKey: "operation"))
+        lumi.reducedMotion = true
+        XCTAssertTrue(lumi.action(forKey: "lumiReach") === ability)
+        XCTAssertTrue(lumi.action(forKey: "operation") === deadline)
+        let aura = try XCTUnwrap(lumi.childNode(withName: "companionPresence"))
+        XCTAssertNil(aura.action(forKey: "presencePulse"))
+        XCTAssertEqual(aura.xScale, 1)
+        XCTAssertEqual(lumi.bodyNode.position, .zero)
+        XCTAssertFalse(lumi.bodyNode.hasActions())
+        lumi.reducedMotion = false
+        XCTAssertTrue(lumi.action(forKey: "operation") === deadline)
+        lumi.removeAllActions()
+
+        let tiko = TikoNode()
+        tiko.operateRune(at: CGPoint(x: 500, y: 250), reducedMotion: false) {}
+        let runeAbility = try XCTUnwrap(tiko.action(forKey: "tikoRuneHop"))
+        tiko.reducedMotion = true
+        XCTAssertTrue(tiko.action(forKey: "tikoRuneHop") === runeAbility)
+        XCTAssertNil(tiko.bodyNode.action(forKey: "tikoRuneFocus"))
+        tiko.removeAllActions()
+    }
+
 }
