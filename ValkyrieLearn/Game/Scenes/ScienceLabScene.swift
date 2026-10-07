@@ -947,17 +947,22 @@ import LearningCore
         if greenhouseStage == .lit,
            !greenhouseComplete,
            let challenge = state.scienceNextFieldStudy(in: .greenhouse),
-           let target,
-           challenge.choiceTargets.contains(target),
-           let stationPoint = greenhouseFieldStudyPoint(for: target) {
-            if isNear(stationPoint, radius: 145) {
-                answerGreenhouseFieldStudy(challenge, targetName: target)
-            } else {
-                instruction.text = "Walk to that evidence station before choosing it."
-                let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 85))
-                travel(to: CGPoint(x: approachX, y: 180))
+           let target {
+            if challenge.choiceTargets.contains(target),
+               let stationPoint = greenhouseFieldStudyPoint(for: target) {
+                if isNear(stationPoint, radius: 145) {
+                    answerGreenhouseFieldStudy(challenge, targetName: target)
+                } else {
+                    instruction.text = "Walk to that evidence station before choosing it."
+                    let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 85))
+                    travel(to: CGPoint(x: approachX, y: 180))
+                }
+                return
             }
-            return
+            if target != "scienceWeatherGate" && target != "scienceHome" {
+                instruction.text = challenge.prompt
+                return
+            }
         }
 
         switch target {
