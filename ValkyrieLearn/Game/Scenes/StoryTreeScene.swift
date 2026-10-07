@@ -17,12 +17,17 @@ import SpriteKit
         CGPoint(x: 795, y: 450)
     ]
 
+    private var travelGeneration = 0
+    private var pendingEntrance: String?
+    private var hasLeft = false
+
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
     private var moonLanternNode: SKNode?
     private var wordGardenLanternNode: SKNode?
     private var puzzlePalaceLanternNode: SKNode?
+    private var lastKineticReducedMotion: Bool?
     private let moonLanternSlots = [
         CGPoint(x: 295, y: 500),
         CGPoint(x: 390, y: 555),
@@ -41,7 +46,60 @@ import SpriteKit
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
+        polishStoryTreeHUD()
         pip.position = CGPoint(x: 250, y: 210)
+        syncStoryTreeKinetics()
+    }
+
+    private func polishStoryTreeHUD() {
+        childNode(withName: "worldTitleBackdrop")?.removeFromParent()
+        childNode(withName: "worldTitle")?.removeFromParent()
+
+        let title = ArtSystem.label(worldTitle, size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
+        title.horizontalAlignmentMode = .left
+        if title.frame.width > 328 {
+            title.fontSize *= 328 / title.frame.width
+        }
+
+        let titleWidth = min(
+            CGFloat(390),
+            max(CGFloat(380), title.frame.width + 60)
+        )
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: titleWidth, height: 42),
+            fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
+            stroke: UIColor(red: 0.92, green: 0.72, blue: 0.34, alpha: 0.56),
+            radius: 15
+        )
+        titlePlate.position = CGPoint(x: 100 + titleWidth / 2, y: 672)
+        titlePlate.zPosition = 1988
+        titlePlate.name = "worldTitleBackdrop"
+        addChild(titlePlate)
+
+        title.position = CGPoint(x: 140, y: 672)
+        title.zPosition = 2000
+        title.name = "worldTitle"
+        addChild(title)
+
+        if let emblem = childNode(withName: "decorativeWorldEmblem") {
+            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.setScale(0.72)
+        }
+
+        childNode(withName: "topVignette")?.alpha = 0.40
+
+        if let feedbackPlate = childNode(withName: "instructionBackdrop") {
+            feedbackPlate.xScale = 0.68
+            feedbackPlate.yScale = 0.80
+            feedbackPlate.position = CGPoint(x: 640, y: 44)
+        }
+        instruction.position = CGPoint(x: 640, y: 44)
+        instruction.fontName = "AvenirNext-Medium"
+        instruction.fontSize = 18
+        instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
+        instruction.preferredMaxLayoutWidth = 610
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -67,6 +125,9 @@ import SpriteKit
     }
 
     override func willLeave() {
+        hasLeft = true
+        travelGeneration += 1
+        pendingEntrance = nil
         activeTouch = nil
         moved = false
         super.willLeave()
@@ -80,44 +141,44 @@ import SpriteKit
         // World entrances are environmental beacons, not generic navigation buttons.
         // Keep them visually offset from the painted travel route so Valkyrie never
         // stands on top of a label while approaching a destination.
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             "Word Garden",
             symbol: "✿",
             name: "wordGarden",
             at: CGPoint(x: 150, y: 430),
             tint: UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 1),
-            width: 150,
-            plaqueOffsetY: 72
+            width: 142,
+            plaqueOffsetY: 68
         )
 
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             "Puzzle Palace",
             symbol: "◈",
             name: "puzzlePalace",
             at: CGPoint(x: 505, y: 515),
             tint: UIColor(red: 0.62, green: 0.50, blue: 0.94, alpha: 1),
-            width: 168
+            width: 156
         )
 
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             "Math Castle",
             symbol: "◆",
             name: "castle",
             at: CGPoint(x: 835, y: 535),
             tint: UIColor(red: 0.95, green: 0.70, blue: 0.28, alpha: 1),
-            width: 160
+            width: 148
         )
 
-        _ = destinationMarker(
+        _ = storyDestinationMarker(
             state.scienceAdventure.groveRestored ? "Science Lab ✦" : "Science Lab",
             symbol: "⚗",
             name: "scienceLab",
             at: CGPoint(x: 705, y: 585),
             tint: UIColor(red: 0.42, green: 0.82, blue: 0.61, alpha: 1),
-            width: 164
+            width: 152
         )
 
-        _ = worldGear("✦", name: "pipWind", at: CGPoint(x: 315, y: 260), radius: 34)
+        buildPipWorkshopGear()
 
         let glow = SKShapeNode(circleOfRadius: 45)
         glow.fillColor = .init(red: 1, green: 0.82, blue: 0.3, alpha: 0.13)
@@ -161,6 +222,187 @@ import SpriteKit
         // destination beacons deliberately sit above that route, so generic
         // interaction avoidance must not push Valkyrie into the surrounding chasm.
         clearRegisteredInteractionZones()
+    }
+
+    @discardableResult
+    private func storyDestinationMarker(
+        _ title: String,
+        symbol: String,
+        name: String,
+        at point: CGPoint,
+        tint: UIColor,
+        width: CGFloat,
+        plaqueOffsetY: CGFloat = -54
+    ) -> SKNode {
+        let root = SKNode()
+        root.name = name
+        root.position = point
+        root.zPosition = 760
+
+        let halo = SKShapeNode(circleOfRadius: 29)
+        halo.fillColor = tint.withAlphaComponent(0.11)
+        halo.strokeColor = tint.withAlphaComponent(0.58)
+        halo.lineWidth = 2
+        halo.glowWidth = reducedMotion ? 0 : 6
+        halo.name = name
+        halo.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
+        root.addChild(halo)
+
+        let medallion = ArtSystem.medallion(
+            radius: 23,
+            fill: UIColor(red: 0.05, green: 0.07, blue: 0.13, alpha: 0.88),
+            stroke: tint.withAlphaComponent(0.72),
+            glow: 0
+        )
+        medallion.name = "storyMarkerRim_\(name)"
+        root.addChild(medallion)
+
+        let emblem = ArtSystem.label(symbol, size: 24)
+        emblem.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
+        emblem.name = name
+        medallion.addChild(emblem)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: max(126, width), height: 38),
+            fill: UIColor(red: 0.045, green: 0.055, blue: 0.11, alpha: 0.86),
+            stroke: tint.withAlphaComponent(0.52),
+            radius: 13
+        )
+        plaque.position = CGPoint(x: 0, y: plaqueOffsetY)
+        plaque.name = name
+        plaque.userData = NSMutableDictionary(dictionary: ["destinationRole": "plaque"])
+        root.addChild(plaque)
+
+        let label = ArtSystem.label(title, size: 15)
+        label.fontName = "Georgia-Bold"
+        label.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
+        label.name = name
+        plaque.addChild(label)
+
+        let hit = SKShapeNode(circleOfRadius: 32)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = name
+        hit.zPosition = 3
+        root.addChild(hit)
+
+        makeAccessible(root, label: title)
+        addChild(root)
+        registerInteraction(root, clearance: 22)
+        return root
+    }
+
+    private func syncStoryTreeKinetics() {
+        lastKineticReducedMotion = reducedMotion
+
+        for (index, name) in [
+            "wordGarden", "puzzlePalace", "castle", "scienceLab"
+        ].enumerated() {
+            guard let rim = childNode(withName: "//storyMarkerRim_\(name)") else { continue }
+            rim.removeAction(forKey: "hubMarkerDrift")
+            rim.zRotation = 0
+            guard !reducedMotion else { continue }
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            rim.run(
+                .repeatForever(
+                    .rotate(
+                        byAngle: direction * .pi * 2,
+                        duration: 12.0 + Double(index) * 1.8
+                    )
+                ),
+                withKey: "hubMarkerDrift"
+            )
+        }
+
+        if let pipGear = childNode(withName: "//storyPipGearRim") {
+            pipGear.removeAction(forKey: "hubPipGearSpin")
+            pipGear.zRotation = 0
+            if !reducedMotion {
+                pipGear.run(
+                    .repeatForever(
+                        .rotate(byAngle: -.pi * 2, duration: 7.5)
+                    ),
+                    withKey: "hubPipGearSpin"
+                )
+            }
+        }
+
+        for (index, name) in [
+            "moonLantern", "wordGardenLantern", "puzzlePalaceLantern"
+        ].enumerated() {
+            guard let lantern = childNode(withName: name) else { continue }
+            lantern.removeAction(forKey: "hubLanternSway")
+            lantern.zRotation = 0
+            guard !reducedMotion else { continue }
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            lantern.run(
+                .repeatForever(
+                    .sequence([
+                        .rotate(byAngle: direction * 0.024, duration: 1.8),
+                        .rotate(byAngle: direction * -0.048, duration: 3.6),
+                        .rotate(byAngle: direction * 0.024, duration: 1.8)
+                    ])
+                ),
+                withKey: "hubLanternSway"
+            )
+        }
+
+        childNode(withName: "storyLight")?.removeAction(forKey: "hubLightBreath")
+        if !reducedMotion {
+            childNode(withName: "storyLight")?.run(
+                .repeatForever(
+                    .sequence([
+                        .scale(to: 1.06, duration: 1.15),
+                        .scale(to: 1.0, duration: 1.15)
+                    ])
+                ),
+                withKey: "hubLightBreath"
+            )
+        }
+    }
+
+    private func playDestinationReaction(named name: String, at point: CGPoint) {
+        focusMoment(on: point, hold: 0.52)
+        guard !reducedMotion, let marker = childNode(withName: name) else { return }
+        marker.removeAction(forKey: "destinationReaction")
+        marker.run(
+            .sequence([
+                .scale(to: 1.08, duration: 0.12),
+                .scale(to: 1.0, duration: 0.20)
+            ]),
+            withKey: "destinationReaction"
+        )
+    }
+
+    private func buildPipWorkshopGear() {
+        let root = SKNode()
+        root.name = "pipWind"
+        root.position = CGPoint(x: 315, y: 260)
+        root.zPosition = 750
+
+        let base = SKShapeNode(ellipseOf: CGSize(width: 74, height: 28))
+        base.fillColor = UIColor(red: 0.16, green: 0.11, blue: 0.08, alpha: 0.56)
+        base.strokeColor = UIColor(red: 0.86, green: 0.63, blue: 0.26, alpha: 0.30)
+        base.lineWidth = 2
+        base.position.y = -29
+        base.name = "pipWind"
+        root.addChild(base)
+
+        let gear = ArtSystem.gear(radius: 25, symbol: "✦")
+        gear.name = "storyPipGearRim"
+        gear.zPosition = 1
+        root.addChild(gear)
+
+        let hit = SKShapeNode(circleOfRadius: 32)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = "pipWind"
+        hit.zPosition = 3
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Pip's workshop gear")
+        addChild(root)
+        registerInteraction(root, clearance: 18)
     }
 
     /// Preserve the approved Starlight Isles illustration while preparing a
@@ -285,6 +527,7 @@ import SpriteKit
         glow.fillColor = UIColor(red: 1, green: 0.80, blue: 0.28, alpha: 0.16)
         glow.strokeColor = .clear
         glow.glowWidth = 10
+        glow.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         glow.name = "moonLantern"
         lantern.addChild(glow)
 
@@ -311,7 +554,7 @@ import SpriteKit
             glow.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.45, duration: 1.1),
                 .fadeAlpha(to: 1.0, duration: 1.1)
-            ])))
+            ])), withKey: "ambientPulse")
         }
 
         addChild(lantern)
@@ -336,6 +579,7 @@ import SpriteKit
         glow.fillColor = UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 0.17)
         glow.strokeColor = .clear
         glow.glowWidth = 10
+        glow.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         glow.name = "wordGardenLantern"
         lantern.addChild(glow)
 
@@ -362,7 +606,7 @@ import SpriteKit
             glow.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.45, duration: 1.0),
                 .fadeAlpha(to: 1.0, duration: 1.0)
-            ])))
+            ])), withKey: "ambientPulse")
         }
 
         addChild(lantern)
@@ -387,6 +631,7 @@ import SpriteKit
         glow.fillColor = UIColor(red: 0.62, green: 0.50, blue: 0.94, alpha: 0.18)
         glow.strokeColor = .clear
         glow.glowWidth = 12
+        glow.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         glow.name = "puzzlePalaceLantern"
         lantern.addChild(glow)
 
@@ -413,7 +658,7 @@ import SpriteKit
             glow.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.42, duration: 1.05),
                 .fadeAlpha(to: 1.0, duration: 1.05)
-            ])))
+            ])), withKey: "ambientPulse")
         }
 
         addChild(lantern)
@@ -434,77 +679,101 @@ import SpriteKit
         handleTap(at: point)
     }
 
-    override func travel(to destination: CGPoint, then action: (() -> Void)? = nil) {
-        let start = nearestWaypoint(to: valkyrie.position)
-        let end = nearestWaypoint(to: destination)
-        let indices = start <= end
-            ? Array(start...end)
-            : Array((end...start).reversed())
-        follow(indices, forward: start <= end, completion: action)
+    // Project taps onto the painted route rather than snapping to the nearest
+    // waypoint. Reversing direction midway through a bridge should not overshoot.
+    private func routeProjection(_ point: CGPoint) -> (point: CGPoint, progress: CGFloat) {
+        var best = (point: route[0], progress: CGFloat.zero)
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for index in 0..<(route.count - 1) {
+            let a = route[index], b = route[index + 1]
+            let dx = b.x - a.x, dy = b.y - a.y
+            let lengthSquared = dx * dx + dy * dy
+            guard lengthSquared > 0 else { continue }
+            let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared))
+            let projected = CGPoint(x: a.x + t * dx, y: a.y + t * dy)
+            let distance = hypot(point.x - projected.x, point.y - projected.y)
+            if distance < bestDistance {
+                bestDistance = distance
+                best = (projected, CGFloat(index) + t)
+            }
+        }
+        return best
     }
 
-    private func follow(
-        _ indices: [Int],
-        forward: Bool,
-        completion: (() -> Void)?
-    ) {
-        guard let first = indices.first else {
+    override func travel(to destination: CGPoint, then action: (() -> Void)? = nil) {
+        guard !hasLeft else { return }
+        travelGeneration += 1
+        let generation = travelGeneration
+        valkyrie.cancelTravel()
+        pip.cancelTravel()
+        let start = routeProjection(valkyrie.position)
+        let end = routeProjection(destination)
+        let forward = start.progress <= end.progress
+        let between = route.indices.filter {
+            CGFloat($0) > min(start.progress, end.progress)
+                && CGFloat($0) < max(start.progress, end.progress)
+        }
+        var points = forward ? between.map { route[$0] } : between.reversed().map { route[$0] }
+        if hypot(valkyrie.position.x - start.point.x, valkyrie.position.y - start.point.y) > 1 {
+            points.insert(start.point, at: 0)
+        }
+        points.append(end.point)
+        showAttentionCue(at: end.point, width: 70)
+        follow(points, generation: generation, completion: action)
+    }
+
+    private func follow(_ points: [CGPoint], generation: Int, completion: (() -> Void)?) {
+        guard !hasLeft, generation == travelGeneration else { return }
+        guard let first = points.first else {
+            clearAttentionCue()
             completion?()
             return
         }
-
-        super.travel(to: route[first]) { [weak self] in
-            self?.follow(
-                Array(indices.dropFirst()),
-                forward: forward,
-                completion: completion
-            )
+        super.travel(to: first) { [weak self] in
+            self?.follow(Array(points.dropFirst()), generation: generation, completion: completion)
         }
-
-        let behind = max(
-            0,
-            min(route.count - 1, first + (forward ? -1 : 1))
-        )
-        let point = behind == first
-            ? CGPoint(x: route[first].x + 35, y: route[first].y + 25)
-            : route[behind]
-        pip.walk(to: point) {}
-    }
-
-    private func nearestWaypoint(to point: CGPoint) -> Int {
-        route.indices.min {
-            hypot(route[$0].x - point.x, route[$0].y - point.y)
-                < hypot(route[$1].x - point.x, route[$1].y - point.y)
-        } ?? 0
+        // Keep Pip on the same traversable surface, behind Valkyrie's last step.
+        pip.walk(to: routeProjection(valkyrie.position).point) {}
     }
 
     func isOnPath(_ point: CGPoint) -> Bool {
-        for (a, b) in zip(route, route.dropFirst()) {
-            let dx = b.x - a.x
-            let dy = b.y - a.y
-            let lengthSquared = dx * dx + dy * dy
-            guard lengthSquared > 0 else { continue }
-
-            let t = max(
-                0,
-                min(
-                    1,
-                    ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared
-                )
-            )
-            if hypot(
-                point.x - (a.x + t * dx),
-                point.y - (a.y + t * dy)
-            ) <= 38 {
-                return true
-            }
-        }
-        return false
+        let projected = routeProjection(point).point
+        return hypot(point.x - projected.x, point.y - projected.y) <= 38
     }
 
     override func walkIfValid(_ point: CGPoint) {
         if isOnPath(point) {
+            pendingEntrance = nil
             travel(to: point)
+        }
+    }
+
+    private func enterWorld(
+        named name: String,
+        destination: CGPoint,
+        instruction text: String,
+        action: @escaping () -> Void
+    ) {
+        // Repeated taps on the selected beacon must not restart the journey.
+        guard !hasLeft else { return }
+        if pendingEntrance == name, valkyrie.action(forKey: "travel") != nil { return }
+        selectionFeedback()
+        pendingEntrance = name
+        instruction.text = text
+        let enter = { [weak self] in
+            guard let self, !self.hasLeft, self.pendingEntrance == name else { return }
+            self.pendingEntrance = nil
+            action()
+        }
+        if isNear(destination) {
+            // Cancel any remaining companion action before changing worlds.
+            travelGeneration += 1
+            valkyrie.cancelTravel()
+            pip.cancelTravel()
+            clearAttentionCue()
+            enter()
+        } else {
+            travel(to: destination, then: enter)
         }
     }
 
@@ -513,51 +782,44 @@ import SpriteKit
         let depth = max(0, min(1, (valkyrie.position.y - 170) / 280))
         valkyrie.setScale(1 - depth * 0.42)
         pip.setScale(1 - depth * 0.42)
+
+        if lastKineticReducedMotion != reducedMotion {
+            syncStoryTreeKinetics()
+        }
     }
 
     func handleTap(at point: CGPoint) {
         switch targetName(at: point) {
         case "wordGarden":
-            selectionFeedback()
-            let destination = CGPoint(x: 190, y: 170)
-            if isNear(destination) {
-                state.travel(to: .wordGarden)
-            } else {
-                instruction.text = "Follow the path to the garden light."
-                travel(to: destination)
+            playDestinationReaction(named: "wordGarden", at: CGPoint(x: 150, y: 430))
+            enterWorld(named: "wordGarden", destination: CGPoint(x: 190, y: 170),
+                       instruction: "Valkyrie is on her way to Word Garden.") { [weak self] in
+                self?.state.travel(to: .wordGarden)
             }
 
         case "castle":
-            selectionFeedback()
-            let destination = CGPoint(x: 795, y: 450)
-            if isNear(destination) {
-                state.travel(to: .mathCastle)
-            } else {
-                instruction.text = "Follow the bridge toward the castle light."
-                travel(to: destination)
+            playDestinationReaction(named: "castle", at: CGPoint(x: 835, y: 535))
+            enterWorld(named: "castle", destination: CGPoint(x: 795, y: 450),
+                       instruction: "Across the bridge! Pip is coming to Math Castle.") { [weak self] in
+                self?.state.travel(to: .mathCastle)
             }
 
         case "scienceLab":
-            selectionFeedback()
-            let destination = CGPoint(x: 580, y: 450)
-            if isNear(destination) {
-                state.enterScienceLab()
-            } else {
-                instruction.text = "Follow the upper path toward Milo's green light."
-                travel(to: destination)
+            playDestinationReaction(named: "scienceLab", at: CGPoint(x: 705, y: 585))
+            enterWorld(named: "scienceLab", destination: CGPoint(x: 580, y: 450),
+                       instruction: "Follow the green light. Milo is waiting.") { [weak self] in
+                self?.state.enterScienceLab()
             }
 
         case "puzzlePalace":
-            selectionFeedback()
-            let destination = CGPoint(x: 580, y: 450)
-            if isNear(destination) {
-                state.travel(to: .puzzlePalace)
-            } else {
-                instruction.text = "Follow the upper path toward Tiko's violet light."
-                travel(to: destination)
+            playDestinationReaction(named: "puzzlePalace", at: CGPoint(x: 505, y: 515))
+            enterWorld(named: "puzzlePalace", destination: CGPoint(x: 580, y: 450),
+                       instruction: "Follow the violet light. Tiko is waiting.") { [weak self] in
+                self?.state.travel(to: .puzzlePalace)
             }
 
         case "pipWind":
+            pendingEntrance = nil
             travel(to: CGPoint(x: 285, y: 235)) { [weak self] in
                 guard let self else { return }
                 self.pip.operate(reducedMotion: self.reducedMotion)
@@ -567,6 +829,7 @@ import SpriteKit
             }
 
         case "storyLight":
+            pendingEntrance = nil
             travel(to: CGPoint(x: 385, y: 275)) { [weak self] in
                 self?.valkyrie.pose(.interact)
                 self?.instruction.text = "A little light. A big adventure. Pip is ready to help."
@@ -580,6 +843,7 @@ import SpriteKit
                 slotCount: moonLanternSlots.count
             )
             renderMoonLantern()
+            syncStoryTreeKinetics()
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "The Moon Lantern found a new branch."
@@ -592,6 +856,7 @@ import SpriteKit
                 slotCount: wordGardenLanternSlots.count
             )
             renderWordGardenLantern()
+            syncStoryTreeKinetics()
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "The Flower Lantern found a new branch."
@@ -604,6 +869,7 @@ import SpriteKit
                 slotCount: puzzlePalaceLanternSlots.count
             )
             renderPuzzlePalaceLantern()
+            syncStoryTreeKinetics()
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "Tiko's Palace Lantern found a new branch."

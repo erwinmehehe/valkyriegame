@@ -26,6 +26,7 @@ import LearningCore
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
+        applyScienceHUDPolish()
         pip.isHidden = true
         pip.position = CGPoint(x: -500, y: -500)
 
@@ -38,6 +39,74 @@ import LearningCore
 
         instruction.text = "Milo found two weather flags. Observe the morning flag first."
         refreshGuidanceCue()
+    }
+
+    private func applyScienceHUDPolish() {
+        childNode(withName: "worldTitleBackdrop")?.removeFromParent()
+        childNode(withName: "worldTitle")?.removeFromParent()
+
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: 350, height: 42),
+            fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
+            stroke: UIColor(red: 0.42, green: 0.74, blue: 0.94, alpha: 0.54),
+            radius: 15
+        )
+        titlePlate.position = CGPoint(x: 280, y: 672)
+        titlePlate.zPosition = 1988
+        titlePlate.name = "worldTitleBackdrop"
+        addChild(titlePlate)
+
+        let title = ArtSystem.label(worldTitle, size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
+        title.horizontalAlignmentMode = .left
+        title.position = CGPoint(x: 140, y: 672)
+        title.zPosition = 2000
+        title.name = "worldTitle"
+        addChild(title)
+
+        if let emblem = childNode(withName: "decorativeWorldEmblem") {
+            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.setScale(0.72)
+        }
+
+        if let plate = childNode(withName: "instructionBackdrop") {
+            plate.xScale = 0.66
+            plate.yScale = 0.80
+            plate.position = CGPoint(x: 710, y: 46)
+        }
+        instruction.position = CGPoint(x: 710, y: 46)
+        instruction.fontName = "AvenirNext-Medium"
+        instruction.fontSize = 18
+        instruction.preferredMaxLayoutWidth = 620
+        instruction.numberOfLines = 2
+    }
+
+    private func buildScienceHomeControl() {
+        let root = SKNode()
+        root.name = "scienceWeatherHome"
+        root.position = CGPoint(x: 55, y: 672)
+        root.zPosition = 2100
+
+        let medallion = ArtSystem.medallion(
+            radius: 22,
+            fill: UIColor(red: 0.05, green: 0.06, blue: 0.14, alpha: 0.92),
+            stroke: UIColor(red: 0.42, green: 0.74, blue: 0.94, alpha: 0.50),
+            glow: reducedMotion ? 0 : 1
+        )
+        medallion.name = "scienceWeatherHome"
+        medallion.addChild(ArtSystem.label("‹", size: 22))
+        root.addChild(medallion)
+
+        let hit = SKShapeNode(circleOfRadius: 30)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = "scienceWeatherHome"
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Back")
+        addChild(root)
     }
 
     override func buildWorld() {
@@ -289,7 +358,7 @@ import LearningCore
         addForecastInstrument()
         addCreatureGate()
 
-        _ = worldControl("⌂", name: "scienceWeatherHome", at: CGPoint(x: 55, y: 665), radius: 30)
+        buildScienceHomeControl()
     }
 
     private func addObservationFlag(title: String, symbol: String, at point: CGPoint, name: String) {

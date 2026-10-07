@@ -7,7 +7,19 @@ import SpriteKit
     private var temporaryLabel: SKLabelNode?
     private var facing: CGFloat = 1
     private let renderHeight: CGFloat
-    var reducedMotion = false
+    private var currentPose: ArtSystem.Pose = .idle
+    var reducedMotion = false {
+        didSet {
+            guard reducedMotion != oldValue else { return }
+            // Refresh visual motion without cancelling travel, companion ability
+            // callbacks or the existing return-to-idle deadline.
+            pose(currentPose, rescheduleIdleReturn: false)
+            if reducedMotion, let aura = childNode(withName: "companionPresence") {
+                aura.removeAction(forKey: "presencePulse")
+                aura.setScale(1)
+            }
+        }
+    }
     init(character: String, color: UIColor, height: CGFloat) {
         self.character = character
         self.renderHeight = height
@@ -20,8 +32,20 @@ import SpriteKit
         head.strokeColor = .clear; head.position.y = height * 0.85; bodyNode.addChild(head)
         let label = ArtSystem.label(character + " · TEMP", size: 18)
         label.position.y = height + 25; addChild(label); temporaryLabel = label
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: height * 0.55, height: 18))
-        shadow.fillColor = .black.withAlphaComponent(0.2); shadow.strokeColor = .clear; shadow.zPosition = -1; addChild(shadow)
+        // A broad, faint penumbra and compact contact shadow keep feet grounded
+        // without putting a hard black oval under every illustrated companion.
+        let shadow = SKNode()
+        shadow.name = "characterGroundShadow"
+        shadow.zPosition = -1
+        shadow.isUserInteractionEnabled = false
+        let layers: [(CGFloat, CGFloat, CGFloat)] = [(0.60, 0.085, 0.055), (0.48, 0.060, 0.10), (0.32, 0.035, 0.16)]
+        for (width, depth, opacity) in layers {
+            let layer = SKShapeNode(ellipseOf: CGSize(width: height * width, height: height * depth))
+            layer.fillColor = UIColor(red: 0.06, green: 0.08, blue: 0.13, alpha: opacity)
+            layer.strokeColor = .clear
+            shadow.addChild(layer)
+        }
+        addChild(shadow)
         let sprite = SKSpriteNode(); sprite.size = CGSize(width: height * (character == "Valkyrie" ? 370.0 / 480 : 360.0 / 420), height: height)
         sprite.anchorPoint = CGPoint(x: 0.5, y: 0); sprite.isHidden = true
         bodyNode.addChild(sprite); atlasSprite = sprite
@@ -49,11 +73,18 @@ import SpriteKit
     }
 
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
-    func pose(_ pose: ArtSystem.Pose) {
-        removeAction(forKey: "operation")
-        bodyNode.removeAction(forKey: "pose")
-        bodyNode.removeAction(forKey: "helperHop")
+    func pose(_ pose: ArtSystem.Pose, rescheduleIdleReturn: Bool = true) {
+        currentPose = pose
+        if rescheduleIdleReturn { removeAction(forKey: "operation") }
+        for key in ["pose", "helperHop", "miloInspect", "tikoRuneFocus"] {
+            bodyNode.removeAction(forKey: key)
+        }
         atlasSprite?.removeAction(forKey: "pose")
+        // Starting another reaction must not inherit a partly expanded aura.
+        if rescheduleIdleReturn, let aura = childNode(withName: "companionPresence") {
+            aura.removeAction(forKey: "presencePulse")
+            aura.setScale(1)
+        }
         bodyNode.position = .zero; bodyNode.zRotation = 0; bodyNode.setScale(1)
         bodyNode.xScale = facing
         let frames = ArtSystem.frames(character: character, pose: pose)
@@ -73,9 +104,13 @@ import SpriteKit
                 switch pose {
                 case .walk:
                     if frames.count > 1 { sprite.run(.repeatForever(.animate(with: frames, timePerFrame: 0.22)), withKey: "pose") }
-                    else { bodyNode.run(.repeatForever(.sequence([.moveBy(x: 0, y: 4, duration: 0.18), .moveBy(x: 0, y: -4, duration: 0.18)])), withKey: "pose") }
+                    else { bodyNode.run(companionStep(), withKey: "pose") }
                 case .idle:
-                    bodyNode.run(.repeatForever(.sequence([.scaleY(to: 1.008, duration: 1.8), .scaleY(to: 1, duration: 1.8)])), withKey: "pose")
+                    let breath = character == "Pip" ? 1.4 : (character == "Tiko" ? 2.2 : 1.8)
+                    bodyNode.run(.repeatForever(.sequence([
+                        eased(.scaleY(to: 1.008, duration: breath)),
+                        eased(.scaleY(to: 1, duration: breath))
+                    ])), withKey: "pose")
                 case .celebrate:
                     bodyNode.run(.sequence([
                         .group([
@@ -97,7 +132,7 @@ import SpriteKit
                 case .interact: break // The existing atlas supplies Valkyrie's reaching pose.
                 }
             }
-            if pose == .interact || pose == .celebrate || pose == .react {
+            if rescheduleIdleReturn && (pose == .interact || pose == .celebrate || pose == .react) {
                 run(.sequence([.wait(forDuration: reducedMotion ? 0.25 : 0.75), .run { [weak self] in self?.pose(.idle) }]), withKey: "operation")
             }
         } else {
@@ -115,6 +150,27 @@ import SpriteKit
             }
             bodyNode.run(.repeatForever(action), withKey: "pose")
         }
+    }
+
+    private func eased(_ action: SKAction) -> SKAction {
+        action.timingMode = .easeInEaseOut
+        return action
+    }
+
+    private func companionStep() -> SKAction {
+        let step: (rise: CGFloat, tilt: CGFloat, beat: TimeInterval)
+        switch character {
+        case "Pip": step = (3.5, 0.028, 0.18) // Waddle.
+        case "Lumi": step = (2, 0.012, 0.30) // Gentle glide.
+        case "Milo": step = (3, 0.018, 0.16) // Quick scout.
+        case "Tiko": step = (1.5, 0.012, 0.28) // Careful steps.
+        default: step = (3, 0.018, 0.20)
+        }
+        // Absolute positions prevent interrupted/restarted walks from drifting.
+        return .repeatForever(.sequence([
+            .group([eased(.moveTo(y: step.rise, duration: step.beat)), eased(.rotate(toAngle: -step.tilt, duration: step.beat))]),
+            .group([eased(.moveTo(y: 0, duration: step.beat)), eased(.rotate(toAngle: step.tilt, duration: step.beat))])
+        ]))
     }
     func walk(to destination: CGPoint, completion: @escaping () -> Void) {
         removeAction(forKey: "travel")
