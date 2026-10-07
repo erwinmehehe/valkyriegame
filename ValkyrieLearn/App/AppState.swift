@@ -132,7 +132,6 @@ import LearningCore
     func scienceLightGreenhouse() {
         updateScience { science, profile in
             science.greenhouseStage = .lit
-            science.greenhouseComplete = true
             science.recordEvidence(
                 skillID: ScienceSkills.comparePlantConditions,
                 mechanicID: ScienceLabMechanicID.sunPrism,
@@ -194,7 +193,6 @@ import LearningCore
             )
             if correct {
                 science.weatherStage = .complete
-                science.creatureRouteOpen = true
             }
         }
     }
@@ -263,10 +261,58 @@ import LearningCore
             )
             if correct {
                 science.groveStage = .complete
-                science.groveRestored = true
             }
         }
     }
+
+    func scienceNextFieldStudy(in world: ScienceFieldStudyWorld) -> ScienceFieldStudyChallenge? {
+        ScienceFieldStudyCatalog.next(in: world, profile: profile)
+    }
+
+    func scienceFieldStudyCompletedCount(in world: ScienceFieldStudyWorld) -> Int {
+        ScienceFieldStudyCatalog.completedCount(in: world, profile: profile)
+    }
+
+    @discardableResult
+    func scienceAnswerFieldStudy(
+        _ challenge: ScienceFieldStudyChallenge,
+        targetName: String
+    ) -> Bool {
+        guard challenge.choiceTargets.contains(targetName),
+              ScienceFieldStudyCatalog.next(in: challenge.world, profile: profile)?.id == challenge.id
+        else {
+            return false
+        }
+
+        let correct = targetName == challenge.answerTarget
+        updateScience { science, profile in
+            science.recordEvidence(
+                skillID: challenge.skillID,
+                mechanicID: challenge.mechanicID,
+                outcome: correct ? .correct : .incorrect,
+                representation: challenge.representation,
+                encounterID: challenge.id,
+                profile: &profile
+            )
+
+            guard correct,
+                  ScienceFieldStudyCatalog.isComplete(challenge.world, in: profile)
+            else {
+                return
+            }
+
+            switch challenge.world {
+            case .greenhouse:
+                science.greenhouseComplete = true
+            case .weatherTower:
+                science.creatureRouteOpen = true
+            case .creatureGrove:
+                science.groveRestored = true
+            }
+        }
+        return correct
+    }
+
     func prepareNext() -> EncounterSelection {
         do {
             ReviewScheduler().markDue(in: &profile, at: Date())
