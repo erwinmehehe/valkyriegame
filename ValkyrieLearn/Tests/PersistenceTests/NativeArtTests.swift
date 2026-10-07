@@ -2749,12 +2749,17 @@ import LearningCore
         lively.didMove(to: SKView())
         defer { lively.willLeave() }
 
-        let ambient = try XCTUnwrap(lively.childNode(withName: "decorativeAmbientLife"))
-        XCTAssertGreaterThanOrEqual(ambient.children.count, 7)
-        XCTAssertTrue(
-            ambient.children.contains { $0.action(forKey: "ambientDrift") != nil },
-            "Live worlds should have subtle environmental motion."
+        let markerRim = try XCTUnwrap(
+            lively.childNode(withName: "//storyMarkerRim_wordGarden")
         )
+        let lantern = try XCTUnwrap(
+            lively.childNode(withName: "wordGardenLantern")
+        )
+        XCTAssertNotNil(
+            markerRim.action(forKey: "hubMarkerDrift"),
+            "Live Story Tree landmarks should retain subtle environmental motion."
+        )
+        XCTAssertNotNil(lantern.action(forKey: "hubLanternSway"))
 
         lively.successFeedback()
         let burst = try XCTUnwrap(lively.childNode(withName: "successBurst"))
@@ -2769,7 +2774,14 @@ import LearningCore
         calm.didMove(to: SKView())
         defer { calm.willLeave() }
 
-        XCTAssertNil(calm.childNode(withName: "decorativeAmbientLife"))
+        let calmRim = try XCTUnwrap(
+            calm.childNode(withName: "//storyMarkerRim_wordGarden")
+        )
+        let calmLantern = try XCTUnwrap(
+            calm.childNode(withName: "wordGardenLantern")
+        )
+        XCTAssertNil(calmRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNil(calmLantern.action(forKey: "hubLanternSway"))
         calm.successFeedback()
         XCTAssertNil(calm.childNode(withName: "successBurst"))
     }
