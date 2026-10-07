@@ -2752,14 +2752,17 @@ import LearningCore
         let markerRim = try XCTUnwrap(
             lively.childNode(withName: "//storyMarkerRim_wordGarden")
         )
-        let lantern = try XCTUnwrap(
-            lively.childNode(withName: "wordGardenLantern")
+        let storyLight = try XCTUnwrap(
+            lively.childNode(withName: "storyLight")
         )
         XCTAssertNotNil(
             markerRim.action(forKey: "hubMarkerDrift"),
             "Live Story Tree landmarks should retain subtle environmental motion."
         )
-        XCTAssertNotNil(lantern.action(forKey: "hubLanternSway"))
+        XCTAssertNotNil(
+            storyLight.action(forKey: "hubLightBreath"),
+            "The always-present Story Tree light should breathe when motion is enabled."
+        )
 
         lively.successFeedback()
         let burst = try XCTUnwrap(lively.childNode(withName: "successBurst"))
@@ -2777,11 +2780,11 @@ import LearningCore
         let calmRim = try XCTUnwrap(
             calm.childNode(withName: "//storyMarkerRim_wordGarden")
         )
-        let calmLantern = try XCTUnwrap(
-            calm.childNode(withName: "wordGardenLantern")
+        let calmStoryLight = try XCTUnwrap(
+            calm.childNode(withName: "storyLight")
         )
         XCTAssertNil(calmRim.action(forKey: "hubMarkerDrift"))
-        XCTAssertNil(calmLantern.action(forKey: "hubLanternSway"))
+        XCTAssertNil(calmStoryLight.action(forKey: "hubLightBreath"))
         calm.successFeedback()
         XCTAssertNil(calm.childNode(withName: "successBurst"))
     }
