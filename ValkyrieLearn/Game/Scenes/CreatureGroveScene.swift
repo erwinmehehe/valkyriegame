@@ -26,6 +26,7 @@ import LearningCore
     private var moved = false
 
     override func didMove(to view: SKView) {
+        prepareAdaptiveLandscapeCanvas(for: view)
         super.didMove(to: view)
         applyScienceHUDPolish()
         pip.isHidden = true
@@ -55,7 +56,7 @@ import LearningCore
             stroke: UIColor(red: 0.54, green: 0.82, blue: 0.48, alpha: 0.54),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 285, y: 672)
+        titlePlate.position = CGPoint(x: 285, y: 672 + verticalViewportInset)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
@@ -64,22 +65,22 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 140, y: 672)
+        title.position = CGPoint(x: 140, y: 672 + verticalViewportInset)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672 + verticalViewportInset)
             emblem.setScale(0.72)
         }
 
         if let plate = childNode(withName: "instructionBackdrop") {
             plate.xScale = 0.66
             plate.yScale = 0.80
-            plate.position = CGPoint(x: 710, y: 46)
+            plate.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         }
-        instruction.position = CGPoint(x: 710, y: 46)
+        instruction.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.preferredMaxLayoutWidth = 620
@@ -89,7 +90,7 @@ import LearningCore
     private func buildScienceHomeControl() {
         let root = SKNode()
         root.name = "scienceGroveHome"
-        root.position = CGPoint(x: 55, y: 672)
+        root.position = CGPoint(x: 55, y: 672 + verticalViewportInset)
         root.zPosition = 2100
 
         let medallion = ArtSystem.medallion(
@@ -99,7 +100,7 @@ import LearningCore
             glow: reducedMotion ? 0 : 1
         )
         medallion.name = "scienceGroveHome"
-        medallion.addChild(ArtSystem.label("‹", size: 22))
+        medallion.addChild(ArtSystem.label("⌂", size: 18))
         root.addChild(medallion)
 
         let hit = SKShapeNode(circleOfRadius: 30)
@@ -109,11 +110,22 @@ import LearningCore
         hit.zPosition = 2
         root.addChild(hit)
 
-        makeAccessible(root, label: "Back")
+        makeAccessible(root, label: "Return to Story Tree")
         addChild(root)
     }
 
     override func buildWorld() {
+        let ambientBase = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.08, green: 0.20, blue: 0.11, alpha: 1),
+            radius: 0
+        )
+        ambientBase.strokeColor = .clear
+        ambientBase.position = CGPoint(x: 640, y: 360)
+        ambientBase.zPosition = -320
+        ambientBase.name = "creatureGroveAmbientBase"
+        addChild(ambientBase)
+
         if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
             // Reuse only the high-resolution woodland/story-hollow quadrant.
             // The full source file is a multi-scene contact sheet.
@@ -125,13 +137,13 @@ import LearningCore
             let preparedTexture = ArtSystem.retinaEnhancedTexture(
                 groveTexture,
                 cacheKey: "word-garden-lower-crop",
-                targetPoints: size,
+                targetPoints: designCanvasSize,
                 sharpness: 0.20
             ) ?? groveTexture
             let backdrop = SKSpriteNode(
                 texture: preparedTexture,
                 color: UIColor(red: 0.58, green: 0.82, blue: 0.58, alpha: 1),
-                size: size
+                size: designCanvasSize
             )
             backdrop.colorBlendFactor = 0.10
             backdrop.position = CGPoint(x: 640, y: 360)
@@ -154,6 +166,90 @@ import LearningCore
             shade.zPosition = -299
             addChild(shade)
         }
+
+        // Give Creature Grove its own crisp canopy architecture instead of
+        // asking the reused woodland crop to define the whole room.
+        let canopy = SKNode()
+        canopy.name = "creatureGroveNativeCanopy"
+        canopy.zPosition = -205
+        canopy.isUserInteractionEnabled = false
+
+        let leftBranchPath = CGMutablePath()
+        leftBranchPath.move(to: CGPoint(x: -40, y: 650))
+        leftBranchPath.addCurve(
+            to: CGPoint(x: 470, y: 555),
+            control1: CGPoint(x: 130, y: 690),
+            control2: CGPoint(x: 310, y: 600)
+        )
+        let leftBranch = SKShapeNode(path: leftBranchPath)
+        leftBranch.strokeColor = UIColor(red: 0.18, green: 0.12, blue: 0.07, alpha: 0.92)
+        leftBranch.lineWidth = 44
+        leftBranch.lineCap = .round
+        leftBranch.name = "decorativeGroveBranch"
+        canopy.addChild(leftBranch)
+
+        let rightBranchPath = CGMutablePath()
+        rightBranchPath.move(to: CGPoint(x: 1320, y: 660))
+        rightBranchPath.addCurve(
+            to: CGPoint(x: 810, y: 565),
+            control1: CGPoint(x: 1150, y: 700),
+            control2: CGPoint(x: 970, y: 600)
+        )
+        let rightBranch = SKShapeNode(path: rightBranchPath)
+        rightBranch.strokeColor = UIColor(red: 0.17, green: 0.11, blue: 0.07, alpha: 0.90)
+        rightBranch.lineWidth = 48
+        rightBranch.lineCap = .round
+        rightBranch.name = "decorativeGroveBranch"
+        canopy.addChild(rightBranch)
+
+        for (index, point) in [
+            CGPoint(x: 140, y: 625),
+            CGPoint(x: 245, y: 610),
+            CGPoint(x: 355, y: 590),
+            CGPoint(x: 925, y: 590),
+            CGPoint(x: 1045, y: 615),
+            CGPoint(x: 1160, y: 630)
+        ].enumerated() {
+            let cluster = SKNode()
+            cluster.position = point
+            cluster.name = "decorativeGroveLeafCluster"
+
+            for leafIndex in 0..<5 {
+                let leaf = SKShapeNode(ellipseOf: CGSize(width: 58, height: 28))
+                leaf.fillColor = UIColor(
+                    red: 0.18 + CGFloat((index + leafIndex) % 2) * 0.05,
+                    green: 0.45 + CGFloat(leafIndex % 3) * 0.035,
+                    blue: 0.20,
+                    alpha: 0.90
+                )
+                leaf.strokeColor = UIColor(red: 0.50, green: 0.69, blue: 0.32, alpha: 0.22)
+                leaf.lineWidth = 1
+                leaf.position = CGPoint(
+                    x: CGFloat(leafIndex - 2) * 22,
+                    y: CGFloat(abs(leafIndex - 2)) * 8
+                )
+                leaf.zRotation = CGFloat(leafIndex - 2) * 0.22
+                cluster.addChild(leaf)
+            }
+            canopy.addChild(cluster)
+        }
+
+        for x in [CGFloat(205), 405, 890, 1095] {
+            let vinePath = CGMutablePath()
+            vinePath.move(to: CGPoint(x: x, y: 620))
+            vinePath.addCurve(
+                to: CGPoint(x: x + 12, y: 475),
+                control1: CGPoint(x: x - 18, y: 565),
+                control2: CGPoint(x: x + 24, y: 525)
+            )
+            let vine = SKShapeNode(path: vinePath)
+            vine.strokeColor = UIColor(red: 0.25, green: 0.50, blue: 0.25, alpha: 0.66)
+            vine.lineWidth = 5
+            vine.name = "decorativeGroveVine"
+            canopy.addChild(vine)
+        }
+
+        addChild(canopy)
 
         let groveWash = ArtSystem.box(
             CGSize(width: 1280, height: 285),
@@ -713,10 +809,25 @@ import LearningCore
 
         case "scienceGroveFinale":
             if groveRestored {
+                selectionFeedback()
+                focusMoment(on: finalePoint)
                 valkyrie.pose(.celebrate)
                 milo.inspect(reducedMotion: reducedMotion)
                 instruction.text = "The grove is active again. Water, food, cover, body parts, and habitat evidence all worked together."
             } else {
+                errorFeedback()
+                switch groveStage {
+                case .arrive:
+                    focusMoment(on: duckPoint)
+                case .animalObserved:
+                    focusMoment(on: habitatPoint)
+                case .habitatMatched:
+                    focusMoment(on: feetPoint)
+                case .bodyPartObserved:
+                    focusMoment(on: comparePoint)
+                case .complete:
+                    focusMoment(on: finalePoint)
+                }
                 instruction.text = "The grove star is still dim. Finish the animal investigation first."
             }
 
@@ -733,6 +844,8 @@ import LearningCore
         valkyrie.pose(.interact)
 
         state.scienceObserveAnimal()
+        selectionFeedback()
+        focusMoment(on: duckPoint)
         refreshStagePresentation(animated: true)
         instruction.text = "Milo observes that the duck uses water, finds food nearby, and needs places with cover. Which habitat offers those resources?"
         refreshGuidanceCue()
@@ -740,10 +853,14 @@ import LearningCore
 
     private func chooseHabitat(_ choice: HabitatChoice) {
         guard groveStage != .arrive else {
+            errorFeedback()
+            focusMoment(on: duckPoint)
             instruction.text = "Observe the duck first so the habitat choice uses evidence."
             return
         }
         guard groveStage == .animalObserved || groveStage == .habitatMatched else {
+            selectionFeedback()
+            focusMoment(on: feetPoint)
             instruction.text = "The habitat match is already recorded. Inspect how the duck moves next."
             return
         }
@@ -753,9 +870,12 @@ import LearningCore
         refreshStagePresentation(animated: choice == .pondEdge)
 
         if choice == .pondEdge {
-            state.audio.play("success")
+            selectionFeedback()
+            focusMoment(on: feetPoint)
             instruction.text = "The pond edge provides water, nearby food, and reed cover. Now inspect a body part that helps the duck use this habitat."
         } else {
+            errorFeedback()
+            focusMoment(on: duckPoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The bare ridge offers little water or cover. Compare that with the needs Milo observed."
         }
@@ -764,6 +884,9 @@ import LearningCore
 
     private func inspectBodyPart() {
         guard groveStage == .habitatMatched || groveStage == .bodyPartObserved else {
+            errorFeedback()
+            let target = groveStage == .arrive ? duckPoint : habitatPoint
+            focusMoment(on: target)
             instruction.text = "Match the duck to a habitat before studying how its body helps there."
             return
         }
@@ -771,6 +894,8 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceInspectBodyPart()
+        selectionFeedback()
+        focusMoment(on: feetPoint)
         refreshStagePresentation(animated: true)
         instruction.text = "The webbing spreads the foot's surface against the water. That can help the duck push water while swimming. Compare the habitats one more time."
         refreshGuidanceCue()
@@ -778,6 +903,17 @@ import LearningCore
 
     private func compareHabitats(_ choice: HabitatChoice) {
         guard groveStage == .bodyPartObserved || groveStage == .complete else {
+            errorFeedback()
+            switch groveStage {
+            case .arrive:
+                focusMoment(on: duckPoint)
+            case .animalObserved:
+                focusMoment(on: habitatPoint)
+            case .habitatMatched:
+                focusMoment(on: feetPoint)
+            case .bodyPartObserved, .complete:
+                focusMoment(on: comparePoint)
+            }
             instruction.text = "Inspect the duck and its webbed feet before making the final habitat comparison."
             return
         }
@@ -787,10 +923,13 @@ import LearningCore
             renderPond()
             renderFinale()
             refreshStagePresentation(animated: true)
-            state.audio.play("success")
+            successFeedback(at: finalePoint)
+            focusMoment(on: finalePoint, hold: 0.70)
             valkyrie.pose(.celebrate)
             instruction.text = "The pond edge meets more of the duck's observed needs. The grove responded to the evidence and came back to life."
         } else {
+            errorFeedback()
+            focusMoment(on: comparePoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The exposed ridge still lacks water and protective cover. Use the needs we observed, not just where the duck could stand."
         }
