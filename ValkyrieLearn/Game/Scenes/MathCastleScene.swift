@@ -971,9 +971,10 @@ import LearningCore
         starlightOrb?.isHidden = true
         starlightOrb?.position = routeEnergyPoints[0]
 
-        environmentGears.forEach {
-            $0.removeAction(forKey: "poweredSpin")
-            $0.speed = 1
+        for (index, gear) in environmentGears.enumerated() {
+            gear.removeAction(forKey: "poweredSpin")
+            gear.speed = 1
+            startEnvironmentGearIdle(gear, index: index)
         }
 
         for lamp in routeLights {
@@ -1036,8 +1037,20 @@ import LearningCore
         }
 
         for (index, gear) in environmentGears.enumerated() {
+            gear.removeAction(forKey: "ambientSpin")
             let angle = CGFloat.pi * (index.isMultiple(of: 2) ? 2.4 : -2.4)
-            gear.run(.rotate(byAngle: angle, duration: 0.95), withKey: "poweredSpin")
+            let surge = SKAction.rotate(byAngle: angle, duration: 0.95)
+            surge.timingMode = .easeInEaseOut
+            gear.run(
+                .sequence([
+                    surge,
+                    .run { [weak self, weak gear] in
+                        guard let self, let gear else { return }
+                        self.startEnvironmentGearIdle(gear, index: index)
+                    }
+                ]),
+                withKey: "poweredSpin"
+            )
         }
 
         let unfold = SKAction.scaleX(to: 1, duration: 1.05)
@@ -1054,6 +1067,14 @@ import LearningCore
                 self.routeReady = true
                 self.destinationBeacon?.alpha = 1
                 self.destinationBeacon?.glowWidth = 18
+                if let nextRotor = self.childNode(withName: "//nextGearRotor") {
+                    self.startRotorIdle(
+                        nextRotor,
+                        duration: 3.2,
+                        clockwise: false,
+                        key: "nextIdleSpin"
+                    )
+                }
                 self.playStarlightBurst(at: self.routeDestination)
             }
         ]), withKey: "routeOpen")
@@ -1188,6 +1209,9 @@ import LearningCore
         // Old input/retry effects must never dim a newly powered machine.
         powerLight?.removeAction(forKey: "gentleRetry")
         powerLight?.removeAction(forKey: "inputPulse")
+        if powered {
+            powerLight?.removeAction(forKey: "ambientPowerPulse")
+        }
         powerLight?.alpha = 1
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
 
@@ -1213,6 +1237,25 @@ import LearningCore
             powerLight?.glowWidth = 0
             if wasPowered || physicalBridge?.xScale != 0.06 {
                 resetPhysicalProgression()
+            }
+            if !reducedMotion, powerLight?.action(forKey: "ambientPowerPulse") == nil {
+                powerLight?.run(
+                    .repeatForever(
+                        .sequence([
+                            .fadeAlpha(to: 0.72, duration: 1.4),
+                            .fadeAlpha(to: 1.0, duration: 1.4)
+                        ])
+                    ),
+                    withKey: "ambientPowerPulse"
+                )
+            }
+            if let powerRotor = childNode(withName: "//castlePowerRotor") {
+                startRotorIdle(
+                    powerRotor,
+                    duration: 8.5,
+                    clockwise: true,
+                    key: "powerIdleSpin"
+                )
             }
         }
 
