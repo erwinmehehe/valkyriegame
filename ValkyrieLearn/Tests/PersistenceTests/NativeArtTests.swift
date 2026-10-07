@@ -2548,6 +2548,47 @@ import LearningCore
         XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 440)
     }
 
+    func testStoryTreeHubUsesCompactDiegeticWayfinding() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+        let titleBackdrop = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
+        let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+        let feedbackBackdrop = try XCTUnwrap(scene.childNode(withName: "instructionBackdrop"))
+
+        XCTAssertEqual(title.fontName, "Georgia-Bold")
+        XCTAssertLessThanOrEqual(title.fontSize, 20)
+        XCTAssertLessThanOrEqual(titleBackdrop.calculateAccumulatedFrame().width, 350)
+        XCTAssertEqual(feedback.fontName, "AvenirNext-Medium")
+        XCTAssertLessThanOrEqual(feedback.fontSize, 18)
+        XCTAssertLessThanOrEqual(feedback.preferredMaxLayoutWidth, 610)
+        XCTAssertLessThanOrEqual(feedbackBackdrop.calculateAccumulatedFrame().width, 670)
+
+        for name in ["wordGarden", "puzzlePalace", "castle", "scienceLab"] {
+            let marker = try XCTUnwrap(scene.childNode(withName: name))
+            XCTAssertGreaterThanOrEqual(marker.calculateAccumulatedFrame().width, 60)
+            XCTAssertGreaterThanOrEqual(marker.calculateAccumulatedFrame().height, 60)
+            let plaque = try XCTUnwrap(
+                marker.children.first {
+                    ($0.userData?["destinationRole"] as? String) == "plaque"
+                }
+            )
+            let label = try XCTUnwrap(plaque.children.compactMap { $0 as? SKLabelNode }.first)
+            XCTAssertEqual(label.fontName, "Georgia-Bold")
+            XCTAssertLessThanOrEqual(label.fontSize, 15)
+        }
+
+        let pipGear = try XCTUnwrap(scene.childNode(withName: "pipWind"))
+        XCTAssertGreaterThanOrEqual(pipGear.calculateAccumulatedFrame().width, 64)
+        XCTAssertGreaterThanOrEqual(pipGear.calculateAccumulatedFrame().height, 64)
+    }
+
     func testPuzzlePalaceLanternPersistsAndMovesOnStoryTree() throws {
         let container = try LearningStore.container(inMemory: true)
         let store = try LearningStore(context: ModelContext(container))
