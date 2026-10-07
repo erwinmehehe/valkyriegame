@@ -480,7 +480,7 @@ import LearningCore
     }
 
     func testInterruptedCompanionReactionResetsAuraWithoutMovingTheActor() throws {
-        let companions: [CharacterNode] = [LumiNode(), MiloNode(), TikoNode()]
+        let companions: [CharacterNode] = [LumiNode(), MiloNode(), TikoNode(), PipNode()]
         for actor in companions {
             actor.position = CGPoint(x: 480, y: 180)
             actor.face(toward: CGPoint(x: 200, y: 180))
@@ -501,6 +501,47 @@ import LearningCore
             XCTAssertNotNil(actor.action(forKey: "operation"))
             actor.cancelTravel()
         }
+    }
+
+    func testCharacterPolishKeepsEveryActorGroundedAndReadable() throws {
+        let actors: [CharacterNode] = [
+            ValkyrieNode(),
+            PipNode(),
+            LumiNode(),
+            MiloNode(),
+            TikoNode()
+        ]
+
+        for actor in actors {
+            actor.position = CGPoint(x: 420, y: 180)
+            let worldPosition = actor.position
+            let shadow = try XCTUnwrap(actor.childNode(withName: "characterGroundShadow"))
+            let glow = try XCTUnwrap(actor.childNode(withName: "characterSilhouetteGlow"))
+
+            XCTAssertEqual(shadow.xScale, 1, accuracy: 0.001)
+            XCTAssertNotNil(glow.action(forKey: "characterPresence"))
+
+            actor.pose(.celebrate)
+            XCTAssertEqual(actor.position, worldPosition)
+            XCTAssertLessThan(shadow.xScale, 1)
+            XCTAssertLessThan(shadow.yScale, 1)
+            XCTAssertNotNil(actor.bodyNode.action(forKey: "pose"))
+
+            actor.reducedMotion = true
+            XCTAssertEqual(actor.position, worldPosition)
+            XCTAssertNil(glow.action(forKey: "characterPresence"))
+            XCTAssertFalse(actor.bodyNode.hasActions())
+
+            actor.pose(.idle)
+            XCTAssertEqual(shadow.xScale, 1, accuracy: 0.001)
+            XCTAssertEqual(shadow.yScale, 1, accuracy: 0.001)
+            XCTAssertEqual(actor.bodyNode.position, .zero)
+            XCTAssertEqual(actor.bodyNode.zRotation, 0, accuracy: 0.001)
+        }
+
+        let pip = PipNode()
+        let pipAura = try XCTUnwrap(pip.childNode(withName: "companionPresence"))
+        XCTAssertNotNil(pipAura.childNode(withName: "decorativeCompanionPresenceRing"))
     }
 
     func testLiveMotionTogglePreservesCompanionTravelAndInteractionDeadlines() throws {
