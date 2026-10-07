@@ -2577,6 +2577,12 @@ import LearningCore
             let marker = try XCTUnwrap(scene.childNode(withName: name))
             XCTAssertGreaterThanOrEqual(marker.calculateAccumulatedFrame().width, 60)
             XCTAssertGreaterThanOrEqual(marker.calculateAccumulatedFrame().height, 60)
+            let pulse = try XCTUnwrap(
+                marker.children.first {
+                    ($0.userData?["decorativeMotionRole"] as? String) == "pulse"
+                }
+            )
+            XCTAssertNil(pulse.action(forKey: "ambientPulse"))
             let plaque = try XCTUnwrap(
                 marker.children.first {
                     ($0.userData?["destinationRole"] as? String) == "plaque"
