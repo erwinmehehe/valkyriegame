@@ -380,11 +380,15 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 900, y: 180)
         scene.handleTap(at: CGPoint(x: 975, y: 285))
         XCTAssertEqual(scene.groveStage, .complete)
-        let restoredFinale = try XCTUnwrap(
-            scene.childNode(withName: "scienceGroveFinale")
+        XCTAssertLessThan(
+            finale.alpha,
+            0.01,
+            "The finale stone stays dormant until the Creature Grove field-study retention step is complete."
         )
-        XCTAssertFalse(restoredFinale === finale)
-        XCTAssertEqual(restoredFinale.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(
+            scene.childNode(withName: "decorativeAttentionCue"),
+            "After the habitat comparison, guidance should move to the follow-up field-study evidence."
+        )
     }
 
     func testPuzzleAndScienceUseExtraVerticalSpaceOnFourByThreeIPad() throws {
