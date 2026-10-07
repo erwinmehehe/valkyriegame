@@ -1304,10 +1304,21 @@ import LearningCore
                 ? "HOLD — keep your hands off the orb until it changes."
                 : "HOLD — Tiko is guarding the orb. Wait for the star."
             let duration: TimeInterval
-            switch support {
-            case .independent: duration = 0.95
-            case .lightHint: duration = 1.15
-            case .strongHint, .demonstration: duration = 1.35
+            if reducedMotion {
+                // Keep the reduced-motion interaction deterministic on slower
+                // simulators: HOLD still has a clear wait, but GO has a wider
+                // stable tap window without changing the signal sequence.
+                switch support {
+                case .independent: duration = 0.75
+                case .lightHint: duration = 0.90
+                case .strongHint, .demonstration: duration = 1.05
+                }
+            } else {
+                switch support {
+                case .independent: duration = 0.95
+                case .lightHint: duration = 1.15
+                case .strongHint, .demonstration: duration = 1.35
+                }
             }
             run(.sequence([
                 .wait(forDuration: duration),
