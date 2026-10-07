@@ -26,7 +26,7 @@ import LearningCore
     private var destinationBeacon: SKShapeNode?
     private var starlightOrb: SKShapeNode?
     private var environmentGears: [SKNode] = []
-    private var lastMathMotionPreference: Bool?
+    private var lastKineticReducedMotion: Bool?
     private var routeReady = false
     private var routeDestination: CGPoint { bridgePath.last! }
     private let routeEnergyPoints = [
@@ -72,8 +72,7 @@ import LearningCore
         valkyrie.setScale(0.58)
         pip.setScale(0.72)
         polishMathCastleHUD()
-        syncMathCastleMotion()
-        lastMathMotionPreference = reducedMotion
+        syncCastleKinetics()
         initialBuildComplete = true
     }
 
@@ -161,22 +160,18 @@ import LearningCore
         root.position = point
         root.zPosition = 750
 
-        let halo = SKShapeNode(circleOfRadius: 27)
-        halo.fillColor = UIColor(red: 1.0, green: 0.78, blue: 0.34, alpha: 0.035)
-        halo.strokeColor = UIColor(red: 1.0, green: 0.78, blue: 0.34, alpha: 0.18)
-        halo.lineWidth = 2
-        halo.alpha = 0.28
-        halo.name = "workshopGearHalo"
-        halo.zPosition = -1
-        root.addChild(halo)
-
-        let gear = ArtSystem.gear(radius: 22, symbol: symbol)
-        gear.name = name
+        // Keep the icon upright while the brass rim rotates independently.
+        // This makes the workshop feel mechanical without sacrificing symbol readability.
+        let gear = ArtSystem.gear(radius: 22, symbol: "")
+        gear.name = "workshopRim_\(name)"
         gear.alpha = 0.86
-        if let rotor = gear.children.first {
-            rotor.name = "decorativeWorkshopGearRotor"
-        }
         root.addChild(gear)
+
+        let icon = ArtSystem.label(symbol, size: 18)
+        icon.name = name
+        icon.fontColor = UIColor(red: 0.95, green: 0.95, blue: 0.92, alpha: 1)
+        icon.zPosition = 3
+        root.addChild(icon)
 
         let hit = SKShapeNode(circleOfRadius: 30)
         hit.fillColor = .clear
@@ -188,284 +183,6 @@ import LearningCore
         makeAccessible(root, label: accessibilityLabel)
         registerInteraction(root, clearance: 14)
         addChild(root)
-    }
-
-    private func startRotorIdle(
-        _ rotor: SKNode,
-        duration: TimeInterval,
-        clockwise: Bool,
-        key: String = "idleSpin"
-    ) {
-        rotor.removeAction(forKey: key)
-        guard !reducedMotion else {
-            rotor.zRotation = 0
-            return
-        }
-        rotor.run(
-            .repeatForever(
-                .rotate(
-                    byAngle: clockwise ? .pi * 2 : -.pi * 2,
-                    duration: duration
-                )
-            ),
-            withKey: key
-        )
-    }
-
-    private func startEnvironmentGearIdle(_ gear: SKNode, index: Int) {
-        gear.removeAction(forKey: "ambientSpin")
-        gear.removeAction(forKey: "arrivalKick")
-        gear.removeAction(forKey: "poweredSpin")
-        guard !reducedMotion else {
-            gear.zRotation = 0
-            return
-        }
-        let clockwise = index.isMultiple(of: 2)
-        let duration = 5.4 + Double(index) * 1.1
-        gear.run(
-            .repeatForever(
-                .rotate(
-                    byAngle: clockwise ? .pi * 2 : -.pi * 2,
-                    duration: duration
-                )
-            ),
-            withKey: "ambientSpin"
-        )
-    }
-
-    private func syncMathCastleMotion() {
-        for index in 0..<5 {
-            guard
-                let root = childNode(withName: "workshop\(index)"),
-                let rotor = root.childNode(withName: "//workshopGearRotor")
-            else { continue }
-            rotor.removeAction(forKey: "stationKick")
-            rotor.removeAction(forKey: "successSurge")
-            startRotorIdle(
-                rotor,
-                duration: 10.0 + Double(index) * 0.85,
-                clockwise: index.isMultiple(of: 2)
-            )
-        }
-
-        if
-            let wind = childNode(withName: "wind"),
-            let rotor = wind.childNode(withName: "//workshopGearRotor")
-        {
-            rotor.removeAction(forKey: "stationKick")
-            startRotorIdle(rotor, duration: 6.8, clockwise: true)
-        }
-
-        if let powerRotor = childNode(withName: "//castlePowerRotor") {
-            powerRotor.removeAction(forKey: "powerSurge")
-            startRotorIdle(
-                powerRotor,
-                duration: wasPowered ? 2.8 : 8.5,
-                clockwise: true,
-                key: "powerIdleSpin"
-            )
-        }
-
-        if let nextRotor = childNode(withName: "//nextGearRotor") {
-            startRotorIdle(
-                nextRotor,
-                duration: routeReady ? 3.2 : 11.0,
-                clockwise: false,
-                key: "nextIdleSpin"
-            )
-        }
-
-        for (index, gear) in environmentGears.enumerated() {
-            startEnvironmentGearIdle(gear, index: index)
-        }
-
-        for index in 0..<5 {
-            let halo = childNode(withName: "workshop\(index)")?
-                .childNode(withName: "workshopGearHalo")
-            if reducedMotion {
-                halo?.removeAction(forKey: "activeStationPulse")
-                halo?.removeAction(forKey: "stationFlash")
-            }
-        }
-        if reducedMotion {
-            let hangers = children.filter { $0.name == "questionPromptHanger" }
-            resetWorkOrderPresentation(hangers)
-        }
-        if let runtime = state.runtime {
-            updateWorkshopStationFocus(
-                mechanicID: runtime.encounter.mechanicID,
-                completed: runtime.completed
-            )
-        }
-
-        powerLight?.removeAction(forKey: "ambientPowerPulse")
-        if !reducedMotion, !wasPowered {
-            powerLight?.run(
-                .repeatForever(
-                    .sequence([
-                        .fadeAlpha(to: 0.72, duration: 1.4),
-                        .fadeAlpha(to: 1.0, duration: 1.4)
-                    ])
-                ),
-                withKey: "ambientPowerPulse"
-            )
-        } else {
-            powerLight?.alpha = 1
-        }
-    }
-
-    private func playWorkshopSelectionReaction(named name: String) {
-        guard let root = childNode(withName: name) else { return }
-        let halo = root.childNode(withName: "workshopGearHalo")
-        let rotor = root.childNode(withName: "//workshopGearRotor")
-
-        halo?.removeAction(forKey: "stationFlash")
-        halo?.alpha = 0.82
-        halo?.run(
-            .sequence([
-                .fadeAlpha(to: 0.28, duration: reducedMotion ? 0 : 0.48)
-            ]),
-            withKey: "stationFlash"
-        )
-
-        guard !reducedMotion, let rotor else { return }
-        rotor.removeAction(forKey: "idleSpin")
-        rotor.removeAction(forKey: "stationKick")
-        let clockwise = name == "wind" || !name.hasSuffix("1") && !name.hasSuffix("3")
-        let kick = SKAction.rotate(
-            byAngle: clockwise ? .pi * 1.5 : -.pi * 1.5,
-            duration: 0.34
-        )
-        kick.timingMode = .easeOut
-        rotor.run(
-            .sequence([
-                kick,
-                .run { [weak self, weak rotor] in
-                    guard let self, let rotor else { return }
-                    let index = Int(name.replacingOccurrences(of: "workshop", with: "")) ?? 0
-                    self.startRotorIdle(
-                        rotor,
-                        duration: name == "wind" ? 6.8 : 10.0 + Double(index) * 0.85,
-                        clockwise: name == "wind" || index.isMultiple(of: 2)
-                    )
-                }
-            ]),
-            withKey: "stationKick"
-        )
-    }
-
-    private func updateWorkshopStationFocus(
-        mechanicID: String?,
-        completed: Bool
-    ) {
-        let activeIndex: Int?
-        switch mechanicID {
-        case MathMechanicID.crystalCart: activeIndex = 0
-        case MathMechanicID.balanceScale: activeIndex = 1
-        case MathMechanicID.numberBondMachine: activeIndex = 2
-        case MathMechanicID.tenFrameGate: activeIndex = 3
-        case MathMechanicID.missingNumberBridge: activeIndex = 4
-        default: activeIndex = nil
-        }
-
-        for index in 0..<5 {
-            guard let root = childNode(withName: "workshop\(index)") else { continue }
-            let halo = root.childNode(withName: "workshopGearHalo")
-            let gear = root.childNode(withName: "workshop\(index)")
-            let active = activeIndex == index && !completed
-            halo?.removeAction(forKey: "activeStationPulse")
-            halo?.alpha = active ? 0.70 : 0.28
-            if active, !reducedMotion {
-                halo?.run(
-                    .repeatForever(
-                        .sequence([
-                            .fadeAlpha(to: 0.34, duration: 0.82),
-                            .fadeAlpha(to: 0.76, duration: 0.82)
-                        ])
-                    ),
-                    withKey: "activeStationPulse"
-                )
-            }
-            gear?.alpha = active ? 1.0 : 0.82
-            gear?.setScale(active ? 1.08 : 1.0)
-        }
-    }
-
-    private func playStationArrivalReaction() {
-        guard !reducedMotion else { return }
-        childNode(withName: "mathWorkZoneCore")?.run(
-            .sequence([
-                .scale(to: 1.035, duration: 0.18),
-                .scale(to: 1.0, duration: 0.28)
-            ]),
-            withKey: "stationArrival"
-        )
-        for (index, gear) in environmentGears.enumerated() {
-            gear.removeAction(forKey: "ambientSpin")
-            let angle: CGFloat = index.isMultiple(of: 2) ? 0.42 : -0.42
-            gear.run(
-                .sequence([
-                    .rotate(byAngle: angle, duration: 0.24),
-                    .run { [weak self, weak gear] in
-                        guard let self, let gear else { return }
-                        self.startEnvironmentGearIdle(gear, index: index)
-                    }
-                ]),
-                withKey: "arrivalKick"
-            )
-        }
-    }
-
-    private func playPoweredMachinerySurge() {
-        guard !reducedMotion else {
-            syncMathCastleMotion()
-            return
-        }
-
-        if let powerRotor = childNode(withName: "//castlePowerRotor") {
-            powerRotor.removeAction(forKey: "powerIdleSpin")
-            powerRotor.run(
-                .sequence([
-                    .rotate(byAngle: .pi * 4, duration: 0.72),
-                    .run { [weak self, weak powerRotor] in
-                        guard let self, let powerRotor else { return }
-                        self.startRotorIdle(
-                            powerRotor,
-                            duration: 2.8,
-                            clockwise: true,
-                            key: "powerIdleSpin"
-                        )
-                    }
-                ]),
-                withKey: "powerSurge"
-            )
-        }
-
-        for index in 0..<5 {
-            guard
-                let root = childNode(withName: "workshop\(index)"),
-                let rotor = root.childNode(withName: "//workshopGearRotor")
-            else { continue }
-            rotor.removeAction(forKey: "idleSpin")
-            rotor.run(
-                .sequence([
-                    .wait(forDuration: Double(index) * 0.055),
-                    .rotate(
-                        byAngle: index.isMultiple(of: 2) ? .pi : -.pi,
-                        duration: 0.34
-                    ),
-                    .run { [weak self, weak rotor] in
-                        guard let self, let rotor else { return }
-                        self.startRotorIdle(
-                            rotor,
-                            duration: 10.0 + Double(index) * 0.85,
-                            clockwise: index.isMultiple(of: 2)
-                        )
-                    }
-                ]),
-                withKey: "successSurge"
-            )
-        }
     }
 
     override func buildWorld() {
@@ -641,7 +358,6 @@ import LearningCore
 
         pip.name = "help"
         nextGear = worldGear("→", name: "next", at: CGPoint(x: 1200, y: 430), radius: 34)
-        nextGear?.children.first?.name = "decorativeNextGearRotor"
         lever = makeLever()
 
         let workflow = SKShapeNode()
@@ -664,7 +380,6 @@ import LearningCore
         powerMount.position = CGPoint(x: 1105, y: 352)
         powerMount.zPosition = 39
         powerMount.name = "castlePowerMount"
-        powerMount.children.first?.name = "decorativeCastlePowerRotor"
         addChild(powerMount)
 
         let light = SKShapeNode(circleOfRadius: 17)
@@ -791,10 +506,228 @@ import LearningCore
             glint.strokeColor = .clear
             glint.glowWidth = reducedMotion ? 0 : 2
             glint.name = "castleSkyGlint"
+            glint.userData = NSMutableDictionary(dictionary: [
+                "decorativeMotionRole": "pulse"
+            ])
             root.addChild(glint)
         }
 
+        // Two light native chain runs sit over chains already suggested by the
+        // painting. Their tiny pendulum motion makes the castle feel mechanical
+        // without turning the learning surface into a carnival.
+        for (index, anchor) in [
+            CGPoint(x: 382, y: 604),
+            CGPoint(x: 1036, y: 575)
+        ].enumerated() {
+            let chain = SKNode()
+            chain.name = "castleAmbientChain\(index)"
+            chain.position = anchor
+            chain.zPosition = 1
+            chain.alpha = 0.34
+
+            for linkIndex in 0..<7 {
+                let link = SKShapeNode(ellipseOf: CGSize(width: 10, height: 17))
+                link.position = CGPoint(x: 0, y: CGFloat(linkIndex) * -15)
+                link.strokeColor = UIColor(
+                    red: 0.72,
+                    green: 0.56,
+                    blue: 0.30,
+                    alpha: 0.82
+                )
+                link.fillColor = .clear
+                link.lineWidth = 2
+                link.name = "decorativeCastleChainLink"
+                chain.addChild(link)
+            }
+
+            root.addChild(chain)
+        }
+
         addChild(root)
+    }
+
+    private func syncCastleKinetics() {
+        lastKineticReducedMotion = reducedMotion
+
+        let powerMount = childNode(withName: "castlePowerMount")
+        powerMount?.removeAction(forKey: "ambientSpin")
+        if reducedMotion { powerMount?.removeAction(forKey: "powerSurge") }
+        powerMount?.zRotation = 0
+
+        let workshopNames = [
+            "workshop0", "workshop1", "workshop2", "workshop3", "workshop4", "wind"
+        ]
+        for (index, name) in workshopNames.enumerated() {
+            guard let rim = childNode(withName: "//workshopRim_\(name)") else { continue }
+            rim.removeAction(forKey: "ambientWorkshopSpin")
+            if reducedMotion { rim.removeAction(forKey: "workshopTapSurge") }
+            rim.zRotation = 0
+            guard !reducedMotion else { continue }
+
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            let duration = name == "wind"
+                ? 5.6
+                : 8.0 + Double(index % 3) * 1.25
+            rim.run(
+                .repeatForever(
+                    .rotate(byAngle: direction * .pi * 2, duration: duration)
+                ),
+                withKey: "ambientWorkshopSpin"
+            )
+        }
+
+        for (index, gear) in environmentGears.enumerated() {
+            gear.removeAction(forKey: "ambientSpin")
+            if reducedMotion {
+                gear.removeAction(forKey: "powerSurge")
+                gear.removeAction(forKey: "poweredSpin")
+                gear.zRotation = 0
+            } else {
+                let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+                let duration = 7.2 + Double(index) * 1.4
+                gear.run(
+                    .repeatForever(
+                        .rotate(byAngle: direction * .pi * 2, duration: duration)
+                    ),
+                    withKey: "ambientSpin"
+                )
+            }
+        }
+
+        if !reducedMotion {
+            powerMount?.run(
+                .repeatForever(
+                    .rotate(byAngle: -.pi * 2, duration: 11.0)
+                ),
+                withKey: "ambientSpin"
+            )
+        }
+
+        for index in 0..<2 {
+            guard let chain = childNode(
+                withName: "//castleAmbientChain\(index)"
+            ) else { continue }
+            chain.removeAction(forKey: "ambientChainSway")
+            chain.zRotation = 0
+            guard !reducedMotion else { continue }
+
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            chain.run(
+                .repeatForever(
+                    .sequence([
+                        .rotate(
+                            byAngle: direction * 0.026,
+                            duration: 2.2 + Double(index) * 0.3
+                        ),
+                        .rotate(
+                            byAngle: direction * -0.052,
+                            duration: 4.4 + Double(index) * 0.4
+                        ),
+                        .rotate(
+                            byAngle: direction * 0.026,
+                            duration: 2.2 + Double(index) * 0.3
+                        )
+                    ])
+                ),
+                withKey: "ambientChainSway"
+            )
+        }
+    }
+
+    private func playWorkshopGearSurge(named name: String) {
+        guard !reducedMotion,
+              let rim = childNode(withName: "//workshopRim_\(name)") else { return }
+
+        rim.removeAction(forKey: "workshopTapSurge")
+        let direction: CGFloat = ["workshop1", "workshop3"].contains(name) ? -1 : 1
+        rim.run(
+            .rotate(byAngle: direction * .pi * 0.85, duration: 0.28),
+            withKey: "workshopTapSurge"
+        )
+    }
+
+    private func setActiveMachineKinetics(_ active: Bool) {
+        guard let mechanic else {
+            resetCamera(duration: 0.28)
+            return
+        }
+
+        mechanic.removeAction(forKey: "activeMachineBreath")
+        childNode(withName: "mathWorkZoneCore")?
+            .removeAction(forKey: "activeMachineBreath")
+        // Stopping a loop mid-frame must also restore its static presentation.
+        mechanic.setScale(1)
+        childNode(withName: "mathWorkZoneCore")?.alpha = 1
+
+        if active {
+            focusCamera(on: CGPoint(x: 820, y: 310), duration: 0.34)
+
+            guard !reducedMotion else { return }
+            mechanic.run(
+                .repeatForever(
+                    .sequence([
+                        .scale(to: 1.018, duration: 0.72),
+                        .scale(to: 1.0, duration: 0.72)
+                    ])
+                ),
+                withKey: "activeMachineBreath"
+            )
+
+            childNode(withName: "mathWorkZoneCore")?.run(
+                .repeatForever(
+                    .sequence([
+                        .fadeAlpha(to: 0.56, duration: 0.78),
+                        .fadeAlpha(to: 1.0, duration: 0.78)
+                    ])
+                ),
+                withKey: "activeMachineBreath"
+            )
+        } else {
+            mechanic.setScale(1)
+            childNode(withName: "mathWorkZoneCore")?.alpha = 1
+            resetCamera(duration: 0.30)
+        }
+    }
+
+    private func playCastlePowerSurge() {
+        guard !reducedMotion else { return }
+
+        childNode(withName: "castlePowerMount")?.removeAction(forKey: "powerSurge")
+        childNode(withName: "castlePowerMount")?.run(
+            .sequence([
+                .rotate(byAngle: -.pi * 1.25, duration: 0.42),
+                .rotate(byAngle: -.pi * 0.65, duration: 0.46)
+            ]),
+            withKey: "powerSurge"
+        )
+
+        for (index, gear) in environmentGears.enumerated() {
+            gear.removeAction(forKey: "powerSurge")
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            gear.run(
+                .rotate(
+                    byAngle: direction * .pi * 1.8,
+                    duration: 0.62
+                ),
+                withKey: "powerSurge"
+            )
+        }
+
+        for index in 0..<2 {
+            childNode(withName: "//castleAmbientChain\(index)")?.run(
+                .sequence([
+                    .rotate(
+                        byAngle: index.isMultiple(of: 2) ? 0.055 : -0.055,
+                        duration: 0.16
+                    ),
+                    .rotate(
+                        byAngle: index.isMultiple(of: 2) ? -0.075 : 0.075,
+                        duration: 0.24
+                    )
+                ]),
+                withKey: "powerSurge"
+            )
+        }
     }
 
     private func buildBridgeRoute() {
@@ -1002,10 +935,9 @@ import LearningCore
         starlightOrb?.isHidden = true
         starlightOrb?.position = routeEnergyPoints[0]
 
-        for (index, gear) in environmentGears.enumerated() {
-            gear.removeAction(forKey: "poweredSpin")
-            gear.speed = 1
-            startEnvironmentGearIdle(gear, index: index)
+        environmentGears.forEach {
+            $0.removeAction(forKey: "poweredSpin")
+            $0.speed = 1
         }
 
         for lamp in routeLights {
@@ -1068,20 +1000,8 @@ import LearningCore
         }
 
         for (index, gear) in environmentGears.enumerated() {
-            gear.removeAction(forKey: "ambientSpin")
             let angle = CGFloat.pi * (index.isMultiple(of: 2) ? 2.4 : -2.4)
-            let surge = SKAction.rotate(byAngle: angle, duration: 0.95)
-            surge.timingMode = .easeInEaseOut
-            gear.run(
-                .sequence([
-                    surge,
-                    .run { [weak self, weak gear] in
-                        guard let self, let gear else { return }
-                        self.startEnvironmentGearIdle(gear, index: index)
-                    }
-                ]),
-                withKey: "poweredSpin"
-            )
+            gear.run(.rotate(byAngle: angle, duration: 0.95), withKey: "poweredSpin")
         }
 
         let unfold = SKAction.scaleX(to: 1, duration: 1.05)
@@ -1098,14 +1018,6 @@ import LearningCore
                 self.routeReady = true
                 self.destinationBeacon?.alpha = 1
                 self.destinationBeacon?.glowWidth = 18
-                if let nextRotor = self.childNode(withName: "//nextGearRotor") {
-                    self.startRotorIdle(
-                        nextRotor,
-                        duration: 3.2,
-                        clockwise: false,
-                        key: "nextIdleSpin"
-                    )
-                }
                 self.playStarlightBurst(at: self.routeDestination)
             }
         ]), withKey: "routeOpen")
@@ -1240,9 +1152,6 @@ import LearningCore
         // Old input/retry effects must never dim a newly powered machine.
         powerLight?.removeAction(forKey: "gentleRetry")
         powerLight?.removeAction(forKey: "inputPulse")
-        if powered {
-            powerLight?.removeAction(forKey: "ambientPowerPulse")
-        }
         powerLight?.alpha = 1
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
 
@@ -1253,7 +1162,6 @@ import LearningCore
             if !wasPowered {
                 if initialBuildComplete {
                     playMechanicSuccessReaction()
-                    playPoweredMachinerySurge()
                 }
                 openPhysicalProgression(animated: initialBuildComplete)
                 if initialBuildComplete && !reducedMotion {
@@ -1269,25 +1177,6 @@ import LearningCore
             if wasPowered || physicalBridge?.xScale != 0.06 {
                 resetPhysicalProgression()
             }
-            if !reducedMotion, powerLight?.action(forKey: "ambientPowerPulse") == nil {
-                powerLight?.run(
-                    .repeatForever(
-                        .sequence([
-                            .fadeAlpha(to: 0.72, duration: 1.4),
-                            .fadeAlpha(to: 1.0, duration: 1.4)
-                        ])
-                    ),
-                    withKey: "ambientPowerPulse"
-                )
-            }
-            if let powerRotor = childNode(withName: "//castlePowerRotor") {
-                startRotorIdle(
-                    powerRotor,
-                    duration: 8.5,
-                    clockwise: true,
-                    key: "powerIdleSpin"
-                )
-            }
         }
 
         wasPowered = powered
@@ -1297,60 +1186,15 @@ import LearningCore
         updateChallengeGateAppearance()
     }
 
-    private func resetWorkOrderPresentation(_ hangers: [SKNode]) {
-        questionPlate.removeAction(forKey: "workOrderReveal")
-        questionHeading.removeAction(forKey: "workOrderReveal")
-        questionLabel.removeAction(forKey: "workOrderReveal")
-        questionPlate.position.y = 618
-        questionHeading.position.y = 643
-        questionPlate.alpha = 1
-        questionHeading.alpha = 1
-        questionLabel.alpha = 1
-        for hanger in hangers {
-            hanger.removeAction(forKey: "workOrderReveal")
-            hanger.position.y = 683
-            hanger.alpha = 1
-        }
-    }
-
-    private func revealWorkOrder(_ hangers: [SKNode]) {
-        guard !reducedMotion else { return }
-        let nodes: [SKNode] = [questionPlate, questionHeading, questionLabel] + hangers
-        for (index, node) in nodes.enumerated() {
-            node.removeAction(forKey: "workOrderReveal")
-            node.position.y += index < 3 ? 12 : 8
-            node.alpha = 0
-            let settle = SKAction.moveBy(
-                x: 0,
-                y: index < 3 ? -12 : -8,
-                duration: 0.24 + Double(index) * 0.018
-            )
-            settle.timingMode = .easeOut
-            node.run(
-                .group([
-                    settle,
-                    .fadeIn(withDuration: 0.18)
-                ]),
-                withKey: "workOrderReveal"
-            )
-        }
-    }
-
     private func showQuestion(_ text: String?) {
         let hangers = children.filter { $0.name == "questionPromptHanger" }
-        let wasHidden = questionPlate.isHidden
         guard let text, !text.isEmpty else {
-            resetWorkOrderPresentation(hangers)
             questionPlate.isHidden = true
             questionHeading.isHidden = true
             questionLabel.isHidden = true
             hangers.forEach { $0.isHidden = true }
             questionLabel.text = nil
             return
-        }
-
-        if wasHidden {
-            resetWorkOrderPresentation(hangers)
         }
         questionLabel.text = text
         let longPrompt = text.count > 52
@@ -1360,10 +1204,6 @@ import LearningCore
         questionHeading.isHidden = false
         questionLabel.isHidden = false
         hangers.forEach { $0.isHidden = false }
-
-        if wasHidden {
-            revealWorkOrder(hangers)
-        }
     }
 
     private func openOrder() {
@@ -1399,7 +1239,6 @@ import LearningCore
             }
             childNode(withName: "next")?.isHidden = false
             lever?.isHidden = true
-            updateWorkshopStationFocus(mechanicID: nil, completed: true)
             updatePower(false)
             return
         }
@@ -1422,10 +1261,6 @@ import LearningCore
         case .missingBridge(let model): (mechanic as? MissingNumberBridgeMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
-        updateWorkshopStationFocus(
-            mechanicID: runtime.encounter.mechanicID,
-            completed: runtime.completed
-        )
         updatePower(runtime.completed)
 
         let secondaryHidden = !runtime.completed && (engaged || !state.workshop)
@@ -1529,9 +1364,9 @@ import LearningCore
         case "help":
             if canManipulate() { showScaffold() } else { engageMachine() }
         case "wind":
+            playWorkshopGearSurge(named: "wind")
             engaged = false
-            playWorkshopSelectionReaction(named: "wind")
-            resetCamera(duration: 0.24)
+            setActiveMachineKinetics(false)
             travel(to: CGPoint(x: 380, y: 235)) { [weak self] in
                 guard let self else { return }
                 self.pip.operate(reducedMotion: self.reducedMotion)
@@ -1554,16 +1389,11 @@ import LearningCore
             } else {
                 state.advanceEncounter(); openOrder()
             }
-        case "workshop0":
-            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop0"); workshop(0)
-        case "workshop1":
-            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop1"); workshop(1)
-        case "workshop2":
-            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop2"); workshop(2)
-        case "workshop3":
-            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop3"); workshop(3)
-        case "workshop4":
-            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop4"); workshop(4)
+        case "workshop0": playWorkshopGearSurge(named: "workshop0"); workshop(0)
+        case "workshop1": playWorkshopGearSurge(named: "workshop1"); workshop(1)
+        case "workshop2": playWorkshopGearSurge(named: "workshop2"); workshop(2)
+        case "workshop3": playWorkshopGearSurge(named: "workshop3"); workshop(3)
+        case "workshop4": playWorkshopGearSurge(named: "workshop4"); workshop(4)
         case "challengeGate":
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
@@ -1572,7 +1402,7 @@ import LearningCore
         default:
             if walkable.contains(point) {
                 engaged = false
-                resetCamera(duration: 0.24)
+                setActiveMachineKinetics(false)
                 walkIfValid(point)
             }
         }
@@ -1659,7 +1489,9 @@ import LearningCore
         updateChallengeGateAppearance()
         if evidence.outcome == .correct {
             successFeedback(at: CGPoint(x: 820, y: 310))
-            focusMoment(on: CGPoint(x: 1030, y: 300))
+            setActiveMachineKinetics(false)
+            playCastlePowerSurge()
+            focusMoment(on: CGPoint(x: 1030, y: 300), hold: 0.72)
             pip.helpRoute(to: CGPoint(x: 975, y: 225), reducedMotion: reducedMotion)
             valkyrie.pose(.celebrate)
             showQuestion(nil)
@@ -1721,7 +1553,11 @@ import LearningCore
             let next = (workshopIndices[index] + offset) % examples.count
             if state.startWorkshop(examples[next]) {
                 workshopIndices[index] = (next + 1) % examples.count
-                clearDrag(); engaged = false; renderedEncounterID = nil; refresh()
+                clearDrag()
+                engaged = false
+                setActiveMachineKinetics(false)
+                renderedEncounterID = nil
+                refresh()
                 instruction.text = "Tap the machine to walk over and try it."
                 return
             }
@@ -1738,22 +1574,13 @@ import LearningCore
             pip.face(toward: CGPoint(x: 820, y: 310))
             state.beginInteraction()
             engaged = true
-            focusCamera(on: CGPoint(x: 820, y: 310), duration: 0.30)
             wakeMechanic()
-            playStationArrivalReaction()
+            setActiveMachineKinetics(true)
             refresh()
         } else {
             engaged = false
-            instruction.text = "Valkyrie is walking over. The workshop is waking up."
-            travel(to: station) { [weak self] in
-                guard let self else { return }
-                self.valkyrie.face(toward: CGPoint(x: 820, y: 310))
-                self.pip.face(toward: CGPoint(x: 820, y: 310))
-                self.focusCamera(on: CGPoint(x: 820, y: 310), duration: 0.34)
-                self.wakeMechanic()
-                self.playStationArrivalReaction()
-                self.instruction.text = "Tap the machine when you're ready to begin."
-            }
+            instruction.text = "Valkyrie is walking over. Tap the machine again when she arrives."
+            travel(to: station)
         }
     }
 
@@ -1775,14 +1602,21 @@ import LearningCore
         valkyrie.setScale(0.5 * (1 - height * 0.12))
         let pipHeight = max(0, min(1, (pip.position.y - 240) / 160))
         pip.setScale(0.65 * (1 - pipHeight * 0.12))
-        if lastMathMotionPreference != reducedMotion {
-            syncMathCastleMotion()
-            lastMathMotionPreference = reducedMotion
+
+        if lastKineticReducedMotion != reducedMotion {
+            syncCastleKinetics()
+            if engaged {
+                setActiveMachineKinetics(true)
+            }
         }
+
         if engaged, lastPreviewVisible != state.previewVisible { refresh() }
     }
     override func willLeave() {
-        hasLeftScene = true; crossingBridge = false
-        clearDrag(); super.willLeave()
+        hasLeftScene = true
+        crossingBridge = false
+        setActiveMachineKinetics(false)
+        clearDrag()
+        super.willLeave()
     }
 }
