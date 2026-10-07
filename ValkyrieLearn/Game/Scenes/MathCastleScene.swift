@@ -214,7 +214,12 @@ import LearningCore
 
     private func startEnvironmentGearIdle(_ gear: SKNode, index: Int) {
         gear.removeAction(forKey: "ambientSpin")
-        guard !reducedMotion else { return }
+        gear.removeAction(forKey: "arrivalKick")
+        gear.removeAction(forKey: "poweredSpin")
+        guard !reducedMotion else {
+            gear.zRotation = 0
+            return
+        }
         let clockwise = index.isMultiple(of: 2)
         let duration = 5.4 + Double(index) * 1.1
         gear.run(
@@ -234,6 +239,8 @@ import LearningCore
                 let root = childNode(withName: "workshop\(index)"),
                 let rotor = root.childNode(withName: "//workshopGearRotor")
             else { continue }
+            rotor.removeAction(forKey: "stationKick")
+            rotor.removeAction(forKey: "successSurge")
             startRotorIdle(
                 rotor,
                 duration: 10.0 + Double(index) * 0.85,
@@ -245,10 +252,12 @@ import LearningCore
             let wind = childNode(withName: "wind"),
             let rotor = wind.childNode(withName: "//workshopGearRotor")
         {
+            rotor.removeAction(forKey: "stationKick")
             startRotorIdle(rotor, duration: 6.8, clockwise: true)
         }
 
         if let powerRotor = childNode(withName: "//castlePowerRotor") {
+            powerRotor.removeAction(forKey: "powerSurge")
             startRotorIdle(
                 powerRotor,
                 duration: wasPowered ? 2.8 : 8.5,
@@ -1189,6 +1198,7 @@ import LearningCore
             if !wasPowered {
                 if initialBuildComplete {
                     playMechanicSuccessReaction()
+                    playPoweredMachinerySurge()
                 }
                 openPhysicalProgression(animated: initialBuildComplete)
                 if initialBuildComplete && !reducedMotion {
@@ -1266,6 +1276,7 @@ import LearningCore
             }
             childNode(withName: "next")?.isHidden = false
             lever?.isHidden = true
+            updateWorkshopStationFocus(mechanicID: nil, completed: true)
             updatePower(false)
             return
         }
@@ -1288,6 +1299,10 @@ import LearningCore
         case .missingBridge(let model): (mechanic as? MissingNumberBridgeMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
+        updateWorkshopStationFocus(
+            mechanicID: runtime.encounter.mechanicID,
+            completed: runtime.completed
+        )
         updatePower(runtime.completed)
 
         let secondaryHidden = !runtime.completed && (engaged || !state.workshop)
@@ -1392,6 +1407,8 @@ import LearningCore
             if canManipulate() { showScaffold() } else { engageMachine() }
         case "wind":
             engaged = false
+            playWorkshopSelectionReaction(named: "wind")
+            resetCamera(duration: 0.24)
             travel(to: CGPoint(x: 380, y: 235)) { [weak self] in
                 guard let self else { return }
                 self.pip.operate(reducedMotion: self.reducedMotion)
@@ -1414,18 +1431,27 @@ import LearningCore
             } else {
                 state.advanceEncounter(); openOrder()
             }
-        case "workshop0": workshop(0)
-        case "workshop1": workshop(1)
-        case "workshop2": workshop(2)
-        case "workshop3": workshop(3)
-        case "workshop4": workshop(4)
+        case "workshop0":
+            playWorkshopSelectionReaction(named: "workshop0"); workshop(0)
+        case "workshop1":
+            playWorkshopSelectionReaction(named: "workshop1"); workshop(1)
+        case "workshop2":
+            playWorkshopSelectionReaction(named: "workshop2"); workshop(2)
+        case "workshop3":
+            playWorkshopSelectionReaction(named: "workshop3"); workshop(3)
+        case "workshop4":
+            playWorkshopSelectionReaction(named: "workshop4"); workshop(4)
         case "challengeGate":
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
             engageMachine()
         default:
-            if walkable.contains(point) { engaged = false; walkIfValid(point) }
+            if walkable.contains(point) {
+                engaged = false
+                resetCamera(duration: 0.24)
+                walkIfValid(point)
+            }
         }
     }
 
@@ -1589,12 +1615,22 @@ import LearningCore
             pip.face(toward: CGPoint(x: 820, y: 310))
             state.beginInteraction()
             engaged = true
+            focusCamera(on: CGPoint(x: 820, y: 310), duration: 0.30)
             wakeMechanic()
+            playStationArrivalReaction()
             refresh()
         } else {
             engaged = false
-            instruction.text = "Valkyrie is walking over. Tap the machine again when she arrives."
-            travel(to: station)
+            instruction.text = "Valkyrie is walking over. The workshop is waking up."
+            travel(to: station) { [weak self] in
+                guard let self else { return }
+                self.valkyrie.face(toward: CGPoint(x: 820, y: 310))
+                self.pip.face(toward: CGPoint(x: 820, y: 310))
+                self.focusCamera(on: CGPoint(x: 820, y: 310), duration: 0.34)
+                self.wakeMechanic()
+                self.playStationArrivalReaction()
+                self.instruction.text = "Tap the machine when you're ready to begin."
+            }
         }
     }
 
@@ -1616,6 +1652,10 @@ import LearningCore
         valkyrie.setScale(0.5 * (1 - height * 0.12))
         let pipHeight = max(0, min(1, (pip.position.y - 240) / 160))
         pip.setScale(0.65 * (1 - pipHeight * 0.12))
+        if lastMathMotionPreference != reducedMotion {
+            syncMathCastleMotion()
+            lastMathMotionPreference = reducedMotion
+        }
         if engaged, lastPreviewVisible != state.previewVisible { refresh() }
     }
     override func willLeave() {
