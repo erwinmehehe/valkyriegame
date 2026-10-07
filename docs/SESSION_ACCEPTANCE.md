@@ -115,6 +115,16 @@ Acceptance:
 - Toggling Reduced Motion during travel preserves movement; beacon and earned-lantern pulses stop immediately and foreground decorations return to their authored positions.
 - No task depends on animation timing to reveal the correct answer.
 
+## Character presentation check
+
+Watch Valkyrie and each available companion approach and operate a world object.
+Pip should waddle, Lumi glide gently, Milo move briskly, and Tiko take slower,
+smaller steps. Foot shadows remain on the ground while their bodies move.
+Trigger another reaction before an aura pulse finishes: the aura must not stay
+enlarged, the actor must keep facing the object, and its world position must not
+jump. Repeat with Reduced Motion enabled; static poses and ability completions
+must remain clear without decorative body motion.
+
 ## Deliberate tap check
 
 In Word Garden and Puzzle Palace, swipe across an answer or destination, then
