@@ -50,12 +50,12 @@ import SpriteKit
         childNode(withName: "worldTitle")?.removeFromParent()
 
         let titlePlate = ArtSystem.plaque(
-            CGSize(width: 340, height: 42),
+            CGSize(width: 380, height: 42),
             fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
             stroke: UIColor(red: 0.92, green: 0.72, blue: 0.34, alpha: 0.56),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 258, y: 672)
+        titlePlate.position = CGPoint(x: 278, y: 672)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
@@ -64,7 +64,7 @@ import SpriteKit
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 103, y: 672)
+        title.position = CGPoint(x: 140, y: 672)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
