@@ -443,6 +443,45 @@ import LearningCore
         XCTAssertEqual(scene.instruction.position.y, 46)
     }
 
+    func testPrototypeWorldAtlasIsNotCompositedIntoProductionPuzzleOrScienceScenes() throws {
+        let state = try makeState()
+
+        state.travel(to: .puzzlePalace)
+        let puzzle = PuzzlePalaceScene(state: state)
+        puzzle.reducedMotion = true
+        puzzle.didMove(to: SKView())
+        XCTAssertNil(puzzle.childNode(withName: "puzzleLegacyMatte"))
+        XCTAssertNotNil(puzzle.childNode(withName: "puzzleRoomIdentity"))
+        puzzle.willLeave()
+
+        state.travel(to: .scienceLab)
+        let greenhouse = ScienceLabScene(state: state)
+        greenhouse.reducedMotion = true
+        greenhouse.didMove(to: SKView())
+        XCTAssertNil(greenhouse.childNode(withName: "scienceLegacyMatte"))
+        greenhouse.willLeave()
+    }
+
+    func testLaterScienceRoomsHaveCrispNativeEnvironmentIdentityLayers() throws {
+        let state = try makeState()
+
+        state.travel(to: .scienceWeatherTower)
+        let weather = WeatherTowerScene(state: state)
+        weather.reducedMotion = true
+        weather.didMove(to: SKView())
+        XCTAssertNotNil(weather.childNode(withName: "weatherFarLandscape"))
+        let painting = try XCTUnwrap(weather.childNode(withName: "//weatherBackdropRetina"))
+        XCTAssertLessThanOrEqual(painting.alpha, 0.30)
+        weather.willLeave()
+
+        state.travel(to: .scienceCreatureGrove)
+        let grove = CreatureGroveScene(state: state)
+        grove.reducedMotion = true
+        grove.didMove(to: SKView())
+        XCTAssertNotNil(grove.childNode(withName: "creatureGroveNativeCanopy"))
+        grove.willLeave()
+    }
+
     func testScienceGuidanceKeepsItsTargetWhenMotionPreferenceChanges() throws {
         let state = try makeState()
         state.travel(to: .scienceLab)
