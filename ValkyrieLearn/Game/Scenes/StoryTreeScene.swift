@@ -223,6 +223,7 @@ import SpriteKit
         halo.lineWidth = 2
         halo.glowWidth = reducedMotion ? 0 : 6
         halo.name = name
+        halo.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         root.addChild(halo)
 
         let medallion = ArtSystem.medallion(
@@ -267,16 +268,6 @@ import SpriteKit
         addChild(root)
         registerInteraction(root, clearance: 22)
 
-        if !reducedMotion {
-            halo.run(
-                .repeatForever(
-                    .sequence([
-                        .fadeAlpha(to: 0.54, duration: 1.3),
-                        .fadeAlpha(to: 1.0, duration: 1.3)
-                    ])
-                )
-            )
-        }
         return root
     }
 
