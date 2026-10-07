@@ -319,4 +319,40 @@ import LearningCore
         tiko.removeAllActions()
     }
 
+
+    func testCompanionArtMeetsRetinaGameplayDensity() throws {
+        let singleFrameCompanions: [(String, CGFloat)] = [
+            ("Milo", 113),
+            ("Tiko", 130),
+            ("Lumi", 128)
+        ]
+
+        for (name, renderHeight) in singleFrameCompanions {
+            let pixels = try XCTUnwrap(ArtSystem.pixelSize(name))
+            XCTAssertGreaterThanOrEqual(pixels.width, 320, "\(name) source art must stay HD.")
+            XCTAssertGreaterThanOrEqual(pixels.height, 320, "\(name) source art must stay HD.")
+            XCTAssertGreaterThanOrEqual(
+                min(pixels.width, pixels.height) / renderHeight,
+                2,
+                "\(name) source art must remain at least 2× its gameplay render height."
+            )
+        }
+
+        let pipPoses: [ArtSystem.Pose] = [.idle, .walk, .interact, .react, .celebrate]
+        for pose in pipPoses {
+            let texture = try XCTUnwrap(
+                ArtSystem.frames(character: "Pip", pose: pose).first,
+                "Pip must resolve artwork for \(pose.rawValue)."
+            )
+            let pixels = texture.cgImage()
+            XCTAssertGreaterThanOrEqual(pixels.width, 320)
+            XCTAssertGreaterThanOrEqual(pixels.height, 320)
+            XCTAssertGreaterThanOrEqual(
+                CGFloat(min(pixels.width, pixels.height)) / 145,
+                2,
+                "Pip \(pose.rawValue) must remain at least 2× gameplay density."
+            )
+        }
+    }
+
 }
