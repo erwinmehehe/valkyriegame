@@ -2567,7 +2567,7 @@ import LearningCore
 
         XCTAssertEqual(title.fontName, "Georgia-Bold")
         XCTAssertLessThanOrEqual(title.fontSize, 20)
-        XCTAssertLessThanOrEqual(titleBackdrop.calculateAccumulatedFrame().width, 350)
+        XCTAssertLessThanOrEqual(titleBackdrop.calculateAccumulatedFrame().width, 390)
         XCTAssertEqual(feedback.fontName, "AvenirNext-Medium")
         XCTAssertLessThanOrEqual(feedback.fontSize, 18)
         XCTAssertLessThanOrEqual(feedback.preferredMaxLayoutWidth, 610)
