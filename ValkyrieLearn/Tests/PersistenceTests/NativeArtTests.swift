@@ -164,6 +164,22 @@ import LearningCore
 
             XCTAssertNotNil(scene.childNode(withName: "wordGardenRetinaAccents"))
             XCTAssertNotNil(scene.childNode(withName: "//" + accentName))
+
+            let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+            let titleBackdrop = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
+            let guidance = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+            let guidanceBackdrop = try XCTUnwrap(scene.childNode(withName: "instructionBackdrop"))
+            let home = try XCTUnwrap(scene.childNode(withName: "home"))
+            XCTAssertEqual(title.fontName, "Georgia-Bold")
+            XCTAssertLessThanOrEqual(title.fontSize, 20)
+            XCTAssertLessThanOrEqual(titleBackdrop.calculateAccumulatedFrame().width, 370)
+            XCTAssertEqual(guidance.fontName, "AvenirNext-Medium")
+            XCTAssertLessThanOrEqual(guidance.fontSize, 18)
+            XCTAssertLessThanOrEqual(guidance.preferredMaxLayoutWidth, 610)
+            XCTAssertLessThanOrEqual(guidanceBackdrop.calculateAccumulatedFrame().width, 650)
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().width, 60)
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().height, 60)
+
             if world == .sunmillCrossing {
                 XCTAssertNil(
                     scene.childNode(withName: "//questionPromptBackdrop"),
@@ -172,9 +188,18 @@ import LearningCore
                 XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
                 XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
             } else {
-                XCTAssertNotNil(
-                    scene.childNode(withName: "//questionPromptBackdrop"),
-                    "Flower Gate and Story Hollow prompts need a contrast surface over the bright painting."
+                let prompt = try XCTUnwrap(
+                    scene.childNode(withName: "questionPrompt") as? SKLabelNode
+                )
+                let promptBackdrop = try XCTUnwrap(
+                    scene.childNode(withName: "//questionPromptBackdrop")
+                )
+                XCTAssertEqual(prompt.fontName, "AvenirNext-Medium")
+                XCTAssertLessThanOrEqual(prompt.fontSize, 18)
+                XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 560)
+                XCTAssertLessThanOrEqual(
+                    promptBackdrop.calculateAccumulatedFrame().width,
+                    670
                 )
             }
             XCTAssertFalse(
