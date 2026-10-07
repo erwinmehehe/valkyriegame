@@ -730,7 +730,45 @@ import LearningCore
         refreshGuidanceCue()
     }
 
+    private func applyWeatherFocusState() {
+        func setAlpha(_ names: Set<String>, _ alpha: CGFloat) {
+            for node in children {
+                guard let name = node.name, names.contains(name) else { continue }
+                node.alpha = alpha
+            }
+        }
+
+        let morningNames: Set<String> = ["scienceMorningWeather"]
+        let afternoonNames: Set<String> = ["scienceAfternoonWeather"]
+        let forecastNames: Set<String> = ["scienceForecastBase"]
+        let gateNames: Set<String> = ["scienceCreatureGate"]
+
+        switch weatherStage {
+        case .arrive:
+            setAlpha(morningNames, 1.0)
+            setAlpha(afternoonNames, 0.42)
+            setAlpha(forecastNames, 0.30)
+            setAlpha(gateNames, 0.34)
+        case .morningObserved:
+            setAlpha(morningNames, 0.72)
+            setAlpha(afternoonNames, 1.0)
+            setAlpha(forecastNames, 0.34)
+            setAlpha(gateNames, 0.34)
+        case .afternoonObserved:
+            setAlpha(morningNames, 0.72)
+            setAlpha(afternoonNames, 0.72)
+            setAlpha(forecastNames, 1.0)
+            setAlpha(gateNames, 0.36)
+        case .complete:
+            setAlpha(morningNames, 0.74)
+            setAlpha(afternoonNames, 0.74)
+            setAlpha(forecastNames, 0.74)
+            setAlpha(gateNames, 1.0)
+        }
+    }
+
     private func refreshGuidanceCue() {
+        applyWeatherFocusState()
         let tint = UIColor(red: 0.62, green: 0.87, blue: 1.0, alpha: 1)
         switch weatherStage {
         case .arrive:
