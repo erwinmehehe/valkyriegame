@@ -190,17 +190,23 @@ import LearningCore
 
             XCTAssertNotNil(scene.childNode(withName: "wordGardenRetinaAccents"))
             XCTAssertNotNil(scene.childNode(withName: "//" + accentName))
-            if world == .sunmillCrossing {
+            if world == .sunmillCrossing || world == .storyHollow {
                 XCTAssertNil(
                     scene.childNode(withName: "//questionPromptBackdrop"),
-                    "Sunmill Crossing should use one guidance surface instead of duplicating the prompt over the world."
+                    "Journey rooms should use one guidance surface instead of duplicating the prompt over the world."
                 )
-                XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
-                XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
+                if world == .sunmillCrossing {
+                    XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
+                    XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
+                } else {
+                    XCTAssertNotNil(scene.childNode(withName: "storyRootNetwork"))
+                    XCTAssertNotNil(scene.childNode(withName: "storyMemoryBranch"))
+                    XCTAssertNotNil(scene.childNode(withName: "storyHollowDoorGlow"))
+                }
             } else {
                 XCTAssertNotNil(
                     scene.childNode(withName: "//questionPromptBackdrop"),
-                    "Flower Gate and Story Hollow prompts need a contrast surface over the bright painting."
+                    "Flower Gate still needs a contrast surface over the bright painting."
                 )
             }
             XCTAssertFalse(
@@ -712,8 +718,40 @@ import LearningCore
         hollow.didMove(to: SKView())
         XCTAssertNotNil(hollow.childNode(withName: "storyHollow"))
         XCTAssertNotNil(hollow.childNode(withName: "wordSeed"))
+        XCTAssertNotNil(hollow.childNode(withName: "storyRootNetwork"))
+        XCTAssertNotNil(hollow.childNode(withName: "storyMemoryBranch"))
+        XCTAssertNotNil(hollow.childNode(withName: "storyHollowDoorGlow"))
         XCTAssertNotNil(hollow.childNode(withName: "storySequencePreview"))
-        XCTAssertEqual(hollow.children.filter { $0.name == "storyHollowChoice" }.count, 4)
+        XCTAssertNil(
+            hollow.childNode(withName: "questionPrompt"),
+            "Story Hollow must show its sequence on the memory tree instead of a duplicate floating prompt."
+        )
+        XCTAssertEqual(hollow.valkyrie.xScale, 0.58, accuracy: 0.001)
+        let hollowInstructionBackdrop = try XCTUnwrap(
+            hollow.childNode(withName: "instructionBackdrop")
+        )
+        XCTAssertLessThan(
+            hollowInstructionBackdrop.calculateAccumulatedFrame().width,
+            800,
+            "Story Hollow guidance should stay compact enough to leave the painted world dominant."
+        )
+
+        let hollowChoices = hollow.children.filter { $0.name == "storyHollowChoice" }
+        XCTAssertEqual(hollowChoices.count, 4)
+        for choice in hollowChoices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 100)
+            XCTAssertGreaterThanOrEqual(frame.height, 100)
+            XCTAssertNotNil(choice.childNode(withName: "decorativeStoryChoiceRoot"))
+            XCTAssertNotNil(choice.childNode(withName: "decorativeStoryChoiceRootKnot"))
+            XCTAssertNotNil(choice.childNode(withName: "decorativeStoryChoiceSprout"))
+            XCTAssertEqual(
+                hollow.targetName(at: choice.position),
+                "storyHollowChoice",
+                "Root and sprout decoration must never steal the literacy tap."
+            )
+        }
+
         XCTAssertEqual(
             state.nextStoryHollowEncounter()?.skillID,
             LiteracySkills.visualPrintSequence
@@ -750,7 +788,22 @@ import LearningCore
         restoredHollow.didMove(to: SKView())
         XCTAssertNotNil(restoredHollow.childNode(withName: "storyBloom"))
         XCTAssertNotNil(restoredHollow.childNode(withName: "storyTreeReturn"))
-        restoredHollow.handleTap(at: CGPoint(x: 1005, y: 165))
+        XCTAssertGreaterThan(
+            restoredHollow.childNode(withName: "storyHollowDoorGlow")?.alpha ?? 0,
+            0.99
+        )
+        for index in 0..<WordGardenEncounterCatalog.storyHollowPattern.count {
+            XCTAssertGreaterThan(
+                restoredHollow.childNode(withName: "storyRootGlow\(index)")?.alpha ?? 0,
+                0.9,
+                "Each restored memory should remain visibly connected through the roots."
+            )
+        }
+        XCTAssertEqual(
+            restoredHollow.targetName(at: CGPoint(x: 1090, y: 195)),
+            "storyTreeReturn"
+        )
+        restoredHollow.handleTap(at: CGPoint(x: 1090, y: 195))
         XCTAssertEqual(state.world, .storyTree)
         restoredHollow.willLeave()
 
