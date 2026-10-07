@@ -81,3 +81,23 @@ print('PASS Puzzle Palace v3.31 source-blob provenance.')
 garden_source = ROOT/'ValkyrieLearn/Resources/AdventureArt.xcassets/WordGardenSourceAtlas.imageset/art.png'
 assert hashlib.sha256(garden_source.read_bytes()).hexdigest() == manifest['sources']['adventure-art/worlds.png']
 print('PASS full-resolution Word Garden source matches approved original artwork.')
+
+# Finished illustrations are versioned separately; never replace pinned reference art.
+illustrated = json.loads((ROOT/'ValkyrieLearn/Resources/ILLUSTRATED_WORLD_ART_MANIFEST.json').read_text())
+assert len(illustrated['assets']) == 13
+for path, metadata in illustrated['assets'].items():
+    data = (ROOT/path).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == metadata['sha256'], path
+    assert data[:2] == b'\xff\xd8', path
+    offset = 2; dimensions = None
+    while offset < len(data):
+        marker = data[offset+1]; length = struct.unpack('>H', data[offset+2:offset+4])[0]
+        if marker in (0xC0, 0xC1, 0xC2):
+            height, width = struct.unpack('>HH', data[offset+5:offset+9])
+            dimensions = [width, height]; break
+        offset += 2 + length
+    assert dimensions == metadata['size'], path
+    assert dimensions[0] > 1280 and dimensions[1] > 720, path
+    contents = json.loads((ROOT/path).with_name('Contents.json').read_text())
+    assert contents['images'][0]['filename'] == 'art.jpg', path
+print('PASS 13 versioned illustrations, original source dimensions and hashes; no source enlargement.')

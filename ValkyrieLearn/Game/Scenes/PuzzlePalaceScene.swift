@@ -820,6 +820,51 @@ import LearningCore
         }
 
         buildPalaceRoomIdentity(accent: accent)
+        buildIllustratedPalaceRoom()
+    }
+
+    private var illustratedRoomAsset: String {
+        switch place {
+        case .runeGate: return "PuzzleRuneGateIllustratedV2"
+        case .memoryBridge: return "PuzzleMemoryBridgeIllustratedV2"
+        case .stopGoOrbs: return "PuzzleStopGoOrbsIllustratedV2"
+        case .sortingPedestal: return "PuzzleSortingPedestalIllustratedV2"
+        case .resortVault: return "PuzzleResortVaultIllustratedV2"
+        case .mirrorHall: return "PuzzleMirrorHallIllustratedV2"
+        case .pathTiles: return "PuzzlePathTilesIllustratedV2"
+        case .commandGears: return "PuzzleCommandGearsIllustratedV2"
+        case .bugLantern: return "PuzzleBugLanternIllustratedV2"
+        case .bugLanternRepair: return "PuzzleBugLanternRepairIllustratedV2"
+        }
+    }
+
+    private func buildIllustratedPalaceRoom() {
+        guard let texture = ArtSystem.texture(illustratedRoomAsset) else { return }
+        let painting = SKSpriteNode(texture: texture, size: designCanvasSize)
+        painting.position = CGPoint(x: 640, y: 360)
+        painting.zPosition = -250
+        painting.name = "puzzleIllustratedBackdrop"
+        painting.isUserInteractionEnabled = false
+        painting.userData = NSMutableDictionary(dictionary: [
+            "sourceAsset": illustratedRoomAsset,
+            "sourcePixels": ArtSystem.pixelSize(illustratedRoomAsset)?.width ?? 0
+        ])
+        addChild(painting)
+
+        // Illustration supplies masonry and depth. Native lights and physical
+        // puzzle mechanics remain separate so they can react to the child.
+        let quietScenery: Set<String> = [
+            "puzzleArchitecture", "puzzleUpperVault", "puzzleVaultCornice",
+            "puzzleFloor", "puzzleFloorTexture", "puzzlePillar",
+            "decorativePuzzlePillarCap", "puzzleRoomIdentity"
+        ]
+        for node in children {
+            guard let name = node.name else { continue }
+            if quietScenery.contains(name) || name.hasPrefix("puzzleAlcove")
+                || name.hasPrefix("puzzleVaultRib") {
+                node.alpha = min(node.alpha, 0.10)
+            }
+        }
     }
 
     /// Crisp, room-specific architecture layered behind the learning mechanic.

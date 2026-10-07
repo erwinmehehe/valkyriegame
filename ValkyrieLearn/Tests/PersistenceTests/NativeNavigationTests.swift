@@ -537,7 +537,8 @@ import LearningCore
         weather.didMove(to: SKView())
         XCTAssertNotNil(weather.childNode(withName: "weatherFarLandscape"))
         let painting = try XCTUnwrap(weather.childNode(withName: "//weatherBackdropRetina"))
-        XCTAssertEqual(painting.alpha, 0.30, accuracy: 0.001)
+        XCTAssertEqual(painting.alpha, 1.0, accuracy: 0.001)
+        XCTAssertEqual(painting.userData?["sourceAsset"] as? String, "WeatherTowerIllustratedV2")
         weather.willLeave()
 
         state.travel(to: .scienceCreatureGrove)

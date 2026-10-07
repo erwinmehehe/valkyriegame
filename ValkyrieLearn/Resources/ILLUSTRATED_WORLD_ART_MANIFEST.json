@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "generator": "Built-in image_gen",
+  "resolutionNote": "Actual generated source: 1672x941. More detail than legacy 1280x720; below true 2x Retina. No source enlargement.",
+  "assets": {
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/MathCastleIllustratedV2.imageset/art.jpg": {
+      "sha256": "33f91d3730a0e608c6d47dd3bffe41887a55521b16e820a29dfa245a4e7076b9",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "MathCastleIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/StoryTreeIllustratedV2.imageset/art.jpg": {
+      "sha256": "968534551d9f6dfb4745b04c7799650e3e8889ff5eee6f1c9c91747e54eadd96",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "StoryTreeIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/WeatherTowerIllustratedV2.imageset/art.jpg": {
+      "sha256": "beee07f7b5647b4ab23a1b6bcc6fb37988f13328446a3df7cad64ffca8360ff9",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "WeatherTowerIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleRuneGateIllustratedV2.imageset/art.jpg": {
+      "sha256": "d91e24c7694bc87dcc1020fc98807a45d6c0abc6ce4d21373f02d3c3a245dde7",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleRuneGateIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleMemoryBridgeIllustratedV2.imageset/art.jpg": {
+      "sha256": "5e60ad712f83e3fb9371e608498f6b7e4fb678790eeec267522638dbb62726fd",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleMemoryBridgeIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleStopGoOrbsIllustratedV2.imageset/art.jpg": {
+      "sha256": "fb4bbbfcb04ada169ea15d5102d23f9b73ba1d23e5f85e8662a25e37542e1687",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleStopGoOrbsIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleSortingPedestalIllustratedV2.imageset/art.jpg": {
+      "sha256": "aa3d85877d93b150f423be2d44dc6b8b2537642ed05f6d351f6c365ab9b84b09",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleSortingPedestalIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleResortVaultIllustratedV2.imageset/art.jpg": {
+      "sha256": "b5834a2e83c36fdf79eae3accb7ee1f05f5cc930d7c63de9067c7f3e7a63ac50",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleResortVaultIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleMirrorHallIllustratedV2.imageset/art.jpg": {
+      "sha256": "2d4ff96b01435f1923b7aeca5cdc4bb3c144e4d38890eebe2288ca8d85b53497",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleMirrorHallIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzlePathTilesIllustratedV2.imageset/art.jpg": {
+      "sha256": "be285974163ecb27e3d840a9733d8a3ed319e3cec624d271b0284f66d464391f",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzlePathTilesIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleCommandGearsIllustratedV2.imageset/art.jpg": {
+      "sha256": "e48d5b4f4208ae3d7e6cb12686af0e90c4ffd970f44046a15f0d8d27f54e6634",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleCommandGearsIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleBugLanternIllustratedV2.imageset/art.jpg": {
+      "sha256": "1284e31ac6a84ff8d52d3ed01b320a79c5c2db04f51ee45834503f3124f7e1e1",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleBugLanternIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/PuzzleBugLanternRepairIllustratedV2.imageset/art.jpg": {
+      "sha256": "2432f98c82e516ffbd58e64a2e78b81962429cdb5118261e904a20ce4e894bdf",
+      "size": [
+        1672,
+        941
+      ],
+      "asset": "PuzzleBugLanternRepairIllustratedV2",
+      "method": "Built-in image generation; JPEG encoding without resize",
+      "requestedSize": [
+        3840,
+        2160
+      ]
+    }
+  }
+}

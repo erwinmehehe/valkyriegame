@@ -131,7 +131,7 @@ import LearningCore
         addChild(ambientBase)
 
         if let texture = ArtSystem.retinaEnhancedTexture(
-            "StarlightIsles",
+            "WeatherTowerIllustratedV2",
             targetPoints: designCanvasSize,
             sharpness: 0.26
         ) {
@@ -145,14 +145,14 @@ import LearningCore
                 size: designCanvasSize
             )
             painting.position = CGPoint(x: 640, y: 360)
-            painting.colorBlendFactor = 0.22
-            // StarlightIsles is approved art but only 1280x720. Keep it as
-            // atmospheric color, not the sharp visual layer on a Retina iPad.
-            painting.alpha = 0.30
+            painting.colorBlendFactor = 0.06
+            // Dedicated Weather Tower painting supplies the environment detail.
+            painting.alpha = 1.0
             painting.name = "weatherBackdropRetina"
             painting.userData = NSMutableDictionary(dictionary: [
                 "retinaPrepared": true,
-                "sourceAsset": "StarlightIsles"
+                "sourceAsset": "WeatherTowerIllustratedV2",
+                "sourcePixels": ArtSystem.pixelSize("WeatherTowerIllustratedV2")?.width ?? 0
             ])
             backdrop.addChild(painting)
 
@@ -230,6 +230,7 @@ import LearningCore
             farLandscape.addChild(beacon)
         }
 
+        farLandscape.alpha = 0.12
         addChild(farLandscape)
 
         let horizonWash = ArtSystem.box(

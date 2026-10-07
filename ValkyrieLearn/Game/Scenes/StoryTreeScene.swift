@@ -412,20 +412,19 @@ import SpriteKit
         registerInteraction(root, clearance: 18)
     }
 
-    /// Preserve the approved Starlight Isles illustration while preparing a
-    /// cached 2x raster for Retina presentation. The source remains the same art;
-    /// this only prevents the 1x bitmap from being enlarged at final composition.
+    /// Use the detailed versioned painting; cached compositing does not add source detail.
     private func prepareStoryTreeIllustrationForRetina() {
         if let backdrop = childNode(withName: "worldBackdrop") as? SKSpriteNode,
            let texture = ArtSystem.retinaEnhancedTexture(
-                "StarlightIsles",
+                "StoryTreeIllustratedV2",
                 targetPoints: size,
                 sharpness: 0.26
            ) {
             backdrop.texture = texture
             backdrop.userData = NSMutableDictionary(dictionary: [
                 "retinaPrepared": true,
-                "sourceAsset": "StarlightIsles"
+                "sourceAsset": "StoryTreeIllustratedV2",
+                "sourcePixels": ArtSystem.pixelSize("StoryTreeIllustratedV2")?.width ?? 0
             ])
         }
 

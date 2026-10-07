@@ -375,7 +375,7 @@ import LearningCore
         )
         XCTAssertEqual(
             weatherBackdrop.userData?["sourceAsset"] as? String,
-            "StarlightIsles"
+            "WeatherTowerIllustratedV2"
         )
         let weatherImage = try XCTUnwrap(weatherBackdrop.texture?.cgImage())
         XCTAssertGreaterThanOrEqual(weatherImage.width, 2560)
@@ -431,7 +431,7 @@ import LearningCore
         )
         XCTAssertEqual(
             backdrop.userData?["sourceAsset"] as? String,
-            "MathCastle"
+            "MathCastleIllustratedV2"
         )
         XCTAssertEqual(
             backdrop.userData?["retinaPrepared"] as? Bool,
@@ -479,7 +479,7 @@ import LearningCore
         )
         XCTAssertEqual(
             backdrop.userData?["sourceAsset"] as? String,
-            "StarlightIsles"
+            "StoryTreeIllustratedV2"
         )
         XCTAssertEqual(
             backdrop.userData?["retinaPrepared"] as? Bool,
@@ -2529,11 +2529,52 @@ import LearningCore
         XCTAssertFalse(scene.crossingBridge, "Bridge route did not finish within ten seconds")
     }
 
+    func testIllustratedPalaceRoomsOnFourByThreeIPad() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        let rooms: [(AppState.World, String)] = [
+            (.puzzlePalace, "RuneGate"), (.memoryBridge, "MemoryBridge"),
+            (.stopGoOrbs, "StopGoOrbs"), (.sortingPedestal, "SortingPedestal"),
+            (.resortVault, "ResortVault"), (.mirrorHall, "MirrorHall"),
+            (.pathTiles, "PathTiles"), (.commandGears, "CommandGears"),
+            (.bugLantern, "BugLantern"), (.bugLanternRepair, "BugLanternRepair")
+        ]
+        for (world, name) in rooms {
+            state.travel(to: world)
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            view.presentScene(scene)
+            let painting = try XCTUnwrap(scene.childNode(withName: "puzzleIllustratedBackdrop") as? SKSpriteNode)
+            XCTAssertEqual(painting.userData?["sourceAsset"] as? String, "Puzzle" + name + "IllustratedV2")
+            let image = try XCTUnwrap(painting.texture?.cgImage())
+            XCTAssertGreaterThan(image.width, 1280)
+            XCTAssertGreaterThan(image.height, 720)
+            XCTAssertEqual(scene.size, CGSize(width: 1280, height: 960))
+            XCTAssertEqual(painting.size, CGSize(width: 1280, height: 720))
+            XCTAssertFalse(painting.isUserInteractionEnabled)
+            try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
+            scene.willLeave()
+        }
+    }
+
     private func capture(_ scene: AdventureScene, in view: SKView, name: String) async throws {
         // Let SpriteKit render an actual frame on the simulator, not a mock composition.
         try await Task.sleep(nanoseconds: 300_000_000)
-        let texture = try XCTUnwrap(view.texture(from: scene, crop: CGRect(origin: .zero, size: scene.size)))
-        let attachment = XCTAttachment(image: UIImage(cgImage: texture.cgImage()))
+        let texture = try XCTUnwrap(view.texture(from: scene, crop: CGRect(x: 0, y: -scene.verticalViewportInset, width: scene.size.width, height: scene.size.height)))
+        let image = UIImage(cgImage: texture.cgImage())
+        // Keep a file copy as well: some xcresult exports omit successful-test attachments.
+        let directory = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("NativeSceneReview", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let data = try XCTUnwrap(image.pngData())
+        try data.write(to: directory.appendingPathComponent(name + ".png"), options: .atomic)
+        let attachment = XCTAttachment(image: image)
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
 
