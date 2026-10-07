@@ -967,6 +967,17 @@ import LearningCore
                     travel(to: CGPoint(x: exitPoint.x - 75, y: 180))
                 }
             } else {
+                errorFeedback()
+                switch greenhouseStage {
+                case .arrive:
+                    focusMoment(on: seedBenchPoint)
+                case .inspected:
+                    focusMoment(on: waterValvePoint)
+                case .watered:
+                    focusMoment(on: sunPrismPoint)
+                case .lit:
+                    focusMoment(on: exitPoint)
+                }
                 instruction.text = "The vine gate is still closed. Finish the plant investigation first."
             }
 
@@ -1004,10 +1015,14 @@ import LearningCore
             return
         }
         guard greenhouseStage != .arrive else {
+            errorFeedback()
+            focusMoment(on: seedBenchPoint)
             instruction.text = "Milo wants to inspect the seed bench first so we have evidence before changing anything."
             return
         }
         guard greenhouseStage == .inspected else {
+            errorFeedback()
+            focusMoment(on: sunPrismPoint)
             instruction.text = "The soil is already moist. Let's observe the sprout before adding more water."
             return
         }
@@ -1024,15 +1039,21 @@ import LearningCore
 
     private func testLight() {
         guard greenhouseStage != .arrive else {
+            errorFeedback()
+            focusMoment(on: seedBenchPoint)
             instruction.text = "Milo wants to inspect the seed bench before changing the light."
             return
         }
         guard greenhouseStage != .inspected else {
             state.scienceRecordDrySoilMistake()
+            errorFeedback()
+            focusMoment(on: waterValvePoint)
             instruction.text = "The soil is visibly dry. Let's test that observation before changing the light."
             return
         }
         guard greenhouseStage == .watered else {
+            selectionFeedback()
+            focusMoment(on: exitPoint)
             instruction.text = "The prism is already aimed at the plant."
             return
         }
