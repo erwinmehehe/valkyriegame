@@ -112,9 +112,9 @@ import LearningCore
     }
 
     override func buildWorld() {
-        // Native geometry now owns the playable environment. The preserved v3.31
-        // science quadrant is only a low-opacity color matte because its effective
-        // source size is 160x90 pixels and cannot support a Retina fullscreen scene.
+        // Native geometry owns the playable environment. Do not composite the
+        // old 320x180 prototype atlas into production scenes: even at low opacity
+        // it softens edges on Retina iPad displays.
         let sky = ArtSystem.box(
             size,
             color: UIColor(red: 0.42, green: 0.64, blue: 0.67, alpha: 1),
@@ -125,20 +125,6 @@ import LearningCore
         sky.zPosition = -250
         sky.name = "scienceNativeBackdrop"
         addChild(sky)
-
-        if let atlas = ArtSystem.texture("V331WorldAtlas") {
-            let scienceTexture = SKTexture(
-                rect: CGRect(x: 0, y: 0, width: 0.5, height: 0.5),
-                in: atlas
-            )
-            scienceTexture.filteringMode = .linear
-            let matte = SKSpriteNode(texture: scienceTexture, color: .white, size: designCanvasSize)
-            matte.position = CGPoint(x: 640, y: 360)
-            matte.zPosition = -240
-            matte.alpha = 0.08
-            matte.name = "scienceLegacyMatte"
-            addChild(matte)
-        }
 
         // Use the high-resolution illustrated garden atlas as the greenhouse's
         // distant scenery. The greenhouse frame, path and teaching objects remain
