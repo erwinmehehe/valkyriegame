@@ -81,8 +81,8 @@ struct AdventureSceneLayout {
         didSet {
             valkyrie.reducedMotion = reducedMotion
             pip.reducedMotion = reducedMotion
-            valkyrie.pose(.idle)
-            pip.pose(.idle)
+            valkyrie.pose(valkyrie.action(forKey: "travel") == nil ? .idle : .walk)
+            pip.pose(pip.action(forKey: "travel") == nil ? .idle : .walk)
             syncDecorativeMotion()
         }
     }
@@ -262,9 +262,11 @@ struct AdventureSceneLayout {
         for name in ["foregroundLeft", "foregroundRight"] {
             guard let foreground = childNode(withName: name) else { continue }
             foreground.removeAction(forKey: "ambientSway")
-            if reducedMotion {
-                foreground.position.y = 80
-            } else {
+            // Restore authored transforms before restarting an ambient loop.
+            // Otherwise each settings toggle accumulates drift and rotation.
+            foreground.position = CGPoint(x: name == "foregroundLeft" ? 75 : 1205, y: 80)
+            foreground.zRotation = 0
+            if !reducedMotion {
                 let direction: CGFloat = name == "foregroundLeft" ? 1 : -1
                 foreground.run(.repeatForever(.sequence([
                     .group([
@@ -276,6 +278,18 @@ struct AdventureSceneLayout {
                         .rotate(byAngle: direction * -0.006, duration: 2.6)
                     ])
                 ])), withKey: "ambientSway")
+            }
+        }
+
+        enumerateChildNodes(withName: "//*") { [self] node, _ in
+            guard (node.userData?["decorativeMotionRole"] as? String) == "pulse" else { return }
+            node.removeAction(forKey: "ambientPulse")
+            node.alpha = 1
+            if !reducedMotion {
+                node.run(.repeatForever(.sequence([
+                    .fadeAlpha(to: 0.58, duration: 1.2),
+                    .fadeAlpha(to: 1, duration: 1.2)
+                ])), withKey: "ambientPulse")
             }
         }
 
@@ -467,6 +481,7 @@ struct AdventureSceneLayout {
         halo.lineWidth = 2
         halo.glowWidth = 8
         halo.name = name
+        halo.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         root.addChild(halo)
 
         let emblem = ArtSystem.label(symbol, size: 31)
@@ -493,7 +508,7 @@ struct AdventureSceneLayout {
         label.name = name
         plaque.addChild(label)
 
-        makeAccessible(root, label: title)
+        makeAccessible(root, label: title, hint: "Tap once. Valkyrie walks here and enters the adventure.")
         addChild(root)
         registerInteraction(root, clearance: 24)
 
@@ -501,7 +516,7 @@ struct AdventureSceneLayout {
             halo.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.58, duration: 1.2),
                 .fadeAlpha(to: 1, duration: 1.2)
-            ])))
+            ])), withKey: "ambientPulse")
         }
         return root
     }
