@@ -115,6 +115,17 @@ import LearningCore
     }
 
     override func buildWorld() {
+        let ambientBase = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.08, green: 0.20, blue: 0.11, alpha: 1),
+            radius: 0
+        )
+        ambientBase.strokeColor = .clear
+        ambientBase.position = CGPoint(x: 640, y: 360)
+        ambientBase.zPosition = -320
+        ambientBase.name = "creatureGroveAmbientBase"
+        addChild(ambientBase)
+
         if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
             // Reuse only the high-resolution woodland/story-hollow quadrant.
             // The full source file is a multi-scene contact sheet.
