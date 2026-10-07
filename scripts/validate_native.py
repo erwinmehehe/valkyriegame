@@ -52,6 +52,27 @@ for character in ['Valkyrie', 'Pip']:
         assert list(atlas.glob(pose+'_*.png')), (character, pose)
 print('PASS approved art hashes, dimensions and required atlas poses.')
 
+# Refreshed companion mascots are production assets, separate from preserved
+# v3.31 reference art. Validate exact bytes and Retina presentation density.
+companion_art = json.loads((ROOT/'ValkyrieLearn/Resources/COMPANION_ART_MANIFEST.json').read_text())
+for name, metadata in companion_art['outputs'].items():
+    data = (ROOT/'ValkyrieLearn/Resources'/name).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == metadata['sha256'], name
+    if name.endswith('.png'):
+        assert data[:8] == b'\x89PNG\r\n\x1a\n', name
+        dimensions = list(struct.unpack('>II', data[16:24]))
+    elif name.endswith('.webp'):
+        assert data[:4] == b'RIFF' and data[8:12] == b'WEBP', name
+        assert data[12:16] == b'VP8X', (name, data[12:16])
+        width = 1 + int.from_bytes(data[24:27], 'little')
+        height = 1 + int.from_bytes(data[27:30], 'little')
+        dimensions = [width, height]
+    else:
+        raise AssertionError(('Unsupported companion image type', name))
+    assert dimensions == metadata['size'], (name, dimensions)
+    assert min(dimensions) / metadata['renderHeight'] >= 2, (name, dimensions, metadata['renderHeight'])
+print('PASS HD companion hashes, dimensions and >=2x gameplay density.')
+
 # Generated bridge props remain separate from the approved v3.31 import.
 bridge_art = json.loads((ROOT/'ValkyrieLearn/Resources/BRIDGE_ART_MANIFEST.json').read_text())
 for name, metadata in bridge_art['outputs'].items():
