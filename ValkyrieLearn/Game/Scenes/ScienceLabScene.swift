@@ -1045,10 +1045,8 @@ import LearningCore
 
     private func applyGreenhouseFocusState() {
         func setAlpha(_ names: Set<String>, _ alpha: CGFloat) {
-            for node in children where {
-                guard let name = node.name else { return false }
-                return names.contains(name)
-            }() {
+            for node in children {
+                guard let name = node.name, names.contains(name) else { continue }
                 node.alpha = alpha
             }
         }
