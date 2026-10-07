@@ -154,6 +154,43 @@ import LearningCore
     }
 
 
+    func testGreenhouseVisuallyPrioritizesTheCurrentExperimentStep() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let bench = try XCTUnwrap(scene.childNode(withName: "scienceSeedBench"))
+        let valve = try XCTUnwrap(scene.childNode(withName: "scienceWaterValve"))
+        let prism = try XCTUnwrap(scene.childNode(withName: "scienceSunPrism"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "scienceWeatherGate"))
+
+        XCTAssertEqual(bench.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(valve.alpha, 0.5)
+        XCTAssertLessThan(prism.alpha, valve.alpha)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        XCTAssertEqual(scene.greenhouseStage, .inspected)
+        XCTAssertEqual(valve.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(prism.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        XCTAssertEqual(scene.greenhouseStage, .watered)
+        XCTAssertEqual(prism.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 850, y: 185)
+        scene.handleTap(at: CGPoint(x: 940, y: 245))
+        XCTAssertEqual(scene.greenhouseStage, .lit)
+        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+    }
+
     func testWeatherTowerRequiresTwoObservationsBeforeForecasting() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let scene = WeatherTowerScene(state: state)
