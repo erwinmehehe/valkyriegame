@@ -111,60 +111,179 @@ import LearningCore
         addChild(root)
     }
 
-    override func buildWorld() {
-        let ambientBase = ArtSystem.box(
-            size,
-            color: UIColor(red: 0.12, green: 0.28, blue: 0.38, alpha: 1),
-            radius: 0
-        )
-        ambientBase.strokeColor = .clear
-        ambientBase.position = CGPoint(x: 640, y: 360)
-        ambientBase.zPosition = -320
-        ambientBase.name = "weatherAmbientBase"
-        addChild(ambientBase)
+    private func buildWeatherObservatoryBackdrop() {
+        let root = SKNode()
+        root.name = "weatherObservatoryBackdrop"
+        root.zPosition = -320
+        root.isUserInteractionEnabled = false
 
-        if let texture = ArtSystem.retinaEnhancedTexture(
-            "StarlightIsles",
-            targetPoints: designCanvasSize,
-            sharpness: 0.26
-        ) {
-            let backdrop = SKNode()
-            backdrop.zPosition = -300
-            backdrop.name = "weatherBackdropHD"
+        let skyColors: [UIColor] = [
+            UIColor(red: 0.08, green: 0.20, blue: 0.30, alpha: 1),
+            UIColor(red: 0.10, green: 0.27, blue: 0.38, alpha: 1),
+            UIColor(red: 0.15, green: 0.36, blue: 0.47, alpha: 1),
+            UIColor(red: 0.23, green: 0.48, blue: 0.58, alpha: 1),
+            UIColor(red: 0.36, green: 0.62, blue: 0.68, alpha: 1),
+            UIColor(red: 0.56, green: 0.76, blue: 0.77, alpha: 1),
+            UIColor(red: 0.74, green: 0.86, blue: 0.82, alpha: 1),
+            UIColor(red: 0.86, green: 0.91, blue: 0.82, alpha: 1)
+        ]
 
-            let painting = SKSpriteNode(
-                texture: texture,
-                color: UIColor(red: 0.45, green: 0.76, blue: 0.88, alpha: 1),
-                size: designCanvasSize
-            )
-            painting.position = CGPoint(x: 640, y: 360)
-            painting.colorBlendFactor = 0.22
-            // StarlightIsles is approved art but only 1280x720. Keep it as
-            // atmospheric color, not the sharp visual layer on a Retina iPad.
-            painting.alpha = 0.30
-            painting.name = "weatherBackdropRetina"
-            painting.userData = NSMutableDictionary(dictionary: [
-                "retinaPrepared": true,
-                "sourceAsset": "StarlightIsles"
-            ])
-            backdrop.addChild(painting)
-
-            let dim = ArtSystem.box(
-                designCanvasSize,
-                color: UIColor(white: 0.02, alpha: 0.14),
+        for (index, color) in skyColors.enumerated() {
+            let band = ArtSystem.box(
+                CGSize(width: 1280, height: 96),
+                color: color,
                 radius: 0
             )
-            dim.strokeColor = .clear
-            dim.position = CGPoint(x: 640, y: 360)
-            dim.zPosition = 1
-            dim.name = "weatherBackdropDim"
-            backdrop.addChild(dim)
-
-            addChild(backdrop)
+            band.strokeColor = .clear
+            band.position = CGPoint(x: 640, y: CGFloat(index) * 92 + 48 - verticalViewportInset)
+            band.zPosition = CGFloat(index)
+            band.name = "weatherSkyBand\(index)"
+            root.addChild(band)
         }
 
-        // Crisp native silhouettes carry the distant composition so the 1x
-        // painting never has to provide the scene's visible edge detail.
+        let sunrise = SKShapeNode(circleOfRadius: 118)
+        sunrise.fillColor = UIColor(red: 1.0, green: 0.83, blue: 0.42, alpha: 0.16)
+        sunrise.strokeColor = UIColor(red: 1.0, green: 0.90, blue: 0.60, alpha: 0.22)
+        sunrise.lineWidth = 2
+        sunrise.glowWidth = reducedMotion ? 0 : 18
+        sunrise.position = CGPoint(x: 225, y: 555)
+        sunrise.zPosition = 16
+        sunrise.name = "decorativeWeatherSunrise"
+        root.addChild(sunrise)
+
+        let stormGlow = SKShapeNode(circleOfRadius: 138)
+        stormGlow.fillColor = UIColor(red: 0.32, green: 0.42, blue: 0.64, alpha: 0.14)
+        stormGlow.strokeColor = UIColor(red: 0.56, green: 0.76, blue: 0.94, alpha: 0.18)
+        stormGlow.lineWidth = 2
+        stormGlow.position = CGPoint(x: 1080, y: 535)
+        stormGlow.zPosition = 15
+        stormGlow.name = "decorativeWeatherStormGlow"
+        root.addChild(stormGlow)
+
+        for (index, x) in [CGFloat(180), 640, 1100].enumerated() {
+            let window = ArtSystem.panel(
+                CGSize(width: index == 1 ? 350 : 260, height: 390),
+                fill: UIColor(red: 0.08, green: 0.26, blue: 0.34, alpha: 0.16),
+                stroke: UIColor(red: 0.73, green: 0.83, blue: 0.72, alpha: 0.46),
+                radius: 96,
+                lineWidth: 4,
+                shadowAlpha: 0.08,
+                innerHighlight: UIColor(white: 1, alpha: 0.025)
+            )
+            window.position = CGPoint(x: x, y: 430)
+            window.zPosition = 24
+            window.name = "decorativeWeatherWindow"
+            root.addChild(window)
+
+            let vertical = ArtSystem.box(
+                CGSize(width: 5, height: 300),
+                color: UIColor(red: 0.78, green: 0.66, blue: 0.39, alpha: 0.34),
+                radius: 2
+            )
+            vertical.strokeColor = .clear
+            vertical.position = CGPoint(x: x, y: 430)
+            vertical.zPosition = 26
+            vertical.name = "decorativeWeatherMullion"
+            root.addChild(vertical)
+
+            let crossbar = ArtSystem.box(
+                CGSize(width: index == 1 ? 270 : 195, height: 5),
+                color: UIColor(red: 0.78, green: 0.66, blue: 0.39, alpha: 0.30),
+                radius: 2
+            )
+            crossbar.strokeColor = .clear
+            crossbar.position = CGPoint(x: x, y: 430)
+            crossbar.zPosition = 26
+            crossbar.name = "decorativeWeatherMullion"
+            root.addChild(crossbar)
+        }
+
+        let cornice = ArtSystem.box(
+            CGSize(width: 1190, height: 24),
+            color: UIColor(red: 0.18, green: 0.25, blue: 0.27, alpha: 0.92),
+            radius: 10
+        )
+        cornice.strokeColor = UIColor(red: 0.86, green: 0.70, blue: 0.38, alpha: 0.46)
+        cornice.lineWidth = 2
+        cornice.position = CGPoint(x: 640, y: 618)
+        cornice.zPosition = 30
+        cornice.name = "weatherObservatoryCornice"
+        root.addChild(cornice)
+
+        for x in [CGFloat(80), 355, 925, 1200] {
+            let column = ArtSystem.panel(
+                CGSize(width: 52, height: 470),
+                fill: UIColor(red: 0.12, green: 0.21, blue: 0.24, alpha: 0.90),
+                stroke: UIColor(red: 0.72, green: 0.62, blue: 0.39, alpha: 0.48),
+                radius: 22,
+                lineWidth: 3,
+                shadowAlpha: 0.10
+            )
+            column.position = CGPoint(x: x, y: 405)
+            column.zPosition = 34
+            column.name = "weatherObservatoryColumn"
+            root.addChild(column)
+
+            for y in [CGFloat(205), 600] {
+                let cap = ArtSystem.box(
+                    CGSize(width: 74, height: 16),
+                    color: UIColor(red: 0.74, green: 0.59, blue: 0.31, alpha: 0.72),
+                    radius: 7
+                )
+                cap.strokeColor = UIColor(red: 0.94, green: 0.78, blue: 0.46, alpha: 0.42)
+                cap.lineWidth = 1
+                cap.position = CGPoint(x: x, y: y)
+                cap.zPosition = 36
+                cap.name = "decorativeWeatherColumnCap"
+                root.addChild(cap)
+            }
+        }
+
+        let glyphs: [(String, CGPoint, UIColor)] = [
+            ("☀︎", CGPoint(x: 180, y: 530), UIColor(red: 1.0, green: 0.78, blue: 0.30, alpha: 0.88)),
+            ("☁︎", CGPoint(x: 640, y: 535), UIColor(red: 0.90, green: 0.96, blue: 0.96, alpha: 0.76)),
+            ("☂︎", CGPoint(x: 1100, y: 530), UIColor(red: 0.52, green: 0.77, blue: 0.98, alpha: 0.82))
+        ]
+        for (symbol, point, color) in glyphs {
+            let medallion = ArtSystem.medallion(
+                radius: 34,
+                fill: UIColor(red: 0.06, green: 0.16, blue: 0.22, alpha: 0.56),
+                stroke: color.withAlphaComponent(0.54),
+                glow: reducedMotion ? 0 : 3
+            )
+            medallion.position = point
+            medallion.zPosition = 40
+            medallion.name = "decorativeWeatherGlyph"
+            let label = ArtSystem.label(symbol, size: 28)
+            label.fontColor = color
+            medallion.addChild(label)
+            root.addChild(medallion)
+        }
+
+        for (index, y) in [CGFloat(475), 505, 565].enumerated() {
+            let windPath = CGMutablePath()
+            windPath.move(to: CGPoint(x: 300, y: y))
+            windPath.addCurve(
+                to: CGPoint(x: 980, y: y + 10),
+                control1: CGPoint(x: 470, y: y + (index == 1 ? 32 : -18)),
+                control2: CGPoint(x: 790, y: y + (index == 1 ? -22 : 26))
+            )
+            let wind = SKShapeNode(path: windPath)
+            wind.strokeColor = UIColor(red: 0.79, green: 0.95, blue: 0.96, alpha: 0.18)
+            wind.lineWidth = index == 1 ? 3 : 2
+            wind.zPosition = 18
+            wind.name = "decorativeWeatherWindStream"
+            root.addChild(wind)
+        }
+
+        addChild(root)
+    }
+
+    override func buildWorld() {
+        buildWeatherObservatoryBackdrop()
+
+        // Crisp native silhouettes carry the distant composition so there is no
+        // stretched 1x painting behind the playable Weather Tower.
         let farLandscape = SKNode()
         farLandscape.name = "weatherFarLandscape"
         farLandscape.zPosition = -205
