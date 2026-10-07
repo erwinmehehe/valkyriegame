@@ -167,6 +167,90 @@ import LearningCore
             addChild(shade)
         }
 
+        // Give Creature Grove its own crisp canopy architecture instead of
+        // asking the reused woodland crop to define the whole room.
+        let canopy = SKNode()
+        canopy.name = "creatureGroveNativeCanopy"
+        canopy.zPosition = -205
+        canopy.isUserInteractionEnabled = false
+
+        let leftBranchPath = CGMutablePath()
+        leftBranchPath.move(to: CGPoint(x: -40, y: 650))
+        leftBranchPath.addCurve(
+            to: CGPoint(x: 470, y: 555),
+            control1: CGPoint(x: 130, y: 690),
+            control2: CGPoint(x: 310, y: 600)
+        )
+        let leftBranch = SKShapeNode(path: leftBranchPath)
+        leftBranch.strokeColor = UIColor(red: 0.18, green: 0.12, blue: 0.07, alpha: 0.92)
+        leftBranch.lineWidth = 44
+        leftBranch.lineCap = .round
+        leftBranch.name = "decorativeGroveBranch"
+        canopy.addChild(leftBranch)
+
+        let rightBranchPath = CGMutablePath()
+        rightBranchPath.move(to: CGPoint(x: 1320, y: 660))
+        rightBranchPath.addCurve(
+            to: CGPoint(x: 810, y: 565),
+            control1: CGPoint(x: 1150, y: 700),
+            control2: CGPoint(x: 970, y: 600)
+        )
+        let rightBranch = SKShapeNode(path: rightBranchPath)
+        rightBranch.strokeColor = UIColor(red: 0.17, green: 0.11, blue: 0.07, alpha: 0.90)
+        rightBranch.lineWidth = 48
+        rightBranch.lineCap = .round
+        rightBranch.name = "decorativeGroveBranch"
+        canopy.addChild(rightBranch)
+
+        for (index, point) in [
+            CGPoint(x: 140, y: 625),
+            CGPoint(x: 245, y: 610),
+            CGPoint(x: 355, y: 590),
+            CGPoint(x: 925, y: 590),
+            CGPoint(x: 1045, y: 615),
+            CGPoint(x: 1160, y: 630)
+        ].enumerated() {
+            let cluster = SKNode()
+            cluster.position = point
+            cluster.name = "decorativeGroveLeafCluster"
+
+            for leafIndex in 0..<5 {
+                let leaf = SKShapeNode(ellipseOf: CGSize(width: 58, height: 28))
+                leaf.fillColor = UIColor(
+                    red: 0.18 + CGFloat((index + leafIndex) % 2) * 0.05,
+                    green: 0.45 + CGFloat(leafIndex % 3) * 0.035,
+                    blue: 0.20,
+                    alpha: 0.90
+                )
+                leaf.strokeColor = UIColor(red: 0.50, green: 0.69, blue: 0.32, alpha: 0.22)
+                leaf.lineWidth = 1
+                leaf.position = CGPoint(
+                    x: CGFloat(leafIndex - 2) * 22,
+                    y: CGFloat(abs(leafIndex - 2)) * 8
+                )
+                leaf.zRotation = CGFloat(leafIndex - 2) * 0.22
+                cluster.addChild(leaf)
+            }
+            canopy.addChild(cluster)
+        }
+
+        for x in [CGFloat(205), 405, 890, 1095] {
+            let vinePath = CGMutablePath()
+            vinePath.move(to: CGPoint(x: x, y: 620))
+            vinePath.addCurve(
+                to: CGPoint(x: x + 12, y: 475),
+                control1: CGPoint(x: x - 18, y: 565),
+                control2: CGPoint(x: x + 24, y: 525)
+            )
+            let vine = SKShapeNode(path: vinePath)
+            vine.strokeColor = UIColor(red: 0.25, green: 0.50, blue: 0.25, alpha: 0.66)
+            vine.lineWidth = 5
+            vine.name = "decorativeGroveVine"
+            canopy.addChild(vine)
+        }
+
+        addChild(canopy)
+
         let groveWash = ArtSystem.box(
             CGSize(width: 1280, height: 285),
             color: UIColor(red: 0.05, green: 0.18, blue: 0.09, alpha: 0.28),
