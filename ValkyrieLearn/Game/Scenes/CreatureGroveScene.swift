@@ -1011,7 +1011,7 @@ import LearningCore
                 instruction.text = "Field study complete. The habitat evidence holds together, and the grove is fully restored."
             } else if let next = state.scienceNextFieldStudy(in: .creatureGrove) {
                 let completed = state.scienceFieldStudyCompletedCount(in: .creatureGrove)
-                instruction.text = "Grove evidence \\(completed)/\\(ScienceFieldStudyCatalog.creatureGrove.count) confirmed. " + next.prompt
+                instruction.text = "Grove evidence \(completed)/\(ScienceFieldStudyCatalog.creatureGrove.count) confirmed. " + next.prompt
             }
         } else {
             instruction.text = "That choice does not match the observed habitat evidence. Compare the duck, body part, and habitat resources again."
