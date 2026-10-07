@@ -469,6 +469,7 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 490, y: 175)
         scene.handleTap(at: CGPoint(x: 830, y: 265))
         XCTAssertTrue(scene.childNode(withName: "workshopRackBacking")?.isHidden == true)
+        XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == true)
         XCTAssertTrue(scene.childNode(withName: "//submit")?.isHidden == false)
         let target = try XCTUnwrap(state.runtime?.encounter.targetQuantity)
         for _ in 0..<target { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
@@ -476,6 +477,7 @@ import LearningCore
         XCTAssertTrue(state.runtime?.completed == true)
         XCTAssertTrue(scene.childNode(withName: "//submit")?.isHidden == true)
         XCTAssertTrue(scene.childNode(withName: "workshopRackBacking")?.isHidden == false)
+        XCTAssertTrue(scene.childNode(withName: "next")?.isHidden == false)
         let powerLight = try XCTUnwrap(scene.childNode(withName: "castlePowerLight") as? SKShapeNode)
         XCTAssertEqual(powerLight.glowWidth, 16)
         let portal = try XCTUnwrap(scene.childNode(withName: "challengeGate") as? SKShapeNode)
@@ -2207,6 +2209,7 @@ import LearningCore
         XCTAssertEqual(heading.text, "PIP'S WORK ORDER")
         XCTAssertEqual(heading.fontName, "AvenirNext-Bold")
         XCTAssertEqual(prompt.fontName, "AvenirNext-Medium")
+        XCTAssertEqual(prompt.fontSize, encounter.prompt.count > 52 ? 17 : 18)
         XCTAssertTrue(prompt.text?.contains(encounter.prompt) == true)
         XCTAssertGreaterThan(prompt.position.y, 500)
         XCTAssertLessThan(feedback.position.y, 100)
