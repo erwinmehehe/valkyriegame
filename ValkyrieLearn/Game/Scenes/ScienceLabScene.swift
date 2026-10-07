@@ -923,6 +923,9 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         milo.zPosition = 1000 - milo.position.y
+        if lastScienceKineticReducedMotion != reducedMotion {
+            applyGreenhouseFocusState()
+        }
     }
 
     override func willLeave() {
@@ -1145,13 +1148,6 @@ import LearningCore
             showAttentionCue(at: sunPrismPoint, tint: tint)
         case .lit:
             showAttentionCue(at: exitPoint, tint: tint, width: 104)
-        }
-    }
-
-    override func update(_ currentTime: TimeInterval) {
-        super.update(currentTime)
-        if lastScienceKineticReducedMotion != reducedMotion {
-            applyGreenhouseFocusState()
         }
     }
 
