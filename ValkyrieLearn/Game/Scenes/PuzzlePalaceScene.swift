@@ -1372,6 +1372,7 @@ import LearningCore
         )
         refreshMemoryBridgeProgress(animated: true)
         successFeedback()
+        playPalaceWakeReaction(at: CGPoint(x: 760, y: 360))
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -3874,6 +3875,7 @@ import LearningCore
             if correct {
                 self.solved = true
                 self.successFeedback()
+                self.playPalaceWakeReaction(at: CGPoint(x: 790, y: 360))
                 self.refreshCommandGearsProgress(animated: true)
                 self.valkyrie.pose(.celebrate)
                 self.tiko.pose(.celebrate)
@@ -4339,6 +4341,7 @@ import LearningCore
 
             self.solved = true
             self.successFeedback()
+            self.playPalaceWakeReaction(at: CGPoint(x: 760, y: 420))
             self.valkyrie.pose(.celebrate)
             self.tiko.pose(.celebrate)
 
