@@ -7,15 +7,6 @@
     "atlasPosition": "lower-right",
     "note": "Puzzle Palace uses the preserved lower-right quadrant of the existing 2x2 v3.31 environment atlas."
   },
-  "assets": {
-    "ValkyrieLearn/Resources/Tiko.webp": {
-      "sourceKey": "comp_tiko",
-      "blobSHA": "332e51b6dbb76e4fd875aea48645ad6a337eb741",
-      "sourceDimensions": [
-        84,
-        84
-      ]
-    }
-  },
-  "note": "Preserved embedded v3.31 reference pixels. Tiko is currently a static reference sprite across poses until a full native action atlas is authored."
+  "assets": {},
+  "note": "Preserved embedded v3.31 environment reference pixels. Tiko is now managed separately by COMPANION_ART_MANIFEST.json."
 }
