@@ -183,6 +183,48 @@ import LearningCore
         XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
     }
 
+    func testCreatureGroveHabitatMotionRespectsReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .scienceCreatureGrove)
+
+        let scene = CreatureGroveScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let reed = try XCTUnwrap(
+            scene.childNode(withName: "//grovePondReed")
+        )
+        let ripple = try XCTUnwrap(
+            scene.childNode(withName: "//grovePondRipple")
+        )
+        let reflection = try XCTUnwrap(
+            scene.childNode(withName: "//grovePondReflection")
+        )
+        let water = try XCTUnwrap(
+            scene.childNode(withName: "//grovePondWater")
+        )
+
+        XCTAssertNotNil(reed.action(forKey: "groveReedSway"))
+        XCTAssertNotNil(ripple.action(forKey: "groveRipple"))
+        XCTAssertNotNil(
+            reflection.action(forKey: "groveReflectionShimmer")
+        )
+        XCTAssertNotNil(water.action(forKey: "groveWaterBreath"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(reed.action(forKey: "groveReedSway"))
+        XCTAssertNil(ripple.action(forKey: "groveRipple"))
+        XCTAssertNil(
+            reflection.action(forKey: "groveReflectionShimmer")
+        )
+        XCTAssertNil(water.action(forKey: "groveWaterBreath"))
+    }
+
     func testWordGardenAmbientMotionRespectsReducedMotion() throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
