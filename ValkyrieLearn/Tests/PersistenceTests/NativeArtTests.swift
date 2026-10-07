@@ -196,6 +196,40 @@ import LearningCore
         sunmill.willLeave()
     }
 
+    func testPuzzlePalaceArchitectureMovesWithoutCompetingWithReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .sortingPedestal)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let crystal = try XCTUnwrap(
+            scene.children.first { $0.name == "puzzleCrystalFixture" }
+        )
+        let alcoveGlow = try XCTUnwrap(
+            scene.childNode(withName: "//puzzleAlcoveGlow0")
+        )
+        let floorSeal = try XCTUnwrap(scene.childNode(withName: "puzzleFloorSeal"))
+
+        XCTAssertNotNil(crystal.action(forKey: "palaceCrystalFloat"))
+        XCTAssertNotNil(alcoveGlow.action(forKey: "palaceAlcoveBreath"))
+        XCTAssertNotNil(floorSeal.action(forKey: "palaceRoomBreath"))
+        XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(crystal.action(forKey: "palaceCrystalFloat"))
+        XCTAssertNil(alcoveGlow.action(forKey: "palaceAlcoveBreath"))
+        XCTAssertNil(floorSeal.action(forKey: "palaceRoomBreath"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
+    }
+
     func testWordGardenPreservesPaintedAtlasCropsWithRetinaPreparedRaster() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
@@ -253,19 +287,25 @@ import LearningCore
             XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().width, 60)
             XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().height, 60)
 
-            if world == .sunmillCrossing {
+            if world == .sunmillCrossing || world == .storyHollow {
                 XCTAssertFalse(guidance.isHidden)
                 XCTAssertFalse(guidanceBackdrop.isHidden)
                 XCTAssertNil(
                     scene.childNode(withName: "//questionPromptBackdrop"),
-                    "Sunmill Crossing should use one guidance surface instead of duplicating the prompt over the world."
+                    "Journey rooms should use one guidance surface instead of duplicating the prompt over the world."
                 )
-                XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
-                XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
+                if world == .sunmillCrossing {
+                    XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
+                    XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
+                } else {
+                    XCTAssertNotNil(scene.childNode(withName: "storyRootNetwork"))
+                    XCTAssertNotNil(scene.childNode(withName: "storyMemoryBranch"))
+                    XCTAssertNotNil(scene.childNode(withName: "storyHollowDoorGlow"))
+                }
             } else {
                 XCTAssertTrue(
                     guidance.isHidden,
-                    "Flower Gate and Story Hollow should not repeat their task prompt in the bottom HUD during preview."
+                    "Flower Gate should not repeat its task prompt in the bottom HUD during preview."
                 )
                 XCTAssertTrue(guidanceBackdrop.isHidden)
                 let prompt = try XCTUnwrap(
@@ -798,8 +838,40 @@ import LearningCore
         XCTAssertGreaterThanOrEqual(sunmillBack.calculateAccumulatedFrame().height, 60)
         XCTAssertNotNil(hollow.childNode(withName: "storyHollow"))
         XCTAssertNotNil(hollow.childNode(withName: "wordSeed"))
+        XCTAssertNotNil(hollow.childNode(withName: "storyRootNetwork"))
+        XCTAssertNotNil(hollow.childNode(withName: "storyMemoryBranch"))
+        XCTAssertNotNil(hollow.childNode(withName: "storyHollowDoorGlow"))
         XCTAssertNotNil(hollow.childNode(withName: "storySequencePreview"))
-        XCTAssertEqual(hollow.children.filter { $0.name == "storyHollowChoice" }.count, 4)
+        XCTAssertNil(
+            hollow.childNode(withName: "questionPrompt"),
+            "Story Hollow must show its sequence on the memory tree instead of a duplicate floating prompt."
+        )
+        XCTAssertEqual(hollow.valkyrie.xScale, 0.58, accuracy: 0.001)
+        let hollowInstructionBackdrop = try XCTUnwrap(
+            hollow.childNode(withName: "instructionBackdrop")
+        )
+        XCTAssertLessThan(
+            hollowInstructionBackdrop.calculateAccumulatedFrame().width,
+            800,
+            "Story Hollow guidance should stay compact enough to leave the painted world dominant."
+        )
+
+        let hollowChoices = hollow.children.filter { $0.name == "storyHollowChoice" }
+        XCTAssertEqual(hollowChoices.count, 4)
+        for choice in hollowChoices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 100)
+            XCTAssertGreaterThanOrEqual(frame.height, 100)
+            XCTAssertNotNil(choice.childNode(withName: "decorativeStoryChoiceRoot"))
+            XCTAssertNotNil(choice.childNode(withName: "decorativeStoryChoiceRootKnot"))
+            XCTAssertNotNil(choice.childNode(withName: "decorativeStoryChoiceSprout"))
+            XCTAssertEqual(
+                hollow.targetName(at: choice.position),
+                "storyHollowChoice",
+                "Root and sprout decoration must never steal the literacy tap."
+            )
+        }
+
         XCTAssertEqual(
             state.nextStoryHollowEncounter()?.skillID,
             LiteracySkills.visualPrintSequence
@@ -836,7 +908,22 @@ import LearningCore
         restoredHollow.didMove(to: SKView())
         XCTAssertNotNil(restoredHollow.childNode(withName: "storyBloom"))
         XCTAssertNotNil(restoredHollow.childNode(withName: "storyTreeReturn"))
-        restoredHollow.handleTap(at: CGPoint(x: 1005, y: 165))
+        XCTAssertGreaterThan(
+            restoredHollow.childNode(withName: "storyHollowDoorGlow")?.alpha ?? 0,
+            0.99
+        )
+        for index in 0..<WordGardenEncounterCatalog.storyHollowPattern.count {
+            XCTAssertGreaterThan(
+                restoredHollow.childNode(withName: "storyRootGlow\(index)")?.alpha ?? 0,
+                0.9,
+                "Each restored memory should remain visibly connected through the roots."
+            )
+        }
+        XCTAssertEqual(
+            restoredHollow.targetName(at: CGPoint(x: 1090, y: 195)),
+            "storyTreeReturn"
+        )
+        restoredHollow.handleTap(at: CGPoint(x: 1090, y: 195))
         XCTAssertEqual(state.world, .storyTree)
         restoredHollow.willLeave()
 
@@ -2683,6 +2770,73 @@ import LearningCore
         XCTAssertNil(calm.childNode(withName: "successBurst"))
     }
 
+    func testMathCastleMachineryFeelsAliveAndRespectsReducedMotion() throws {
+        let livelyState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(livelyState.startWorkshop(MathFoundation.workshopExamples[0]))
+        let lively = MathCastleScene(state: livelyState)
+        lively.reducedMotion = false
+        lively.didMove(to: SKView())
+        defer { lively.willLeave() }
+
+        let station = try XCTUnwrap(lively.childNode(withName: "workshop0"))
+        let stationRim = try XCTUnwrap(station.childNode(withName: "workshopRim_workshop0"))
+        let powerMount = try XCTUnwrap(lively.childNode(withName: "castlePowerMount"))
+        let environmentGear = try XCTUnwrap(lively.childNode(withName: "environmentGear0"))
+        XCTAssertNotNil(stationRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNotNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNotNil(environmentGear.action(forKey: "ambientSpin"))
+        // The quantity icon is a sibling of the moving brass rim, so it stays readable.
+        let icon = try XCTUnwrap(station.children.first { $0 is SKLabelNode })
+        XCTAssertFalse(icon.hasActions())
+
+        lively.handleTap(at: CGPoint(x: 140, y: 548))
+        XCTAssertNotNil(stationRim.action(forKey: "workshopTapSurge"))
+        lively.valkyrie.position = CGPoint(x: 490, y: 175)
+        lively.handleTap(at: CGPoint(x: 830, y: 265))
+        let core = try XCTUnwrap(lively.childNode(withName: "mathWorkZoneCore"))
+        XCTAssertNotNil(lively.camera?.action(forKey: "focus"))
+        XCTAssertNotNil(core.action(forKey: "activeMachineBreath"))
+
+        // Model the intermediate frame at which a child changes the setting.
+        core.alpha = 0.56
+        lively.reducedMotion = true
+        lively.update(1)
+        XCTAssertNil(stationRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNil(stationRim.action(forKey: "workshopTapSurge"))
+        XCTAssertNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNil(environmentGear.action(forKey: "ambientSpin"))
+        XCTAssertNil(core.action(forKey: "activeMachineBreath"))
+        XCTAssertEqual(core.alpha, 1, accuracy: 0.001)
+
+        lively.reducedMotion = false
+        lively.update(2)
+        XCTAssertNotNil(stationRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNotNil(core.action(forKey: "activeMachineBreath"))
+
+        let calmState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(calmState.startWorkshop(MathFoundation.workshopExamples[0]))
+        let calm = MathCastleScene(state: calmState)
+        calm.reducedMotion = true
+        calm.didMove(to: SKView())
+        defer { calm.willLeave() }
+        let calmRim = try XCTUnwrap(calm.childNode(withName: "//workshopRim_workshop0"))
+        let calmPower = try XCTUnwrap(calm.childNode(withName: "castlePowerMount"))
+        let calmGear = try XCTUnwrap(calm.childNode(withName: "environmentGear0"))
+        XCTAssertNil(calmRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNil(calmPower.action(forKey: "ambientSpin"))
+        XCTAssertNil(calmGear.action(forKey: "ambientSpin"))
+        calm.handleTap(at: CGPoint(x: 140, y: 548))
+        XCTAssertNil(calmRim.action(forKey: "workshopTapSurge"))
+        calm.valkyrie.position = CGPoint(x: 490, y: 175)
+        calm.handleTap(at: CGPoint(x: 830, y: 265))
+        XCTAssertNil(calm.camera?.action(forKey: "focus"))
+        XCTAssertNil(calm.childNode(withName: "mathWorkZoneCore")?.action(forKey: "activeMachineBreath"))
+    }
+
     func testSharedHUDAndPromptTextStayInsideSafeDesignBounds() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -2774,12 +2928,23 @@ import LearningCore
         let gardenRim = try XCTUnwrap(
             scene.childNode(withName: "//storyMarkerRim_wordGarden")
         )
+        let gardenIcon = try XCTUnwrap(
+            scene.childNode(withName: "//storyMarkerIcon_wordGarden")
+        )
         let castleRim = try XCTUnwrap(
             scene.childNode(withName: "//storyMarkerRim_castle")
         )
         let pipGearRim = try XCTUnwrap(
             scene.childNode(withName: "//storyPipGearRim")
         )
+        let pipGearRoot = try XCTUnwrap(scene.childNode(withName: "pipWind"))
+        let pipGearIcon = try XCTUnwrap(
+            pipGearRoot.children.compactMap { $0 as? SKLabelNode }
+                .first { $0.text == "✦" }
+        )
+
+        XCTAssertFalse(gardenIcon.parent === gardenRim)
+        XCTAssertFalse(pipGearIcon.parent === pipGearRim)
         let storyLight = try XCTUnwrap(scene.childNode(withName: "storyLight"))
 
         XCTAssertNotNil(gardenRim.action(forKey: "hubMarkerDrift"))
