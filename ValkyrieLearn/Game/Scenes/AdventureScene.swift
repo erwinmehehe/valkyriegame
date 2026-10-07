@@ -90,6 +90,16 @@ struct AdventureSceneLayout {
     let instruction = ArtSystem.label("", size: 27)
     let layout = AdventureSceneLayout(size: CGSize(width: 1280, height: 720))
 
+    /// Gameplay stays on its original canvas; taller iPads gain space for HUD chrome.
+    var designCanvasSize: CGSize { layout.size }
+    var verticalViewportInset: CGFloat { max(0, (size.height - designCanvasSize.height) / 2) }
+
+    func prepareAdaptiveLandscapeCanvas(for view: SKView) {
+        guard children.isEmpty, view.bounds.width > 0, view.bounds.height > 0 else { return }
+        let height = designCanvasSize.width * view.bounds.height / view.bounds.width
+        size = CGSize(width: designCanvasSize.width, height: max(designCanvasSize.height, min(960, height)))
+    }
+
     var walkable: CGRect { layout.actorLane }
     var environment: ArtSystem.Environment { .castle }
     var worldTitle: String { "Math Castle" }
@@ -608,7 +618,7 @@ struct AdventureSceneLayout {
             var node: SKNode? = hit
             var depth = 0
             while let current = node, current !== self {
-                if let name = current.name, !name.isEmpty, !name.hasPrefix("decorative") {
+                if let name = current.name, !name.isEmpty, !name.hasPrefix("decorative"), name != "successBurst" {
                     var score = current.zPosition
                     var ancestor = current.parent
                     while let parent = ancestor, parent !== self {

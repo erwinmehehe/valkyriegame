@@ -128,6 +128,7 @@ import LearningCore
     }
 
     override func didMove(to view: SKView) {
+        prepareAdaptiveLandscapeCanvas(for: view)
         super.didMove(to: view)
         applyPuzzleHUDPolish()
         pip.removeFromParent()
@@ -390,29 +391,29 @@ import LearningCore
             stroke: UIColor(red: 0.72, green: 0.58, blue: 0.98, alpha: 0.54),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 100 + titleWidth / 2, y: 672)
+        titlePlate.position = CGPoint(x: 100 + titleWidth / 2, y: 672 + verticalViewportInset)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
 
-        title.position = CGPoint(x: 140, y: 672)
+        title.position = CGPoint(x: 140, y: 672 + verticalViewportInset)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672 + verticalViewportInset)
             emblem.setScale(0.72)
         }
 
         if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
             instructionBackdrop.xScale = 0.65
             instructionBackdrop.yScale = 0.80
-            instructionBackdrop.position = CGPoint(x: 735, y: 46)
+            instructionBackdrop.position = CGPoint(x: 735, y: 46 - verticalViewportInset)
             instructionBackdrop.alpha = 0.90
         }
 
-        instruction.position = CGPoint(x: 735, y: 46)
+        instruction.position = CGPoint(x: 735, y: 46 - verticalViewportInset)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
@@ -423,7 +424,7 @@ import LearningCore
     private func buildPuzzleHomeControl() {
         let root = SKNode()
         root.name = "home"
-        root.position = CGPoint(x: 52, y: 672)
+        root.position = CGPoint(x: 52, y: 672 + verticalViewportInset)
         root.zPosition = 2100
 
         let medallion = ArtSystem.medallion(
@@ -433,7 +434,7 @@ import LearningCore
             glow: reducedMotion ? 0 : 1
         )
         medallion.name = "home"
-        medallion.addChild(ArtSystem.label("‹", size: 22))
+        medallion.addChild(ArtSystem.label("⌂", size: 18))
         root.addChild(medallion)
 
         let hit = SKShapeNode(circleOfRadius: 30)
@@ -443,14 +444,17 @@ import LearningCore
         hit.zPosition = 2
         root.addChild(hit)
 
-        makeAccessible(root, label: "Back")
+        makeAccessible(root, label: "Return to Story Tree")
         addChild(root)
     }
 
     override func buildWorld() {
         buildNativePalaceBackdrop()
 
-        for (height, y) in [(CGFloat(62), CGFloat(684)), (CGFloat(96), CGFloat(42))] {
+        for (height, y) in [
+            (CGFloat(62), CGFloat(684) + verticalViewportInset),
+            (CGFloat(96), CGFloat(42) - verticalViewportInset)
+        ] {
             let shade = ArtSystem.box(
                 CGSize(width: 1280, height: height),
                 color: .black.withAlphaComponent(0.29),
@@ -531,22 +535,6 @@ import LearningCore
         base.zPosition = -260
         base.name = "puzzleNativeBackdrop"
         addChild(base)
-
-        // Preserve the v3.31 palette as a distant matte only. The source quadrant is
-        // 160x90 pixels, so it must never be the full-strength playable environment.
-        if let atlas = ArtSystem.texture("V331WorldAtlas") {
-            let puzzleTexture = SKTexture(
-                rect: CGRect(x: 0.5, y: 0, width: 0.5, height: 0.5),
-                in: atlas
-            )
-            puzzleTexture.filteringMode = .linear
-            let matte = SKSpriteNode(texture: puzzleTexture, color: .white, size: size)
-            matte.position = CGPoint(x: 640, y: 360)
-            matte.zPosition = -250
-            matte.alpha = 0.10
-            matte.name = "puzzleLegacyMatte"
-            addChild(matte)
-        }
 
         let hall = ArtSystem.box(
             CGSize(width: 1080, height: 430),
@@ -830,6 +818,229 @@ import LearningCore
             daisInset.name = "puzzleStageInlay"
             addChild(daisInset)
         }
+
+        buildPalaceRoomIdentity(accent: accent)
+    }
+
+    /// Crisp, room-specific architecture layered behind the learning mechanic.
+    /// Every Puzzle Palace stop shares one visual language, but no longer looks
+    /// like the same prototype room with a different activity dropped on top.
+    private func buildPalaceRoomIdentity(accent: UIColor) {
+        let root = SKNode()
+        root.name = "puzzleRoomIdentity"
+        root.zPosition = -165
+        root.isUserInteractionEnabled = false
+
+        let motifs: [String]
+        switch place {
+        case .runeGate: motifs = ["✦", "◇", "◈"]
+        case .memoryBridge: motifs = ["Ⅰ", "Ⅱ", "Ⅲ"]
+        case .stopGoOrbs: motifs = ["●", "✦", "●"]
+        case .sortingPedestal: motifs = ["○", "◇", "○"]
+        case .resortVault: motifs = ["↻", "◇", "↺"]
+        case .mirrorHall: motifs = ["◁", "◇", "▷"]
+        case .pathTiles: motifs = ["↑", "→", "↑"]
+        case .commandGears: motifs = ["◆", "↻", "◇"]
+        case .bugLantern: motifs = ["!", "◇", "?"]
+        case .bugLanternRepair: motifs = ["↔", "◆", "↻"]
+        }
+
+        let farPortal = SKShapeNode(
+            rectOf: CGSize(width: 760, height: 270),
+            cornerRadius: 126
+        )
+        farPortal.position = CGPoint(x: 700, y: 420)
+        farPortal.fillColor = UIColor(red: 0.035, green: 0.035, blue: 0.095, alpha: 0.72)
+        farPortal.strokeColor = accent.withAlphaComponent(0.34)
+        farPortal.lineWidth = 5
+        farPortal.name = "puzzleRoomFarPortal"
+        root.addChild(farPortal)
+
+        let portalGlow = SKShapeNode(ellipseOf: CGSize(width: 600, height: 190))
+        portalGlow.fillColor = accent.withAlphaComponent(0.055)
+        portalGlow.strokeColor = accent.withAlphaComponent(0.12)
+        portalGlow.lineWidth = 3
+        portalGlow.position.y = -4
+        portalGlow.name = "decorativePuzzleRoomGlow"
+        portalGlow.userData = NSMutableDictionary(dictionary: [
+            "decorativeMotionRole": "pulse"
+        ])
+        farPortal.addChild(portalGlow)
+
+        for (index, x) in [CGFloat(-220), 0, 220].enumerated() {
+            let medallion = ArtSystem.medallion(
+                radius: index == 1 ? 38 : 29,
+                fill: UIColor(red: 0.08, green: 0.065, blue: 0.16, alpha: 0.94),
+                stroke: accent.withAlphaComponent(index == 1 ? 0.70 : 0.42),
+                glow: reducedMotion ? 0 : (index == 1 ? 3 : 1)
+            )
+            medallion.position = CGPoint(x: x, y: 66 + (index == 1 ? 18 : 0))
+            medallion.name = "decorativePuzzleRoomMotif"
+            let mark = ArtSystem.label(motifs[index], size: index == 1 ? 30 : 22)
+            mark.fontColor = UIColor(red: 1.0, green: 0.87, blue: 0.48, alpha: 0.90)
+            medallion.addChild(mark)
+            farPortal.addChild(medallion)
+        }
+
+        // Side buttresses stay behind Valkyrie but create a foreground-to-midground
+        // read that the old flat contact-sheet artwork never had.
+        for (index, x) in [CGFloat(70), 1210].enumerated() {
+            let buttress = ArtSystem.panel(
+                CGSize(width: 112, height: 430),
+                fill: UIColor(red: 0.075, green: 0.065, blue: 0.16, alpha: 0.96),
+                stroke: accent.withAlphaComponent(0.36),
+                radius: 38,
+                lineWidth: 3,
+                shadowAlpha: 0.24
+            )
+            buttress.position = CGPoint(x: x, y: 354)
+            buttress.zRotation = index == 0 ? -0.035 : 0.035
+            buttress.name = "puzzleRoomButtress"
+            root.addChild(buttress)
+
+            if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: 58, height: 86)) {
+                crystal.position = CGPoint(x: x, y: 505)
+                crystal.alpha = 0.76
+                crystal.name = "decorativePuzzleRoomCrystal"
+                root.addChild(crystal)
+            }
+        }
+
+        for (index, x) in [CGFloat(260), 480, 700, 920, 1140].enumerated() {
+            let lamp = SKShapeNode(circleOfRadius: index == 2 ? 9 : 6)
+            lamp.fillColor = accent.withAlphaComponent(index == 2 ? 0.78 : 0.52)
+            lamp.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.42, alpha: 0.68)
+            lamp.lineWidth = 1.5
+            lamp.glowWidth = reducedMotion ? 0 : CGFloat(index == 2 ? 8 : 4)
+            lamp.position = CGPoint(x: x, y: 610 - CGFloat(abs(index - 2)) * 12)
+            lamp.name = "decorativePuzzleRoomLamp"
+            root.addChild(lamp)
+        }
+
+        // Each room gets one unmistakable architectural signature.
+        switch place {
+        case .runeGate:
+            for x in stride(from: CGFloat(370), through: CGFloat(1010), by: CGFloat(128)) {
+                let rune = ArtSystem.label("◇", size: 26)
+                rune.position = CGPoint(x: x, y: 520 + sin(x / 90) * 18)
+                rune.fontColor = accent.withAlphaComponent(0.48)
+                rune.name = "decorativeRuneHallGlyph"
+                root.addChild(rune)
+            }
+
+        case .memoryBridge:
+            for y in stride(from: CGFloat(330), through: CGFloat(555), by: CGFloat(54)) {
+                for x in [CGFloat(330), 1080] {
+                    let bead = SKShapeNode(circleOfRadius: 8)
+                    bead.position = CGPoint(x: x, y: y)
+                    bead.fillColor = accent.withAlphaComponent(0.48)
+                    bead.strokeColor = .clear
+                    bead.name = "decorativeMemoryLantern"
+                    root.addChild(bead)
+                }
+            }
+            for y in [CGFloat(300), 350] {
+                let mist = SKShapeNode(ellipseOf: CGSize(width: 760, height: 72))
+                mist.position = CGPoint(x: 700, y: y)
+                mist.fillColor = UIColor(red: 0.42, green: 0.52, blue: 0.86, alpha: 0.035)
+                mist.strokeColor = .clear
+                mist.name = "decorativeMemoryMist"
+                root.addChild(mist)
+            }
+
+        case .stopGoOrbs:
+            for y in [CGFloat(340), 430, 520] {
+                let conduit = ArtSystem.box(
+                    CGSize(width: 760, height: 6),
+                    color: accent.withAlphaComponent(0.18),
+                    radius: 3
+                )
+                conduit.position = CGPoint(x: 700, y: y)
+                conduit.strokeColor = .clear
+                conduit.name = "decorativeStopGoConduit"
+                root.addChild(conduit)
+            }
+
+        case .sortingPedestal, .resortVault:
+            for x in [CGFloat(390), 700, 1010] {
+                let shelf = ArtSystem.panel(
+                    CGSize(width: 180, height: 72),
+                    fill: UIColor(red: 0.08, green: 0.12, blue: 0.18, alpha: 0.72),
+                    stroke: accent.withAlphaComponent(0.30),
+                    radius: 24,
+                    lineWidth: 2,
+                    shadowAlpha: 0.12
+                )
+                shelf.position = CGPoint(x: x, y: 470)
+                shelf.name = "decorativeSortingGallery"
+                root.addChild(shelf)
+            }
+
+        case .mirrorHall:
+            for x in [CGFloat(330), 500, 900, 1070] {
+                let shard = SKShapeNode(
+                    rectOf: CGSize(width: 54, height: 220),
+                    cornerRadius: 25
+                )
+                shard.position = CGPoint(x: x, y: 440)
+                shard.zRotation = x < 700 ? -0.10 : 0.10
+                shard.fillColor = UIColor(red: 0.58, green: 0.86, blue: 1.0, alpha: 0.055)
+                shard.strokeColor = accent.withAlphaComponent(0.30)
+                shard.lineWidth = 2
+                shard.name = "decorativeMirrorShard"
+                root.addChild(shard)
+            }
+
+        case .pathTiles:
+            for x in stride(from: CGFloat(360), through: CGFloat(1040), by: CGFloat(85)) {
+                let guide = ArtSystem.box(
+                    CGSize(width: 2, height: 260),
+                    color: accent.withAlphaComponent(0.12),
+                    radius: 1
+                )
+                guide.position = CGPoint(x: x, y: 410)
+                guide.zRotation = (x - 700) * 0.00045
+                guide.strokeColor = .clear
+                guide.name = "decorativePathGuide"
+                root.addChild(guide)
+            }
+
+        case .commandGears:
+            for (index, x) in [CGFloat(350), 520, 880, 1050].enumerated() {
+                let gear = ArtSystem.gear(radius: index.isMultiple(of: 2) ? 31 : 24)
+                gear.position = CGPoint(x: x, y: 455 + CGFloat(index % 2) * 70)
+                gear.setScale(0.9)
+                gear.alpha = 0.42
+                gear.name = "decorativeCommandGear"
+                root.addChild(gear)
+            }
+
+        case .bugLantern, .bugLanternRepair:
+            let cablePath = CGMutablePath()
+            cablePath.move(to: CGPoint(x: 300, y: 520))
+            cablePath.addCurve(
+                to: CGPoint(x: 1100, y: 390),
+                control1: CGPoint(x: 470, y: 310),
+                control2: CGPoint(x: 880, y: 610)
+            )
+            let cable = SKShapeNode(path: cablePath)
+            cable.strokeColor = accent.withAlphaComponent(0.30)
+            cable.lineWidth = 8
+            cable.name = "decorativeDiagnosticCable"
+            root.addChild(cable)
+
+            for x in [CGFloat(420), 700, 980] {
+                let status = SKShapeNode(circleOfRadius: 10)
+                status.position = CGPoint(x: x, y: 505)
+                status.fillColor = accent.withAlphaComponent(0.62)
+                status.strokeColor = UIColor(red: 1.0, green: 0.78, blue: 0.34, alpha: 0.62)
+                status.lineWidth = 2
+                status.name = "decorativeDiagnosticLamp"
+                root.addChild(status)
+            }
+        }
+
+        addChild(root)
     }
 
     private func buildRuneGate() {
@@ -1316,6 +1527,7 @@ import LearningCore
 
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
         _ = state.recordPuzzle(
             memoryEncounter,
@@ -1580,6 +1792,11 @@ import LearningCore
         stopGoAcceptingTap = false
         stopGoCurrentSignal = nil
         instruction.text = inhibitionEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 755, y: 365),
+            tint: UIColor(red: 0.78, green: 0.58, blue: 0.98, alpha: 1),
+            width: 175
+        )
         run(.sequence([
             .wait(forDuration: reducedMotion ? 0.20 : 0.55),
             .run { [weak self] in
@@ -1694,6 +1911,7 @@ import LearningCore
             stopGoIndex = 0
             stopGoAcceptingTap = false
             stopGoCurrentSignal = nil
+            errorFeedback()
             valkyrie.pose(.react)
             tiko.pose(.react)
             shakeStopGoOrb()
@@ -1709,6 +1927,7 @@ import LearningCore
             guard stopGoAcceptingTap else { return }
             stopGoAcceptingTap = false
             removeAction(forKey: "stopGoSignal")
+            selectionFeedback()
             valkyrie.pose(.interact)
             tiko.pose(.interact)
             pulseStopGoOrb()
@@ -1726,6 +1945,7 @@ import LearningCore
         stopGoCurrentSignal = nil
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
 
         _ = state.recordPuzzle(
@@ -1736,7 +1956,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
         refreshStopGoProgress(animated: true)
-        state.audio.play("success")
+        successFeedback(at: CGPoint(x: 755, y: 365))
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -1978,6 +2198,11 @@ import LearningCore
         sortAcceptingInput = false
         childNode(withName: "sortingObject")?.removeFromParent()
         instruction.text = sortEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 755, y: 225),
+            tint: UIColor(red: 0.52, green: 0.88, blue: 0.90, alpha: 1),
+            width: 250
+        )
 
         run(.sequence([
             .wait(forDuration: reducedMotion ? 0.16 : 0.45),
@@ -2086,6 +2311,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            errorFeedback()
             valkyrie.pose(.react)
             tiko.pose(.react)
             highlightSortingDimension(rule)
@@ -2104,6 +2330,7 @@ import LearningCore
         let destination = bucket == .left
             ? CGPoint(x: 530, y: 355)
             : CGPoint(x: 970, y: 355)
+        selectionFeedback()
         valkyrie.pose(.interact)
         tiko.pose(.interact)
 
@@ -2151,6 +2378,7 @@ import LearningCore
         sortAcceptingInput = false
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
 
         _ = state.recordPuzzle(
@@ -2161,7 +2389,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
         refreshSortingProgress(animated: true)
-        state.audio.play("success")
+        successFeedback(at: CGPoint(x: 755, y: 225))
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -2341,6 +2569,11 @@ import LearningCore
 
         updateResortRule(resortEncounter.initialRule)
         instruction.text = resortEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 755, y: 395),
+            tint: UIColor(red: 0.52, green: 0.88, blue: 0.90, alpha: 1),
+            width: 280
+        )
         presentResortObject()
     }
 
@@ -2430,6 +2663,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            errorFeedback()
             valkyrie.pose(.react)
             tiko.pose(.react)
             highlightResortRule(rule)
@@ -2450,6 +2684,7 @@ import LearningCore
         let sideX: CGFloat = bucket == .left ? 475 : 1035
         let offset = CGFloat(resortObjectIndex % 2) * 34 - 17
         let destination = CGPoint(x: sideX + offset, y: 335 + CGFloat(resortObjectIndex / 2) * 38)
+        selectionFeedback()
         valkyrie.pose(.interact)
         tiko.pose(.interact)
         token.run(.move(to: destination, duration: reducedMotion ? 0 : 0.24))
@@ -2488,6 +2723,7 @@ import LearningCore
 
         attempts += 1
         solved = true
+        clearAttentionCue()
         let attemptSupport = support
         _ = state.recordPuzzle(
             resortEncounter,
@@ -2497,7 +2733,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
         refreshResortProgress(animated: true)
-        state.audio.play("success")
+        successFeedback(at: CGPoint(x: 755, y: 395))
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -3058,6 +3294,11 @@ import LearningCore
         }
 
         instruction.text = orientationEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 765, y: 390),
+            tint: UIColor(red: 0.58, green: 0.86, blue: 1.0, alpha: 1),
+            width: 300
+        )
         tiko.pose(.interact)
     }
 
@@ -3119,6 +3360,8 @@ import LearningCore
         }
 
         solved = true
+
+        clearAttentionCue()
         _ = state.recordPuzzle(
             orientationEncounter,
             outcome: .correct,
@@ -3275,6 +3518,11 @@ import LearningCore
             registerInteraction(mirror, clearance: 30)
         }
         instruction.text = "Imagine this turn. Tap the mirror with the matching shape."
+        showAttentionCue(
+            at: CGPoint(x: 765, y: 390),
+            tint: UIColor(red: 0.58, green: 0.86, blue: 1.0, alpha: 1),
+            width: 300
+        )
         buildVisualTurnCue(quarterTurns: rotationEncounter.quarterTurns)
         refreshMirrorRotationProgress()
         tiko.pose(.interact)
@@ -3312,6 +3560,7 @@ import LearningCore
             return
         }
         solved = true
+        clearAttentionCue()
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorRotationProgress()
@@ -3538,6 +3787,11 @@ import LearningCore
         }
 
         instruction.text = pathEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 420),
+            tint: UIColor(red: 0.54, green: 0.82, blue: 0.96, alpha: 1),
+            width: 320
+        )
         tiko.pose(.interact)
     }
 
@@ -3569,6 +3823,8 @@ import LearningCore
         }
 
         solved = true
+
+        clearAttentionCue()
         let route = activeEncounter.route(for: index)
         animateTikoAlongPath(route, encounter: activeEncounter)
         refreshPathTilesProgress(animated: true)
@@ -3744,6 +4000,11 @@ import LearningCore
         }
 
         instruction.text = sequenceEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 330),
+            tint: UIColor(red: 0.96, green: 0.72, blue: 0.34, alpha: 1),
+            width: 330
+        )
         tiko.pose(.interact)
     }
 
@@ -3827,6 +4088,7 @@ import LearningCore
             guard let self else { return }
             if correct {
                 self.solved = true
+                self.clearAttentionCue()
                 self.successFeedback()
                 self.refreshCommandGearsProgress(animated: true)
                 self.valkyrie.pose(.celebrate)
@@ -4132,6 +4394,11 @@ import LearningCore
             core.glowWidth = 12
         }
         instruction.text = bugEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 355),
+            tint: UIColor(red: 0.82, green: 0.60, blue: 0.98, alpha: 1),
+            width: 360
+        )
         tiko.pose(.interact)
     }
 
@@ -4292,6 +4559,8 @@ import LearningCore
             )
 
             self.solved = true
+
+            self.clearAttentionCue()
             self.successFeedback()
             self.valkyrie.pose(.celebrate)
             self.tiko.pose(.celebrate)
@@ -4518,6 +4787,11 @@ import LearningCore
 
         renderRepairSelection()
         instruction.text = repairEncounter.prompt
+        showAttentionCue(
+            at: CGPoint(x: 760, y: 355),
+            tint: UIColor(red: 0.82, green: 0.60, blue: 0.98, alpha: 1),
+            width: 380
+        )
         tiko.pose(.interact)
     }
 
@@ -4587,6 +4861,7 @@ import LearningCore
             guard let self else { return }
             if correct {
                 self.solved = true
+                self.clearAttentionCue()
                 self.successFeedback()
                 self.valkyrie.pose(.celebrate)
                 self.tiko.pose(.celebrate)
@@ -5089,6 +5364,7 @@ import LearningCore
 
         if value == encounter.answer {
             solved = true
+            clearAttentionCue()
             pulse(node)
             fillSocket(with: value)
             _ = state.recordPuzzle(
@@ -5099,7 +5375,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             refreshRuneGateProgress(animated: true)
-            state.audio.play("success")
+            successFeedback(at: CGPoint(x: 875, y: 455))
             valkyrie.pose(.celebrate)
 
             if state.puzzleRuneGateComplete {
@@ -5131,6 +5407,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            errorFeedback()
             valkyrie.pose(.react)
             nudge(node)
             showPatternHint()

@@ -26,6 +26,7 @@ import LearningCore
     private var lastScienceKineticReducedMotion: Bool?
 
     override func didMove(to view: SKView) {
+        prepareAdaptiveLandscapeCanvas(for: view)
         super.didMove(to: view)
         applyScienceHUDPolish()
         pip.isHidden = true
@@ -59,7 +60,7 @@ import LearningCore
             stroke: UIColor(red: 0.42, green: 0.74, blue: 0.94, alpha: 0.54),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 280, y: 672)
+        titlePlate.position = CGPoint(x: 280, y: 672 + verticalViewportInset)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
@@ -68,22 +69,22 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 140, y: 672)
+        title.position = CGPoint(x: 140, y: 672 + verticalViewportInset)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672 + verticalViewportInset)
             emblem.setScale(0.72)
         }
 
         if let plate = childNode(withName: "instructionBackdrop") {
             plate.xScale = 0.66
             plate.yScale = 0.80
-            plate.position = CGPoint(x: 710, y: 46)
+            plate.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         }
-        instruction.position = CGPoint(x: 710, y: 46)
+        instruction.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.preferredMaxLayoutWidth = 620
@@ -93,7 +94,7 @@ import LearningCore
     private func buildScienceHomeControl() {
         let root = SKNode()
         root.name = "scienceWeatherHome"
-        root.position = CGPoint(x: 55, y: 672)
+        root.position = CGPoint(x: 55, y: 672 + verticalViewportInset)
         root.zPosition = 2100
 
         let medallion = ArtSystem.medallion(
@@ -103,7 +104,7 @@ import LearningCore
             glow: reducedMotion ? 0 : 1
         )
         medallion.name = "scienceWeatherHome"
-        medallion.addChild(ArtSystem.label("‹", size: 22))
+        medallion.addChild(ArtSystem.label("⌂", size: 18))
         root.addChild(medallion)
 
         let hit = SKShapeNode(circleOfRadius: 30)
@@ -113,14 +114,25 @@ import LearningCore
         hit.zPosition = 2
         root.addChild(hit)
 
-        makeAccessible(root, label: "Back")
+        makeAccessible(root, label: "Return to Story Tree")
         addChild(root)
     }
 
     override func buildWorld() {
+        let ambientBase = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.12, green: 0.28, blue: 0.38, alpha: 1),
+            radius: 0
+        )
+        ambientBase.strokeColor = .clear
+        ambientBase.position = CGPoint(x: 640, y: 360)
+        ambientBase.zPosition = -320
+        ambientBase.name = "weatherAmbientBase"
+        addChild(ambientBase)
+
         if let texture = ArtSystem.retinaEnhancedTexture(
             "StarlightIsles",
-            targetPoints: size,
+            targetPoints: designCanvasSize,
             sharpness: 0.26
         ) {
             let backdrop = SKNode()
@@ -130,10 +142,13 @@ import LearningCore
             let painting = SKSpriteNode(
                 texture: texture,
                 color: UIColor(red: 0.45, green: 0.76, blue: 0.88, alpha: 1),
-                size: size
+                size: designCanvasSize
             )
             painting.position = CGPoint(x: 640, y: 360)
             painting.colorBlendFactor = 0.22
+            // StarlightIsles is approved art but only 1280x720. Keep it as
+            // atmospheric color, not the sharp visual layer on a Retina iPad.
+            painting.alpha = 0.30
             painting.name = "weatherBackdropRetina"
             painting.userData = NSMutableDictionary(dictionary: [
                 "retinaPrepared": true,
@@ -142,7 +157,7 @@ import LearningCore
             backdrop.addChild(painting)
 
             let dim = ArtSystem.box(
-                size,
+                designCanvasSize,
                 color: UIColor(white: 0.02, alpha: 0.14),
                 radius: 0
             )
@@ -154,6 +169,68 @@ import LearningCore
 
             addChild(backdrop)
         }
+
+        // Crisp native silhouettes carry the distant composition so the 1x
+        // painting never has to provide the scene's visible edge detail.
+        let farLandscape = SKNode()
+        farLandscape.name = "weatherFarLandscape"
+        farLandscape.zPosition = -205
+        farLandscape.isUserInteractionEnabled = false
+
+        for (index, points) in [
+            [
+                CGPoint(x: -40, y: 285),
+                CGPoint(x: 170, y: 455),
+                CGPoint(x: 350, y: 330),
+                CGPoint(x: 520, y: 470),
+                CGPoint(x: 690, y: 300)
+            ],
+            [
+                CGPoint(x: 520, y: 300),
+                CGPoint(x: 730, y: 500),
+                CGPoint(x: 930, y: 345),
+                CGPoint(x: 1110, y: 465),
+                CGPoint(x: 1320, y: 305)
+            ]
+        ].enumerated() {
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: points[0].x, y: 250))
+            for point in points { path.addLine(to: point) }
+            path.addLine(to: CGPoint(x: points.last!.x, y: 250))
+            path.closeSubpath()
+
+            let ridge = SKShapeNode(path: path)
+            ridge.fillColor = index == 0
+                ? UIColor(red: 0.10, green: 0.25, blue: 0.31, alpha: 0.88)
+                : UIColor(red: 0.08, green: 0.20, blue: 0.28, alpha: 0.82)
+            ridge.strokeColor = UIColor(red: 0.42, green: 0.67, blue: 0.72, alpha: 0.24)
+            ridge.lineWidth = 2
+            ridge.name = "decorativeWeatherRidge"
+            farLandscape.addChild(ridge)
+        }
+
+        for x in [CGFloat(185), 355, 1025, 1175] {
+            let spire = ArtSystem.box(
+                CGSize(width: 18, height: 118),
+                color: UIColor(red: 0.08, green: 0.16, blue: 0.22, alpha: 0.92),
+                radius: 8
+            )
+            spire.position = CGPoint(x: x, y: 320)
+            spire.strokeColor = UIColor(red: 0.55, green: 0.75, blue: 0.76, alpha: 0.28)
+            spire.lineWidth = 2
+            spire.name = "decorativeWeatherFarSpire"
+            farLandscape.addChild(spire)
+
+            let beacon = SKShapeNode(circleOfRadius: 6)
+            beacon.position = CGPoint(x: x, y: 382)
+            beacon.fillColor = UIColor(red: 0.96, green: 0.76, blue: 0.34, alpha: 0.72)
+            beacon.strokeColor = .clear
+            beacon.glowWidth = reducedMotion ? 0 : 5
+            beacon.name = "decorativeWeatherFarBeacon"
+            farLandscape.addChild(beacon)
+        }
+
+        addChild(farLandscape)
 
         let horizonWash = ArtSystem.box(
             CGSize(width: 1280, height: 250),
@@ -711,6 +788,17 @@ import LearningCore
                     travel(to: CGPoint(x: creatureGatePoint.x - 75, y: 180))
                 }
             } else {
+                errorFeedback()
+                switch weatherStage {
+                case .arrive:
+                    focusMoment(on: morningPoint)
+                case .morningObserved:
+                    focusMoment(on: afternoonPoint)
+                case .afternoonObserved:
+                    focusMoment(on: forecastPoint)
+                case .complete:
+                    focusMoment(on: creatureGatePoint)
+                }
                 instruction.text = "The cloud lock is still closed. Compare both observations and set the forecast vane."
             }
 
@@ -726,40 +814,58 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceObserveMorningWeather()
+        selectionFeedback()
+        focusMoment(on: morningPoint)
         instruction.text = "Morning: cloudy with rain. Milo says to compare another observation before forecasting."
         refreshGuidanceCue()
     }
 
     private func observeAfternoon() {
         guard weatherStage != .arrive else {
+            errorFeedback()
+            focusMoment(on: morningPoint)
             instruction.text = "Observe the morning flag first so we have something to compare."
             return
         }
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceObserveAfternoonWeather()
+        selectionFeedback()
+        focusMoment(on: afternoonPoint)
         instruction.text = "Afternoon: cloudy with rain again. The same condition appeared twice. What is likely next?"
         refreshGuidanceCue()
     }
 
     private func chooseForecast(_ choice: ForecastChoice) {
         guard weatherStage == .afternoonObserved || weatherStage == .complete else {
+            errorFeedback()
+            switch weatherStage {
+            case .arrive:
+                focusMoment(on: morningPoint)
+            case .morningObserved:
+                focusMoment(on: afternoonPoint)
+            case .afternoonObserved, .complete:
+                focusMoment(on: forecastPoint)
+            }
             instruction.text = "The forecast vane needs two observations first."
             return
         }
 
         state.scienceChooseForecast(choice)
+        selectionFeedback()
         valkyrie.pose(.interact)
         let targetAngle: CGFloat = choice == .sun ? -0.55 : 0.55
         forecastNeedle.run(.rotate(toAngle: targetAngle, duration: reducedMotion ? 0 : 0.25))
         renderCreatureGate()
 
         if choice == .rain {
-            state.audio.play("success")
+            successFeedback(at: forecastPoint)
             if let challenge = state.scienceNextFieldStudy(in: .weatherTower) {
                 instruction.text = "Rain matches the repeated observations. " + challenge.prompt
             }
         } else {
+            errorFeedback()
+            focusMoment(on: forecastPoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "Sun could happen, but it does not match the pattern we observed. Compare the two rainy flags again."
         }

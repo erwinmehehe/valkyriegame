@@ -91,10 +91,7 @@ import LearningCore
         puzzle.didMove(to: SKView())
         defer { puzzle.willLeave() }
 
-        let puzzleMatte = try XCTUnwrap(
-            puzzle.childNode(withName: "puzzleLegacyMatte") as? SKSpriteNode
-        )
-        XCTAssertEqual(puzzleMatte.alpha, CGFloat(0.10), accuracy: CGFloat(0.001))
+        XCTAssertNil(puzzle.childNode(withName: "puzzleLegacyMatte"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleNativeBackdrop"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleArchitecture"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloor"))
@@ -139,10 +136,7 @@ import LearningCore
         science.didMove(to: SKView())
         defer { science.willLeave() }
 
-        let scienceMatte = try XCTUnwrap(
-            science.childNode(withName: "scienceLegacyMatte") as? SKSpriteNode
-        )
-        XCTAssertEqual(scienceMatte.alpha, CGFloat(0.08), accuracy: CGFloat(0.001))
+        XCTAssertNil(science.childNode(withName: "scienceLegacyMatte"))
         XCTAssertNotNil(science.childNode(withName: "scienceNativeBackdrop"))
         XCTAssertNotNil(science.childNode(withName: "scienceGreenhouseFrame"))
         XCTAssertNotNil(science.childNode(withName: "scienceGround"))
