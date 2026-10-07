@@ -164,12 +164,11 @@ import LearningCore
         mechanic.render(current)
         let cells = try XCTUnwrap(mechanic.childNode(withName: "tenFrameCells")).children.compactMap { $0 as? SKShapeNode }
         XCTAssertEqual(cells.count, 10)
-        // SpriteKit stores resolved colors; compare against the same rendering
-        // conversion rather than UIColor's dynamic system-color identity.
-        let reference = SKShapeNode()
-        reference.fillColor = .systemTeal
+        // Preview state is represented by the visible crystal art rather than a
+        // specific cell fill color, so visual polish can change the housing palette
+        // without changing the quick-look behavior.
         func isLit(_ cell: SKShapeNode) -> Bool {
-            cell.fillColor.cgColor == reference.fillColor.cgColor
+            cell.children.compactMap { $0 as? SKSpriteNode }.first?.isHidden == false
         }
         XCTAssertEqual(cells.filter(isLit).count, 5)
         XCTAssertTrue(cells.allSatisfy { $0.name == "tenFramePreview" })
