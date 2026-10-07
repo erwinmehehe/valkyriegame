@@ -73,6 +73,7 @@ import LearningCore
     private var mirrorPracticeReady = false
     private var mirrorPracticeBusy = false
     private var mirrorApproaching = false
+    private var lastPalaceKineticReducedMotion: Bool?
     private let mirrorChoicePoints = [
         CGPoint(x: 525, y: 390),
         CGPoint(x: 765, y: 390),
@@ -166,6 +167,7 @@ import LearningCore
         }
         tiko.reducedMotion = reducedMotion
         addChild(tiko)
+        syncPalaceKinetics()
 
         switch place {
         case .runeGate:
@@ -279,6 +281,92 @@ import LearningCore
                 repairEncounter = state.nextPuzzleBugRepairEncounter()
                 buildBugRepairEncounter()
             }
+        }
+    }
+
+    private var palaceFocusPoint: CGPoint {
+        switch place {
+        case .runeGate: return CGPoint(x: 820, y: 330)
+        case .memoryBridge: return CGPoint(x: 700, y: 310)
+        case .stopGoOrbs: return CGPoint(x: 760, y: 315)
+        case .sortingPedestal, .resortVault: return CGPoint(x: 760, y: 335)
+        case .mirrorHall: return CGPoint(x: 765, y: 390)
+        case .pathTiles: return CGPoint(x: 760, y: 305)
+        case .commandGears: return CGPoint(x: 760, y: 320)
+        case .bugLantern, .bugLanternRepair: return CGPoint(x: 760, y: 355)
+        }
+    }
+
+    private func syncPalaceKinetics() {
+        lastPalaceKineticReducedMotion = reducedMotion
+
+        var crystalIndex = 0
+        enumerateChildNodes(withName: "//*") { [self] node, _ in
+            guard let name = node.name else { return }
+
+            if name == "puzzleCrystalFixture" {
+                node.removeAction(forKey: "palaceCrystalFloat")
+                node.zRotation = 0
+                guard !reducedMotion else {
+                    node.alpha = min(1, max(0.74, node.alpha))
+                    return
+                }
+
+                let direction: CGFloat = crystalIndex.isMultiple(of: 2) ? 1 : -1
+                let phase = Double(crystalIndex % 4) * 0.18
+                node.run(
+                    .repeatForever(
+                        .sequence([
+                            .wait(forDuration: phase),
+                            .group([
+                                .moveBy(x: direction * 1.6, y: 4, duration: 1.8),
+                                .fadeAlpha(to: 0.72, duration: 1.8)
+                            ]),
+                            .group([
+                                .moveBy(x: direction * -1.6, y: -4, duration: 1.8),
+                                .fadeAlpha(to: 0.92, duration: 1.8)
+                            ])
+                        ])
+                    ),
+                    withKey: "palaceCrystalFloat"
+                )
+                crystalIndex += 1
+            }
+
+            if name.hasPrefix("puzzleAlcoveGlow") {
+                node.removeAction(forKey: "palaceAlcoveBreath")
+                node.alpha = 1
+                guard !reducedMotion else { return }
+                node.run(
+                    .repeatForever(
+                        .sequence([
+                            .fadeAlpha(to: 0.48, duration: 1.35),
+                            .fadeAlpha(to: 1.0, duration: 1.35)
+                        ])
+                    ),
+                    withKey: "palaceAlcoveBreath"
+                )
+            }
+        }
+
+        for name in ["puzzleFloorSeal", "puzzleStageInlay"] {
+            guard let node = childNode(withName: name) else { continue }
+            node.removeAction(forKey: "palaceRoomBreath")
+            node.alpha = 1
+            guard !reducedMotion else { continue }
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .fadeAlpha(to: 0.62, duration: 1.7),
+                        .fadeAlpha(to: 1.0, duration: 1.7)
+                    ])
+                ),
+                withKey: "palaceRoomBreath"
+            )
+        }
+
+        if !reducedMotion {
+            focusMoment(on: palaceFocusPoint, hold: 0.56)
         }
     }
 
@@ -5169,6 +5257,10 @@ import LearningCore
         super.update(currentTime)
         tiko.reducedMotion = reducedMotion
         tiko.zPosition = 1000 - tiko.position.y
+
+        if lastPalaceKineticReducedMotion != reducedMotion {
+            syncPalaceKinetics()
+        }
     }
 
     override func willLeave() {
