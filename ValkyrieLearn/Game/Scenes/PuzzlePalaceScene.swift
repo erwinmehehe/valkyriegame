@@ -32,6 +32,21 @@ import LearningCore
         case .bugLanternRepair: return "Puzzle Palace · Repair Lab"
         }
     }
+    private var illustratedBackdropAssetName: String {
+        switch place {
+        case .runeGate: return "PuzzleRuneGate"
+        case .memoryBridge: return "PuzzleMemoryBridge"
+        case .stopGoOrbs: return "PuzzleStopGoOrbs"
+        case .sortingPedestal: return "PuzzleSortingPedestal"
+        case .resortVault: return "PuzzleResortVault"
+        case .mirrorHall: return "PuzzleMirrorHall"
+        case .pathTiles: return "PuzzlePathTiles"
+        case .commandGears: return "PuzzleCommandGears"
+        case .bugLantern: return "PuzzleBugLantern"
+        case .bugLanternRepair: return "PuzzleRepairLab"
+        }
+    }
+
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
 
     let tiko = TikoNode()
@@ -416,7 +431,49 @@ import LearningCore
     }
 
 
+    private func buildIllustratedPalaceBackdrop() -> Bool {
+        guard let backdrop = ArtSystem.sprite(
+            illustratedBackdropAssetName,
+            size: designCanvasSize
+        ) else {
+            return false
+        }
+
+        let ambientBase = ArtSystem.box(
+            size,
+            color: UIColor(red: 0.055, green: 0.050, blue: 0.12, alpha: 1),
+            radius: 0
+        )
+        ambientBase.strokeColor = .clear
+        ambientBase.position = CGPoint(x: 640, y: 360)
+        ambientBase.zPosition = -280
+        ambientBase.name = "puzzleIllustratedAmbientBase"
+        addChild(ambientBase)
+
+        backdrop.position = CGPoint(x: 640, y: 360)
+        backdrop.zPosition = -270
+        backdrop.name = "puzzleIllustratedBackdrop"
+        addChild(backdrop)
+
+        let readabilityWash = ArtSystem.box(
+            designCanvasSize,
+            color: UIColor(red: 0.025, green: 0.022, blue: 0.075, alpha: 0.07),
+            radius: 0
+        )
+        readabilityWash.strokeColor = .clear
+        readabilityWash.position = CGPoint(x: 640, y: 360)
+        readabilityWash.zPosition = -260
+        readabilityWash.name = "puzzleRoomIdentity"
+        addChild(readabilityWash)
+
+        return true
+    }
+
     private func buildNativePalaceBackdrop() {
+        if buildIllustratedPalaceBackdrop() {
+            return
+        }
+
         let accent: UIColor
         switch place {
         case .runeGate:

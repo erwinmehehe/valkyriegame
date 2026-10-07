@@ -1,21 +1,28 @@
 {
-  "reference": "index.html embedded v3.31 reference-art integration",
-  "sourceBlobSHA": "1f4432fa3c9a82156abb733a61d211c58aea9fba",
-  "environment": {
-    "asset": "V331WorldAtlas.webp",
-    "sourceKey": "env_atlas",
-    "atlasPosition": "lower-right",
-    "note": "Puzzle Palace uses the preserved lower-right quadrant of the existing 2x2 v3.31 environment atlas."
+  "version": 2,
+  "reference": "ChatGPT image-generation production pass, 2026-10-07",
+  "outputDimensions": [
+    1280,
+    720
+  ],
+  "format": "JPEG",
+  "rooms": {
+    "runeGate": "PuzzleRuneGate",
+    "memoryBridge": "PuzzleMemoryBridge",
+    "stopGoOrbs": "PuzzleStopGoOrbs",
+    "sortingPedestal": "PuzzleSortingPedestal",
+    "resortVault": "PuzzleResortVault",
+    "mirrorHall": "PuzzleMirrorHall",
+    "pathTiles": "PuzzlePathTiles",
+    "commandGears": "PuzzleCommandGears",
+    "bugLantern": "PuzzleBugLantern",
+    "bugLanternRepair": "PuzzleRepairLab"
   },
-  "assets": {
-    "ValkyrieLearn/Resources/Tiko.webp": {
-      "sourceKey": "comp_tiko",
-      "blobSHA": "332e51b6dbb76e4fd875aea48645ad6a337eb741",
-      "sourceDimensions": [
-        84,
-        84
-      ]
-    }
+  "behavior": {
+    "nativeGeometryFallback": true,
+    "stretchOnFourByThree": false,
+    "gameplayLogicChanged": false,
+    "charactersChanged": false
   },
-  "note": "Preserved embedded v3.31 reference pixels. Tiko is currently a static reference sprite across poses until a full native action atlas is authored."
+  "note": "Room-specific HD illustrated environments replace the prototype/skeleton visual backdrop. Native SpriteKit gameplay objects remain live above the paintings; the old native palace environment remains only as a missing-asset fallback."
 }
