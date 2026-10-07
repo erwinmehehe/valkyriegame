@@ -985,6 +985,8 @@ import LearningCore
         switch greenhouseStage {
         case .arrive:
             state.scienceInspectGreenhouse()
+            selectionFeedback()
+            focusMoment(on: seedBenchPoint)
             instruction.text = "Milo notices the soil is dry. What change should we test first?"
         case .inspected:
             instruction.text = "The soil is still dry. The water valve can test our prediction."
@@ -1014,6 +1016,8 @@ import LearningCore
         state.audio.play("crystal")
         state.scienceWaterGreenhouse()
         renderPlant()
+        selectionFeedback()
+        focusMoment(on: seedBenchPoint)
         instruction.text = "The dry soil darkened, and a sprout appeared. Our water test changed the seed tray."
         refreshGuidanceCue()
     }
@@ -1038,7 +1042,8 @@ import LearningCore
         state.scienceLightGreenhouse()
         renderPlant()
         renderGate()
-        state.audio.play("success")
+        successFeedback(at: exitPoint)
+        focusMoment(on: exitPoint, hold: 0.70)
         instruction.text = "The pale sprout became greener in the light. Observation, prediction, test, result—the Weather Tower path opened."
         refreshGuidanceCue()
     }
