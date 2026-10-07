@@ -660,6 +660,10 @@ import LearningCore
             "Sunmill guidance should stay compact enough to leave the painted world dominant."
         )
 
+        let flowerBack = try XCTUnwrap(sunmill.childNode(withName: "flowerGateBack"))
+        XCTAssertGreaterThanOrEqual(flowerBack.calculateAccumulatedFrame().width, 60)
+        XCTAssertGreaterThanOrEqual(flowerBack.calculateAccumulatedFrame().height, 60)
+
         let sunmillChoices = sunmill.children.filter { $0.name == "sunmillChoice" }
         XCTAssertEqual(sunmillChoices.count, 4)
         for choice in sunmillChoices {
@@ -716,6 +720,9 @@ import LearningCore
 
         let hollow = WordGardenScene(state: state)
         hollow.didMove(to: SKView())
+        let sunmillBack = try XCTUnwrap(hollow.childNode(withName: "sunmillBack"))
+        XCTAssertGreaterThanOrEqual(sunmillBack.calculateAccumulatedFrame().width, 60)
+        XCTAssertGreaterThanOrEqual(sunmillBack.calculateAccumulatedFrame().height, 60)
         XCTAssertNotNil(hollow.childNode(withName: "storyHollow"))
         XCTAssertNotNil(hollow.childNode(withName: "wordSeed"))
         XCTAssertNotNil(hollow.childNode(withName: "storySequencePreview"))
