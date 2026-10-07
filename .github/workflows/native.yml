@@ -52,20 +52,44 @@ jobs:
             simulator_id=$(xcrun simctl create "Valkyrie iPad 9th generation" "$device_type" "$runtime")
           fi
           echo "Using iPad (9th generation): $simulator_id"
+          echo "SIMULATOR_ID=$simulator_id" >> "$GITHUB_ENV"
           xcrun simctl boot "$simulator_id" 2>/dev/null || true
           xcrun simctl bootstatus "$simulator_id" -b
           xcodebuild test -project ValkyrieLearn.xcodeproj -scheme ValkyrieLearn \
             -destination "platform=iOS Simulator,id=$simulator_id" \
             -resultBundlePath NativeTests.xcresult CODE_SIGNING_ALLOWED=NO
+
+      - name: Build browser-streamable iOS Simulator app
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild build -project ValkyrieLearn.xcodeproj -scheme ValkyrieLearn \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath NativeSimulatorBuild \
+            CODE_SIGNING_ALLOWED=NO
+          app_path=$(find NativeSimulatorBuild/Build/Products -maxdepth 2 -type d -name "ValkyrieLearn.app" | head -n 1)
+          if [ -z "$app_path" ]; then
+            echo "ValkyrieLearn.app was not produced"
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" ValkyrieLearn-simulator.zip
+
       - name: Export native scene screenshots
         if: ${{ always() && !cancelled() }}
         run: |
           if [ -d NativeTests.xcresult ]; then
             xcrun xcresulttool export attachments --path NativeTests.xcresult --output-path native-scene-review
           fi
+
       - uses: actions/upload-artifact@v4
         if: ${{ always() && !cancelled() }}
         with:
           name: native-scene-review
           path: native-scene-review
           if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: valkyrie-native-simulator-app
+          path: ValkyrieLearn-simulator.zip
+          if-no-files-found: error
