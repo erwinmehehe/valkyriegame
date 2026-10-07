@@ -25,6 +25,7 @@ import LearningCore
     private var moved = false
 
     override func didMove(to view: SKView) {
+        prepareAdaptiveLandscapeCanvas(for: view)
         super.didMove(to: view)
         applyScienceHUDPolish()
         pip.isHidden = true
@@ -51,7 +52,7 @@ import LearningCore
             stroke: UIColor(red: 0.42, green: 0.74, blue: 0.94, alpha: 0.54),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 280, y: 672)
+        titlePlate.position = CGPoint(x: 280, y: 672 + verticalViewportInset)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
@@ -60,22 +61,22 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 140, y: 672)
+        title.position = CGPoint(x: 140, y: 672 + verticalViewportInset)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672 + verticalViewportInset)
             emblem.setScale(0.72)
         }
 
         if let plate = childNode(withName: "instructionBackdrop") {
             plate.xScale = 0.66
             plate.yScale = 0.80
-            plate.position = CGPoint(x: 710, y: 46)
+            plate.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         }
-        instruction.position = CGPoint(x: 710, y: 46)
+        instruction.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.preferredMaxLayoutWidth = 620
@@ -85,7 +86,7 @@ import LearningCore
     private func buildScienceHomeControl() {
         let root = SKNode()
         root.name = "scienceWeatherHome"
-        root.position = CGPoint(x: 55, y: 672)
+        root.position = CGPoint(x: 55, y: 672 + verticalViewportInset)
         root.zPosition = 2100
 
         let medallion = ArtSystem.medallion(
@@ -112,7 +113,7 @@ import LearningCore
     override func buildWorld() {
         if let texture = ArtSystem.retinaEnhancedTexture(
             "StarlightIsles",
-            targetPoints: size,
+            targetPoints: designCanvasSize,
             sharpness: 0.26
         ) {
             let backdrop = SKNode()
@@ -122,7 +123,7 @@ import LearningCore
             let painting = SKSpriteNode(
                 texture: texture,
                 color: UIColor(red: 0.45, green: 0.76, blue: 0.88, alpha: 1),
-                size: size
+                size: designCanvasSize
             )
             painting.position = CGPoint(x: 640, y: 360)
             painting.colorBlendFactor = 0.22
@@ -134,7 +135,7 @@ import LearningCore
             backdrop.addChild(painting)
 
             let dim = ArtSystem.box(
-                size,
+                designCanvasSize,
                 color: UIColor(white: 0.02, alpha: 0.14),
                 radius: 0
             )
