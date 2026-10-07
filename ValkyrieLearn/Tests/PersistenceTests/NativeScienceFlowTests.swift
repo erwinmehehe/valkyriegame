@@ -154,6 +154,112 @@ import LearningCore
     }
 
 
+    func testGreenhouseCinematicFocusHandsOffBetweenExperimentSteps() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let bench = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceSeedBench" }
+        )
+        let valve = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceWaterValve" }
+        )
+        let prism = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceSunPrism" }
+        )
+        let gate = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceWeatherGate" }
+        )
+
+        XCTAssertEqual(bench.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(bench.action(forKey: "scienceActiveBreath"))
+        XCTAssertLessThan(valve.alpha, 0.5)
+        XCTAssertLessThan(prism.alpha, 0.5)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        XCTAssertEqual(scene.greenhouseStage, .inspected)
+        XCTAssertEqual(valve.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(valve.action(forKey: "scienceActiveSpin"))
+        XCTAssertLessThan(prism.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        XCTAssertEqual(scene.greenhouseStage, .watered)
+        XCTAssertEqual(prism.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(prism.action(forKey: "scienceActiveBreath"))
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 850, y: 185)
+        scene.handleTap(at: CGPoint(x: 940, y: 245))
+        XCTAssertEqual(scene.greenhouseStage, .lit)
+        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(gate.action(forKey: "scienceActiveBreath"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+        XCTAssertNil(gate.action(forKey: "scienceActiveBreath"))
+    }
+
+    func testWeatherTowerCinematicFocusFollowsEvidenceSequence() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .scienceWeatherTower)
+
+        let scene = WeatherTowerScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let morning = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceMorningWeather" }
+        )
+        let afternoon = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceAfternoonWeather" }
+        )
+        let forecast = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceForecastBase" }
+        )
+        let gate = try XCTUnwrap(
+            scene.children.first { $0.name == "scienceCreatureGate" }
+        )
+
+        XCTAssertEqual(morning.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(morning.action(forKey: "weatherActiveBreath"))
+        XCTAssertLessThan(afternoon.alpha, 0.5)
+        XCTAssertLessThan(forecast.alpha, 0.5)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 370, y: 180)
+        scene.handleTap(at: CGPoint(x: 470, y: 305))
+        XCTAssertEqual(scene.weatherStage, .morningObserved)
+        XCTAssertEqual(afternoon.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(afternoon.action(forKey: "weatherActiveBreath"))
+
+        scene.valkyrie.position = CGPoint(x: 605, y: 180)
+        scene.handleTap(at: CGPoint(x: 700, y: 305))
+        XCTAssertEqual(scene.weatherStage, .afternoonObserved)
+        XCTAssertEqual(forecast.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(forecast.action(forKey: "weatherActiveBreath"))
+
+        scene.valkyrie.position = CGPoint(x: 825, y: 180)
+        scene.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertEqual(scene.weatherStage, .complete)
+        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(gate.action(forKey: "weatherActiveBreath"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+        XCTAssertNil(gate.action(forKey: "weatherActiveBreath"))
+    }
+
     func testWeatherTowerRequiresTwoObservationsBeforeForecasting() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let scene = WeatherTowerScene(state: state)
