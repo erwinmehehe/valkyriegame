@@ -26,6 +26,7 @@ import LearningCore
     private var destinationBeacon: SKShapeNode?
     private var starlightOrb: SKShapeNode?
     private var environmentGears: [SKNode] = []
+    private var lastMathMotionPreference: Bool?
     private var routeReady = false
     private var routeDestination: CGPoint { bridgePath.last! }
     private let routeEnergyPoints = [
@@ -71,6 +72,8 @@ import LearningCore
         valkyrie.setScale(0.58)
         pip.setScale(0.72)
         polishMathCastleHUD()
+        syncMathCastleMotion()
+        lastMathMotionPreference = reducedMotion
         initialBuildComplete = true
     }
 
@@ -158,9 +161,21 @@ import LearningCore
         root.position = point
         root.zPosition = 750
 
+        let halo = SKShapeNode(circleOfRadius: 27)
+        halo.fillColor = UIColor(red: 1.0, green: 0.78, blue: 0.34, alpha: 0.035)
+        halo.strokeColor = UIColor(red: 1.0, green: 0.78, blue: 0.34, alpha: 0.18)
+        halo.lineWidth = 2
+        halo.alpha = 0.28
+        halo.name = "workshopGearHalo"
+        halo.zPosition = -1
+        root.addChild(halo)
+
         let gear = ArtSystem.gear(radius: 22, symbol: symbol)
         gear.name = name
         gear.alpha = 0.86
+        if let rotor = gear.children.first {
+            rotor.name = "workshopGearRotor"
+        }
         root.addChild(gear)
 
         let hit = SKShapeNode(circleOfRadius: 30)
@@ -173,6 +188,244 @@ import LearningCore
         makeAccessible(root, label: accessibilityLabel)
         registerInteraction(root, clearance: 14)
         addChild(root)
+    }
+
+    private func startRotorIdle(
+        _ rotor: SKNode,
+        duration: TimeInterval,
+        clockwise: Bool,
+        key: String = "idleSpin"
+    ) {
+        rotor.removeAction(forKey: key)
+        guard !reducedMotion else {
+            rotor.zRotation = 0
+            return
+        }
+        rotor.run(
+            .repeatForever(
+                .rotate(
+                    byAngle: clockwise ? .pi * 2 : -.pi * 2,
+                    duration: duration
+                )
+            ),
+            withKey: key
+        )
+    }
+
+    private func startEnvironmentGearIdle(_ gear: SKNode, index: Int) {
+        gear.removeAction(forKey: "ambientSpin")
+        guard !reducedMotion else { return }
+        let clockwise = index.isMultiple(of: 2)
+        let duration = 5.4 + Double(index) * 1.1
+        gear.run(
+            .repeatForever(
+                .rotate(
+                    byAngle: clockwise ? .pi * 2 : -.pi * 2,
+                    duration: duration
+                )
+            ),
+            withKey: "ambientSpin"
+        )
+    }
+
+    private func syncMathCastleMotion() {
+        for index in 0..<5 {
+            guard
+                let root = childNode(withName: "workshop\(index)"),
+                let rotor = root.childNode(withName: "//workshopGearRotor")
+            else { continue }
+            startRotorIdle(
+                rotor,
+                duration: 10.0 + Double(index) * 0.85,
+                clockwise: index.isMultiple(of: 2)
+            )
+        }
+
+        if
+            let wind = childNode(withName: "wind"),
+            let rotor = wind.childNode(withName: "//workshopGearRotor")
+        {
+            startRotorIdle(rotor, duration: 6.8, clockwise: true)
+        }
+
+        if let powerRotor = childNode(withName: "//castlePowerRotor") {
+            startRotorIdle(
+                powerRotor,
+                duration: wasPowered ? 2.8 : 8.5,
+                clockwise: true,
+                key: "powerIdleSpin"
+            )
+        }
+
+        if let nextRotor = childNode(withName: "//nextGearRotor") {
+            startRotorIdle(
+                nextRotor,
+                duration: routeReady ? 3.2 : 11.0,
+                clockwise: false,
+                key: "nextIdleSpin"
+            )
+        }
+
+        for (index, gear) in environmentGears.enumerated() {
+            startEnvironmentGearIdle(gear, index: index)
+        }
+
+        powerLight?.removeAction(forKey: "ambientPowerPulse")
+        if !reducedMotion, !wasPowered {
+            powerLight?.run(
+                .repeatForever(
+                    .sequence([
+                        .fadeAlpha(to: 0.72, duration: 1.4),
+                        .fadeAlpha(to: 1.0, duration: 1.4)
+                    ])
+                ),
+                withKey: "ambientPowerPulse"
+            )
+        } else {
+            powerLight?.alpha = 1
+        }
+    }
+
+    private func playWorkshopSelectionReaction(named name: String) {
+        guard let root = childNode(withName: name) else { return }
+        let halo = root.childNode(withName: "workshopGearHalo")
+        let rotor = root.childNode(withName: "//workshopGearRotor")
+
+        halo?.removeAction(forKey: "stationFlash")
+        halo?.alpha = 0.82
+        halo?.run(
+            .sequence([
+                .fadeAlpha(to: 0.28, duration: reducedMotion ? 0 : 0.48)
+            ]),
+            withKey: "stationFlash"
+        )
+
+        guard !reducedMotion, let rotor else { return }
+        rotor.removeAction(forKey: "idleSpin")
+        rotor.removeAction(forKey: "stationKick")
+        let clockwise = name == "wind" || !name.hasSuffix("1") && !name.hasSuffix("3")
+        let kick = SKAction.rotate(
+            byAngle: clockwise ? .pi * 1.5 : -.pi * 1.5,
+            duration: 0.34
+        )
+        kick.timingMode = .easeOut
+        rotor.run(
+            .sequence([
+                kick,
+                .run { [weak self, weak rotor] in
+                    guard let self, let rotor else { return }
+                    let index = Int(name.replacingOccurrences(of: "workshop", with: "")) ?? 0
+                    self.startRotorIdle(
+                        rotor,
+                        duration: name == "wind" ? 6.8 : 10.0 + Double(index) * 0.85,
+                        clockwise: name == "wind" || index.isMultiple(of: 2)
+                    )
+                }
+            ]),
+            withKey: "stationKick"
+        )
+    }
+
+    private func updateWorkshopStationFocus(
+        mechanicID: String?,
+        completed: Bool
+    ) {
+        let activeIndex: Int?
+        switch mechanicID {
+        case MathMechanicID.crystalCart: activeIndex = 0
+        case MathMechanicID.balanceScale: activeIndex = 1
+        case MathMechanicID.numberBondMachine: activeIndex = 2
+        case MathMechanicID.tenFrameGate: activeIndex = 3
+        case MathMechanicID.missingNumberBridge: activeIndex = 4
+        default: activeIndex = nil
+        }
+
+        for index in 0..<5 {
+            guard let root = childNode(withName: "workshop\(index)") else { continue }
+            let halo = root.childNode(withName: "workshopGearHalo")
+            let gear = root.childNode(withName: "workshop\(index)")
+            let active = activeIndex == index && !completed
+            halo?.alpha = active ? 0.70 : 0.28
+            gear?.alpha = active ? 1.0 : 0.82
+            gear?.setScale(active ? 1.08 : 1.0)
+        }
+    }
+
+    private func playStationArrivalReaction() {
+        guard !reducedMotion else { return }
+        childNode(withName: "mathWorkZoneCore")?.run(
+            .sequence([
+                .scale(to: 1.035, duration: 0.18),
+                .scale(to: 1.0, duration: 0.28)
+            ]),
+            withKey: "stationArrival"
+        )
+        for (index, gear) in environmentGears.enumerated() {
+            gear.removeAction(forKey: "ambientSpin")
+            let angle: CGFloat = index.isMultiple(of: 2) ? 0.42 : -0.42
+            gear.run(
+                .sequence([
+                    .rotate(byAngle: angle, duration: 0.24),
+                    .run { [weak self, weak gear] in
+                        guard let self, let gear else { return }
+                        self.startEnvironmentGearIdle(gear, index: index)
+                    }
+                ]),
+                withKey: "arrivalKick"
+            )
+        }
+    }
+
+    private func playPoweredMachinerySurge() {
+        guard !reducedMotion else {
+            syncMathCastleMotion()
+            return
+        }
+
+        if let powerRotor = childNode(withName: "//castlePowerRotor") {
+            powerRotor.removeAction(forKey: "powerIdleSpin")
+            powerRotor.run(
+                .sequence([
+                    .rotate(byAngle: .pi * 4, duration: 0.72),
+                    .run { [weak self, weak powerRotor] in
+                        guard let self, let powerRotor else { return }
+                        self.startRotorIdle(
+                            powerRotor,
+                            duration: 2.8,
+                            clockwise: true,
+                            key: "powerIdleSpin"
+                        )
+                    }
+                ]),
+                withKey: "powerSurge"
+            )
+        }
+
+        for index in 0..<5 {
+            guard
+                let root = childNode(withName: "workshop\(index)"),
+                let rotor = root.childNode(withName: "//workshopGearRotor")
+            else { continue }
+            rotor.removeAction(forKey: "idleSpin")
+            rotor.run(
+                .sequence([
+                    .wait(forDuration: Double(index) * 0.055),
+                    .rotate(
+                        byAngle: index.isMultiple(of: 2) ? .pi : -.pi,
+                        duration: 0.34
+                    ),
+                    .run { [weak self, weak rotor] in
+                        guard let self, let rotor else { return }
+                        self.startRotorIdle(
+                            rotor,
+                            duration: 10.0 + Double(index) * 0.85,
+                            clockwise: index.isMultiple(of: 2)
+                        )
+                    }
+                ]),
+                withKey: "successSurge"
+            )
+        }
     }
 
     override func buildWorld() {
@@ -348,6 +601,7 @@ import LearningCore
 
         pip.name = "help"
         nextGear = worldGear("→", name: "next", at: CGPoint(x: 1200, y: 430), radius: 34)
+        nextGear?.children.first?.name = "nextGearRotor"
         lever = makeLever()
 
         let workflow = SKShapeNode()
@@ -370,6 +624,7 @@ import LearningCore
         powerMount.position = CGPoint(x: 1105, y: 352)
         powerMount.zPosition = 39
         powerMount.name = "castlePowerMount"
+        powerMount.children.first?.name = "castlePowerRotor"
         addChild(powerMount)
 
         let light = SKShapeNode(circleOfRadius: 17)
