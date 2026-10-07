@@ -1151,7 +1151,6 @@ import LearningCore
             if groveRestored {
                 playGroveRestorationSurge()
                 valkyrie.pose(.celebrate)
-                playGroveRestorationSurge()
                 instruction.text = "Field study complete. The habitat evidence holds together, and the grove is fully restored."
             } else if let next = state.scienceNextFieldStudy(in: .creatureGrove) {
                 let completed = state.scienceFieldStudyCompletedCount(in: .creatureGrove)
