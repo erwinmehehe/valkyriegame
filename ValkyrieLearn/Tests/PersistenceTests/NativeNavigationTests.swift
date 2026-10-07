@@ -257,6 +257,30 @@ import LearningCore
         }
     }
 
+    func testInterruptedCompanionReactionResetsAuraWithoutMovingTheActor() throws {
+        let companions: [CharacterNode] = [LumiNode(), MiloNode(), TikoNode()]
+        for actor in companions {
+            actor.position = CGPoint(x: 480, y: 180)
+            actor.face(toward: CGPoint(x: 200, y: 180))
+            let aura = try XCTUnwrap(actor.childNode(withName: "companionPresence"))
+            aura.setScale(1.18)
+            aura.run(.repeatForever(.scale(to: 1.2, duration: 0.3)), withKey: "presencePulse")
+            actor.bodyNode.position.y = 3
+            actor.bodyNode.zRotation = 0.02
+            actor.pose(.react)
+            XCTAssertEqual(actor.position, CGPoint(x: 480, y: 180))
+            XCTAssertEqual(actor.bodyNode.position, .zero)
+            XCTAssertEqual(actor.bodyNode.zRotation, 0)
+            XCTAssertLessThan(actor.bodyNode.xScale, 0)
+            XCTAssertEqual(aura.xScale, 1)
+            XCTAssertNil(aura.action(forKey: "presencePulse"))
+            actor.reducedMotion = true
+            XCTAssertFalse(actor.bodyNode.hasActions())
+            XCTAssertNotNil(actor.action(forKey: "operation"))
+            actor.cancelTravel()
+        }
+    }
+
     func testLiveMotionTogglePreservesCompanionTravelAndInteractionDeadlines() throws {
         let milo = MiloNode()
         milo.walk(to: CGPoint(x: 400, y: 180)) {}
