@@ -2688,12 +2688,23 @@ import LearningCore
         let gardenRim = try XCTUnwrap(
             scene.childNode(withName: "//storyMarkerRim_wordGarden")
         )
+        let gardenIcon = try XCTUnwrap(
+            scene.childNode(withName: "//storyMarkerIcon_wordGarden")
+        )
         let castleRim = try XCTUnwrap(
             scene.childNode(withName: "//storyMarkerRim_castle")
         )
         let pipGearRim = try XCTUnwrap(
             scene.childNode(withName: "//storyPipGearRim")
         )
+        let pipGearRoot = try XCTUnwrap(scene.childNode(withName: "pipWind"))
+        let pipGearIcon = try XCTUnwrap(
+            pipGearRoot.children.compactMap { $0 as? SKLabelNode }
+                .first { $0.text == "✦" }
+        )
+
+        XCTAssertFalse(gardenIcon.parent === gardenRim)
+        XCTAssertFalse(pipGearIcon.parent === pipGearRim)
         let storyLight = try XCTUnwrap(scene.childNode(withName: "storyLight"))
 
         XCTAssertNotNil(gardenRim.action(forKey: "hubMarkerDrift"))
