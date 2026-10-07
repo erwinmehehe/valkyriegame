@@ -693,6 +693,7 @@ import LearningCore
             let leaf = sunmillChoiceNode(letter: choice, index: index)
             leaf.position = sunmillChoicePoints[index]
             leaf.name = "sunmillChoice"
+            leaf.zPosition = 620
             leaf.userData = NSMutableDictionary(dictionary: ["choice": choice])
             addChild(leaf)
         }
