@@ -23,6 +23,7 @@ import SpriteKit
     private var moonLanternNode: SKNode?
     private var wordGardenLanternNode: SKNode?
     private var puzzlePalaceLanternNode: SKNode?
+    private var lastKineticReducedMotion: Bool?
     private let moonLanternSlots = [
         CGPoint(x: 295, y: 500),
         CGPoint(x: 390, y: 555),
@@ -43,34 +44,43 @@ import SpriteKit
         super.didMove(to: view)
         polishStoryTreeHUD()
         pip.position = CGPoint(x: 250, y: 210)
+        syncStoryTreeKinetics()
     }
 
     private func polishStoryTreeHUD() {
         childNode(withName: "worldTitleBackdrop")?.removeFromParent()
         childNode(withName: "worldTitle")?.removeFromParent()
 
-        let titlePlate = ArtSystem.plaque(
-            CGSize(width: 380, height: 42),
-            fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
-            stroke: UIColor(red: 0.92, green: 0.72, blue: 0.34, alpha: 0.56),
-            radius: 15
-        )
-        titlePlate.position = CGPoint(x: 278, y: 672)
-        titlePlate.zPosition = 1988
-        titlePlate.name = "worldTitleBackdrop"
-        addChild(titlePlate)
-
         let title = ArtSystem.label(worldTitle, size: 20)
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
+        if title.frame.width > 348 {
+            title.fontSize *= 348 / title.frame.width
+        }
+
+        let titleWidth = min(
+            CGFloat(410),
+            max(CGFloat(390), title.frame.width + 60)
+        )
+        let titlePlate = ArtSystem.plaque(
+            CGSize(width: titleWidth, height: 42),
+            fill: UIColor(red: 0.045, green: 0.065, blue: 0.13, alpha: 0.88),
+            stroke: UIColor(red: 0.92, green: 0.72, blue: 0.34, alpha: 0.56),
+            radius: 15
+        )
+        titlePlate.position = CGPoint(x: 100 + titleWidth / 2, y: 672)
+        titlePlate.zPosition = 1988
+        titlePlate.name = "worldTitleBackdrop"
+        addChild(titlePlate)
+
         title.position = CGPoint(x: 140, y: 672)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 111, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672)
             emblem.setScale(0.72)
         }
 
@@ -237,7 +247,7 @@ import SpriteKit
             stroke: tint.withAlphaComponent(0.72),
             glow: 0
         )
-        medallion.name = name
+        medallion.name = "storyMarkerRim_\(name)"
         root.addChild(medallion)
 
         let emblem = ArtSystem.label(symbol, size: 24)
@@ -274,6 +284,79 @@ import SpriteKit
         registerInteraction(root, clearance: 22)
 
         return root
+    }
+
+    private func syncStoryTreeKinetics() {
+        lastKineticReducedMotion = reducedMotion
+
+        for (index, name) in [
+            "wordGarden", "puzzlePalace", "castle", "scienceLab"
+        ].enumerated() {
+            guard let rim = childNode(withName: "//storyMarkerRim_\(name)") else {
+                continue
+            }
+            rim.removeAction(forKey: "hubMarkerDrift")
+            rim.zRotation = 0
+            guard !reducedMotion else { continue }
+
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            let duration = 12.0 + Double(index) * 1.8
+            rim.run(
+                .repeatForever(
+                    .rotate(byAngle: direction * .pi * 2, duration: duration)
+                ),
+                withKey: "hubMarkerDrift"
+            )
+        }
+
+        for (index, name) in [
+            "moonLantern", "wordGardenLantern", "puzzlePalaceLantern"
+        ].enumerated() {
+            guard let lantern = childNode(withName: name) else { continue }
+            lantern.removeAction(forKey: "hubLanternSway")
+            lantern.zRotation = 0
+            guard !reducedMotion else { continue }
+
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            lantern.run(
+                .repeatForever(
+                    .sequence([
+                        .rotate(byAngle: direction * 0.024, duration: 1.8),
+                        .rotate(byAngle: direction * -0.048, duration: 3.6),
+                        .rotate(byAngle: direction * 0.024, duration: 1.8)
+                    ])
+                ),
+                withKey: "hubLanternSway"
+            )
+        }
+
+        childNode(withName: "storyLight")?.removeAction(forKey: "hubLightBreath")
+        if !reducedMotion {
+            childNode(withName: "storyLight")?.run(
+                .repeatForever(
+                    .sequence([
+                        .scale(to: 1.06, duration: 1.15),
+                        .scale(to: 1.0, duration: 1.15)
+                    ])
+                ),
+                withKey: "hubLightBreath"
+            )
+        }
+    }
+
+    private func playDestinationReaction(named name: String, at point: CGPoint) {
+        focusMoment(on: point, hold: 0.52)
+        guard !reducedMotion,
+              let marker = childNode(withName: name) else { return }
+
+        marker.removeAction(forKey: "destinationReaction")
+        marker.run(
+            .sequence([
+                .scale(to: 1.08, duration: 0.12),
+                .scale(to: 1.0, duration: 0.20)
+            ]),
+            withKey: "destinationReaction"
+        )
     }
 
     private func buildPipWorkshopGear() {
@@ -657,12 +740,17 @@ import SpriteKit
         let depth = max(0, min(1, (valkyrie.position.y - 170) / 280))
         valkyrie.setScale(1 - depth * 0.42)
         pip.setScale(1 - depth * 0.42)
+
+        if lastKineticReducedMotion != reducedMotion {
+            syncStoryTreeKinetics()
+        }
     }
 
     func handleTap(at point: CGPoint) {
         switch targetName(at: point) {
         case "wordGarden":
             selectionFeedback()
+            playDestinationReaction(named: "wordGarden", at: CGPoint(x: 150, y: 430))
             let destination = CGPoint(x: 190, y: 170)
             if isNear(destination) {
                 state.travel(to: .wordGarden)
@@ -673,6 +761,7 @@ import SpriteKit
 
         case "castle":
             selectionFeedback()
+            playDestinationReaction(named: "castle", at: CGPoint(x: 835, y: 535))
             let destination = CGPoint(x: 795, y: 450)
             if isNear(destination) {
                 state.travel(to: .mathCastle)
@@ -683,6 +772,7 @@ import SpriteKit
 
         case "scienceLab":
             selectionFeedback()
+            playDestinationReaction(named: "scienceLab", at: CGPoint(x: 705, y: 585))
             let destination = CGPoint(x: 580, y: 450)
             if isNear(destination) {
                 state.enterScienceLab()
@@ -693,6 +783,7 @@ import SpriteKit
 
         case "puzzlePalace":
             selectionFeedback()
+            playDestinationReaction(named: "puzzlePalace", at: CGPoint(x: 505, y: 515))
             let destination = CGPoint(x: 580, y: 450)
             if isNear(destination) {
                 state.travel(to: .puzzlePalace)
