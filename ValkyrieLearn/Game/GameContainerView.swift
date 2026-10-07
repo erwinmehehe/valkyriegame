@@ -6,6 +6,7 @@ import SpriteKit
     @State private var scene: AdventureScene?
     @State private var settings = false
     @Environment(\.accessibilityReduceMotion) private var systemReducedMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         GeometryReader { geometry in
@@ -15,10 +16,10 @@ import SpriteKit
                 Color(red: 0.08, green: 0.09, blue: 0.16)
 
                 if let scene {
-                    SpriteView(scene: scene, isPaused: settings)
+                    SpriteView(scene: scene, isPaused: settings || !isLandscape || scenePhase != .active)
                         .aspectRatio(16 / 9, contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .allowsHitTesting(isLandscape && !settings)
+                        .allowsHitTesting(isLandscape && !settings && scenePhase == .active)
                         .accessibilityHidden(!isLandscape)
                 }
 
@@ -65,12 +66,21 @@ import SpriteKit
                     .accessibilityElement(children: .combine)
                 }
             }
+            .onChange(of: isLandscape) { _, landscape in
+                if !landscape { scene?.cancelPendingTap() }
+            }
         }
         .ignoresSafeArea()
         .onAppear { rebuild() }
         .onChange(of: state.world) { _, _ in rebuild() }
         .onChange(of: state.reducedMotion) { _, value in scene?.reducedMotion = value || systemReducedMotion }
         .onChange(of: systemReducedMotion) { _, value in scene?.reducedMotion = value || state.reducedMotion }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { scene?.cancelPendingTap() }
+        }
+        .onChange(of: settings) { _, presented in
+            if presented { scene?.cancelPendingTap() }
+        }
         .sheet(isPresented: $settings) { AdventureSettingsView(state: state) }
     }
 

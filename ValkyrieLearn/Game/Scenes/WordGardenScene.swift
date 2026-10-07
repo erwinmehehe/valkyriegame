@@ -1103,7 +1103,7 @@ import LearningCore
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let point = touches.first?.location(in: self) else { return }
+        guard let point = completedTap(in: touches) else { return }
         handleTap(at: point)
     }
 

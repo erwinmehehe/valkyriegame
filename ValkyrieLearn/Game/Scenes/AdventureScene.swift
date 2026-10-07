@@ -1,6 +1,42 @@
 import SpriteKit
 import UIKit
 
+/// A tap owns one contact and stays cancelled once that contact becomes a swipe.
+/// Kept independent of UITouch so interruption and extra-contact handling can be tested.
+struct SceneTapGesture<Contact: Hashable> {
+    private var contact: Contact?
+    private var start = CGPoint.zero
+    private var moved = false
+
+    mutating func begin(_ contact: Contact, at point: CGPoint) {
+        guard self.contact == nil else { return }
+        self.contact = contact
+        start = point
+        moved = false
+    }
+
+    mutating func move(_ contact: Contact, to point: CGPoint) {
+        guard self.contact == contact else { return }
+        if hypot(point.x - start.x, point.y - start.y) > 12 { moved = true }
+    }
+
+    mutating func end(_ contact: Contact, at point: CGPoint) -> CGPoint? {
+        guard self.contact == contact else { return nil }
+        move(contact, to: point)
+        defer { reset() }
+        return moved ? nil : point
+    }
+
+    mutating func cancel(_ contact: Contact) {
+        if self.contact == contact { reset() }
+    }
+
+    mutating func reset() {
+        contact = nil
+        moved = false
+    }
+}
+
 struct AdventureSceneLayout {
     let size: CGSize
 
@@ -69,6 +105,7 @@ struct AdventureSceneLayout {
     }
 
     private var leaving = false
+    private var tapGesture = SceneTapGesture<ObjectIdentifier>()
     private var attentionCue: (point: CGPoint, tint: UIColor?, width: CGFloat)?
     private var registeredInteractionZones: [CGRect] = []
     private var interactionRegistrations: [InteractionRegistration] = []
@@ -734,8 +771,38 @@ struct AdventureSceneLayout {
         if walkable.contains(point) { travel(to: point) }
     }
 
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard !leaving, let touch = touches.first else { return }
+        tapGesture.begin(ObjectIdentifier(touch), at: touch.location(in: self))
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            tapGesture.move(ObjectIdentifier(touch), to: touch.location(in: self))
+        }
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches { tapGesture.cancel(ObjectIdentifier(touch)) }
+    }
+
+    func completedTap(in touches: Set<UITouch>) -> CGPoint? {
+        guard !leaving else { return nil }
+        for touch in touches {
+            if let point = tapGesture.end(ObjectIdentifier(touch), at: touch.location(in: self)) {
+                return point
+            }
+        }
+        return nil
+    }
+
+    func cancelPendingTap() {
+        tapGesture.reset()
+    }
+
     func willLeave() {
         leaving = true
+        cancelPendingTap()
         clearAttentionCue()
         enumerateChildNodes(withName: "//*") { node, _ in
             node.removeAllActions()
