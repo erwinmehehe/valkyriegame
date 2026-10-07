@@ -412,20 +412,19 @@ import LearningCore
         openOrder()
     }
 
-    /// The current approved Math Castle painting is a 1x source for a 1280x720
-    /// point scene. Preserve that art direction, but prepare a cached 2x raster so
-    /// Retina compositing is not forced to magnify the 1x bitmap at presentation.
+    /// Use the detailed versioned painting; cached compositing does not add source detail.
     private func prepareCastleIllustrationForRetina() {
         if let backdrop = childNode(withName: "worldBackdrop") as? SKSpriteNode,
            let texture = ArtSystem.retinaEnhancedTexture(
-                "MathCastle",
+                "MathCastleIllustratedV2",
                 targetPoints: size,
                 sharpness: 0.30
            ) {
             backdrop.texture = texture
             backdrop.userData = NSMutableDictionary(dictionary: [
                 "retinaPrepared": true,
-                "sourceAsset": "MathCastle"
+                "sourceAsset": "MathCastleIllustratedV2",
+                "sourcePixels": ArtSystem.pixelSize("MathCastleIllustratedV2")?.width ?? 0
             ])
         }
 
