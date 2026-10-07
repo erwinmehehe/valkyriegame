@@ -2342,6 +2342,51 @@ import LearningCore
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
 
+    func testMathCastleAmbientMachineryAndActiveFocusRespectReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let encounter = MathCastleEncounterCatalog.numberBondMachine[0]
+        XCTAssertTrue(state.startWorkshop(encounter))
+
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let chain0 = try XCTUnwrap(scene.childNode(withName: "//castleAmbientChain0"))
+        let chain1 = try XCTUnwrap(scene.childNode(withName: "//castleAmbientChain1"))
+        let powerMount = try XCTUnwrap(scene.childNode(withName: "castlePowerMount"))
+        let workshopRim = try XCTUnwrap(
+            scene.childNode(withName: "//workshopRim_workshop0")
+        )
+
+        XCTAssertNotNil(chain0.action(forKey: "ambientChainSway"))
+        XCTAssertNotNil(chain1.action(forKey: "ambientChainSway"))
+        XCTAssertNotNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNotNil(workshopRim.action(forKey: "ambientWorkshopSpin"))
+
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 925, y: 280))
+
+        let machine = try XCTUnwrap(
+            scene.childNode(withName: "//\(MathMechanicID.numberBondMachine)")
+        )
+        XCTAssertNotNil(machine.action(forKey: "activeMachineBreath"))
+        XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(chain0.action(forKey: "ambientChainSway"))
+        XCTAssertNil(chain1.action(forKey: "ambientChainSway"))
+        XCTAssertNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNil(workshopRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNil(machine.action(forKey: "activeMachineBreath"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
+    }
+
     func testMathQuestionRendersAboveManipulativeAndFeedbackStaysBelow() async throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let encounter = MathCastleEncounterCatalog.numberBondMachine[0]
@@ -2578,6 +2623,96 @@ import LearningCore
         let prompt = try XCTUnwrap(scene.childNode(withName: "questionPrompt") as? SKLabelNode)
         XCTAssertEqual(prompt.numberOfLines, 2)
         XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 440)
+    }
+
+    func testStoryTreeHubUsesCompactDiegeticWayfinding() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let title = try XCTUnwrap(scene.childNode(withName: "worldTitle") as? SKLabelNode)
+        let titleBackdrop = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
+        let feedback = try XCTUnwrap(scene.childNode(withName: "feedbackText") as? SKLabelNode)
+        let feedbackBackdrop = try XCTUnwrap(scene.childNode(withName: "instructionBackdrop"))
+
+        XCTAssertEqual(title.fontName, "Georgia-Bold")
+        XCTAssertLessThanOrEqual(title.fontSize, 20)
+        XCTAssertLessThanOrEqual(titleBackdrop.calculateAccumulatedFrame().width, 390)
+        XCTAssertEqual(feedback.fontName, "AvenirNext-Medium")
+        XCTAssertLessThanOrEqual(feedback.fontSize, 18)
+        XCTAssertLessThanOrEqual(feedback.preferredMaxLayoutWidth, 610)
+        XCTAssertLessThanOrEqual(feedbackBackdrop.calculateAccumulatedFrame().width, 670)
+
+        for name in ["wordGarden", "puzzlePalace", "castle", "scienceLab"] {
+            let marker = try XCTUnwrap(scene.childNode(withName: name))
+            XCTAssertGreaterThanOrEqual(marker.calculateAccumulatedFrame().width, 60)
+            XCTAssertGreaterThanOrEqual(marker.calculateAccumulatedFrame().height, 60)
+
+            let pulse = try XCTUnwrap(
+                marker.children.first {
+                    ($0.userData?["decorativeMotionRole"] as? String) == "pulse"
+                }
+            )
+            XCTAssertNil(pulse.action(forKey: "ambientPulse"))
+
+            let plaque = try XCTUnwrap(
+                marker.children.first {
+                    ($0.userData?["destinationRole"] as? String) == "plaque"
+                }
+            )
+            let label = try XCTUnwrap(
+                plaque.children.compactMap { $0 as? SKLabelNode }.first
+            )
+            XCTAssertEqual(label.fontName, "Georgia-Bold")
+            XCTAssertLessThanOrEqual(label.fontSize, 15)
+        }
+
+        let pipGear = try XCTUnwrap(scene.childNode(withName: "pipWind"))
+        XCTAssertGreaterThanOrEqual(pipGear.calculateAccumulatedFrame().width, 64)
+        XCTAssertGreaterThanOrEqual(pipGear.calculateAccumulatedFrame().height, 64)
+    }
+
+    func testStoryTreeLivingHubMotionRespectsReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = StoryTreeScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let gardenRim = try XCTUnwrap(
+            scene.childNode(withName: "//storyMarkerRim_wordGarden")
+        )
+        let castleRim = try XCTUnwrap(
+            scene.childNode(withName: "//storyMarkerRim_castle")
+        )
+        let pipGearRim = try XCTUnwrap(
+            scene.childNode(withName: "//storyPipGearRim")
+        )
+        let storyLight = try XCTUnwrap(scene.childNode(withName: "storyLight"))
+
+        XCTAssertNotNil(gardenRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNotNil(castleRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNotNil(pipGearRim.action(forKey: "hubPipGearSpin"))
+        XCTAssertNotNil(storyLight.action(forKey: "hubLightBreath"))
+
+        scene.handleTap(at: CGPoint(x: 150, y: 430))
+        XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(gardenRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNil(castleRim.action(forKey: "hubMarkerDrift"))
+        XCTAssertNil(pipGearRim.action(forKey: "hubPipGearSpin"))
+        XCTAssertNil(storyLight.action(forKey: "hubLightBreath"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
     }
 
     func testPuzzlePalaceLanternPersistsAndMovesOnStoryTree() throws {

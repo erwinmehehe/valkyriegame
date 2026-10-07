@@ -66,6 +66,11 @@ import LearningCore
         title.name = "worldTitle"
         addChild(title)
 
+        if let emblem = childNode(withName: "decorativeWorldEmblem") {
+            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.setScale(0.72)
+        }
+
         if let plate = childNode(withName: "instructionBackdrop") {
             plate.xScale = 0.66
             plate.yScale = 0.80

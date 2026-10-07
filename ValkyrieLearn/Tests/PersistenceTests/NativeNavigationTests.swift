@@ -5,6 +5,54 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeNavigationTests: XCTestCase {
+    func testTapGestureAcceptsSmallMovementButRejectsSwipesAndReturnTrips() {
+        var gesture = SceneTapGesture<Int>()
+        let target = CGPoint(x: 400, y: 300)
+        XCTAssertNil(gesture.end(1, at: target), "A release without a press is not a tap.")
+        gesture.begin(1, at: target)
+        gesture.move(1, to: CGPoint(x: 404, y: 302))
+        XCTAssertEqual(gesture.end(1, at: CGPoint(x: 405, y: 303)), CGPoint(x: 405, y: 303))
+
+        gesture.begin(2, at: target)
+        // A fast swipe may arrive without an intermediate touchesMoved callback.
+        XCTAssertNil(gesture.end(2, at: CGPoint(x: 600, y: 300)))
+        gesture.begin(3, at: target)
+        gesture.move(3, to: CGPoint(x: 600, y: 300))
+        gesture.move(3, to: target)
+        XCTAssertNil(gesture.end(3, at: target), "Returning to the start must not turn a swipe into an answer.")
+
+        gesture.begin(4, at: target)
+        XCTAssertEqual(gesture.end(4, at: target), target, "A swipe must not disable the next deliberate tap.")
+    }
+
+    func testExtraContactsCannotStealOrRepeatATap() {
+        var gesture = SceneTapGesture<Int>()
+        let target = CGPoint(x: 400, y: 300)
+        gesture.begin(1, at: target)
+        gesture.begin(2, at: CGPoint(x: 900, y: 600))
+        gesture.move(2, to: .zero)
+        XCTAssertNil(gesture.end(2, at: .zero))
+        XCTAssertEqual(gesture.end(1, at: target), target)
+        XCTAssertNil(gesture.end(1, at: target), "One contact must dispatch only once.")
+        XCTAssertNil(gesture.end(2, at: target), "A previously ignored contact must stay ignored.")
+    }
+
+    func testCancelledAndAbandonedTapsCannotActivateOnRelease() {
+        var gesture = SceneTapGesture<Int>()
+        let target = CGPoint(x: 400, y: 300)
+        gesture.begin(1, at: target)
+        gesture.cancel(2)
+        XCTAssertEqual(gesture.end(1, at: target), target)
+        gesture.begin(3, at: target)
+        gesture.cancel(3)
+        XCTAssertNil(gesture.end(3, at: target))
+        gesture.begin(4, at: target)
+        gesture.reset() // Leaving a scene clears its unfinished gesture.
+        XCTAssertNil(gesture.end(4, at: target))
+        gesture.begin(5, at: target)
+        XCTAssertEqual(gesture.end(5, at: target), target)
+    }
+
     private func waitUntil(_ condition: @escaping () -> Bool) async throws {
         let deadline = Date().addingTimeInterval(5)
         while !condition(), Date() < deadline {
@@ -136,8 +184,21 @@ import LearningCore
             (.storyTree, "✦", { StoryTreeScene(state: $0) }),
             (.mathCastle, "◆", { MathCastleScene(state: $0) }),
             (.wordGarden, "✿", { WordGardenScene(state: $0) }),
+            (.sunmillCrossing, "✿", { WordGardenScene(state: $0) }),
+            (.storyHollow, "✿", { WordGardenScene(state: $0) }),
             (.scienceLab, "⚗", { ScienceLabScene(state: $0) }),
-            (.puzzlePalace, "◈", { PuzzlePalaceScene(state: $0) })
+            (.scienceWeatherTower, "⚗", { WeatherTowerScene(state: $0) }),
+            (.scienceCreatureGrove, "⚗", { CreatureGroveScene(state: $0) }),
+            (.puzzlePalace, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.memoryBridge, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.stopGoOrbs, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.sortingPedestal, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.resortVault, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.mirrorHall, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.pathTiles, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.commandGears, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.bugLantern, "◈", { PuzzlePalaceScene(state: $0) }),
+            (.bugLanternRepair, "◈", { PuzzlePalaceScene(state: $0) })
         ]
         for (world, symbol, makeScene) in cases {
             state.travel(to: world)
@@ -150,8 +211,10 @@ import LearningCore
             let plate = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
             XCTAssertTrue(plate.calculateAccumulatedFrame().contains(title.calculateAccumulatedFrame()),
                           "\(world) title must fit in its themed plate.")
+            XCTAssertTrue(plate.calculateAccumulatedFrame().contains(emblem.calculateAccumulatedFrame()),
+                          "\(world) emblem must fit in its themed plate.")
             XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(title.calculateAccumulatedFrame()),
-                           "World emblem must not cover its title text.")
+                           "\(world) emblem must not cover its title text.")
             XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(scene.layout.interactionStage))
             XCTAssertNotEqual(scene.targetName(at: emblem.position), "decorativeWorldEmblem")
             scene.willLeave()
@@ -191,6 +254,30 @@ import LearningCore
             scene.reducedMotion = reduced
             XCTAssertTrue(scene.valkyrie.action(forKey: "operation") === valkyrieDeadline)
             XCTAssertTrue(scene.pip.action(forKey: "operation") === pipDeadline)
+        }
+    }
+
+    func testInterruptedCompanionReactionResetsAuraWithoutMovingTheActor() throws {
+        let companions: [CharacterNode] = [LumiNode(), MiloNode(), TikoNode()]
+        for actor in companions {
+            actor.position = CGPoint(x: 480, y: 180)
+            actor.face(toward: CGPoint(x: 200, y: 180))
+            let aura = try XCTUnwrap(actor.childNode(withName: "companionPresence"))
+            aura.setScale(1.18)
+            aura.run(.repeatForever(.scale(to: 1.2, duration: 0.3)), withKey: "presencePulse")
+            actor.bodyNode.position.y = 3
+            actor.bodyNode.zRotation = 0.02
+            actor.pose(.react)
+            XCTAssertEqual(actor.position, CGPoint(x: 480, y: 180))
+            XCTAssertEqual(actor.bodyNode.position, .zero)
+            XCTAssertEqual(actor.bodyNode.zRotation, 0)
+            XCTAssertLessThan(actor.bodyNode.xScale, 0)
+            XCTAssertEqual(aura.xScale, 1)
+            XCTAssertNil(aura.action(forKey: "presencePulse"))
+            actor.reducedMotion = true
+            XCTAssertFalse(actor.bodyNode.hasActions())
+            XCTAssertNotNil(actor.action(forKey: "operation"))
+            actor.cancelTravel()
         }
     }
 

@@ -5,6 +5,86 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeMathFlowTests: XCTestCase {
+    func testEveryMachineAcknowledgesTheVisibleEditWithoutCheckingTheAnswer() throws {
+        let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
+            (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
+            (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
+            (MathCastleEncounterCatalog.numberBondMachine[0], CGPoint(x: 925, y: 280), CGPoint(x: 555, y: 280), "1 crystal in the open part."),
+            (MathCastleEncounterCatalog.tenFrameGate[0], CGPoint(x: 820, y: 344), CGPoint(x: 550, y: 310), "1 light placed."),
+            (MathCastleEncounterCatalog.missingNumberBridge[0], CGPoint(x: 965, y: 330), CGPoint(x: 550, y: 335), "1 plank added.")
+        ]
+        for (encounter, machine, input, message) in cases {
+            let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+            XCTAssertTrue(state.startWorkshop(encounter))
+            let scene = MathCastleScene(state: state)
+            scene.reducedMotion = true
+            scene.didMove(to: SKView())
+            scene.valkyrie.position = CGPoint(x: 490, y: 175)
+            scene.handleTap(at: machine)
+            let profile = state.profile
+            scene.handleTap(at: input)
+            XCTAssertEqual(scene.instruction.text, message + " Pull Pip's lever when you're ready.")
+            XCTAssertNotNil(scene.pip.action(forKey: "operation"))
+            XCTAssertFalse(scene.pip.bodyNode.hasActions())
+            XCTAssertFalse(state.runtime?.completed == true)
+            XCTAssertEqual(state.runtime?.support, .independent)
+            XCTAssertEqual(state.profile, profile, "Acknowledging an edit must not award learning evidence.")
+            scene.willLeave()
+        }
+    }
+
+    func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
+        let scene = MathCastleScene(state: state)
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 830, y: 265))
+        for _ in 0..<12 { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
+        let runtime = state.runtime
+        let reaction = try XCTUnwrap(scene.pip.action(forKey: "operation"))
+        scene.handleTap(at: CGPoint(x: 595, y: 235))
+        XCTAssertEqual(state.runtime, runtime)
+        XCTAssertTrue(scene.pip.action(forKey: "operation") === reaction)
+        XCTAssertEqual(scene.instruction.text, "No change yet. Try another move, or pull Pip's lever.")
+        scene.drop(origin: "supply", at: CGPoint(x: 830, y: 265))
+        XCTAssertEqual(state.runtime, runtime)
+        XCTAssertTrue(scene.pip.action(forKey: "operation") === reaction)
+        scene.drop(origin: "cartCrystal", at: CGPoint(x: 595, y: 235))
+        XCTAssertEqual(scene.instruction.text, "11 crystals in the cart. Pull Pip's lever when you're ready.")
+        scene.handleTap(at: CGPoint(x: 595, y: 235))
+        XCTAssertEqual(scene.instruction.text, "12 crystals in the cart. Pull Pip's lever when you're ready.")
+    }
+
+    func testRetryLightIsVisibleWithoutMotionAndCannotDimAQuickSuccess() throws {
+        for reduced in [false, true] {
+            let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+            XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
+            let scene = MathCastleScene(state: state)
+            scene.reducedMotion = reduced
+            scene.didMove(to: SKView())
+            scene.valkyrie.position = CGPoint(x: 490, y: 175)
+            scene.handleTap(at: CGPoint(x: 830, y: 265))
+            scene.handleTap(at: CGPoint(x: 1120, y: 250))
+            let light = try XCTUnwrap(scene.childNode(withName: "castlePowerLight") as? SKShapeNode)
+            XCTAssertEqual(light.glowWidth, 5)
+            XCTAssertNotNil(light.action(forKey: "gentleRetry"))
+            let target = try XCTUnwrap(state.runtime?.encounter.targetQuantity)
+            for _ in 0..<target { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
+            scene.handleTap(at: CGPoint(x: 1120, y: 250))
+            XCTAssertTrue(state.runtime?.completed == true)
+            XCTAssertEqual(light.glowWidth, 16)
+            XCTAssertEqual(light.alpha, 1)
+            XCTAssertNil(light.action(forKey: "gentleRetry"))
+            XCTAssertNil(light.action(forKey: "inputPulse"))
+            let completed = state.runtime
+            scene.handleTap(at: CGPoint(x: 1120, y: 250))
+            XCTAssertEqual(state.runtime, completed, "Feedback must not make a solved machine submit twice.")
+            scene.willLeave()
+        }
+    }
+
     func testEveryMechanicRestoresWithSupportAndWorldAcrossContexts() async throws {
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
