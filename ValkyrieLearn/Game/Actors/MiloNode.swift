@@ -24,9 +24,18 @@ import SpriteKit
             )
             bodyNode.run(
                 .sequence([
-                    .rotate(toAngle: -0.055, duration: 0.14),
-                    .rotate(toAngle: 0.025, duration: 0.16),
-                    .rotate(toAngle: 0, duration: 0.14)
+                    .group([
+                        .moveTo(y: 3, duration: 0.12),
+                        .rotate(toAngle: -0.062, duration: 0.12)
+                    ]),
+                    .group([
+                        .moveTo(y: 1, duration: 0.15),
+                        .rotate(toAngle: 0.030, duration: 0.15)
+                    ]),
+                    .group([
+                        .moveTo(y: 0, duration: 0.14),
+                        .rotate(toAngle: 0, duration: 0.14)
+                    ])
                 ]),
                 withKey: "miloInspect"
             )
