@@ -20,6 +20,172 @@ public enum ScienceHabitatChoice: String, Codable, Equatable, Sendable {
     case pondEdge, dryRidge
 }
 
+
+public enum ScienceFieldStudyWorld: String, Codable, CaseIterable, Sendable {
+    case greenhouse
+    case weatherTower
+    case creatureGrove
+}
+
+public struct ScienceFieldStudyChallenge: Equatable, Sendable {
+    public let id: String
+    public let world: ScienceFieldStudyWorld
+    public let skillID: SkillID
+    public let mechanicID: String
+    public let representation: Representation
+    public let prompt: String
+    public let answerTarget: String
+    public let choiceTargets: [String]
+
+    public init(
+        id: String,
+        world: ScienceFieldStudyWorld,
+        skillID: SkillID,
+        mechanicID: String,
+        representation: Representation = .reasoning,
+        prompt: String,
+        answerTarget: String,
+        choiceTargets: [String]
+    ) {
+        self.id = id
+        self.world = world
+        self.skillID = skillID
+        self.mechanicID = mechanicID
+        self.representation = representation
+        self.prompt = prompt
+        self.answerTarget = answerTarget
+        self.choiceTargets = choiceTargets
+    }
+}
+
+/// Authored retention/transfer work that reuses each room's physical stations.
+/// Fresh playthroughs complete these after the room's main investigation; old
+/// saves that already carry a completion flag remain grandfathered.
+public enum ScienceFieldStudyCatalog {
+    public static let greenhouse: [ScienceFieldStudyChallenge] = [
+        .init(
+            id: "science-field-greenhouse-first-evidence",
+            world: .greenhouse,
+            skillID: ScienceSkills.orderEvents,
+            mechanicID: ScienceLabMechanicID.seedBench,
+            prompt: "Field study: where did we collect our first plant evidence?",
+            answerTarget: "scienceSeedBench",
+            choiceTargets: ["scienceSeedBench", "scienceWaterValve", "scienceSunPrism"]
+        ),
+        .init(
+            id: "science-field-greenhouse-dry-soil",
+            world: .greenhouse,
+            skillID: ScienceSkills.plantNeeds,
+            mechanicID: ScienceLabMechanicID.waterChannel,
+            prompt: "The soil was dry. Which station tested the change it needed?",
+            answerTarget: "scienceWaterValve",
+            choiceTargets: ["scienceSeedBench", "scienceWaterValve", "scienceSunPrism"]
+        ),
+        .init(
+            id: "science-field-greenhouse-pale-sprout",
+            world: .greenhouse,
+            skillID: ScienceSkills.comparePlantConditions,
+            mechanicID: ScienceLabMechanicID.sunPrism,
+            prompt: "The sprout was pale after watering. Which station changed its light?",
+            answerTarget: "scienceSunPrism",
+            choiceTargets: ["scienceSeedBench", "scienceWaterValve", "scienceSunPrism"]
+        )
+    ]
+
+    public static let weatherTower: [ScienceFieldStudyChallenge] = [
+        .init(
+            id: "science-field-weather-first-observation",
+            world: .weatherTower,
+            skillID: ScienceSkills.orderEvents,
+            mechanicID: ScienceLabMechanicID.weatherDial,
+            prompt: "Field study: which weather flag did we observe first?",
+            answerTarget: "scienceMorningWeather",
+            choiceTargets: ["scienceMorningWeather", "scienceAfternoonWeather"]
+        ),
+        .init(
+            id: "science-field-weather-repeated-clue",
+            world: .weatherTower,
+            skillID: ScienceSkills.weatherPattern,
+            mechanicID: ScienceLabMechanicID.weatherDial,
+            prompt: "Both flags repeated the umbrella clue. Which forecast matches that pattern?",
+            answerTarget: "scienceForecastRain",
+            choiceTargets: ["scienceForecastSun", "scienceForecastRain"]
+        )
+    ]
+
+    public static let creatureGrove: [ScienceFieldStudyChallenge] = [
+        .init(
+            id: "science-field-grove-resources",
+            world: .creatureGrove,
+            skillID: ScienceSkills.habitatMatch,
+            mechanicID: ScienceLabMechanicID.habitatNests,
+            prompt: "Field study: which habitat kept water and protective cover together?",
+            answerTarget: "scienceHabitatPond",
+            choiceTargets: ["scienceHabitatPond", "scienceHabitatRidge"]
+        ),
+        .init(
+            id: "science-field-grove-swimming-body-part",
+            world: .creatureGrove,
+            skillID: ScienceSkills.bodyPartFunction,
+            mechanicID: ScienceLabMechanicID.miloInspect,
+            prompt: "Which station showed the body part that helps the duck push against water?",
+            answerTarget: "scienceWebbedFeet",
+            choiceTargets: ["scienceGroveDuck", "scienceWebbedFeet"]
+        ),
+        .init(
+            id: "science-field-grove-final-evidence",
+            world: .creatureGrove,
+            skillID: ScienceSkills.compareHabitats,
+            mechanicID: ScienceLabMechanicID.habitatNests,
+            prompt: "Which side of the comparison board kept both water and shelter?",
+            answerTarget: "scienceCompareShelteredPond",
+            choiceTargets: ["scienceCompareShelteredPond", "scienceCompareExposedRidge"]
+        )
+    ]
+
+    public static var all: [ScienceFieldStudyChallenge] {
+        greenhouse + weatherTower + creatureGrove
+    }
+
+    public static func challenges(for world: ScienceFieldStudyWorld) -> [ScienceFieldStudyChallenge] {
+        switch world {
+        case .greenhouse: greenhouse
+        case .weatherTower: weatherTower
+        case .creatureGrove: creatureGrove
+        }
+    }
+
+    public static func isComplete(
+        _ challenge: ScienceFieldStudyChallenge,
+        in profile: LearnerProfile
+    ) -> Bool {
+        profile.progress(for: challenge.skillID).evidence.contains {
+            $0.encounterID == challenge.id && $0.outcome == .correct
+        }
+    }
+
+    public static func next(
+        in world: ScienceFieldStudyWorld,
+        profile: LearnerProfile
+    ) -> ScienceFieldStudyChallenge? {
+        challenges(for: world).first { !isComplete($0, in: profile) }
+    }
+
+    public static func completedCount(
+        in world: ScienceFieldStudyWorld,
+        profile: LearnerProfile
+    ) -> Int {
+        challenges(for: world).filter { isComplete($0, in: profile) }.count
+    }
+
+    public static func isComplete(
+        _ world: ScienceFieldStudyWorld,
+        in profile: LearnerProfile
+    ) -> Bool {
+        next(in: world, profile: profile) == nil
+    }
+}
+
 /// Durable Science Lab state. This is stored inside LearnerProfile JSON so
 /// Science progress survives scene recreation without changing the SwiftData schema.
 public struct ScienceAdventure: Codable, Equatable, Sendable {
