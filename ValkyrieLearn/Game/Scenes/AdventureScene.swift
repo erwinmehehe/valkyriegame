@@ -618,7 +618,7 @@ struct AdventureSceneLayout {
             var node: SKNode? = hit
             var depth = 0
             while let current = node, current !== self {
-                if let name = current.name, !name.isEmpty, !name.hasPrefix("decorative") {
+                if let name = current.name, !name.isEmpty, !name.hasPrefix("decorative"), name != "successBurst" {
                     var score = current.zPosition
                     var ancestor = current.parent
                     while let parent = ancestor, parent !== self {

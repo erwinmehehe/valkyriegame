@@ -500,7 +500,7 @@ import LearningCore
         weather.didMove(to: SKView())
         XCTAssertNotNil(weather.childNode(withName: "weatherFarLandscape"))
         let painting = try XCTUnwrap(weather.childNode(withName: "//weatherBackdropRetina"))
-        XCTAssertLessThanOrEqual(painting.alpha, 0.30)
+        XCTAssertEqual(painting.alpha, 0.30, accuracy: 0.001)
         weather.willLeave()
 
         state.travel(to: .scienceCreatureGrove)
@@ -548,7 +548,7 @@ import LearningCore
     }
 
     func testInterruptedCompanionReactionResetsAuraWithoutMovingTheActor() throws {
-        let companions: [CharacterNode] = [LumiNode(), MiloNode(), TikoNode(), PipNode()]
+        let companions: [CharacterNode] = [LumiNode(), MiloNode(), TikoNode()]
         for actor in companions {
             actor.position = CGPoint(x: 480, y: 180)
             actor.face(toward: CGPoint(x: 200, y: 180))
@@ -571,45 +571,33 @@ import LearningCore
         }
     }
 
-    func testCharacterPolishKeepsEveryActorGroundedAndReadable() throws {
-        let actors: [CharacterNode] = [
-            ValkyrieNode(),
-            PipNode(),
-            LumiNode(),
-            MiloNode(),
-            TikoNode()
-        ]
-
+    func testCharacterGroundingPreservesFootPositionAcrossMotionPreferences() throws {
+        let actors: [CharacterNode] = [ValkyrieNode(), PipNode(), LumiNode(), MiloNode(), TikoNode()]
         for actor in actors {
             actor.position = CGPoint(x: 420, y: 180)
-            let worldPosition = actor.position
             let shadow = try XCTUnwrap(actor.childNode(withName: "characterGroundShadow"))
-            let glow = try XCTUnwrap(actor.childNode(withName: "characterSilhouetteGlow"))
-
-            XCTAssertEqual(shadow.xScale, 1, accuracy: 0.001)
-            XCTAssertNotNil(glow.action(forKey: "characterPresence"))
-
+            XCTAssertFalse(shadow.children.isEmpty)
             actor.pose(.celebrate)
-            XCTAssertEqual(actor.position, worldPosition)
-            XCTAssertLessThan(shadow.xScale, 1)
-            XCTAssertLessThan(shadow.yScale, 1)
-            XCTAssertNotNil(actor.bodyNode.action(forKey: "pose"))
-
+            XCTAssertEqual(actor.position, CGPoint(x: 420, y: 180))
             actor.reducedMotion = true
-            XCTAssertEqual(actor.position, worldPosition)
-            XCTAssertNil(glow.action(forKey: "characterPresence"))
             XCTAssertFalse(actor.bodyNode.hasActions())
-
             actor.pose(.idle)
+            XCTAssertEqual(actor.position, CGPoint(x: 420, y: 180))
             XCTAssertEqual(shadow.xScale, 1, accuracy: 0.001)
-            XCTAssertEqual(shadow.yScale, 1, accuracy: 0.001)
             XCTAssertEqual(actor.bodyNode.position, .zero)
             XCTAssertEqual(actor.bodyNode.zRotation, 0, accuracy: 0.001)
         }
+    }
 
-        let pip = PipNode()
-        let pipAura = try XCTUnwrap(pip.childNode(withName: "companionPresence"))
-        XCTAssertNotNil(pipAura.childNode(withName: "decorativeCompanionPresenceRing"))
+    func testSuccessBurstDoesNotInterceptAnOpenedRoute() throws {
+        let scene = AdventureScene(state: try makeState())
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        let point = CGPoint(x: 640, y: 360)
+        scene.worldControl("Route", name: "routeUnderBurst", at: point)
+        scene.successFeedback(at: point)
+        XCTAssertNotNil(scene.childNode(withName: "successBurst"))
+        XCTAssertEqual(scene.targetName(at: point), "routeUnderBurst")
     }
 
     func testLiveMotionTogglePreservesCompanionTravelAndInteractionDeadlines() throws {

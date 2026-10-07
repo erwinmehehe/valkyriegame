@@ -140,10 +140,7 @@ import LearningCore
         XCTAssertNotNil(scene.childNode(withName: "scienceNativeBackdrop"))
         XCTAssertNotNil(scene.childNode(withName: "scienceGreenhouseFrame"))
         XCTAssertNotNil(scene.childNode(withName: "scienceGround"))
-        let legacyMatte = try XCTUnwrap(
-            scene.childNode(withName: "scienceLegacyMatte") as? SKSpriteNode
-        )
-        XCTAssertEqual(legacyMatte.alpha, CGFloat(0.08), accuracy: CGFloat(0.001))
+        XCTAssertNil(scene.childNode(withName: "scienceLegacyMatte"))
         XCTAssertNotNil(scene.childNode(withName: "scienceWaterBed"))
         XCTAssertEqual(scene.valkyrie.xScale, 0.5, accuracy: 0.001)
         XCTAssertEqual(scene.valkyrie.yScale, 0.5, accuracy: 0.001)
