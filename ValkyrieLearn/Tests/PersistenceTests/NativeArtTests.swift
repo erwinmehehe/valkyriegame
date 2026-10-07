@@ -2120,7 +2120,7 @@ import LearningCore
             }
             XCTAssertEqual(model.selected, index == 2 ? .equal : nil)
             XCTAssertNotNil(scale.childNode(withName: "//scaleBase"))
-            XCTAssertNotNil(scale.childNode(withName: "//scalePivot"))
+            XCTAssertNotNil(scale.childNode(withName: "//scaleBeam"))
             try await capture(scale, in: view, name: name)
             scale.willLeave()
         }
@@ -2200,7 +2200,7 @@ import LearningCore
         XCTAssertGreaterThan(prompt.position.y, 500)
         XCTAssertLessThan(feedback.position.y, 100)
         XCTAssertGreaterThan(prompt.position.y, feedback.position.y)
-        XCTAssertGreaterThanOrEqual(prompt.preferredMaxLayoutWidth, 500)
+        XCTAssertLessThanOrEqual(prompt.preferredMaxLayoutWidth, 440)
         XCTAssertNotNil(scene.childNode(withName: "mathWorkZoneCore"))
         XCTAssertNotNil(scene.childNode(withName: "workshopRackBacking"))
         XCTAssertNotNil(scene.childNode(withName: "castlePowerMount"))
