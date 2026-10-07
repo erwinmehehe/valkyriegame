@@ -154,6 +154,87 @@ import LearningCore
     }
 
 
+    func testGreenhouseVisuallyPrioritizesTheCurrentExperimentStep() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let bench = try XCTUnwrap(scene.childNode(withName: "scienceSeedBench"))
+        let valve = try XCTUnwrap(scene.childNode(withName: "scienceWaterValve"))
+        let prism = try XCTUnwrap(scene.childNode(withName: "scienceSunPrism"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "scienceWeatherGate"))
+
+        XCTAssertEqual(bench.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(valve.alpha, 0.5)
+        XCTAssertLessThan(prism.alpha, valve.alpha)
+        XCTAssertLessThan(gate.alpha, 0.5)
+        XCTAssertNotNil(bench.action(forKey: "scienceFocusPulse"))
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        XCTAssertEqual(scene.greenhouseStage, .inspected)
+        XCTAssertEqual(valve.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(valve.action(forKey: "scienceFocusPulse"))
+        XCTAssertNotNil(valve.action(forKey: "scienceActiveSpin"))
+
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        XCTAssertEqual(scene.greenhouseStage, .watered)
+        XCTAssertEqual(prism.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.reducedMotion = true
+        scene.update(0)
+        XCTAssertNil(prism.action(forKey: "scienceFocusPulse"))
+        XCTAssertNil(valve.action(forKey: "scienceActiveSpin"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
+    }
+
+    func testWeatherTowerVisuallyPrioritizesTheCurrentObservationStep() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .scienceWeatherTower)
+        let scene = WeatherTowerScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let morning = try XCTUnwrap(scene.childNode(withName: "scienceMorningWeather"))
+        let afternoon = try XCTUnwrap(scene.childNode(withName: "scienceAfternoonWeather"))
+        let forecast = try XCTUnwrap(scene.childNode(withName: "scienceForecastBase"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "scienceCreatureGate"))
+
+        XCTAssertEqual(morning.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(afternoon.alpha, 0.5)
+        XCTAssertLessThan(forecast.alpha, afternoon.alpha)
+        XCTAssertLessThan(gate.alpha, 0.5)
+        XCTAssertNotNil(morning.action(forKey: "scienceFocusPulse"))
+
+        scene.valkyrie.position = CGPoint(x: 370, y: 180)
+        scene.handleTap(at: CGPoint(x: 470, y: 305))
+        XCTAssertEqual(scene.weatherStage, .morningObserved)
+        XCTAssertEqual(afternoon.alpha, 1.0, accuracy: 0.001)
+        XCTAssertNotNil(afternoon.action(forKey: "scienceFocusPulse"))
+
+        scene.valkyrie.position = CGPoint(x: 605, y: 180)
+        scene.handleTap(at: CGPoint(x: 700, y: 305))
+        XCTAssertEqual(scene.weatherStage, .afternoonObserved)
+        XCTAssertEqual(forecast.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.reducedMotion = true
+        scene.update(0)
+        XCTAssertNil(forecast.action(forKey: "scienceFocusPulse"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
+    }
+
     func testWeatherTowerRequiresTwoObservationsBeforeForecasting() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let scene = WeatherTowerScene(state: state)

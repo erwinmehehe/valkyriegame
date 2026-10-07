@@ -15,6 +15,8 @@ import AVFoundation
 
     private var players: [Channel: AVAudioPlayer] = [:]
     private var playerNames: [Channel: String] = [:]
+    private var effectPlayers: [AVAudioPlayer] = []
+    private let maxConcurrentEffects = 4
     private var urlCache: [String: URL] = [:]
     private var sessionActive = false
     private var interruptionObserver: NSObjectProtocol?
@@ -44,6 +46,12 @@ import AVFoundation
         activateSessionIfNeeded()
 
         let loopCount = looping ? -1 : 0
+
+        if channel == .effect {
+            playEffect(url: url, loopCount: loopCount)
+            return
+        }
+
         if let player = players[channel],
            playerNames[channel] == name,
            player.numberOfLoops == loopCount {
@@ -54,7 +62,7 @@ import AVFoundation
 
         do {
             let player = try AVAudioPlayer(contentsOf: url)
-            player.volume = channel == .effect ? 0.3 : 0.2
+            player.volume = 0.2
             player.numberOfLoops = loopCount
             player.prepareToPlay()
 
@@ -68,6 +76,12 @@ import AVFoundation
     }
 
     func stop(channel: Channel) {
+        if channel == .effect {
+            effectPlayers.forEach { $0.stop() }
+            effectPlayers.removeAll()
+            return
+        }
+
         players[channel]?.stop()
         players.removeValue(forKey: channel)
         playerNames.removeValue(forKey: channel)
@@ -75,8 +89,29 @@ import AVFoundation
 
     func stop() {
         players.values.forEach { $0.stop() }
+        effectPlayers.forEach { $0.stop() }
         players.removeAll()
         playerNames.removeAll()
+        effectPlayers.removeAll()
+    }
+
+    private func playEffect(url: URL, loopCount: Int) {
+        effectPlayers.removeAll { !$0.isPlaying }
+
+        if effectPlayers.count >= maxConcurrentEffects {
+            effectPlayers.removeFirst().stop()
+        }
+
+        do {
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.volume = 0.3
+            player.numberOfLoops = loopCount
+            player.prepareToPlay()
+            effectPlayers.append(player)
+            player.play()
+        } catch {
+            // Effects are optional; never block gameplay on audio.
+        }
     }
 
     private func activateSessionIfNeeded() {
