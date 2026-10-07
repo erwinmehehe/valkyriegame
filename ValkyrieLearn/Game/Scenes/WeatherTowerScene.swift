@@ -95,7 +95,7 @@ import LearningCore
             glow: reducedMotion ? 0 : 1
         )
         medallion.name = "scienceWeatherHome"
-        medallion.addChild(ArtSystem.label("‹", size: 22))
+        medallion.addChild(ArtSystem.label("⌂", size: 18))
         root.addChild(medallion)
 
         let hit = SKShapeNode(circleOfRadius: 30)
@@ -105,7 +105,7 @@ import LearningCore
         hit.zPosition = 2
         root.addChild(hit)
 
-        makeAccessible(root, label: "Back")
+        makeAccessible(root, label: "Return to Story Tree")
         addChild(root)
     }
 
