@@ -259,8 +259,9 @@ import SpriteKit
 
         let emblem = ArtSystem.label(symbol, size: 24)
         emblem.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
-        emblem.name = name
-        medallion.addChild(emblem)
+        emblem.name = "storyMarkerIcon_\(name)"
+        emblem.zPosition = 3
+        root.addChild(emblem)
 
         let plaque = ArtSystem.plaque(
             CGSize(width: max(126, width), height: 38),
@@ -388,10 +389,16 @@ import SpriteKit
         base.name = "pipWind"
         root.addChild(base)
 
-        let gear = ArtSystem.gear(radius: 25, symbol: "✦")
+        let gear = ArtSystem.gear(radius: 25, symbol: "")
         gear.name = "storyPipGearRim"
         gear.zPosition = 1
         root.addChild(gear)
+
+        let gearIcon = ArtSystem.label("✦", size: 18)
+        gearIcon.name = "pipWind"
+        gearIcon.fontColor = UIColor(red: 0.96, green: 0.93, blue: 0.82, alpha: 1)
+        gearIcon.zPosition = 3
+        root.addChild(gearIcon)
 
         let hit = SKShapeNode(circleOfRadius: 32)
         hit.fillColor = .clear
