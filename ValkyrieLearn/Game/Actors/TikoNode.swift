@@ -22,9 +22,18 @@ import SpriteKit
             )
             bodyNode.run(
                 .sequence([
-                    .rotate(toAngle: -0.07, duration: 0.12),
-                    .rotate(toAngle: 0.05, duration: 0.14),
-                    .rotate(toAngle: 0, duration: 0.14)
+                    .group([
+                        .moveTo(y: 2, duration: 0.12),
+                        .rotate(toAngle: -0.060, duration: 0.12)
+                    ]),
+                    .group([
+                        .moveTo(y: 1, duration: 0.15),
+                        .rotate(toAngle: 0.042, duration: 0.15)
+                    ]),
+                    .group([
+                        .moveTo(y: 0, duration: 0.14),
+                        .rotate(toAngle: 0, duration: 0.14)
+                    ])
                 ]),
                 withKey: "tikoRuneFocus"
             )
