@@ -24,6 +24,8 @@ import LearningCore
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
+    private var lastGroveKineticReducedMotion: Bool?
+    private var lastGroveKineticRestored: Bool?
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
@@ -480,6 +482,7 @@ import LearningCore
             : UIColor(red: 0.42, green: 0.65, blue: 0.61, alpha: 0.72)
         water.lineWidth = 4
         water.position.y = 2
+        water.name = "grovePondWater"
         pondNode.addChild(water)
 
         let reflection = SKShapeNode(ellipseOf: CGSize(width: 380, height: 44))
@@ -534,6 +537,10 @@ import LearningCore
                 )
                 reed.position = CGPoint(x: x + offset, y: 66)
                 reed.zRotation = offset < 0 ? -0.06 : 0.05
+                reed.name = "grovePondReed"
+                reed.userData = NSMutableDictionary(dictionary: [
+                    "groveBaseRotation": reed.zRotation
+                ])
                 pondNode.addChild(reed)
             }
         }
@@ -568,6 +575,140 @@ import LearningCore
         }
 
         addChild(pondNode)
+        syncGroveKinetics()
+    }
+
+    private func syncGroveKinetics() {
+        lastGroveKineticReducedMotion = reducedMotion
+        lastGroveKineticRestored = groveRestored
+
+        var reedIndex = 0
+        pondNode.enumerateChildNodes(withName: "//grovePondReed") { node, _ in
+            node.removeAction(forKey: "groveReedSway")
+
+            let baseRotation =
+                (node.userData?["groveBaseRotation"] as? CGFloat)
+                ?? node.zRotation
+            node.zRotation = baseRotation
+
+            guard !self.reducedMotion else {
+                reedIndex += 1
+                return
+            }
+
+            let direction: CGFloat = reedIndex.isMultiple(of: 2) ? 1 : -1
+            let amplitude: CGFloat = self.groveRestored ? 0.028 : 0.018
+            let duration = 1.7 + Double(reedIndex % 4) * 0.16
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .rotate(
+                            toAngle: baseRotation + direction * amplitude,
+                            duration: duration,
+                            shortestUnitArc: true
+                        ),
+                        .rotate(
+                            toAngle: baseRotation - direction * amplitude,
+                            duration: duration * 1.8,
+                            shortestUnitArc: true
+                        ),
+                        .rotate(
+                            toAngle: baseRotation,
+                            duration: duration,
+                            shortestUnitArc: true
+                        )
+                    ])
+                ),
+                withKey: "groveReedSway"
+            )
+            reedIndex += 1
+        }
+
+        var rippleIndex = 0
+        pondNode.enumerateChildNodes(withName: "//grovePondRipple") { node, _ in
+            node.removeAction(forKey: "groveRipple")
+            node.setScale(1)
+            node.alpha = 1
+
+            guard !self.reducedMotion else {
+                rippleIndex += 1
+                return
+            }
+
+            let peakScale: CGFloat = self.groveRestored ? 1.07 : 1.035
+            let lowAlpha: CGFloat = self.groveRestored ? 0.38 : 0.52
+            let duration = 1.4 + Double(rippleIndex) * 0.22
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .group([
+                            .scale(to: peakScale, duration: duration),
+                            .fadeAlpha(to: lowAlpha, duration: duration)
+                        ]),
+                        .group([
+                            .scale(to: 1.0, duration: duration),
+                            .fadeAlpha(to: 1.0, duration: duration)
+                        ])
+                    ])
+                ),
+                withKey: "groveRipple"
+            )
+            rippleIndex += 1
+        }
+
+        if let reflection = pondNode.childNode(withName: "grovePondReflection") {
+            reflection.removeAction(forKey: "groveReflectionShimmer")
+            reflection.alpha = 1
+            if !reducedMotion {
+                reflection.run(
+                    .repeatForever(
+                        .sequence([
+                            .fadeAlpha(
+                                to: groveRestored ? 0.46 : 0.58,
+                                duration: 1.15
+                            ),
+                            .fadeAlpha(to: 1.0, duration: 1.15)
+                        ])
+                    ),
+                    withKey: "groveReflectionShimmer"
+                )
+            }
+        }
+
+        if let water = pondNode.childNode(withName: "grovePondWater") {
+            water.removeAction(forKey: "groveWaterBreath")
+            water.alpha = 1
+            if !reducedMotion {
+                water.run(
+                    .repeatForever(
+                        .sequence([
+                            .fadeAlpha(
+                                to: groveRestored ? 0.88 : 0.78,
+                                duration: 1.8
+                            ),
+                            .fadeAlpha(to: 1.0, duration: 1.8)
+                        ])
+                    ),
+                    withKey: "groveWaterBreath"
+                )
+            }
+        }
+    }
+
+    private func playGroveRestorationSurge() {
+        guard !reducedMotion else { return }
+
+        pondNode.removeAction(forKey: "groveRestorationSurge")
+        pondNode.run(
+            .sequence([
+                .scale(to: 1.025, duration: 0.20),
+                .scale(to: 0.995, duration: 0.18),
+                .scale(to: 1.0, duration: 0.24)
+            ]),
+            withKey: "groveRestorationSurge"
+        )
+
+        focusMoment(on: CGPoint(x: 690, y: 400), hold: 0.72)
     }
 
     private func renderFinale() {
@@ -653,6 +794,11 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         milo.zPosition = 1000 - milo.position.y
+
+        if lastGroveKineticReducedMotion != reducedMotion
+            || lastGroveKineticRestored != groveRestored {
+            syncGroveKinetics()
+        }
     }
 
     override func willLeave() {
@@ -787,6 +933,7 @@ import LearningCore
             renderPond()
             renderFinale()
             refreshStagePresentation(animated: true)
+            playGroveRestorationSurge()
             state.audio.play("success")
             valkyrie.pose(.celebrate)
             instruction.text = "The pond edge meets more of the duck's observed needs. The grove responded to the evidence and came back to life."
