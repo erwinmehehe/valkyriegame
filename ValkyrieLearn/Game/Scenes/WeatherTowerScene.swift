@@ -39,7 +39,14 @@ import LearningCore
         milo.setScale(0.82)
         addChild(milo)
 
-        instruction.text = "Milo found two weather flags. Observe the morning flag first."
+        if weatherStage == .complete && !creatureRouteOpen,
+           let challenge = state.scienceNextFieldStudy(in: .weatherTower) {
+            instruction.text = challenge.prompt
+        } else if creatureRouteOpen {
+            instruction.text = "The Weather Tower study is complete. The Creature Grove route is open."
+        } else {
+            instruction.text = "Milo found two weather flags. Observe the morning flag first."
+        }
         refreshGuidanceCue()
     }
 
@@ -835,7 +842,30 @@ import LearningCore
     }
 
     func handleTap(at point: CGPoint) {
-        switch targetName(at: point) {
+        let target = targetName(at: point)
+
+        if weatherStage == .complete,
+           !creatureRouteOpen,
+           let challenge = state.scienceNextFieldStudy(in: .weatherTower),
+           let target {
+            if challenge.choiceTargets.contains(target),
+               let stationPoint = weatherFieldStudyPoint(for: target) {
+                if isNear(stationPoint, radius: 155) {
+                    answerWeatherFieldStudy(challenge, targetName: target)
+                } else {
+                    instruction.text = "Walk to that weather evidence before choosing it."
+                    let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 95))
+                    travel(to: CGPoint(x: approachX, y: 180))
+                }
+                return
+            }
+            if target != "scienceCreatureGate" && target != "scienceWeatherHome" {
+                instruction.text = challenge.prompt
+                return
+            }
+        }
+
+        switch target {
         case "scienceMorningWeather":
             if isNear(morningPoint, radius: 140) {
                 observeMorning()
@@ -950,12 +980,46 @@ import LearningCore
         if choice == .rain {
             successFeedback(at: creatureGatePoint)
             focusMoment(on: creatureGatePoint, hold: 0.70)
-            instruction.text = "Both observations were rainy, so rain is a reasonable next prediction—not a certainty. The Creature Grove route opened."
+            if let challenge = state.scienceNextFieldStudy(in: .weatherTower) {
+                instruction.text = "Rain matches the repeated observations. " + challenge.prompt
+            }
         } else {
             errorFeedback()
             focusMoment(on: forecastPoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "Sun could happen, but it does not match the pattern we observed. Compare the two rainy flags again."
+        }
+        refreshGuidanceCue()
+    }
+
+    private func weatherFieldStudyPoint(for targetName: String) -> CGPoint? {
+        switch targetName {
+        case "scienceMorningWeather": morningPoint
+        case "scienceAfternoonWeather": afternoonPoint
+        case "scienceForecastSun", "scienceForecastRain": forecastPoint
+        default: nil
+        }
+    }
+
+    private func answerWeatherFieldStudy(
+        _ challenge: ScienceFieldStudyChallenge,
+        targetName: String
+    ) {
+        valkyrie.pose(.interact)
+        milo.inspect(reducedMotion: reducedMotion)
+
+        let correct = state.scienceAnswerFieldStudy(challenge, targetName: targetName)
+        if correct {
+            state.audio.play("success")
+            if creatureRouteOpen {
+                renderCreatureGate()
+                valkyrie.pose(.celebrate)
+                instruction.text = "Field study complete. The weather evidence is consistent, and the Creature Grove route is open."
+            } else if let next = state.scienceNextFieldStudy(in: .weatherTower) {
+                instruction.text = "Weather evidence confirmed. " + next.prompt
+            }
+        } else {
+            instruction.text = "That choice does not match the observation sequence. Compare the flags and forecast symbols again."
         }
         refreshGuidanceCue()
     }
@@ -987,12 +1051,21 @@ import LearningCore
                 (["scienceCreatureGate"], 0.36)
             ]
         case .complete:
-            groups = [
-                (["scienceMorningWeather"], 0.74),
-                (["scienceAfternoonWeather"], 0.74),
-                (["scienceForecastBase"], 0.74),
-                (["scienceCreatureGate"], 1.0)
-            ]
+            if creatureRouteOpen {
+                groups = [
+                    (["scienceMorningWeather"], 0.74),
+                    (["scienceAfternoonWeather"], 0.74),
+                    (["scienceForecastBase"], 0.74),
+                    (["scienceCreatureGate"], 1.0)
+                ]
+            } else {
+                groups = [
+                    (["scienceMorningWeather"], 1.0),
+                    (["scienceAfternoonWeather"], 1.0),
+                    (["scienceForecastBase"], 1.0),
+                    (["scienceCreatureGate"], 0.34)
+                ]
+            }
         }
 
         for (names, alpha) in groups {
@@ -1005,6 +1078,11 @@ import LearningCore
         }
 
         guard !reducedMotion else { return }
+
+        if weatherStage == .complete && !creatureRouteOpen {
+            focusMoment(on: CGPoint(x: 700, y: 250), hold: 0.52)
+            return
+        }
 
         let activeName: String
         let activePoint: CGPoint
@@ -1049,7 +1127,11 @@ import LearningCore
         case .afternoonObserved:
             showAttentionCue(at: forecastPoint, tint: tint, width: 138)
         case .complete:
-            showAttentionCue(at: creatureGatePoint, tint: tint, width: 104)
+            if creatureRouteOpen {
+                showAttentionCue(at: creatureGatePoint, tint: tint, width: 104)
+            } else {
+                showAttentionCue(at: CGPoint(x: 700, y: 250), tint: tint, width: 610)
+            }
         }
     }
 
