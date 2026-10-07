@@ -286,10 +286,16 @@ import LearningCore
         childNode(withName: "worldTitleBackdrop")?.removeFromParent()
         childNode(withName: "worldTitle")?.removeFromParent()
 
-        let titleWidth = min(
-            CGFloat(400),
-            max(CGFloat(355), CGFloat(worldTitle.count) * 9.4 + 83)
-        )
+        let title = ArtSystem.label(worldTitle, size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.82, alpha: 1)
+        title.horizontalAlignmentMode = .left
+        // Wide letters in Memory Bridge and Command Gears exceed a character-count estimate.
+        // Reserve the emblem gutter and fit the actual glyphs into the compact plaque.
+        if title.frame.width > 338 {
+            title.fontSize *= 338 / title.frame.width
+        }
+        let titleWidth = min(CGFloat(400), max(CGFloat(355), title.frame.width + 60))
         let titlePlate = ArtSystem.plaque(
             CGSize(width: titleWidth, height: 42),
             fill: UIColor(red: 0.045, green: 0.055, blue: 0.13, alpha: 0.90),
@@ -301,10 +307,6 @@ import LearningCore
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
 
-        let title = ArtSystem.label(worldTitle, size: 20)
-        title.fontName = "Georgia-Bold"
-        title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.82, alpha: 1)
-        title.horizontalAlignmentMode = .left
         title.position = CGPoint(x: 140, y: 672)
         title.zPosition = 2000
         title.name = "worldTitle"
