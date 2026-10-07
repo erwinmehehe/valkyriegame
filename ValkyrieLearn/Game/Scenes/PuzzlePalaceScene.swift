@@ -127,6 +127,7 @@ import LearningCore
     }
 
     override func didMove(to view: SKView) {
+        prepareAdaptiveLandscapeCanvas(for: view)
         super.didMove(to: view)
         applyPuzzleHUDPolish()
         pip.removeFromParent()
@@ -302,29 +303,29 @@ import LearningCore
             stroke: UIColor(red: 0.72, green: 0.58, blue: 0.98, alpha: 0.54),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 100 + titleWidth / 2, y: 672)
+        titlePlate.position = CGPoint(x: 100 + titleWidth / 2, y: 672 + verticalViewportInset)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
 
-        title.position = CGPoint(x: 140, y: 672)
+        title.position = CGPoint(x: 140, y: 672 + verticalViewportInset)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672 + verticalViewportInset)
             emblem.setScale(0.72)
         }
 
         if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
             instructionBackdrop.xScale = 0.65
             instructionBackdrop.yScale = 0.80
-            instructionBackdrop.position = CGPoint(x: 735, y: 46)
+            instructionBackdrop.position = CGPoint(x: 735, y: 46 - verticalViewportInset)
             instructionBackdrop.alpha = 0.90
         }
 
-        instruction.position = CGPoint(x: 735, y: 46)
+        instruction.position = CGPoint(x: 735, y: 46 - verticalViewportInset)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.fontColor = UIColor(red: 1.0, green: 0.96, blue: 0.84, alpha: 1)
@@ -335,7 +336,7 @@ import LearningCore
     private func buildPuzzleHomeControl() {
         let root = SKNode()
         root.name = "home"
-        root.position = CGPoint(x: 52, y: 672)
+        root.position = CGPoint(x: 52, y: 672 + verticalViewportInset)
         root.zPosition = 2100
 
         let medallion = ArtSystem.medallion(
@@ -362,7 +363,10 @@ import LearningCore
     override func buildWorld() {
         buildNativePalaceBackdrop()
 
-        for (height, y) in [(CGFloat(62), CGFloat(684)), (CGFloat(96), CGFloat(42))] {
+        for (height, y) in [
+            (CGFloat(62), CGFloat(684) + verticalViewportInset),
+            (CGFloat(96), CGFloat(42) - verticalViewportInset)
+        ] {
             let shade = ArtSystem.box(
                 CGSize(width: 1280, height: height),
                 color: .black.withAlphaComponent(0.29),
@@ -452,7 +456,7 @@ import LearningCore
                 in: atlas
             )
             puzzleTexture.filteringMode = .linear
-            let matte = SKSpriteNode(texture: puzzleTexture, color: .white, size: size)
+            let matte = SKSpriteNode(texture: puzzleTexture, color: .white, size: designCanvasSize)
             matte.position = CGPoint(x: 640, y: 360)
             matte.zPosition = -250
             matte.alpha = 0.10
