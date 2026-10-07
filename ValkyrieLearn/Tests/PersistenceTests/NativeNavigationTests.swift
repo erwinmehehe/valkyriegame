@@ -158,6 +158,41 @@ import LearningCore
         }
     }
 
+    func testWorldHomeControlsUseHubSymbolInsteadOfRoomBackChevron() throws {
+        func firstLabelText(in node: SKNode) -> String? {
+            if let label = node as? SKLabelNode, let text = label.text {
+                return text
+            }
+            for child in node.children {
+                if let text = firstLabelText(in: child) {
+                    return text
+                }
+            }
+            return nil
+        }
+
+        let state = try makeState()
+        let cases: [(AppState.World, String, (AppState) -> AdventureScene)] = [
+            (.mathCastle, "home", { MathCastleScene(state: $0) }),
+            (.puzzlePalace, "home", { PuzzlePalaceScene(state: $0) }),
+            (.scienceLab, "scienceHome", { ScienceLabScene(state: $0) }),
+            (.scienceWeatherTower, "scienceWeatherHome", { WeatherTowerScene(state: $0) }),
+            (.scienceCreatureGrove, "scienceGroveHome", { CreatureGroveScene(state: $0) })
+        ]
+
+        for (world, controlName, makeScene) in cases {
+            state.travel(to: world)
+            let scene = makeScene(state)
+            scene.reducedMotion = true
+            scene.didMove(to: SKView())
+            let home = try XCTUnwrap(scene.childNode(withName: controlName))
+            XCTAssertEqual(firstLabelText(in: home), "⌂")
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().width, 60)
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().height, 60)
+            scene.willLeave()
+        }
+    }
+
     func testScienceGuidanceKeepsItsTargetWhenMotionPreferenceChanges() throws {
         let state = try makeState()
         state.travel(to: .scienceLab)
