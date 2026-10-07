@@ -69,6 +69,7 @@ struct AdventureSceneLayout {
     }
 
     private var leaving = false
+    private var attentionCue: (point: CGPoint, tint: UIColor?, width: CGFloat)?
     private var registeredInteractionZones: [CGRect] = []
     private var interactionRegistrations: [InteractionRegistration] = []
     private weak var instructionBackdrop: SKShapeNode?
@@ -81,9 +82,18 @@ struct AdventureSceneLayout {
         didSet {
             valkyrie.reducedMotion = reducedMotion
             pip.reducedMotion = reducedMotion
-            valkyrie.pose(valkyrie.action(forKey: "travel") == nil ? .idle : .walk)
-            pip.pose(pip.action(forKey: "travel") == nil ? .idle : .walk)
+            enumerateChildNodes(withName: "//*") { [self] node, _ in
+                // Every world companion must use the same live preference.
+                if let character = node as? CharacterNode {
+                    character.reducedMotion = reducedMotion
+                }
+            }
             syncDecorativeMotion()
+            if reducedMotion {
+                removeAction(forKey: "cameraReset")
+                camera?.removeAction(forKey: "focus")
+                camera?.position = CGPoint(x: 640, y: 360)
+            }
         }
     }
 
@@ -127,12 +137,12 @@ struct AdventureSceneLayout {
         let titleLeft: CGFloat = 88
         let titleWidth = min(
             CGFloat(520),
-            max(CGFloat(350), CGFloat(worldTitle.count) * 11.5 + 70)
+            max(CGFloat(350), CGFloat(worldTitle.count) * 11.5 + 110)
         )
         let titlePlate = ArtSystem.panel(
             CGSize(width: titleWidth, height: 50),
             fill: UIColor(red: 0.055, green: 0.05, blue: 0.11, alpha: 0.82),
-            stroke: UIColor(red: 0.72, green: 0.76, blue: 0.92, alpha: 0.26),
+            stroke: ambientTint.withAlphaComponent(0.48),
             radius: 25,
             lineWidth: 1.5,
             shadowAlpha: 0.30
@@ -143,10 +153,24 @@ struct AdventureSceneLayout {
         addChild(titlePlate)
         titleBackdrop = titlePlate
 
+        let emblem = ArtSystem.medallion(
+            radius: 17,
+            fill: ambientTint.withAlphaComponent(0.16),
+            stroke: ambientTint.withAlphaComponent(0.72),
+            glow: 0
+        )
+        emblem.name = "decorativeWorldEmblem"
+        emblem.position = CGPoint(x: titleLeft + 26, y: 669)
+        emblem.zPosition = 1995
+        let mark = ArtSystem.label(worldEmblem, size: 20)
+        mark.fontColor = ambientTint
+        emblem.addChild(mark)
+        addChild(emblem)
+
         let title = ArtSystem.label(worldTitle, size: worldTitle.count > 28 ? 21 : 24)
         title.horizontalAlignmentMode = .left
         title.verticalAlignmentMode = .center
-        title.position = CGPoint(x: titleLeft + 16, y: 669)
+        title.position = CGPoint(x: titleLeft + 52, y: 669)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
@@ -154,7 +178,7 @@ struct AdventureSceneLayout {
         let instructionPlate = ArtSystem.panel(
             CGSize(width: layout.instructionZone.width, height: 56),
             fill: UIColor(red: 0.045, green: 0.045, blue: 0.095, alpha: 0.84),
-            stroke: UIColor(red: 0.82, green: 0.80, blue: 0.68, alpha: 0.22),
+            stroke: ambientTint.withAlphaComponent(0.32),
             radius: 28,
             lineWidth: 1.5,
             shadowAlpha: 0.32
@@ -217,6 +241,7 @@ struct AdventureSceneLayout {
         for (name, delay) in [
             ("worldTitleBackdrop", 0.04),
             ("worldTitle", 0.08),
+            ("decorativeWorldEmblem", 0.08),
             ("instructionBackdrop", 0.10),
             ("feedbackText", 0.14)
         ] {
@@ -240,6 +265,14 @@ struct AdventureSceneLayout {
         ]))
     }
 
+    private var worldEmblem: String {
+        if worldTitle.hasPrefix("Word Garden") { return "✿" }
+        if worldTitle.hasPrefix("Science Lab") { return "⚗" }
+        if worldTitle.hasPrefix("Puzzle Palace") { return "◈" }
+        if worldTitle.hasPrefix("Story Tree") { return "✦" }
+        return "◆"
+    }
+
     private var ambientTint: UIColor {
         if worldTitle.hasPrefix("Word Garden") {
             return UIColor(red: 1.0, green: 0.64, blue: 0.82, alpha: 1)
@@ -253,11 +286,16 @@ struct AdventureSceneLayout {
         if worldTitle.hasPrefix("Story Tree") {
             return UIColor(red: 1.0, green: 0.82, blue: 0.36, alpha: 1)
         }
-        return UIColor(red: 0.72, green: 0.91, blue: 1.0, alpha: 1)
+        return UIColor(red: 1.0, green: 0.80, blue: 0.38, alpha: 1)
     }
 
     private func syncDecorativeMotion() {
         childNode(withName: "decorativeAmbientLife")?.removeFromParent()
+        // Recreate guidance in its static/animated form without losing the
+        // selected object, color or destination when settings change mid-scene.
+        if let cue = attentionCue {
+            showAttentionCue(at: cue.point, tint: cue.tint, width: cue.width)
+        }
 
         for name in ["foregroundLeft", "foregroundRight"] {
             guard let foreground = childNode(withName: name) else { continue }
@@ -402,7 +440,7 @@ struct AdventureSceneLayout {
         let control = ArtSystem.medallion(
             radius: touchRadius,
             fill: UIColor(red: 0.075, green: 0.07, blue: 0.15, alpha: 0.92),
-            stroke: UIColor(red: 0.86, green: 0.82, blue: 0.68, alpha: 0.48),
+            stroke: ambientTint.withAlphaComponent(0.60),
             glow: reducedMotion ? 0 : 2
         )
         control.position = point
@@ -443,7 +481,7 @@ struct AdventureSceneLayout {
         let node = ArtSystem.panel(
             size,
             fill: UIColor(red: 0.095, green: 0.085, blue: 0.18, alpha: 0.94),
-            stroke: UIColor(red: 0.79, green: 0.76, blue: 0.66, alpha: 0.34),
+            stroke: ambientTint.withAlphaComponent(0.42),
             radius: min(24, size.height * 0.38),
             lineWidth: 2,
             shadowAlpha: 0.28
@@ -721,6 +759,7 @@ struct AdventureSceneLayout {
     }
 
     func clearAttentionCue() {
+        attentionCue = nil
         childNode(withName: "decorativeAttentionCue")?.removeFromParent()
     }
 
@@ -731,6 +770,7 @@ struct AdventureSceneLayout {
         width: CGFloat = 118
     ) {
         clearAttentionCue()
+        attentionCue = (point, tint, width)
 
         let color = tint ?? ambientTint
         let root = SKNode()

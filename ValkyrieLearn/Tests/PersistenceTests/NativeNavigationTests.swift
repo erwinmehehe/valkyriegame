@@ -130,4 +130,106 @@ import LearningCore
         XCTAssertNotNil(halo.action(forKey: "ambientPulse"))
         XCTAssertNotNil(glow.action(forKey: "ambientPulse"))
     }
+    func testWorldHUDUsesDistinctEmblemsAndKeepsTitlesInsideTheirPlates() throws {
+        let state = try makeState()
+        let cases: [(AppState.World, String, (AppState) -> AdventureScene)] = [
+            (.storyTree, "✦", { StoryTreeScene(state: $0) }),
+            (.mathCastle, "◆", { MathCastleScene(state: $0) }),
+            (.wordGarden, "✿", { WordGardenScene(state: $0) }),
+            (.scienceLab, "⚗", { ScienceLabScene(state: $0) }),
+            (.puzzlePalace, "◈", { PuzzlePalaceScene(state: $0) })
+        ]
+        for (world, symbol, makeScene) in cases {
+            state.travel(to: world)
+            let scene = makeScene(state)
+            scene.reducedMotion = true
+            scene.didMove(to: SKView())
+            let emblem = try XCTUnwrap(scene.childNode(withName: "decorativeWorldEmblem"))
+            XCTAssertEqual(emblem.children.compactMap { ($0 as? SKLabelNode)?.text }.first, symbol)
+            let title = try XCTUnwrap(scene.childNode(withName: "worldTitle"))
+            let plate = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
+            XCTAssertTrue(plate.calculateAccumulatedFrame().contains(title.calculateAccumulatedFrame()),
+                          "\(world) title must fit in its themed plate.")
+            XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(title.calculateAccumulatedFrame()),
+                           "World emblem must not cover its title text.")
+            XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(scene.layout.interactionStage))
+            XCTAssertNotEqual(scene.targetName(at: emblem.position), "decorativeWorldEmblem")
+            scene.willLeave()
+        }
+    }
+
+    func testScienceGuidanceKeepsItsTargetWhenMotionPreferenceChanges() throws {
+        let state = try makeState()
+        state.travel(to: .scienceLab)
+        let scene = ScienceLabScene(state: state)
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        let original = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        let position = original.position
+        scene.reducedMotion = true
+        let calm = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(calm.position, position)
+        XCTAssertTrue(calm.children.allSatisfy { !$0.hasActions() })
+        XCTAssertTrue(scene.milo.reducedMotion)
+        scene.reducedMotion = false
+        let animated = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(animated.position, position)
+        XCTAssertTrue(animated.children.contains { $0.hasActions() })
+        XCTAssertFalse(scene.milo.reducedMotion)
+        XCTAssertEqual(scene.targetName(at: position), "scienceSeedBench")
+    }
+
+    func testSceneMotionTogglePreservesValkyrieAndPipPoseDeadlines() throws {
+        let scene = StoryTreeScene(state: try makeState())
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.pose(.interact)
+        scene.pip.pose(.celebrate)
+        let valkyrieDeadline = try XCTUnwrap(scene.valkyrie.action(forKey: "operation"))
+        let pipDeadline = try XCTUnwrap(scene.pip.action(forKey: "operation"))
+        for reduced in [true, false] {
+            scene.reducedMotion = reduced
+            XCTAssertTrue(scene.valkyrie.action(forKey: "operation") === valkyrieDeadline)
+            XCTAssertTrue(scene.pip.action(forKey: "operation") === pipDeadline)
+        }
+    }
+
+    func testLiveMotionTogglePreservesCompanionTravelAndInteractionDeadlines() throws {
+        let milo = MiloNode()
+        milo.walk(to: CGPoint(x: 400, y: 180)) {}
+        let travel = try XCTUnwrap(milo.action(forKey: "travel"))
+        XCTAssertNotNil(milo.bodyNode.action(forKey: "pose"))
+        milo.reducedMotion = true
+        XCTAssertTrue(milo.action(forKey: "travel") === travel)
+        XCTAssertNil(milo.bodyNode.action(forKey: "pose"))
+        milo.reducedMotion = false
+        XCTAssertNotNil(milo.bodyNode.action(forKey: "pose"))
+        XCTAssertTrue(milo.action(forKey: "travel") === travel)
+        milo.cancelTravel()
+
+        let lumi = LumiNode()
+        lumi.reach(to: CGPoint(x: 200, y: 220), reducedMotion: false) {}
+        let ability = try XCTUnwrap(lumi.action(forKey: "lumiReach"))
+        let deadline = try XCTUnwrap(lumi.action(forKey: "operation"))
+        lumi.reducedMotion = true
+        XCTAssertTrue(lumi.action(forKey: "lumiReach") === ability)
+        XCTAssertTrue(lumi.action(forKey: "operation") === deadline)
+        let aura = try XCTUnwrap(lumi.childNode(withName: "companionPresence"))
+        XCTAssertNil(aura.action(forKey: "presencePulse"))
+        XCTAssertEqual(aura.xScale, 1)
+        XCTAssertEqual(lumi.bodyNode.position, .zero)
+        XCTAssertFalse(lumi.bodyNode.hasActions())
+        lumi.reducedMotion = false
+        XCTAssertTrue(lumi.action(forKey: "operation") === deadline)
+        lumi.removeAllActions()
+
+        let tiko = TikoNode()
+        tiko.operateRune(at: CGPoint(x: 500, y: 250), reducedMotion: false) {}
+        let runeAbility = try XCTUnwrap(tiko.action(forKey: "tikoRuneHop"))
+        tiko.reducedMotion = true
+        XCTAssertTrue(tiko.action(forKey: "tikoRuneHop") === runeAbility)
+        XCTAssertNil(tiko.bodyNode.action(forKey: "tikoRuneFocus"))
+        tiko.removeAllActions()
+    }
+
 }

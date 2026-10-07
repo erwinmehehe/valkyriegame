@@ -93,10 +93,16 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 105, y: 672)
+        title.position = CGPoint(x: 134, y: 672)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
+
+        // Fit the shared world identity into the castle's compact title plaque.
+        if let emblem = childNode(withName: "decorativeWorldEmblem") {
+            emblem.position = CGPoint(x: 111, y: 672)
+            emblem.setScale(0.72)
+        }
 
         childNode(withName: "topVignette")?.alpha = 0.48
 
