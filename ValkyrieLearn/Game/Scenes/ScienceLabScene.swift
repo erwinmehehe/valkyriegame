@@ -23,6 +23,7 @@ import LearningCore
     private var moved = false
 
     override func didMove(to view: SKView) {
+        prepareAdaptiveLandscapeCanvas(for: view)
         super.didMove(to: view)
         applyScienceHUDPolish()
         pip.isHidden = true
@@ -52,7 +53,7 @@ import LearningCore
             stroke: UIColor(red: 0.42, green: 0.82, blue: 0.61, alpha: 0.54),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 270, y: 672)
+        titlePlate.position = CGPoint(x: 270, y: 672 + verticalViewportInset)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
@@ -61,22 +62,22 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 140, y: 672)
+        title.position = CGPoint(x: 140, y: 672 + verticalViewportInset)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672 + verticalViewportInset)
             emblem.setScale(0.72)
         }
 
         if let plate = childNode(withName: "instructionBackdrop") {
             plate.xScale = 0.66
             plate.yScale = 0.80
-            plate.position = CGPoint(x: 710, y: 46)
+            plate.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         }
-        instruction.position = CGPoint(x: 710, y: 46)
+        instruction.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.preferredMaxLayoutWidth = 620
@@ -86,7 +87,7 @@ import LearningCore
     private func buildScienceHomeControl() {
         let root = SKNode()
         root.name = "scienceHome"
-        root.position = CGPoint(x: 55, y: 672)
+        root.position = CGPoint(x: 55, y: 672 + verticalViewportInset)
         root.zPosition = 2100
 
         let medallion = ArtSystem.medallion(
@@ -131,7 +132,7 @@ import LearningCore
                 in: atlas
             )
             scienceTexture.filteringMode = .linear
-            let matte = SKSpriteNode(texture: scienceTexture, color: .white, size: size)
+            let matte = SKSpriteNode(texture: scienceTexture, color: .white, size: designCanvasSize)
             matte.position = CGPoint(x: 640, y: 360)
             matte.zPosition = -240
             matte.alpha = 0.08
@@ -152,13 +153,13 @@ import LearningCore
             let preparedTexture = ArtSystem.retinaEnhancedTexture(
                 greenhouseTexture,
                 cacheKey: "word-garden-upper-crop",
-                targetPoints: size,
+                targetPoints: designCanvasSize,
                 sharpness: 0.22
             ) ?? greenhouseTexture
             let scenic = SKSpriteNode(
                 texture: preparedTexture,
                 color: UIColor(red: 0.72, green: 0.92, blue: 0.78, alpha: 1),
-                size: size
+                size: designCanvasSize
             )
             scenic.colorBlendFactor = 0.08
             scenic.position = CGPoint(x: 640, y: 360)
@@ -173,7 +174,7 @@ import LearningCore
             addChild(scenic)
 
             let scenicWash = ArtSystem.box(
-                size,
+                designCanvasSize,
                 color: UIColor(red: 0.08, green: 0.28, blue: 0.19, alpha: 0.12),
                 radius: 0
             )
@@ -387,7 +388,10 @@ import LearningCore
         addChild(house)
         buildGreenhouseConceptAccents()
 
-        for (height, y) in [(CGFloat(66), CGFloat(687)), (CGFloat(100), CGFloat(46))] {
+        for (height, y) in [
+            (CGFloat(66), CGFloat(687) + verticalViewportInset),
+            (CGFloat(100), CGFloat(46) - verticalViewportInset)
+        ] {
             let shade = ArtSystem.box(
                 CGSize(width: 1280, height: height),
                 color: .black.withAlphaComponent(0.20),
