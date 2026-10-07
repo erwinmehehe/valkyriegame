@@ -33,9 +33,11 @@ import LearningCore
         valkyrie.setScale(0.5)
         milo.position = CGPoint(x: 315, y: 190)
         milo.reducedMotion = reducedMotion
+        milo.setScale(0.82)
         addChild(milo)
 
         instruction.text = "Milo found two weather flags. Observe the morning flag first."
+        refreshGuidanceCue()
     }
 
     override func buildWorld() {
@@ -148,63 +150,63 @@ import LearningCore
         tower.name = "weatherTowerStructure"
 
         let shaft = ArtSystem.panel(
-            CGSize(width: 274, height: 372),
-            fill: UIColor(red: 0.12, green: 0.20, blue: 0.24, alpha: 0.82),
-            stroke: UIColor(red: 0.61, green: 0.74, blue: 0.75, alpha: 0.72),
-            radius: 38,
-            lineWidth: 4,
-            shadowAlpha: 0.24,
-            innerHighlight: UIColor(red: 0.66, green: 0.92, blue: 0.95, alpha: 0.05)
+            CGSize(width: 246, height: 344),
+            fill: UIColor(red: 0.12, green: 0.20, blue: 0.24, alpha: 0.60),
+            stroke: UIColor(red: 0.61, green: 0.74, blue: 0.75, alpha: 0.58),
+            radius: 42,
+            lineWidth: 3,
+            shadowAlpha: 0.16,
+            innerHighlight: UIColor(red: 0.66, green: 0.92, blue: 0.95, alpha: 0.04)
         )
         shaft.name = "weatherTowerShaft"
         tower.addChild(shaft)
 
         let observationGlass = ArtSystem.panel(
-            CGSize(width: 184, height: 226),
-            fill: UIColor(red: 0.12, green: 0.36, blue: 0.43, alpha: 0.16),
-            stroke: UIColor(red: 0.62, green: 0.88, blue: 0.91, alpha: 0.48),
-            radius: 42,
-            lineWidth: 2,
-            shadowAlpha: 0.08,
-            innerHighlight: UIColor(white: 1, alpha: 0.05)
+            CGSize(width: 166, height: 214),
+            fill: UIColor(red: 0.12, green: 0.36, blue: 0.43, alpha: 0.10),
+            stroke: UIColor(red: 0.62, green: 0.88, blue: 0.91, alpha: 0.34),
+            radius: 40,
+            lineWidth: 1.5,
+            shadowAlpha: 0.04,
+            innerHighlight: UIColor(white: 1, alpha: 0.04)
         )
         observationGlass.position = CGPoint(x: 0, y: 12)
         observationGlass.name = "weatherObservationGlass"
         tower.addChild(observationGlass)
 
-        for x in [CGFloat(-148), CGFloat(148)] {
+        for x in [CGFloat(-132), CGFloat(132)] {
             let buttress = ArtSystem.panel(
-                CGSize(width: 34, height: 320),
-                fill: UIColor(red: 0.10, green: 0.17, blue: 0.20, alpha: 0.84),
-                stroke: UIColor(red: 0.45, green: 0.58, blue: 0.59, alpha: 0.56),
-                radius: 15,
-                lineWidth: 2,
-                shadowAlpha: 0.18
+                CGSize(width: 26, height: 292),
+                fill: UIColor(red: 0.10, green: 0.17, blue: 0.20, alpha: 0.66),
+                stroke: UIColor(red: 0.45, green: 0.58, blue: 0.59, alpha: 0.42),
+                radius: 13,
+                lineWidth: 1.5,
+                shadowAlpha: 0.10
             )
             buttress.position = CGPoint(x: x, y: -18)
             buttress.name = "weatherTowerButtress"
             tower.addChild(buttress)
         }
 
-        for y in [CGFloat(-112), CGFloat(-18), CGFloat(76)] {
+        for y in [CGFloat(-102), CGFloat(-16), CGFloat(70)] {
             let band = ArtSystem.box(
-                CGSize(width: 294, height: 9),
-                color: UIColor(red: 0.52, green: 0.43, blue: 0.27, alpha: 0.84),
-                radius: 4
+                CGSize(width: 264, height: 7),
+                color: UIColor(red: 0.52, green: 0.43, blue: 0.27, alpha: 0.62),
+                radius: 3
             )
-            band.strokeColor = UIColor(red: 0.87, green: 0.69, blue: 0.38, alpha: 0.54)
+            band.strokeColor = UIColor(red: 0.87, green: 0.69, blue: 0.38, alpha: 0.36)
             band.lineWidth = 1
             band.position.y = y
             band.name = "weatherTowerBand"
             tower.addChild(band)
         }
 
-        for y in [CGFloat(-70), CGFloat(40), CGFloat(135)] {
+        for y in [CGFloat(-64), CGFloat(34), CGFloat(120)] {
             let window = ArtSystem.medallion(
-                radius: 28,
-                fill: UIColor(red: 0.12, green: 0.42, blue: 0.52, alpha: 0.86),
-                stroke: UIColor(red: 0.70, green: 0.92, blue: 0.94, alpha: 0.90),
-                glow: reducedMotion ? 0 : 5
+                radius: 23,
+                fill: UIColor(red: 0.12, green: 0.42, blue: 0.52, alpha: 0.68),
+                stroke: UIColor(red: 0.70, green: 0.92, blue: 0.94, alpha: 0.72),
+                glow: reducedMotion ? 0 : 3
             )
             window.position = CGPoint(x: 0, y: y)
             tower.addChild(window)
@@ -215,21 +217,21 @@ import LearningCore
 
         let roof = SKShapeNode(path: {
             let p = CGMutablePath()
-            p.move(to: CGPoint(x: 0, y: 255))
-            p.addLine(to: CGPoint(x: -205, y: 170))
-            p.addLine(to: CGPoint(x: 205, y: 170))
+            p.move(to: CGPoint(x: 0, y: 244))
+            p.addLine(to: CGPoint(x: -184, y: 166))
+            p.addLine(to: CGPoint(x: 184, y: 166))
             p.closeSubpath()
             return p
         }())
-        roof.fillColor = UIColor(red: 0.08, green: 0.23, blue: 0.28, alpha: 0.92)
-        roof.strokeColor = UIColor(red: 0.76, green: 0.66, blue: 0.39, alpha: 0.76)
-        roof.lineWidth = 5
+        roof.fillColor = UIColor(red: 0.08, green: 0.23, blue: 0.28, alpha: 0.78)
+        roof.strokeColor = UIColor(red: 0.76, green: 0.66, blue: 0.39, alpha: 0.60)
+        roof.lineWidth = 4
         roof.name = "weatherTowerRoof"
         tower.addChild(roof)
 
         let roofTrim = ArtSystem.box(
-            CGSize(width: 330, height: 8),
-            color: UIColor(red: 0.86, green: 0.68, blue: 0.34, alpha: 0.72),
+            CGSize(width: 292, height: 7),
+            color: UIColor(red: 0.86, green: 0.68, blue: 0.34, alpha: 0.54),
             radius: 4
         )
         roofTrim.position = CGPoint(x: 0, y: 171)
@@ -622,6 +624,7 @@ import LearningCore
         valkyrie.pose(.interact)
         state.scienceObserveMorningWeather()
         instruction.text = "Morning: cloudy with rain. Milo says to compare another observation before forecasting."
+        refreshGuidanceCue()
     }
 
     private func observeAfternoon() {
@@ -633,6 +636,7 @@ import LearningCore
         valkyrie.pose(.interact)
         state.scienceObserveAfternoonWeather()
         instruction.text = "Afternoon: cloudy with rain again. The same condition appeared twice. What is likely next?"
+        refreshGuidanceCue()
     }
 
     private func chooseForecast(_ choice: ForecastChoice) {
@@ -654,5 +658,21 @@ import LearningCore
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "Sun could happen, but it does not match the pattern we observed. Compare the two rainy flags again."
         }
+        refreshGuidanceCue()
     }
+
+    private func refreshGuidanceCue() {
+        let tint = UIColor(red: 0.62, green: 0.87, blue: 1.0, alpha: 1)
+        switch weatherStage {
+        case .arrive:
+            showAttentionCue(at: morningPoint, tint: tint)
+        case .morningObserved:
+            showAttentionCue(at: afternoonPoint, tint: tint)
+        case .afternoonObserved:
+            showAttentionCue(at: forecastPoint, tint: tint, width: 138)
+        case .complete:
+            showAttentionCue(at: creatureGatePoint, tint: tint, width: 104)
+        }
+    }
+
 }

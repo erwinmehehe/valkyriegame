@@ -29,6 +29,7 @@ import LearningCore
 
         milo.position = CGPoint(x: 320, y: 190)
         milo.reducedMotion = reducedMotion
+        milo.setScale(0.82)
         addChild(milo)
 
         valkyrie.position = CGPoint(x: 175, y: 175)
@@ -37,6 +38,7 @@ import LearningCore
         renderGate()
 
         instruction.text = "Milo noticed something at the seed bench. Walk over and inspect it."
+        refreshGuidanceCue()
     }
 
     override func buildWorld() {
@@ -314,6 +316,7 @@ import LearningCore
         roofCrest.addChild(crestMark)
 
         addChild(house)
+        buildGreenhouseConceptAccents()
 
         for (height, y) in [(CGFloat(66), CGFloat(687)), (CGFloat(100), CGFloat(46))] {
             let shade = ArtSystem.box(
@@ -329,11 +332,11 @@ import LearningCore
 
         let path = ArtSystem.panel(
             CGSize(width: 1110, height: 86),
-            fill: UIColor(red: 0.39, green: 0.30, blue: 0.19, alpha: 0.58),
-            stroke: UIColor(red: 0.69, green: 0.57, blue: 0.36, alpha: 0.58),
+            fill: UIColor(red: 0.39, green: 0.30, blue: 0.19, alpha: 0.24),
+            stroke: UIColor(red: 0.69, green: 0.57, blue: 0.36, alpha: 0.34),
             radius: 43,
             lineWidth: 3,
-            shadowAlpha: 0.16,
+            shadowAlpha: 0.08,
             innerHighlight: UIColor(red: 0.82, green: 0.70, blue: 0.47, alpha: 0.06)
         )
         path.position = CGPoint(x: 640, y: 184)
@@ -513,6 +516,152 @@ import LearningCore
         _ = worldControl("⌂", name: "scienceHome", at: CGPoint(x: 55, y: 665), radius: 30)
     }
 
+    private func buildGreenhouseConceptAccents() {
+        let root = SKNode()
+        root.name = "decorativeScienceConceptAccents"
+        root.zPosition = -62
+        root.isUserInteractionEnabled = false
+
+        let dome = SKShapeNode(ellipseOf: CGSize(width: 950, height: 560))
+        dome.position = CGPoint(x: 720, y: 390)
+        dome.fillColor = .clear
+        dome.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.31, alpha: 0.16)
+        dome.lineWidth = 4
+        dome.name = "decorativeScienceDome"
+        root.addChild(dome)
+
+        let domeInner = SKShapeNode(ellipseOf: CGSize(width: 875, height: 500))
+        domeInner.position = dome.position
+        domeInner.fillColor = .clear
+        domeInner.strokeColor = UIColor(red: 0.72, green: 0.91, blue: 0.86, alpha: 0.10)
+        domeInner.lineWidth = 2
+        domeInner.name = "decorativeScienceDome"
+        root.addChild(domeInner)
+
+        for (index, x) in [CGFloat(235), 615, 1035].enumerated() {
+            let hanger = SKNode()
+            hanger.position = CGPoint(x: x, y: 585 - CGFloat(index % 2) * 34)
+            hanger.name = "decorativeScienceHangingPlanter\(index)"
+
+            let cord = SKShapeNode(rectOf: CGSize(width: 3, height: 74), cornerRadius: 1)
+            cord.fillColor = UIColor(red: 0.54, green: 0.39, blue: 0.19, alpha: 0.74)
+            cord.strokeColor = .clear
+            cord.position.y = 36
+            hanger.addChild(cord)
+
+            let pot = SKShapeNode(path: {
+                let p = CGMutablePath()
+                p.move(to: CGPoint(x: -30, y: 8))
+                p.addLine(to: CGPoint(x: 30, y: 8))
+                p.addLine(to: CGPoint(x: 22, y: -28))
+                p.addLine(to: CGPoint(x: -22, y: -28))
+                p.closeSubpath()
+                return p
+            }())
+            pot.fillColor = UIColor(red: 0.49, green: 0.28, blue: 0.13, alpha: 0.96)
+            pot.strokeColor = UIColor(red: 0.85, green: 0.63, blue: 0.29, alpha: 0.58)
+            pot.lineWidth = 2
+            hanger.addChild(pot)
+
+            for leafIndex in 0..<5 {
+                let leaf = SKShapeNode(ellipseOf: CGSize(width: 28, height: 15))
+                leaf.fillColor = leafIndex.isMultiple(of: 2)
+                    ? UIColor(red: 0.26, green: 0.62, blue: 0.31, alpha: 0.94)
+                    : UIColor(red: 0.42, green: 0.72, blue: 0.38, alpha: 0.92)
+                leaf.strokeColor = .clear
+                leaf.position = CGPoint(
+                    x: CGFloat(leafIndex - 2) * 13,
+                    y: 18 + CGFloat(abs(leafIndex - 2)) * 4
+                )
+                leaf.zRotation = CGFloat(leafIndex - 2) * 0.28
+                hanger.addChild(leaf)
+            }
+
+            root.addChild(hanger)
+        }
+
+        for offset in [CGFloat(-60), 0, 60] {
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 1160 + offset, y: 690))
+            path.addLine(to: CGPoint(x: 900 + offset * 0.20, y: 310))
+            let ray = SKShapeNode(path: path)
+            ray.strokeColor = UIColor(red: 1.0, green: 0.88, blue: 0.46, alpha: 0.10)
+            ray.lineWidth = 24
+            ray.name = "decorativeScienceSunShaft"
+            root.addChild(ray)
+        }
+
+        let cloche = SKShapeNode(ellipseOf: CGSize(width: 194, height: 214))
+        cloche.position = CGPoint(x: seedBenchPoint.x, y: seedBenchPoint.y + 74)
+        cloche.fillColor = UIColor(red: 0.78, green: 0.96, blue: 0.94, alpha: 0.055)
+        cloche.strokeColor = UIColor(red: 0.80, green: 0.96, blue: 0.92, alpha: 0.25)
+        cloche.lineWidth = 3
+        cloche.name = "decorativeSciencePlantCloche"
+        root.addChild(cloche)
+
+        let clocheBase = ArtSystem.box(
+            CGSize(width: 190, height: 12),
+            color: UIColor(red: 0.68, green: 0.49, blue: 0.22, alpha: 0.68),
+            radius: 5
+        )
+        clocheBase.position = CGPoint(x: seedBenchPoint.x, y: seedBenchPoint.y - 30)
+        clocheBase.strokeColor = .clear
+        clocheBase.name = "decorativeSciencePlantCloche"
+        root.addChild(clocheBase)
+
+        let railPath = CGMutablePath()
+        railPath.move(to: CGPoint(x: waterValvePoint.x, y: 208))
+        railPath.addCurve(
+            to: CGPoint(x: sunPrismPoint.x, y: 214),
+            control1: CGPoint(x: 560, y: 160),
+            control2: CGPoint(x: 810, y: 162)
+        )
+        let rail = SKShapeNode(path: railPath)
+        rail.strokeColor = UIColor(red: 0.88, green: 0.65, blue: 0.28, alpha: 0.32)
+        rail.lineWidth = 5
+        rail.name = "decorativeScienceExperimentRail"
+        root.addChild(rail)
+
+        let waterOrb = SKShapeNode(circleOfRadius: 56)
+        waterOrb.position = CGPoint(x: 355, y: 352)
+        waterOrb.fillColor = UIColor(red: 0.23, green: 0.71, blue: 0.88, alpha: 0.12)
+        waterOrb.strokeColor = UIColor(red: 0.55, green: 0.90, blue: 0.98, alpha: 0.40)
+        waterOrb.lineWidth = 3
+        waterOrb.glowWidth = reducedMotion ? 0 : 5
+        waterOrb.name = "decorativeScienceWaterOrb"
+        root.addChild(waterOrb)
+
+        let waterDrop = ArtSystem.label("◆", size: 22)
+        waterDrop.fontColor = UIColor(red: 0.58, green: 0.92, blue: 1.0, alpha: 0.86)
+        waterDrop.name = "decorativeScienceWaterOrb"
+        waterOrb.addChild(waterDrop)
+
+        let board = ArtSystem.panel(
+            CGSize(width: 176, height: 106),
+            fill: UIColor(red: 0.07, green: 0.19, blue: 0.16, alpha: 0.62),
+            stroke: UIColor(red: 0.68, green: 0.52, blue: 0.25, alpha: 0.38),
+            radius: 14,
+            lineWidth: 2,
+            shadowAlpha: 0.06,
+            innerHighlight: UIColor(red: 0.76, green: 0.94, blue: 0.72, alpha: 0.03)
+        )
+        board.position = CGPoint(x: 1070, y: 418)
+        board.name = "decorativeScienceObservationBoard"
+        root.addChild(board)
+
+        for (index, symbol) in ["•", "↗", "✿"].enumerated() {
+            let icon = ArtSystem.label(symbol, size: index == 1 ? 24 : 28)
+            icon.position = CGPoint(x: CGFloat(index - 1) * 52, y: 4)
+            icon.fontColor = index == 2
+                ? UIColor(red: 0.80, green: 0.95, blue: 0.48, alpha: 0.92)
+                : UIColor(red: 0.75, green: 0.93, blue: 0.76, alpha: 0.86)
+            icon.name = "decorativeScienceObservationBoard"
+            board.addChild(icon)
+        }
+
+        addChild(root)
+    }
+
     private func renderPlant() {
         plantNode.removeFromParent()
         plantNode = SKNode()
@@ -575,6 +724,15 @@ import LearningCore
             bloom.position.y = 104
             bloom.name = "scienceSeedBench"
             plantNode.addChild(bloom)
+
+            let aura = SKShapeNode(circleOfRadius: 48)
+            aura.fillColor = UIColor(red: 0.90, green: 0.90, blue: 0.36, alpha: 0.08)
+            aura.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.34, alpha: 0.34)
+            aura.lineWidth = 2
+            aura.glowWidth = reducedMotion ? 0 : 8
+            aura.position.y = 70
+            aura.name = "scienceSeedBench"
+            plantNode.addChild(aura)
         }
 
         addChild(plantNode)
@@ -766,6 +924,7 @@ import LearningCore
         case .lit:
             instruction.text = "Water and light changed the plant. The Greenhouse gate is open."
         }
+        refreshGuidanceCue()
     }
 
     private func testWater() {
@@ -787,6 +946,7 @@ import LearningCore
         state.scienceWaterGreenhouse()
         renderPlant()
         instruction.text = "The dry soil darkened, and a sprout appeared. Our water test changed the seed tray."
+        refreshGuidanceCue()
     }
 
     private func testLight() {
@@ -811,5 +971,21 @@ import LearningCore
         renderGate()
         state.audio.play("success")
         instruction.text = "The pale sprout became greener in the light. Observation, prediction, test, result—the Weather Tower path opened."
+        refreshGuidanceCue()
     }
+
+    private func refreshGuidanceCue() {
+        let tint = UIColor(red: 0.57, green: 0.93, blue: 0.63, alpha: 1)
+        switch greenhouseStage {
+        case .arrive:
+            showAttentionCue(at: seedBenchPoint, tint: tint)
+        case .inspected:
+            showAttentionCue(at: waterValvePoint, tint: tint)
+        case .watered:
+            showAttentionCue(at: sunPrismPoint, tint: tint)
+        case .lit:
+            showAttentionCue(at: exitPoint, tint: tint, width: 104)
+        }
+    }
+
 }

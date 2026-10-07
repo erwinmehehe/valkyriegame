@@ -99,7 +99,10 @@ import LearningCore
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleArchitecture"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloor"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloorTexture"))
-        XCTAssertNotNil(puzzle.childNode(withName: "puzzleStageDais"))
+        XCTAssertNotNil(
+            puzzle.childNode(withName: "puzzleGate"),
+            "The polished Rune Gate remains native SpriteKit structure even without the old stage dais."
+        )
 
         let scienceState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
@@ -1549,20 +1552,32 @@ import LearningCore
 
         let grove = CreatureGroveScene(state: state); grove.reducedMotion = true
         view.presentScene(grove)
+        XCTAssertLessThan(grove.childNode(withName: "scienceHabitatPond")?.alpha ?? 1, 0.01)
+        XCTAssertLessThan(grove.childNode(withName: "scienceWebbedFeet")?.alpha ?? 1, 0.01)
+        XCTAssertLessThan(grove.childNode(withName: "scienceCompareBoard")?.alpha ?? 1, 0.01)
+        XCTAssertLessThan(grove.childNode(withName: "scienceGroveFinale")?.alpha ?? 1, 0.01)
         try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-arrival")
         grove.valkyrie.position = CGPoint(x: 245, y: 180)
         grove.handleTap(at: CGPoint(x: 335, y: 270))
+        XCTAssertGreaterThan(grove.childNode(withName: "scienceHabitatPond")?.alpha ?? 0, 0.99)
+        XCTAssertGreaterThan(grove.childNode(withName: "scienceHabitatRidge")?.alpha ?? 0, 0.99)
         grove.valkyrie.position = CGPoint(x: 610, y: 180)
         grove.handleTap(at: CGPoint(x: 528, y: 270))
         XCTAssertEqual(grove.groveStage, .habitatMatched)
+        XCTAssertLessThan(grove.childNode(withName: "scienceHabitatPond")?.alpha ?? 1, 0.01)
+        XCTAssertGreaterThan(grove.childNode(withName: "scienceWebbedFeet")?.alpha ?? 0, 0.99)
         try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-habitat")
         grove.valkyrie.position = CGPoint(x: 750, y: 180)
         grove.handleTap(at: CGPoint(x: 840, y: 290))
         XCTAssertEqual(grove.groveStage, .bodyPartObserved)
+        XCTAssertLessThan(grove.childNode(withName: "scienceWebbedFeet")?.alpha ?? 1, 0.01)
+        XCTAssertGreaterThan(grove.childNode(withName: "scienceCompareBoard")?.alpha ?? 0, 0.99)
         try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-body-part")
         grove.valkyrie.position = CGPoint(x: 920, y: 180)
         grove.handleTap(at: CGPoint(x: 975, y: 285))
         XCTAssertTrue(grove.groveRestored)
+        XCTAssertLessThan(grove.childNode(withName: "scienceCompareBoard")?.alpha ?? 1, 0.01)
+        XCTAssertGreaterThan(grove.childNode(withName: "scienceGroveFinale")?.alpha ?? 0, 0.99)
         try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-restored")
         grove.willLeave()
 
@@ -1571,6 +1586,25 @@ import LearningCore
         palace.reducedMotion = true
         view.presentScene(palace)
         try await capture(palace, in: view, name: "Puzzle-Palace-native-rune-gate")
+        XCTAssertNil(
+            palace.childNode(withName: "puzzleCrystalFixture"),
+            "Rune Gate must not carry decorative crystal clutter from deeper palace rooms."
+        )
+        XCTAssertNil(
+            palace.childNode(withName: "puzzlePillar"),
+            "Rune Gate must not show the old synthetic pillar scaffolding."
+        )
+        XCTAssertNil(
+            palace.childNode(withName: "puzzleStageDais"),
+            "Rune Gate must keep the floor clear instead of layering another giant platform."
+        )
+        XCTAssertNotNil(palace.childNode(withName: "puzzleGate"))
+        XCTAssertEqual(
+            palace.valkyrie.xScale,
+            0.56,
+            accuracy: 0.001,
+            "Rune Gate polish must not alter Valkyrie's native presentation."
+        )
         palace.willLeave()
 
         for encounter in PuzzlePalaceEncounterCatalog.runeGate {
@@ -1642,7 +1676,14 @@ import LearningCore
             name: "Puzzle-Palace-native-stop-go-orbs"
         )
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoOrb"))
+        XCTAssertNotNil(stopGo.childNode(withName: "//stopGoOrbHalo"))
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoBarrier"))
+        XCTAssertNotNil(stopGo.childNode(withName: "stopGoLegend"))
+        XCTAssertEqual(
+            stopGo.children.filter { $0.name == "stopGoBrace" }.count,
+            3,
+            "Stop/Go chamber should keep the signal focus clear instead of filling the room with braces."
+        )
         stopGo.willLeave()
 
         for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
@@ -1759,6 +1800,16 @@ import LearningCore
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallRail"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorBeacon"))
         XCTAssertNotNil(mirrorHall.childNode(withName: "mirrorHallTitlePlate"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "decorativeMirrorHallConceptAccents"))
+        XCTAssertNotNil(mirrorHall.childNode(withName: "//decorativeMirrorHallFloorCompass"))
+        let mirrorBackdropArch = try XCTUnwrap(
+            mirrorHall.childNode(withName: "//decorativeMirrorHallBackdropArch0") as? SKShapeNode
+        )
+        XCTAssertLessThanOrEqual(
+            mirrorBackdropArch.lineWidth,
+            3,
+            "Decorative Mirror Hall architecture must stay quieter than scored mirrors."
+        )
         let orientationChoices = mirrorHall.children.filter { $0.name == "mirrorOrientationChoice" }
         XCTAssertEqual(orientationChoices.count, 3)
         let mirrorPools = mirrorHall.children.filter {
@@ -1770,6 +1821,15 @@ import LearningCore
             XCTAssertFalse(
                 actorFrame.intersects(choice.calculateAccumulatedFrame()),
                 "Valkyrie must never obscure a scored mirror choice."
+            )
+            XCTAssertNotNil(
+                choice.childNode(withName: "//decorativeMirrorStationCrystal"),
+                "Each scored mirror should read as a physical portal station."
+            )
+            XCTAssertEqual(
+                mirrorHall.targetName(at: choice.position),
+                "mirrorOrientationChoice",
+                "Decorative portal art must never steal the mirror tap."
             )
         }
         XCTAssertEqual(
@@ -2452,6 +2512,17 @@ import LearningCore
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterPipe"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSunPrism"))
         XCTAssertNotNil(greenhouse.childNode(withName: "sciencePrismBeam"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "decorativeScienceConceptAccents"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceDome"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceHangingPlanter0"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeSciencePlantCloche"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceExperimentRail"))
+        XCTAssertNotNil(greenhouse.childNode(withName: "//decorativeScienceObservationBoard"))
+        XCTAssertEqual(
+            greenhouse.targetName(at: CGPoint(x: 685, y: 235)),
+            "scienceSeedBench",
+            "Greenhouse concept decoration must not steal the seed-bench tap."
+        )
         XCTAssertEqual(
             greenhouse.targetName(at: CGPoint(x: 430, y: 220)),
             "scienceWaterValve"
@@ -2460,6 +2531,7 @@ import LearningCore
             greenhouse.targetName(at: CGPoint(x: 940, y: 245)),
             "scienceSunPrism"
         )
+        XCTAssertEqual(greenhouse.milo.xScale, 0.82, accuracy: 0.001)
         greenhouse.willLeave()
 
         let weatherState = try AppState(
@@ -2478,6 +2550,7 @@ import LearningCore
         XCTAssertNotNil(weather.childNode(withName: "scienceForecastBase"))
         XCTAssertNotNil(weather.childNode(withName: "scienceMorningWeather"))
         XCTAssertNotNil(weather.childNode(withName: "scienceAfternoonWeather"))
+        XCTAssertEqual(weather.milo.xScale, 0.82, accuracy: 0.001)
         weather.willLeave()
 
         let groveState = try AppState(
@@ -2496,7 +2569,60 @@ import LearningCore
         XCTAssertNotNil(grove.childNode(withName: "scienceGroveDuck"))
         XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
         XCTAssertNotNil(grove.childNode(withName: "scienceCompareBoard"))
+        XCTAssertEqual(grove.milo.xScale, 0.82, accuracy: 0.001)
         grove.willLeave()
+    }
+
+    func testRuneGateReadsAsPhysicalWorldInsteadOfFullscreenWorksheet() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .puzzlePalace)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let architecture = try XCTUnwrap(
+            scene.childNode(withName: "puzzleArchitecture") as? SKShapeNode
+        )
+        XCTAssertLessThan(
+            architecture.alpha,
+            0.10,
+            "Rune Gate should not be dominated by the old giant palace panel."
+        )
+
+        let gate = try XCTUnwrap(
+            scene.childNode(withName: "puzzleGate") as? SKShapeNode
+        )
+        let gateFrame = gate.calculateAccumulatedFrame()
+        XCTAssertLessThan(gateFrame.width, 190)
+        XCTAssertLessThan(gateFrame.height, 270)
+
+        let board = try XCTUnwrap(scene.childNode(withName: "runeBoard"))
+        XCTAssertLessThan(
+            board.calculateAccumulatedFrame().width,
+            520,
+            "The rune pattern should read as physical stones, not a wide quiz rail."
+        )
+
+        let choices = scene.children.filter { $0.name == "runeChoice" }
+        XCTAssertEqual(choices.count, 3)
+        for choice in choices {
+            let frame = choice.calculateAccumulatedFrame()
+            XCTAssertGreaterThanOrEqual(frame.width, 88)
+            XCTAssertGreaterThanOrEqual(frame.height, 88)
+        }
+
+        let instructionBackdrop = try XCTUnwrap(
+            scene.childNode(withName: "instructionBackdrop")
+        )
+        XCTAssertLessThan(
+            instructionBackdrop.calculateAccumulatedFrame().width,
+            800,
+            "Puzzle Palace instructions should not span nearly the whole screen."
+        )
     }
 
     func testLongPuzzleWorldTitleAndActorScaleStayPresentationSafe() throws {
@@ -2546,5 +2672,39 @@ import LearningCore
         XCTAssertGreaterThan(feedbackBackdrop.lineWidth, 1)
     }
 
+
+
+    func testScienceGuidanceCueTracksTheNextPhysicalActionWithoutStealingInput() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        var cue = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(cue.position.x, 685, accuracy: 0.001)
+        XCTAssertEqual(cue.position.y, 235, accuracy: 0.001)
+        XCTAssertFalse(cue.hasActions())
+        XCTAssertTrue(cue.children.allSatisfy { !$0.hasActions() })
+        XCTAssertNotEqual(
+            scene.targetName(at: cue.position),
+            "decorativeAttentionCue",
+            "A visual hint must never steal a gameplay tap."
+        )
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        cue = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(cue.position.x, 430, accuracy: 0.001)
+        XCTAssertEqual(cue.position.y, 220, accuracy: 0.001)
+
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        cue = try XCTUnwrap(scene.childNode(withName: "decorativeAttentionCue"))
+        XCTAssertEqual(cue.position.x, 940, accuracy: 0.001)
+        XCTAssertEqual(cue.position.y, 245, accuracy: 0.001)
+    }
 
 }

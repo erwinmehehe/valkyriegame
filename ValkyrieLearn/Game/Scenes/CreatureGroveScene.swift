@@ -34,11 +34,14 @@ import LearningCore
         valkyrie.setScale(0.5)
         milo.position = CGPoint(x: 245, y: 190)
         milo.reducedMotion = reducedMotion
+        milo.setScale(0.82)
         addChild(milo)
 
         renderPond()
         renderFinale()
+        refreshStagePresentation(animated: false)
         instruction.text = "Milo spotted a duck near the grove. Observe it before changing the habitat."
+        refreshGuidanceCue()
     }
 
     override func buildWorld() {
@@ -205,6 +208,7 @@ import LearningCore
         )
         title.position = CGPoint(x: habitatPoint.x, y: habitatPoint.y + 120)
         title.zPosition = 520
+        title.name = "scienceHabitatTitle"
         addChild(title)
 
         let titleLabel = ArtSystem.label("CHOOSE A HABITAT", size: 13)
@@ -660,7 +664,9 @@ import LearningCore
         valkyrie.pose(.interact)
 
         state.scienceObserveAnimal()
+        refreshStagePresentation(animated: true)
         instruction.text = "Milo observes that the duck uses water, finds food nearby, and needs places with cover. Which habitat offers those resources?"
+        refreshGuidanceCue()
     }
 
     private func chooseHabitat(_ choice: HabitatChoice) {
@@ -675,6 +681,7 @@ import LearningCore
 
         state.scienceChooseHabitat(choice)
         valkyrie.pose(.interact)
+        refreshStagePresentation(animated: choice == .pondEdge)
 
         if choice == .pondEdge {
             state.audio.play("success")
@@ -683,6 +690,7 @@ import LearningCore
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The bare ridge offers little water or cover. Compare that with the needs Milo observed."
         }
+        refreshGuidanceCue()
     }
 
     private func inspectBodyPart() {
@@ -694,7 +702,9 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceInspectBodyPart()
+        refreshStagePresentation(animated: true)
         instruction.text = "The webbing spreads the foot's surface against the water. That can help the duck push water while swimming. Compare the habitats one more time."
+        refreshGuidanceCue()
     }
 
     private func compareHabitats(_ choice: HabitatChoice) {
@@ -707,6 +717,7 @@ import LearningCore
         if choice == .pondEdge {
             renderPond()
             renderFinale()
+            refreshStagePresentation(animated: true)
             state.audio.play("success")
             valkyrie.pose(.celebrate)
             instruction.text = "The pond edge meets more of the duck's observed needs. The grove responded to the evidence and came back to life."
@@ -714,5 +725,101 @@ import LearningCore
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The exposed ridge still lacks water and protective cover. Use the needs we observed, not just where the duck could stand."
         }
+        refreshGuidanceCue()
     }
+
+    private func refreshStagePresentation(animated: Bool) {
+        let habitatNames = [
+            "scienceHabitatTitle",
+            "scienceHabitatPond",
+            "scienceHabitatRidge"
+        ]
+
+        func setVisible(_ names: [String], _ visible: Bool) {
+            for name in names {
+                guard let node = childNode(withName: name) else { continue }
+                node.removeAction(forKey: "groveStageReveal")
+                guard visible else {
+                    // Keep the authored hit target alive so an early tap still
+                    // reaches the stage guard and explains what to do next.
+                    // Alpha-only staging avoids turning an early tap into an
+                    // unrelated walk command.
+                    node.isHidden = false
+                    node.alpha = 0.001
+                    node.setScale(1)
+                    continue
+                }
+
+                let wasVisuallyDormant = node.alpha < 0.01
+                node.isHidden = false
+                if wasVisuallyDormant && animated && !reducedMotion {
+                    node.alpha = 0.001
+                    node.setScale(0.94)
+                    node.run(
+                        .group([
+                            .fadeAlpha(to: 1, duration: 0.22),
+                            .scale(to: 1, duration: 0.22)
+                        ]),
+                        withKey: "groveStageReveal"
+                    )
+                } else {
+                    node.alpha = 1
+                    node.setScale(1)
+                }
+            }
+        }
+
+        let bodyName = ["scienceWebbedFeet"]
+        let compareName = ["scienceCompareBoard"]
+        let finaleName = ["scienceGroveFinale"]
+
+        switch groveStage {
+        case .arrive:
+            setVisible(habitatNames, false)
+            setVisible(bodyName, false)
+            setVisible(compareName, false)
+            setVisible(finaleName, false)
+
+        case .animalObserved:
+            setVisible(habitatNames, true)
+            setVisible(bodyName, false)
+            setVisible(compareName, false)
+            setVisible(finaleName, false)
+
+        case .habitatMatched:
+            setVisible(habitatNames, false)
+            setVisible(bodyName, true)
+            setVisible(compareName, false)
+            setVisible(finaleName, false)
+
+        case .bodyPartObserved:
+            setVisible(habitatNames, false)
+            setVisible(bodyName, false)
+            setVisible(compareName, true)
+            setVisible(finaleName, false)
+
+        case .complete:
+            setVisible(habitatNames, false)
+            setVisible(bodyName, false)
+            setVisible(compareName, false)
+            setVisible(finaleName, true)
+        }
+    }
+
+    private func refreshGuidanceCue() {
+        let tint = UIColor(red: 0.66, green: 0.91, blue: 0.52, alpha: 1)
+        switch groveStage {
+        case .arrive:
+            showAttentionCue(at: duckPoint, tint: tint)
+        case .animalObserved:
+            showAttentionCue(at: habitatPoint, tint: tint, width: 154)
+        case .habitatMatched:
+            showAttentionCue(at: feetPoint, tint: tint)
+        case .bodyPartObserved:
+            showAttentionCue(at: comparePoint, tint: tint, width: 150)
+        case .complete:
+            showAttentionCue(at: finalePoint, tint: tint, width: 102)
+        }
+    }
+
 }
