@@ -160,10 +160,18 @@ import LearningCore
         root.position = point
         root.zPosition = 750
 
-        let gear = ArtSystem.gear(radius: 22, symbol: symbol)
-        gear.name = name
+        // Keep the icon upright while the brass rim rotates independently.
+        // This makes the workshop feel mechanical without sacrificing symbol readability.
+        let gear = ArtSystem.gear(radius: 22, symbol: "")
+        gear.name = "workshopRim_\(name)"
         gear.alpha = 0.86
         root.addChild(gear)
+
+        let icon = ArtSystem.label(symbol, size: 18)
+        icon.name = name
+        icon.fontColor = UIColor(red: 0.95, green: 0.95, blue: 0.92, alpha: 1)
+        icon.zPosition = 3
+        root.addChild(icon)
 
         let hit = SKShapeNode(circleOfRadius: 30)
         hit.fillColor = .clear
@@ -545,6 +553,27 @@ import LearningCore
         powerMount?.removeAction(forKey: "ambientSpin")
         powerMount?.zRotation = 0
 
+        let workshopNames = [
+            "workshop0", "workshop1", "workshop2", "workshop3", "workshop4", "wind"
+        ]
+        for (index, name) in workshopNames.enumerated() {
+            guard let rim = childNode(withName: "//workshopRim_\(name)") else { continue }
+            rim.removeAction(forKey: "ambientWorkshopSpin")
+            rim.zRotation = 0
+            guard !reducedMotion else { continue }
+
+            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
+            let duration = name == "wind"
+                ? 5.6
+                : 8.0 + Double(index % 3) * 1.25
+            rim.run(
+                .repeatForever(
+                    .rotate(byAngle: direction * .pi * 2, duration: duration)
+                ),
+                withKey: "ambientWorkshopSpin"
+            )
+        }
+
         for (index, gear) in environmentGears.enumerated() {
             gear.removeAction(forKey: "ambientSpin")
             if reducedMotion {
@@ -599,6 +628,18 @@ import LearningCore
                 withKey: "ambientChainSway"
             )
         }
+    }
+
+    private func playWorkshopGearSurge(named name: String) {
+        guard !reducedMotion,
+              let rim = childNode(withName: "//workshopRim_\(name)") else { return }
+
+        rim.removeAction(forKey: "workshopTapSurge")
+        let direction: CGFloat = ["workshop1", "workshop3"].contains(name) ? -1 : 1
+        rim.run(
+            .rotate(byAngle: direction * .pi * 0.85, duration: 0.28),
+            withKey: "workshopTapSurge"
+        )
     }
 
     private func setActiveMachineKinetics(_ active: Bool) {
@@ -1316,6 +1357,7 @@ import LearningCore
         case "help":
             if canManipulate() { showScaffold() } else { engageMachine() }
         case "wind":
+            playWorkshopGearSurge(named: "wind")
             engaged = false
             setActiveMachineKinetics(false)
             travel(to: CGPoint(x: 380, y: 235)) { [weak self] in
@@ -1340,11 +1382,11 @@ import LearningCore
             } else {
                 state.advanceEncounter(); openOrder()
             }
-        case "workshop0": workshop(0)
-        case "workshop1": workshop(1)
-        case "workshop2": workshop(2)
-        case "workshop3": workshop(3)
-        case "workshop4": workshop(4)
+        case "workshop0": playWorkshopGearSurge(named: "workshop0"); workshop(0)
+        case "workshop1": playWorkshopGearSurge(named: "workshop1"); workshop(1)
+        case "workshop2": playWorkshopGearSurge(named: "workshop2"); workshop(2)
+        case "workshop3": playWorkshopGearSurge(named: "workshop3"); workshop(3)
+        case "workshop4": playWorkshopGearSurge(named: "workshop4"); workshop(4)
         case "challengeGate":
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
