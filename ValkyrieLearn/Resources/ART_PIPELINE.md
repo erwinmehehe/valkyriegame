@@ -55,24 +55,26 @@ SpriteKit keeps quantity selection, drop footprints, equation text and traversal
 native. The same timber materials cover the crossing steps and their supports.
 
 
-## Companion presence pass
+## Companion HD art pass
 
-Lumi, Milo and Tiko currently ship as small single-frame source images rather than
-full action atlases. The native renderer must therefore preserve each source
-texture's real aspect ratio instead of forcing Pip's atlas proportions onto every
-non-Valkyrie actor.
+Milo, Tiko and Lumi now ship with dedicated 256×256 transparent WebP production
+cutouts instead of the former tiny single-frame source images. At their authored
+native scene sizes, these assets remove the visible low-resolution companion
+presentation while preserving each character's real aspect ratio.
 
-Until dedicated HD companion atlases are produced:
+Pip keeps the existing five-pose atlas contract
+(`idle/walk/interact/react/celebrate`) so gameplay code does not change. The atlas
+slots now use the refreshed 256×256 transparent Pip identity art; authored native
+motion still supplies the current action behavior rather than pretending that a
+single illustrated pose is a true multi-frame animation.
 
-- Lumi renders at a readable fairy-companion scale in Word Garden instead of being
-  reduced to a decorative sticker.
-- Lumi, Milo and Tiko use subtle world-colored grounding auras so their silhouettes
-  remain legible against illustrated environments without becoming floating HUD.
-- Their authored interaction methods add short native reaction motion, while
-  reduced-motion mode keeps the reactions immediate and spatially stable.
-- The presentation layer does not claim additional source animation frames and does
-  not change curriculum, evidence, routing or progression.
+- Valkyrie's atlas and character design are unchanged.
+- Milo, Tiko and Lumi keep their world-colored grounding auras and authored
+  interaction reactions.
+- Reduced Motion behavior remains unchanged.
+- All companion art is packaged in the app and works fully offline; there are no
+  runtime image downloads.
+- Curriculum, evidence, routing, mastery and persistence logic are unchanged.
 
-This is an interim game-feel correction. Dedicated Retina companion art with
-idle/walk/interact/react/celebrate coverage remains required for final visual
-acceptance.
+True multi-frame companion animation remains a future production pass, but the
+low-resolution companion-art blocker is removed.
