@@ -462,6 +462,35 @@ import LearningCore
         greenhouse.willLeave()
     }
 
+    func testEveryPuzzlePalaceRoomBuildsAFinishedNativeIdentityLayer() throws {
+        let state = try makeState()
+        let worlds: [AppState.World] = [
+            .puzzlePalace,
+            .memoryBridge,
+            .stopGoOrbs,
+            .sortingPedestal,
+            .resortVault,
+            .mirrorHall,
+            .pathTiles,
+            .commandGears,
+            .bugLantern,
+            .bugLanternRepair
+        ]
+
+        for world in worlds {
+            state.travel(to: world)
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            scene.didMove(to: SKView())
+            XCTAssertNotNil(
+                scene.childNode(withName: "puzzleRoomIdentity"),
+                "\(world) must not fall back to a skeleton/prototype room."
+            )
+            XCTAssertNil(scene.childNode(withName: "puzzleLegacyMatte"))
+            scene.willLeave()
+        }
+    }
+
     func testLaterScienceRoomsHaveCrispNativeEnvironmentIdentityLayers() throws {
         let state = try makeState()
 
