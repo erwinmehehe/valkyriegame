@@ -181,6 +181,8 @@ import LearningCore
             XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().height, 60)
 
             if world == .sunmillCrossing {
+                XCTAssertFalse(guidance.isHidden)
+                XCTAssertFalse(guidanceBackdrop.isHidden)
                 XCTAssertNil(
                     scene.childNode(withName: "//questionPromptBackdrop"),
                     "Sunmill Crossing should use one guidance surface instead of duplicating the prompt over the world."
@@ -188,6 +190,11 @@ import LearningCore
                 XCTAssertNotNil(scene.childNode(withName: "sunmillLightPath"))
                 XCTAssertNotNil(scene.childNode(withName: "decorativeSunmillChoiceBank"))
             } else {
+                XCTAssertTrue(
+                    guidance.isHidden,
+                    "Flower Gate and Story Hollow should not repeat their task prompt in the bottom HUD during preview."
+                )
+                XCTAssertTrue(guidanceBackdrop.isHidden)
                 let prompt = try XCTUnwrap(
                     scene.childNode(withName: "questionPrompt") as? SKLabelNode
                 )
