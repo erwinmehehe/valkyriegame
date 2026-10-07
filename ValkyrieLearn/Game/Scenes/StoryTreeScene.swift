@@ -69,6 +69,11 @@ import SpriteKit
         title.name = "worldTitle"
         addChild(title)
 
+        if let emblem = childNode(withName: "decorativeWorldEmblem") {
+            emblem.position = CGPoint(x: 111, y: 672)
+            emblem.setScale(0.72)
+        }
+
         childNode(withName: "topVignette")?.alpha = 0.40
 
         if let feedbackPlate = childNode(withName: "instructionBackdrop") {
