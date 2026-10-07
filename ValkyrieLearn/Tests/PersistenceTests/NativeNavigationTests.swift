@@ -412,10 +412,9 @@ import LearningCore
         let weather = WeatherTowerScene(state: state)
         weather.reducedMotion = true
         weather.didMove(to: view)
-        let weatherArt = try XCTUnwrap(
-            weather.childNode(withName: "//weatherBackdropRetina") as? SKSpriteNode
-        )
-        XCTAssertEqual(weatherArt.size, CGSize(width: 1280, height: 720))
+        XCTAssertNotNil(weather.childNode(withName: "weatherObservatoryBackdrop"))
+        XCTAssertNotNil(weather.childNode(withName: "//weatherSkyBand0"))
+        XCTAssertNil(weather.childNode(withName: "//weatherBackdropRetina"))
         weather.willLeave()
 
         state.travel(to: .scienceCreatureGrove)
@@ -470,8 +469,9 @@ import LearningCore
         weather.reducedMotion = true
         weather.didMove(to: SKView())
         XCTAssertNotNil(weather.childNode(withName: "weatherFarLandscape"))
-        let painting = try XCTUnwrap(weather.childNode(withName: "//weatherBackdropRetina"))
-        XCTAssertLessThanOrEqual(painting.alpha, 0.30)
+        XCTAssertNotNil(weather.childNode(withName: "weatherObservatoryBackdrop"))
+        XCTAssertNotNil(weather.childNode(withName: "//weatherObservatoryCornice"))
+        XCTAssertNil(weather.childNode(withName: "//weatherBackdropRetina"))
         weather.willLeave()
 
         state.travel(to: .scienceCreatureGrove)
