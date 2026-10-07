@@ -138,6 +138,9 @@ import LearningCore
             )
             painting.position = CGPoint(x: 640, y: 360)
             painting.colorBlendFactor = 0.22
+            // StarlightIsles is approved art but only 1280x720. Keep it as
+            // atmospheric color, not the sharp visual layer on a Retina iPad.
+            painting.alpha = 0.30
             painting.name = "weatherBackdropRetina"
             painting.userData = NSMutableDictionary(dictionary: [
                 "retinaPrepared": true,
@@ -158,6 +161,68 @@ import LearningCore
 
             addChild(backdrop)
         }
+
+        // Crisp native silhouettes carry the distant composition so the 1x
+        // painting never has to provide the scene's visible edge detail.
+        let farLandscape = SKNode()
+        farLandscape.name = "weatherFarLandscape"
+        farLandscape.zPosition = -205
+        farLandscape.isUserInteractionEnabled = false
+
+        for (index, points) in [
+            [
+                CGPoint(x: -40, y: 285),
+                CGPoint(x: 170, y: 455),
+                CGPoint(x: 350, y: 330),
+                CGPoint(x: 520, y: 470),
+                CGPoint(x: 690, y: 300)
+            ],
+            [
+                CGPoint(x: 520, y: 300),
+                CGPoint(x: 730, y: 500),
+                CGPoint(x: 930, y: 345),
+                CGPoint(x: 1110, y: 465),
+                CGPoint(x: 1320, y: 305)
+            ]
+        ].enumerated() {
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: points[0].x, y: 250))
+            for point in points { path.addLine(to: point) }
+            path.addLine(to: CGPoint(x: points.last!.x, y: 250))
+            path.closeSubpath()
+
+            let ridge = SKShapeNode(path: path)
+            ridge.fillColor = index == 0
+                ? UIColor(red: 0.10, green: 0.25, blue: 0.31, alpha: 0.88)
+                : UIColor(red: 0.08, green: 0.20, blue: 0.28, alpha: 0.82)
+            ridge.strokeColor = UIColor(red: 0.42, green: 0.67, blue: 0.72, alpha: 0.24)
+            ridge.lineWidth = 2
+            ridge.name = "decorativeWeatherRidge"
+            farLandscape.addChild(ridge)
+        }
+
+        for x in [CGFloat(185), 355, 1025, 1175] {
+            let spire = ArtSystem.box(
+                CGSize(width: 18, height: 118),
+                color: UIColor(red: 0.08, green: 0.16, blue: 0.22, alpha: 0.92),
+                radius: 8
+            )
+            spire.position = CGPoint(x: x, y: 320)
+            spire.strokeColor = UIColor(red: 0.55, green: 0.75, blue: 0.76, alpha: 0.28)
+            spire.lineWidth = 2
+            spire.name = "decorativeWeatherFarSpire"
+            farLandscape.addChild(spire)
+
+            let beacon = SKShapeNode(circleOfRadius: 6)
+            beacon.position = CGPoint(x: x, y: 382)
+            beacon.fillColor = UIColor(red: 0.96, green: 0.76, blue: 0.34, alpha: 0.72)
+            beacon.strokeColor = .clear
+            beacon.glowWidth = reducedMotion ? 0 : 5
+            beacon.name = "decorativeWeatherFarBeacon"
+            farLandscape.addChild(beacon)
+        }
+
+        addChild(farLandscape)
 
         let horizonWash = ArtSystem.box(
             CGSize(width: 1280, height: 250),
