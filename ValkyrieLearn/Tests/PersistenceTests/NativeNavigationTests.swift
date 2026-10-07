@@ -221,6 +221,111 @@ import LearningCore
         }
     }
 
+    func testPuzzleAndScienceHomeControlsClearlyReturnToStoryTree() throws {
+        func firstLabelText(in node: SKNode) -> String? {
+            if let label = node as? SKLabelNode, let text = label.text {
+                return text
+            }
+            for child in node.children {
+                if let text = firstLabelText(in: child) {
+                    return text
+                }
+            }
+            return nil
+        }
+
+        let state = try makeState()
+        let cases: [(AppState.World, String, (AppState) -> AdventureScene)] = [
+            (.puzzlePalace, "home", { PuzzlePalaceScene(state: $0) }),
+            (.scienceLab, "scienceHome", { ScienceLabScene(state: $0) }),
+            (.scienceWeatherTower, "scienceWeatherHome", { WeatherTowerScene(state: $0) }),
+            (.scienceCreatureGrove, "scienceGroveHome", { CreatureGroveScene(state: $0) })
+        ]
+
+        for (world, controlName, makeScene) in cases {
+            state.travel(to: world)
+            let scene = makeScene(state)
+            scene.reducedMotion = true
+            scene.didMove(to: SKView())
+            let home = try XCTUnwrap(scene.childNode(withName: controlName))
+            XCTAssertEqual(firstLabelText(in: home), "⌂")
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().width, 60)
+            XCTAssertGreaterThanOrEqual(home.calculateAccumulatedFrame().height, 60)
+            scene.willLeave()
+        }
+    }
+
+    func testGreenhouseVisuallyPrioritizesTheCurrentExperimentStep() throws {
+        let state = try makeState()
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let bench = try XCTUnwrap(scene.childNode(withName: "scienceSeedBench"))
+        let valve = try XCTUnwrap(scene.childNode(withName: "scienceWaterValve"))
+        let prism = try XCTUnwrap(scene.childNode(withName: "scienceSunPrism"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "scienceWeatherGate"))
+
+        XCTAssertEqual(bench.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(valve.alpha, 0.5)
+        XCTAssertLessThan(prism.alpha, valve.alpha)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 565, y: 185)
+        scene.handleTap(at: CGPoint(x: 685, y: 235))
+        XCTAssertEqual(scene.greenhouseStage, .inspected)
+        XCTAssertEqual(valve.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(prism.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 500, y: 180)
+        scene.handleTap(at: CGPoint(x: 430, y: 220))
+        XCTAssertEqual(scene.greenhouseStage, .watered)
+        XCTAssertEqual(prism.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 850, y: 185)
+        scene.handleTap(at: CGPoint(x: 940, y: 245))
+        XCTAssertEqual(scene.greenhouseStage, .lit)
+        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+    }
+
+    func testWeatherTowerVisuallyPrioritizesTheCurrentObservationStep() throws {
+        let state = try makeState()
+        state.travel(to: .scienceWeatherTower)
+        let scene = WeatherTowerScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let morning = try XCTUnwrap(scene.childNode(withName: "scienceMorningWeather"))
+        let afternoon = try XCTUnwrap(scene.childNode(withName: "scienceAfternoonWeather"))
+        let forecast = try XCTUnwrap(scene.childNode(withName: "scienceForecastBase"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "scienceCreatureGate"))
+
+        XCTAssertEqual(morning.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(afternoon.alpha, 0.5)
+        XCTAssertLessThan(forecast.alpha, afternoon.alpha)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 370, y: 180)
+        scene.handleTap(at: CGPoint(x: 470, y: 305))
+        XCTAssertEqual(scene.weatherStage, .morningObserved)
+        XCTAssertEqual(afternoon.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(forecast.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 605, y: 180)
+        scene.handleTap(at: CGPoint(x: 700, y: 305))
+        XCTAssertEqual(scene.weatherStage, .afternoonObserved)
+        XCTAssertEqual(forecast.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 825, y: 180)
+        scene.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertEqual(scene.weatherStage, .complete)
+        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+    }
+
     func testScienceGuidanceKeepsItsTargetWhenMotionPreferenceChanges() throws {
         let state = try makeState()
         state.travel(to: .scienceLab)
