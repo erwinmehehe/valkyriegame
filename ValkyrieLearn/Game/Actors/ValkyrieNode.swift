@@ -32,6 +32,22 @@ import SpriteKit
         head.strokeColor = .clear; head.position.y = height * 0.85; bodyNode.addChild(head)
         let label = ArtSystem.label(character + " · TEMP", size: 18)
         label.position.y = height + 25; addChild(label); temporaryLabel = label
+
+        // A very soft silhouette wash separates illustrated characters from busy
+        // painted worlds without altering the character artwork itself.
+        let silhouetteGlow = SKShapeNode(
+            ellipseOf: CGSize(width: height * 0.66, height: height * 0.82)
+        )
+        silhouetteGlow.name = "characterSilhouetteGlow"
+        silhouetteGlow.fillColor = color.withAlphaComponent(character == "Valkyrie" ? 0.030 : 0.022)
+        silhouetteGlow.strokeColor = color.withAlphaComponent(character == "Valkyrie" ? 0.12 : 0.085)
+        silhouetteGlow.lineWidth = character == "Valkyrie" ? 2.2 : 1.6
+        silhouetteGlow.glowWidth = character == "Valkyrie" ? 7 : 5
+        silhouetteGlow.position.y = height * 0.45
+        silhouetteGlow.zPosition = -3
+        silhouetteGlow.isUserInteractionEnabled = false
+        addChild(silhouetteGlow)
+
         // A broad, faint penumbra and compact contact shadow keep feet grounded
         // without putting a hard black oval under every illustrated companion.
         let shadow = SKNode()
@@ -87,6 +103,7 @@ import SpriteKit
         }
         bodyNode.position = .zero; bodyNode.zRotation = 0; bodyNode.setScale(1)
         bodyNode.xScale = facing
+        syncCharacterPresentation(for: pose)
         let frames = ArtSystem.frames(character: character, pose: pose)
         if let first = frames.first, let sprite = atlasSprite {
             temporaryLabel?.isHidden = true
@@ -106,29 +123,11 @@ import SpriteKit
                     if frames.count > 1 { sprite.run(.repeatForever(.animate(with: frames, timePerFrame: 0.22)), withKey: "pose") }
                     else { bodyNode.run(companionStep(), withKey: "pose") }
                 case .idle:
-                    let breath = character == "Pip" ? 1.4 : (character == "Tiko" ? 2.2 : 1.8)
-                    bodyNode.run(.repeatForever(.sequence([
-                        eased(.scaleY(to: 1.008, duration: breath)),
-                        eased(.scaleY(to: 1, duration: breath))
-                    ])), withKey: "pose")
+                    bodyNode.run(idleMotion(), withKey: "pose")
                 case .celebrate:
-                    bodyNode.run(.sequence([
-                        .group([
-                            .moveBy(x: 0, y: 15, duration: 0.20),
-                            .rotate(toAngle: -0.045, duration: 0.20)
-                        ]),
-                        .group([
-                            .moveBy(x: 0, y: -15, duration: 0.28),
-                            .rotate(toAngle: 0.025, duration: 0.22)
-                        ]),
-                        .rotate(toAngle: 0, duration: 0.12)
-                    ]), withKey: "pose")
+                    bodyNode.run(celebrationMotion(), withKey: "pose")
                 case .react:
-                    bodyNode.run(.sequence([
-                        .rotate(toAngle: -0.04, duration: 0.12),
-                        .rotate(toAngle: 0.025, duration: 0.12),
-                        .rotate(toAngle: 0, duration: 0.16)
-                    ]), withKey: "pose")
+                    bodyNode.run(reactionMotion(), withKey: "pose")
                 case .interact: break // The existing atlas supplies Valkyrie's reaching pose.
                 }
             }
@@ -157,13 +156,137 @@ import SpriteKit
         return action
     }
 
+    private func syncCharacterPresentation(for pose: ArtSystem.Pose) {
+        if let shadow = childNode(withName: "characterGroundShadow") {
+            shadow.removeAction(forKey: "poseShadow")
+            shadow.alpha = 1
+            switch pose {
+            case .idle:
+                shadow.xScale = 1
+                shadow.yScale = 1
+            case .walk:
+                shadow.xScale = 0.92
+                shadow.yScale = 0.88
+            case .interact:
+                shadow.xScale = 0.96
+                shadow.yScale = 0.90
+            case .celebrate:
+                shadow.xScale = 0.80
+                shadow.yScale = 0.76
+            case .react:
+                shadow.xScale = 1.08
+                shadow.yScale = 0.92
+            }
+        }
+
+        guard let glow = childNode(withName: "characterSilhouetteGlow") else { return }
+        glow.removeAction(forKey: "characterPresence")
+        glow.setScale(1)
+        glow.alpha = pose == .celebrate ? 1 : (pose == .react ? 0.62 : 0.78)
+
+        guard !reducedMotion else { return }
+        let peak: CGFloat = character == "Valkyrie" ? 0.96 : 0.88
+        let floor: CGFloat = character == "Valkyrie" ? 0.72 : 0.64
+        let duration: TimeInterval = character == "Milo" ? 1.8 : (character == "Lumi" ? 2.8 : 2.3)
+        glow.alpha = floor
+        glow.run(
+            .repeatForever(.sequence([
+                .fadeAlpha(to: peak, duration: duration),
+                .fadeAlpha(to: floor, duration: duration)
+            ])),
+            withKey: "characterPresence"
+        )
+    }
+
+    private func idleMotion() -> SKAction {
+        let profile: (scale: CGFloat, rise: CGFloat, beat: TimeInterval)
+        switch character {
+        case "Valkyrie": profile = (1.006, 1.5, 2.15)
+        case "Pip": profile = (1.012, 2.0, 1.30)
+        case "Lumi": profile = (1.005, 2.4, 2.70)
+        case "Milo": profile = (1.010, 1.8, 1.55)
+        case "Tiko": profile = (1.006, 1.0, 2.35)
+        default: profile = (1.008, 1.2, 1.8)
+        }
+
+        return .repeatForever(.sequence([
+            .group([
+                eased(.scaleY(to: profile.scale, duration: profile.beat)),
+                eased(.moveTo(y: profile.rise, duration: profile.beat))
+            ]),
+            .group([
+                eased(.scaleY(to: 1, duration: profile.beat)),
+                eased(.moveTo(y: 0, duration: profile.beat))
+            ])
+        ]))
+    }
+
+    private func celebrationMotion() -> SKAction {
+        let rise: CGFloat
+        let tilt: CGFloat
+        let up: TimeInterval
+        let down: TimeInterval
+        switch character {
+        case "Valkyrie": (rise, tilt, up, down) = (18, -0.032, 0.19, 0.28)
+        case "Milo": (rise, tilt, up, down) = (13, -0.065, 0.13, 0.18)
+        case "Tiko": (rise, tilt, up, down) = (10, -0.038, 0.18, 0.24)
+        case "Pip": (rise, tilt, up, down) = (11, -0.080, 0.12, 0.17)
+        case "Lumi": (rise, tilt, up, down) = (15, -0.020, 0.24, 0.30)
+        default: (rise, tilt, up, down) = (14, -0.04, 0.18, 0.24)
+        }
+
+        var actions: [SKAction] = [
+            .group([
+                eased(.moveBy(x: 0, y: rise, duration: up)),
+                eased(.rotate(toAngle: tilt, duration: up))
+            ]),
+            .group([
+                eased(.moveBy(x: 0, y: -rise, duration: down)),
+                eased(.rotate(toAngle: -tilt * 0.45, duration: down))
+            ])
+        ]
+        if character == "Pip" || character == "Milo" {
+            actions.append(.group([
+                eased(.moveBy(x: 0, y: 5, duration: 0.10)),
+                eased(.rotate(toAngle: tilt * 0.55, duration: 0.10))
+            ]))
+            actions.append(.group([
+                eased(.moveBy(x: 0, y: -5, duration: 0.12)),
+                eased(.rotate(toAngle: 0, duration: 0.12))
+            ]))
+        } else {
+            actions.append(eased(.rotate(toAngle: 0, duration: 0.12)))
+        }
+        return .sequence(actions)
+    }
+
+    private func reactionMotion() -> SKAction {
+        let first: CGFloat
+        let second: CGFloat
+        let beat: TimeInterval
+        switch character {
+        case "Valkyrie": (first, second, beat) = (-0.032, 0.018, 0.13)
+        case "Milo": (first, second, beat) = (-0.075, 0.040, 0.10)
+        case "Tiko": (first, second, beat) = (-0.038, 0.020, 0.16)
+        case "Pip": (first, second, beat) = (-0.095, 0.070, 0.10)
+        case "Lumi": (first, second, beat) = (-0.025, 0.012, 0.18)
+        default: (first, second, beat) = (-0.04, 0.025, 0.12)
+        }
+        return .sequence([
+            eased(.rotate(toAngle: first, duration: beat)),
+            eased(.rotate(toAngle: second, duration: beat)),
+            eased(.rotate(toAngle: 0, duration: beat + 0.04))
+        ])
+    }
+
     private func companionStep() -> SKAction {
         let step: (rise: CGFloat, tilt: CGFloat, beat: TimeInterval)
         switch character {
-        case "Pip": step = (3.5, 0.028, 0.18) // Waddle.
-        case "Lumi": step = (2, 0.012, 0.30) // Gentle glide.
-        case "Milo": step = (3, 0.018, 0.16) // Quick scout.
-        case "Tiko": step = (1.5, 0.012, 0.28) // Careful steps.
+        case "Valkyrie": step = (4.5, 0.012, 0.22) // Confident, grounded stride.
+        case "Pip": step = (3.8, 0.034, 0.17) // Cheerful waddle.
+        case "Lumi": step = (2.2, 0.010, 0.31) // Gentle glide.
+        case "Milo": step = (3.4, 0.022, 0.15) // Quick scout.
+        case "Tiko": step = (1.7, 0.014, 0.27) // Careful mechanic steps.
         default: step = (3, 0.018, 0.20)
         }
         // Absolute positions prevent interrupted/restarted walks from drifting.
