@@ -2342,6 +2342,51 @@ import LearningCore
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
 
+    func testMathCastleAmbientMachineryAndActiveFocusRespectReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        let encounter = MathCastleEncounterCatalog.numberBondMachine[0]
+        XCTAssertTrue(state.startWorkshop(encounter))
+
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let chain0 = try XCTUnwrap(scene.childNode(withName: "//castleAmbientChain0"))
+        let chain1 = try XCTUnwrap(scene.childNode(withName: "//castleAmbientChain1"))
+        let powerMount = try XCTUnwrap(scene.childNode(withName: "castlePowerMount"))
+        let workshopRim = try XCTUnwrap(
+            scene.childNode(withName: "//workshopRim_workshop0")
+        )
+
+        XCTAssertNotNil(chain0.action(forKey: "ambientChainSway"))
+        XCTAssertNotNil(chain1.action(forKey: "ambientChainSway"))
+        XCTAssertNotNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNotNil(workshopRim.action(forKey: "ambientWorkshopSpin"))
+
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 925, y: 280))
+
+        let machine = try XCTUnwrap(
+            scene.childNode(withName: "//\(MathMechanicID.numberBondMachine)")
+        )
+        XCTAssertNotNil(machine.action(forKey: "activeMachineBreath"))
+        XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(chain0.action(forKey: "ambientChainSway"))
+        XCTAssertNil(chain1.action(forKey: "ambientChainSway"))
+        XCTAssertNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNil(workshopRim.action(forKey: "ambientWorkshopSpin"))
+        XCTAssertNil(machine.action(forKey: "activeMachineBreath"))
+        XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
+        XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
+    }
+
     func testMathQuestionRendersAboveManipulativeAndFeedbackStaysBelow() async throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let encounter = MathCastleEncounterCatalog.numberBondMachine[0]
