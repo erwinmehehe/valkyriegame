@@ -287,7 +287,14 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 850, y: 185)
         scene.handleTap(at: CGPoint(x: 940, y: 245))
         XCTAssertEqual(scene.greenhouseStage, .lit)
-        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+        XCTAssertEqual(bench.alpha, 1.0, accuracy: 0.001)
+        XCTAssertEqual(valve.alpha, 1.0, accuracy: 0.001)
+        XCTAssertEqual(prism.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(
+            gate.alpha,
+            0.5,
+            "The Weather route stays visually gated until the Greenhouse field-study completion condition is satisfied."
+        )
     }
 
     func testWeatherTowerVisuallyPrioritizesTheCurrentObservationStep() throws {
@@ -323,7 +330,14 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 825, y: 180)
         scene.handleTap(at: CGPoint(x: 985, y: 282))
         XCTAssertEqual(scene.weatherStage, .complete)
-        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+        XCTAssertEqual(morning.alpha, 1.0, accuracy: 0.001)
+        XCTAssertEqual(afternoon.alpha, 1.0, accuracy: 0.001)
+        XCTAssertEqual(forecast.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(
+            gate.alpha,
+            0.5,
+            "Creature Grove stays visually gated until the Weather field-study retention choices are complete."
+        )
     }
 
     func testCreatureGroveRevealsOneEvidenceStepAtATime() throws {
@@ -366,7 +380,11 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 900, y: 180)
         scene.handleTap(at: CGPoint(x: 975, y: 285))
         XCTAssertEqual(scene.groveStage, .complete)
-        XCTAssertEqual(finale.alpha, 1.0, accuracy: 0.001)
+        let restoredFinale = try XCTUnwrap(
+            scene.childNode(withName: "scienceGroveFinale")
+        )
+        XCTAssertFalse(restoredFinale === finale)
+        XCTAssertEqual(restoredFinale.alpha, 1.0, accuracy: 0.001)
     }
 
     func testPuzzleAndScienceUseExtraVerticalSpaceOnFourByThreeIPad() throws {
