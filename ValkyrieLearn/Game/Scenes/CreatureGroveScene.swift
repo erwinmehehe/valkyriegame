@@ -44,7 +44,14 @@ import LearningCore
         renderPond()
         renderFinale()
         refreshStagePresentation(animated: false)
-        instruction.text = "Milo spotted a duck near the grove. Observe it before changing the habitat."
+        if groveStage == .complete && !groveRestored,
+           let challenge = state.scienceNextFieldStudy(in: .creatureGrove) {
+            instruction.text = challenge.prompt
+        } else if groveRestored {
+            instruction.text = "The Creature Grove study is complete. The restored grove is holding steady."
+        } else {
+            instruction.text = "Milo spotted a duck near the grove. Observe it before changing the habitat."
+        }
         refreshGuidanceCue()
     }
 
@@ -904,7 +911,30 @@ import LearningCore
     }
 
     func handleTap(at point: CGPoint) {
-        switch targetName(at: point) {
+        let target = targetName(at: point)
+
+        if groveStage == .complete,
+           !groveRestored,
+           let challenge = state.scienceNextFieldStudy(in: .creatureGrove),
+           let target {
+            if challenge.choiceTargets.contains(target),
+               let stationPoint = groveFieldStudyPoint(for: target) {
+                if isNear(stationPoint, radius: 185) {
+                    answerGroveFieldStudy(challenge, targetName: target)
+                } else {
+                    instruction.text = "Walk to that grove evidence before choosing it."
+                    let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 95))
+                    travel(to: CGPoint(x: approachX, y: 180))
+                }
+                return
+            }
+            if target != "scienceGroveHome" {
+                instruction.text = challenge.prompt
+                return
+            }
+        }
+
+        switch target {
         case "scienceGroveDuck":
             if isNear(duckPoint, radius: 135) {
                 observeAnimal()
@@ -1069,15 +1099,66 @@ import LearningCore
             renderPond()
             renderFinale()
             refreshStagePresentation(animated: true)
-            successFeedback(at: finalePoint)
-            playGroveRestorationSurge()
-            valkyrie.pose(.celebrate)
-            instruction.text = "The pond edge meets more of the duck's observed needs. The grove responded to the evidence and came back to life."
+            successFeedback(at: comparePoint)
+            if let challenge = state.scienceNextFieldStudy(in: .creatureGrove) {
+                instruction.text = "The pond edge meets more of the duck's observed needs. " + challenge.prompt
+            }
         } else {
             errorFeedback()
             focusMoment(on: comparePoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The exposed ridge still lacks water and protective cover. Use the needs we observed, not just where the duck could stand."
+        }
+        refreshGuidanceCue()
+    }
+
+    private func groveFieldStudyPoint(for targetName: String) -> CGPoint? {
+        switch targetName {
+        case "scienceGroveDuck": duckPoint
+        case "scienceHabitatPond", "scienceHabitatRidge": habitatPoint
+        case "scienceWebbedFeet": feetPoint
+        case "scienceCompareShelteredPond", "scienceCompareExposedRidge": comparePoint
+        default: nil
+        }
+    }
+
+    private func groveFieldStudyFocusPoint(
+        for challenge: ScienceFieldStudyChallenge
+    ) -> CGPoint {
+        if challenge.choiceTargets.contains("scienceHabitatPond") {
+            return habitatPoint
+        }
+        if challenge.choiceTargets.contains("scienceWebbedFeet") {
+            return CGPoint(x: 590, y: 245)
+        }
+        return comparePoint
+    }
+
+    private func answerGroveFieldStudy(
+        _ challenge: ScienceFieldStudyChallenge,
+        targetName: String
+    ) {
+        valkyrie.pose(.interact)
+        milo.inspect(reducedMotion: reducedMotion)
+
+        let correct = state.scienceAnswerFieldStudy(challenge, targetName: targetName)
+        if correct {
+            state.audio.play("success")
+            renderPond()
+            renderFinale()
+            refreshStagePresentation(animated: true)
+
+            if groveRestored {
+                playGroveRestorationSurge()
+                valkyrie.pose(.celebrate)
+                playGroveRestorationSurge()
+                instruction.text = "Field study complete. The habitat evidence holds together, and the grove is fully restored."
+            } else if let next = state.scienceNextFieldStudy(in: .creatureGrove) {
+                let completed = state.scienceFieldStudyCompletedCount(in: .creatureGrove)
+                instruction.text = "Grove evidence \(completed)/\(ScienceFieldStudyCatalog.creatureGrove.count) confirmed. " + next.prompt
+            }
+        } else {
+            instruction.text = "That choice does not match the observed habitat evidence. Compare the duck, body part, and habitat resources again."
         }
         refreshGuidanceCue()
     }
@@ -1153,10 +1234,25 @@ import LearningCore
             setVisible(finaleName, false)
 
         case .complete:
-            setVisible(habitatNames, false)
-            setVisible(bodyName, false)
-            setVisible(compareName, false)
-            setVisible(finaleName, true)
+            if groveRestored {
+                setVisible(habitatNames, false)
+                setVisible(bodyName, false)
+                setVisible(compareName, false)
+                setVisible(finaleName, true)
+            } else if let challenge = state.scienceNextFieldStudy(in: .creatureGrove) {
+                let showHabitat = challenge.choiceTargets.contains("scienceHabitatPond")
+                let showBody = challenge.choiceTargets.contains("scienceWebbedFeet")
+                let showCompare = challenge.choiceTargets.contains("scienceCompareShelteredPond")
+                setVisible(habitatNames, showHabitat)
+                setVisible(bodyName, showBody)
+                setVisible(compareName, showCompare)
+                setVisible(finaleName, false)
+            } else {
+                setVisible(habitatNames, false)
+                setVisible(bodyName, false)
+                setVisible(compareName, false)
+                setVisible(finaleName, true)
+            }
         }
     }
 
@@ -1177,8 +1273,16 @@ import LearningCore
             focusPoint = comparePoint
             showAttentionCue(at: comparePoint, tint: tint, width: 150)
         case .complete:
-            focusPoint = finalePoint
-            showAttentionCue(at: finalePoint, tint: tint, width: 102)
+            if groveRestored {
+                focusPoint = finalePoint
+                showAttentionCue(at: finalePoint, tint: tint, width: 102)
+            } else if let challenge = state.scienceNextFieldStudy(in: .creatureGrove) {
+                focusPoint = groveFieldStudyFocusPoint(for: challenge)
+                showAttentionCue(at: focusPoint, tint: tint, width: 280)
+            } else {
+                focusPoint = finalePoint
+                showAttentionCue(at: finalePoint, tint: tint, width: 102)
+            }
         }
 
         focusMoment(on: focusPoint, hold: 0.50)

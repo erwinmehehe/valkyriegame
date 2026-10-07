@@ -1148,7 +1148,10 @@ import LearningCore
         XCTAssertTrue(garden.childNode(withName: "targetRune") == nil || garden.childNode(withName: "targetRune")?.isHidden == true)
         garden.handleTap(at: CGPoint(x: 675, y: 228))
         XCTAssertNil(garden.action(forKey: "wordGardenPreview"))
-        XCTAssertEqual(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count, 3)
+        XCTAssertEqual(
+            state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count,
+            WordGardenEncounterCatalog.visualLetterShapes.count
+        )
         garden.willLeave()
     }
 
@@ -1696,8 +1699,9 @@ import LearningCore
         try await capture(home, in: view, name: "Story-Tree-native")
         home.handleTap(at: CGPoint(x: 835, y: 535))
         // Exercise the painted waypoint route before the arrival capture.
-        try await Task.sleep(nanoseconds: 3_000_000_000)
-        XCTAssertTrue(home.isNear(CGPoint(x: 795, y: 450)))
+        try await waitUntil(timeout: 8) {
+            home.isNear(CGPoint(x: 795, y: 450))
+        }
         try await capture(home, in: view, name: "Story-Tree-native-castle-arrival")
         home.willLeave()
 
@@ -1804,6 +1808,13 @@ import LearningCore
         try await capture(science, in: view, name: "Science-Lab-native-greenhouse-sprout")
         science.valkyrie.position = CGPoint(x: 850, y: 185)
         science.handleTap(at: CGPoint(x: 940, y: 245))
+        XCTAssertFalse(science.greenhouseComplete)
+        science.valkyrie.position = CGPoint(x: 565, y: 185)
+        science.handleTap(at: CGPoint(x: 685, y: 235))
+        science.valkyrie.position = CGPoint(x: 500, y: 180)
+        science.handleTap(at: CGPoint(x: 430, y: 220))
+        science.valkyrie.position = CGPoint(x: 850, y: 185)
+        science.handleTap(at: CGPoint(x: 940, y: 245))
         XCTAssertTrue(science.greenhouseComplete)
         try await capture(science, in: view, name: "Science-Lab-native-greenhouse-complete")
         science.willLeave()
@@ -1817,6 +1828,11 @@ import LearningCore
         weather.handleTap(at: CGPoint(x: 700, y: 305))
         XCTAssertEqual(weather.weatherStage, .afternoonObserved)
         try await capture(weather, in: view, name: "Science-Lab-native-weather-compared")
+        weather.valkyrie.position = CGPoint(x: 825, y: 180)
+        weather.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertFalse(weather.creatureRouteOpen)
+        weather.valkyrie.position = CGPoint(x: 370, y: 180)
+        weather.handleTap(at: CGPoint(x: 470, y: 305))
         weather.valkyrie.position = CGPoint(x: 825, y: 180)
         weather.handleTap(at: CGPoint(x: 985, y: 282))
         XCTAssertTrue(weather.creatureRouteOpen)
@@ -1846,6 +1862,13 @@ import LearningCore
         XCTAssertLessThan(grove.childNode(withName: "scienceWebbedFeet")?.alpha ?? 1, 0.01)
         XCTAssertGreaterThan(grove.childNode(withName: "scienceCompareBoard")?.alpha ?? 0, 0.99)
         try await capture(grove, in: view, name: "Science-Lab-native-creature-grove-body-part")
+        grove.valkyrie.position = CGPoint(x: 920, y: 180)
+        grove.handleTap(at: CGPoint(x: 975, y: 285))
+        XCTAssertFalse(grove.groveRestored)
+        grove.valkyrie.position = CGPoint(x: 610, y: 180)
+        grove.handleTap(at: CGPoint(x: 528, y: 270))
+        grove.valkyrie.position = CGPoint(x: 750, y: 180)
+        grove.handleTap(at: CGPoint(x: 840, y: 290))
         grove.valkyrie.position = CGPoint(x: 920, y: 180)
         grove.handleTap(at: CGPoint(x: 975, y: 285))
         XCTAssertTrue(grove.groveRestored)

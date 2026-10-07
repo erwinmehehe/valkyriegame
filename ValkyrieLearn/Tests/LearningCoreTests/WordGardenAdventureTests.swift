@@ -2,6 +2,64 @@ import XCTest
 @testable import LearningCore
 
 final class WordGardenAdventureTests: XCTestCase {
+
+    func testWordGardenShipsEighteenDistinctNoAudioAuthoredEncounters() {
+        let flower = WordGardenEncounterCatalog.visualLetterShapes
+        let sunmill = WordGardenEncounterCatalog.sunmillVisualShapes
+        let hollow = WordGardenEncounterCatalog.storyHollowSequence
+        let all = flower + sunmill + hollow
+
+        XCTAssertEqual(flower.count, 6)
+        XCTAssertEqual(sunmill.count, 6)
+        XCTAssertEqual(hollow.count, 6)
+        XCTAssertEqual(all.count, 18)
+        XCTAssertEqual(Set(all.map(\.id)).count, 18)
+        XCTAssertEqual(Set(all.map(\.fingerprint)).count, 18)
+
+        for encounter in all {
+            XCTAssertTrue(encounter.choices.contains(encounter.answer))
+            XCTAssertEqual(Set(encounter.choices).count, encounter.choices.count)
+            XCTAssertGreaterThanOrEqual(encounter.choices.count, 4)
+            XCTAssertFalse(
+                LiteracySkillCatalog.descriptor(for: encounter.skillID)?
+                    .requiresRecordedAudio ?? true
+            )
+        }
+
+        XCTAssertEqual(WordGardenEncounterCatalog.storyHollowPatterns.count, 2)
+        XCTAssertTrue(
+            WordGardenEncounterCatalog.storyHollowPatterns.allSatisfy {
+                $0.count == WordGardenEncounterCatalog.storyHollowPatternLength
+            }
+        )
+    }
+
+    func testStoryHollowRotatesToSecondMemoryAfterFirstThreeRestorations() {
+        let first = WordGardenEncounterCatalog.storyHollowVisiblePatternProgress(
+            independentCount: 0
+        )
+        XCTAssertEqual(first.pattern, ["m", "a", "p"])
+        XCTAssertEqual(first.filledCount, 0)
+
+        let firstComplete = WordGardenEncounterCatalog.storyHollowVisiblePatternProgress(
+            independentCount: 3
+        )
+        XCTAssertEqual(firstComplete.pattern, ["r", "i", "n"])
+        XCTAssertEqual(firstComplete.filledCount, 0)
+
+        let secondNearlyComplete = WordGardenEncounterCatalog.storyHollowVisiblePatternProgress(
+            independentCount: 5
+        )
+        XCTAssertEqual(secondNearlyComplete.pattern, ["r", "i", "n"])
+        XCTAssertEqual(secondNearlyComplete.filledCount, 2)
+
+        let complete = WordGardenEncounterCatalog.storyHollowVisiblePatternProgress(
+            independentCount: 6
+        )
+        XCTAssertEqual(complete.pattern, ["r", "i", "n"])
+        XCTAssertEqual(complete.filledCount, 3)
+    }
+
     func testFlowerGateStartsWithNonAudioVisualLetterMatching() throws {
         let graph = try LiteracySkillCatalog.graph()
         let encounter = WordGardenDirector.nextEncounter(
@@ -18,7 +76,7 @@ final class WordGardenAdventureTests: XCTestCase {
         XCTAssertFalse(WordGardenDirector.flowerGateComplete(profile: LearnerProfile()))
     }
 
-    func testThreeIndependentFlowerGateMatchesUnlockSunmillWithoutSpokenMastery() throws {
+    func testSixIndependentFlowerGateMatchesUnlockSunmillWithoutSpokenMastery() throws {
         let graph = try LiteracySkillCatalog.graph()
         var profile = LearnerProfile()
         let mastery = MasteryEngine()
@@ -91,7 +149,7 @@ final class WordGardenAdventureTests: XCTestCase {
         XCTAssertNil(WordGardenDirector.nextSunmillEncounter(profile: profile))
     }
 
-    func testThreeIndependentSunmillTransfersWakeCrossingWithoutSpokenLetterClaims() throws {
+    func testSixIndependentSunmillTransfersWakeCrossingWithoutSpokenLetterClaims() throws {
         var profile = LearnerProfile()
         let mastery = MasteryEngine()
 
@@ -117,7 +175,7 @@ final class WordGardenAdventureTests: XCTestCase {
                 for: WordGardenEncounterCatalog.sunmillVisualShapes,
                 profile: profile
             ),
-            3
+            6
         )
         XCTAssertEqual(
             profile.progress(for: LiteracySkills.uppercaseLetterNames).state,
@@ -150,7 +208,7 @@ final class WordGardenAdventureTests: XCTestCase {
             LiteracySkills.shortVowelSounds
         ].contains(flower.skillID))
     }
-    func testStoryHollowStaysLockedUntilSunmillHasThreeIndependentTransferMatches() throws {
+    func testStoryHollowStaysLockedUntilSunmillHasSixIndependentTransferMatches() throws {
         var profile = LearnerProfile()
         let mastery = MasteryEngine()
 
@@ -224,7 +282,7 @@ final class WordGardenAdventureTests: XCTestCase {
                 for: WordGardenEncounterCatalog.storyHollowSequence,
                 profile: profile
             ),
-            3
+            6
         )
         XCTAssertEqual(
             profile.progress(for: LiteracySkills.visualPrintSequence).state,
