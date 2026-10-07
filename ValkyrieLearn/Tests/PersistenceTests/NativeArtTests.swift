@@ -99,7 +99,10 @@ import LearningCore
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleArchitecture"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloor"))
         XCTAssertNotNil(puzzle.childNode(withName: "puzzleFloorTexture"))
-        XCTAssertNotNil(puzzle.childNode(withName: "puzzleStageDais"))
+        XCTAssertNotNil(
+            puzzle.childNode(withName: "puzzleGate"),
+            "The polished Rune Gate remains native SpriteKit structure even without the old stage dais."
+        )
 
         let scienceState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
