@@ -82,11 +82,27 @@ import LearningCore
         lumi.reducedMotion = reducedMotion
         addChild(lumi)
 
+        if place == .sunmillCrossing {
+            applySunmillHUDPolish()
+        }
+
         switch place {
         case .flowerGate: configureFlowerGate()
         case .sunmillCrossing: configureSunmill()
         case .storyHollow: configureStoryHollow()
         }
+    }
+
+    private func applySunmillHUDPolish() {
+        if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
+            instructionBackdrop.xScale = 0.70
+            instructionBackdrop.position = CGPoint(x: 755, y: 48)
+            instructionBackdrop.alpha = 0.92
+        }
+        instruction.position = CGPoint(x: 755, y: 48)
+        instruction.fontSize = 19
+        instruction.preferredMaxLayoutWidth = 720
+        instruction.numberOfLines = 2
     }
 
     override func buildWorld() {
@@ -385,8 +401,8 @@ import LearningCore
 
         let bank = SKShapeNode(ellipseOf: CGSize(width: 650, height: 150))
         bank.position = CGPoint(x: 775, y: 230)
-        bank.fillColor = UIColor(red: 0.10, green: 0.24, blue: 0.13, alpha: 0.22)
-        bank.strokeColor = UIColor(red: 0.58, green: 0.76, blue: 0.34, alpha: 0.34)
+        bank.fillColor = UIColor(red: 0.10, green: 0.24, blue: 0.13, alpha: 0.06)
+        bank.strokeColor = UIColor(red: 0.58, green: 0.76, blue: 0.34, alpha: 0.16)
         bank.lineWidth = 3
         bank.name = "decorativeSunmillChoiceBank"
         bank.zPosition = 260
@@ -507,8 +523,8 @@ import LearningCore
             control2: CGPoint(x: 650, y: 255)
         )
         let current = SKShapeNode(path: currentPath)
-        current.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.36, alpha: 0.18)
-        current.lineWidth = 10
+        current.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.36, alpha: 0.58)
+        current.lineWidth = 8
         current.glowWidth = reducedMotion ? 0 : 5
         current.name = "sunmillLightPath"
         current.zPosition = 300
@@ -1511,11 +1527,14 @@ import LearningCore
     private func showStoryHollowRoute() {
         guard state.storyHollowAvailable,
               childNode(withName: "storyHollowRoute") == nil else { return }
-        let route = hotspot(
-            "Story Hollow →",
+        let route = destinationMarker(
+            "Story Hollow",
+            symbol: "☾",
             name: "storyHollowRoute",
-            at: CGPoint(x: 1010, y: 165),
-            size: CGSize(width: 215, height: 58)
+            at: CGPoint(x: 1095, y: 300),
+            tint: UIColor(red: 0.88, green: 0.70, blue: 1.0, alpha: 1),
+            width: 150,
+            plaqueOffsetY: -55
         )
         route.zPosition = 830
     }
