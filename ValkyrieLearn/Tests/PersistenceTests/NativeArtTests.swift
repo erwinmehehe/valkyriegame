@@ -103,6 +103,32 @@ import LearningCore
             puzzle.childNode(withName: "puzzleGate"),
             "The polished Rune Gate remains native SpriteKit structure even without the old stage dais."
         )
+        XCTAssertNil(
+            puzzle.childNode(withName: "puzzleUpperVault"),
+            "Rune Gate keeps its open portal composition instead of inheriting the denser shared hall."
+        )
+
+        let palaceDepthState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        palaceDepthState.travel(to: .sortingPedestal)
+        let palaceDepth = PuzzlePalaceScene(state: palaceDepthState)
+        palaceDepth.reducedMotion = true
+        palaceDepth.didMove(to: SKView())
+        defer { palaceDepth.willLeave() }
+
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleUpperVault"))
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleVaultCornice"))
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleFloorSeal"))
+        XCTAssertNotNil(palaceDepth.childNode(withName: "puzzleStageInlay"))
+        XCTAssertEqual(
+            palaceDepth.children.filter { $0.name?.hasPrefix("puzzleAlcove") == true }.count,
+            3
+        )
+        XCTAssertEqual(
+            palaceDepth.children.filter { $0.name?.hasPrefix("puzzleCrystalSconce") == true }.count,
+            4
+        )
 
         let scienceState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
