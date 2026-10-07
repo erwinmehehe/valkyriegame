@@ -819,6 +819,39 @@ import LearningCore
         restoredTree.willLeave()
     }
 
+    func testPuzzlePalaceAmbientArchitectureRespectsReducedMotion() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .sortingPedestal)
+
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = false
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let crystal = try XCTUnwrap(
+            scene.childNode(withName: "//puzzleCrystalFixture")
+        )
+        let seal = try XCTUnwrap(
+            scene.childNode(withName: "puzzleFloorSeal")
+        )
+        let alcoveGlow = try XCTUnwrap(
+            scene.childNode(withName: "//puzzleAlcoveGlow0")
+        )
+
+        XCTAssertNotNil(crystal.action(forKey: "palaceCrystalFloat"))
+        XCTAssertNotNil(seal.action(forKey: "palaceFloorBreath"))
+        XCTAssertNotNil(alcoveGlow.action(forKey: "palaceGlowPulse"))
+
+        scene.reducedMotion = true
+        scene.update(0)
+
+        XCTAssertNil(crystal.action(forKey: "palaceCrystalFloat"))
+        XCTAssertNil(seal.action(forKey: "palaceFloorBreath"))
+        XCTAssertNil(alcoveGlow.action(forKey: "palaceGlowPulse"))
+    }
+
     func testPuzzlePalaceRuneGateRoutesFromStoryTreeAndPersistsEvidence() async throws {
         let container = try LearningStore.container(inMemory: true)
         let state = try AppState(context: ModelContext(container))
