@@ -627,6 +627,9 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         milo.zPosition = 1000 - milo.position.y
+        if lastScienceKineticReducedMotion != reducedMotion {
+            applyWeatherFocusState()
+        }
     }
 
     override func willLeave() {
@@ -821,13 +824,6 @@ import LearningCore
             showAttentionCue(at: forecastPoint, tint: tint, width: 138)
         case .complete:
             showAttentionCue(at: creatureGatePoint, tint: tint, width: 104)
-        }
-    }
-
-    override func update(_ currentTime: TimeInterval) {
-        super.update(currentTime)
-        if lastScienceKineticReducedMotion != reducedMotion {
-            applyWeatherFocusState()
         }
     }
 
