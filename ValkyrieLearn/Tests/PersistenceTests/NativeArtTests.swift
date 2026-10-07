@@ -899,7 +899,11 @@ import LearningCore
         defer { view.presentScene(nil); window.isHidden = true }
         let garden = WordGardenScene(state: state)
         view.presentScene(garden)
-        try await Task.sleep(for: .seconds(1.5))
+        // Wait for SpriteKit's observable preview state, not wall-clock time:
+        // loaded simulators may advance SKActions later than a fixed sleep.
+        try await waitUntil(timeout: 8) {
+            garden.childNode(withName: "targetRune")?.isHidden == true
+        }
         garden.handleTap(at: CGPoint(x: 675, y: 228))
         let firstTravel = garden.valkyrie.action(forKey: "travel")
         XCTAssertNotNil(firstTravel)

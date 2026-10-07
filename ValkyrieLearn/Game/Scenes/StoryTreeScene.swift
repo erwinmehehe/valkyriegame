@@ -520,7 +520,8 @@ import SpriteKit
         action: @escaping () -> Void
     ) {
         // Repeated taps on the selected beacon must not restart the journey.
-        guard !hasLeft, pendingEntrance != name else { return }
+        guard !hasLeft else { return }
+        if pendingEntrance == name, valkyrie.action(forKey: "travel") != nil { return }
         selectionFeedback()
         pendingEntrance = name
         instruction.text = text
