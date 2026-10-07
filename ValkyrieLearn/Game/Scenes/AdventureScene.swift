@@ -368,7 +368,9 @@ struct AdventureSceneLayout {
             }
         }
 
-        guard !reducedMotion, scene != nil || view != nil else { return }
+        // Preferences can arrive before didMove; ambient nodes must not make
+        // the scene look built before its world and controls are installed.
+        guard !reducedMotion, childNode(withName: "adventureCamera") != nil else { return }
 
         let root = SKNode()
         root.name = "decorativeAmbientLife"

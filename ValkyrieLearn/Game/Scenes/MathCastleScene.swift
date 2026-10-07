@@ -852,8 +852,7 @@ import LearningCore
     }
 
     private func playGentleRetryReaction() {
-        guard !reducedMotion else { return }
-        if let mechanic {
+        if !reducedMotion, let mechanic {
             mechanic.removeAction(forKey: "retry")
             mechanic.run(.sequence([
                 .moveBy(x: -6, y: 0, duration: 0.07),
@@ -861,15 +860,15 @@ import LearningCore
                 .moveBy(x: -6, y: 0, duration: 0.07)
             ]), withKey: "retry")
         }
+        // A steady amber cue remains useful with Reduced Motion enabled.
+        powerLight?.fillColor = UIColor(red: 0.88, green: 0.63, blue: 0.25, alpha: 1)
+        powerLight?.glowWidth = 5
         powerLight?.run(.sequence([
+            .wait(forDuration: 0.45),
             .run { [weak self] in
-                self?.powerLight?.fillColor = UIColor(red: 0.88, green: 0.63, blue: 0.25, alpha: 1)
-                self?.powerLight?.glowWidth = 5
-            },
-            .wait(forDuration: 0.22),
-            .run { [weak self] in
-                self?.powerLight?.fillColor = UIColor(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
-                self?.powerLight?.glowWidth = 0
+                guard let self, !self.wasPowered else { return }
+                self.powerLight?.fillColor = UIColor(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+                self.powerLight?.glowWidth = 0
             }
         ]), withKey: "gentleRetry")
     }
@@ -922,6 +921,10 @@ import LearningCore
     }
 
     private func updatePower(_ powered: Bool) {
+        // Old input/retry effects must never dim a newly powered machine.
+        powerLight?.removeAction(forKey: "gentleRetry")
+        powerLight?.removeAction(forKey: "inputPulse")
+        powerLight?.alpha = 1
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
 
         if powered {
@@ -1173,18 +1176,50 @@ import LearningCore
 
     private func manipulate(_ action: () -> Void) {
         guard canManipulate() else { engageMachine(); return }
+        let before = state.runtime
         action()
+        finishManipulation(from: before)
+    }
+
+    private func finishManipulation(from before: MathMechanicRuntime?) {
+        guard let runtime = state.runtime, runtime != before else {
+            instruction.text = "No change yet. Try another move, or pull Pip's lever."
+            return
+        }
         selectionFeedback()
         refresh()
         playManipulationReaction()
         valkyrie.pose(.interact)
+        pip.face(toward: CGPoint(x: 820, y: 310))
+        pip.pose(.react)
         state.audio.play("crystal")
+        let change: String
+        switch runtime {
+        case .crystalCart(let model):
+            change = "\(model.quantity) \(model.quantity == 1 ? "crystal" : "crystals") in the cart."
+        case .numberBond(let model):
+            change = "\(model.selectedPart) \(model.selectedPart == 1 ? "crystal" : "crystals") in the open part."
+        case .tenFrame(let model):
+            change = "\(model.filled) \(model.filled == 1 ? "light" : "lights") placed."
+        case .missingBridge(let model):
+            change = "\(model.selectedNumber) \(model.selectedNumber == 1 ? "plank" : "planks") added."
+        case .balanceScale(let model):
+            switch model.selected {
+            case .left: change = "Left pan selected."
+            case .right: change = "Right pan selected."
+            case .equal: change = "Equal gear selected."
+            case nil: return
+            }
+        }
+        // Describe only the child's visible edit; the lever still checks the answer.
+        instruction.text = change + " Pull Pip's lever when you're ready."
     }
 
     func drop(origin: String, at point: CGPoint) {
         guard canManipulate() else { return }
         guard let mechanic else { return }
         let local = mechanic.convert(point, from: self)
+        let before = state.runtime
         var changed = false
         switch origin {
         case "supply":
@@ -1206,10 +1241,7 @@ import LearningCore
         default: break
         }
         if changed {
-            refresh()
-            playManipulationReaction()
-            valkyrie.pose(.interact)
-            state.audio.play("crystal")
+            finishManipulation(from: before)
         }
     }
 
@@ -1222,7 +1254,7 @@ import LearningCore
         refresh()
         updateChallengeGateAppearance()
         if evidence.outcome == .correct {
-            successFeedback()
+            successFeedback(at: CGPoint(x: 820, y: 310))
             focusMoment(on: CGPoint(x: 1030, y: 300))
             pip.helpRoute(to: CGPoint(x: 975, y: 225), reducedMotion: reducedMotion)
             valkyrie.pose(.celebrate)
@@ -1237,8 +1269,8 @@ import LearningCore
         } else {
             errorFeedback()
             valkyrie.pose(.react)
-            playGentleRetryReaction()
             showScaffold()
+            playGentleRetryReaction()
         }
     }
 

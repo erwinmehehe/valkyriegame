@@ -56,6 +56,8 @@ Acceptance:
   - applying addition/subtraction in a story context
 - The app does not award "choose a strategy" or "multiple solutions" evidence unless a future mechanic directly observes those actions.
 - Pip support is visible in-world and assisted work remains distinguishable from independent evidence.
+- Taps and valid drags describe the actual quantity or selected pan without marking an answer correct before the lever is pulled. Pip acknowledges a real edit, while inputs at a quantity limit do not replay his reaction or the input sound.
+- A retry lights the machine lamp amber even with Reduced Motion enabled. Correcting and submitting quickly leaves it steadily gold; an earlier retry effect must not dim the successful machine.
 
 Fail the pass for:
 - a worksheet-like modal flow replacing the world
