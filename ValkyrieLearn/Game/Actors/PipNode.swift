@@ -1,7 +1,11 @@
 import SpriteKit
 
 @MainActor final class PipNode: CharacterNode {
-    init() { super.init(character: "Pip", color: .systemTeal, height: 145) }
+    init() {
+        super.init(character: "Pip", color: .systemTeal, height: 145)
+        name = "pip"
+        addPresenceAura(color: .systemTeal, width: 106, height: 30, glow: 4)
+    }
     required init?(coder: NSCoder) { fatalError("Use programmatic scenes") }
 
     func operate(reducedMotion: Bool) {
@@ -9,11 +13,30 @@ import SpriteKit
         pose(.interact)
 
         if !reducedMotion {
+            childNode(withName: "companionPresence")?.run(
+                .sequence([
+                    .scale(to: 1.18, duration: 0.12),
+                    .scale(to: 1.0, duration: 0.22)
+                ]),
+                withKey: "presencePulse"
+            )
             bodyNode.run(.sequence([
-                .moveBy(x: 0, y: 8, duration: 0.12),
-                .moveBy(x: 0, y: -8, duration: 0.14),
-                .moveBy(x: 0, y: 5, duration: 0.10),
-                .moveBy(x: 0, y: -5, duration: 0.12)
+                .group([
+                    .moveBy(x: 0, y: 9, duration: 0.11),
+                    .rotate(toAngle: -0.055, duration: 0.11)
+                ]),
+                .group([
+                    .moveBy(x: 0, y: -9, duration: 0.14),
+                    .rotate(toAngle: 0.040, duration: 0.14)
+                ]),
+                .group([
+                    .moveBy(x: 0, y: 5, duration: 0.10),
+                    .rotate(toAngle: -0.025, duration: 0.10)
+                ]),
+                .group([
+                    .moveBy(x: 0, y: -5, duration: 0.12),
+                    .rotate(toAngle: 0, duration: 0.12)
+                ])
             ]), withKey: "helperHop")
         }
 
