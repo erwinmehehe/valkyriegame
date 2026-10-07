@@ -1502,15 +1502,15 @@ import LearningCore
                 state.advanceEncounter(); openOrder()
             }
         case "workshop0":
-            playWorkshopSelectionReaction(named: "workshop0"); workshop(0)
+            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop0"); workshop(0)
         case "workshop1":
-            playWorkshopSelectionReaction(named: "workshop1"); workshop(1)
+            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop1"); workshop(1)
         case "workshop2":
-            playWorkshopSelectionReaction(named: "workshop2"); workshop(2)
+            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop2"); workshop(2)
         case "workshop3":
-            playWorkshopSelectionReaction(named: "workshop3"); workshop(3)
+            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop3"); workshop(3)
         case "workshop4":
-            playWorkshopSelectionReaction(named: "workshop4"); workshop(4)
+            selectionFeedback(); playWorkshopSelectionReaction(named: "workshop4"); workshop(4)
         case "challengeGate":
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
