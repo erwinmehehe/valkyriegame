@@ -2119,6 +2119,8 @@ import LearningCore
                 XCTFail("Scale capture must render the requested mechanic"); continue
             }
             XCTAssertEqual(model.selected, index == 2 ? .equal : nil)
+            XCTAssertNotNil(scale.childNode(withName: "//scaleBase"))
+            XCTAssertNotNil(scale.childNode(withName: "//scalePivot"))
             try await capture(scale, in: view, name: name)
             scale.willLeave()
         }
@@ -2198,6 +2200,12 @@ import LearningCore
         XCTAssertGreaterThan(prompt.position.y, 500)
         XCTAssertLessThan(feedback.position.y, 100)
         XCTAssertGreaterThan(prompt.position.y, feedback.position.y)
+        XCTAssertGreaterThanOrEqual(prompt.preferredMaxLayoutWidth, 500)
+        XCTAssertNotNil(scene.childNode(withName: "mathWorkZoneCore"))
+        XCTAssertNotNil(scene.childNode(withName: "workshopRackBacking"))
+        XCTAssertNotNil(scene.childNode(withName: "castlePowerMount"))
+        XCTAssertNotNil(scene.childNode(withName: "//bondMachineBase"))
+        XCTAssertNotNil(scene.childNode(withName: "//bondWholePlaque"))
 
         scene.willLeave()
     }
@@ -2257,6 +2265,10 @@ import LearningCore
 
         let cells = try XCTUnwrap(scene.childNode(withName: "//tenFrameCells"))
         XCTAssertEqual(cells.children.count, 10)
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameGateFrame"))
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameGateInset"))
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameRowDivider"))
+        XCTAssertNotNil(scene.childNode(withName: "//tenFrameGateBadge"))
 
         for cell in cells.children {
             let shape = try XCTUnwrap(cell as? SKShapeNode)
