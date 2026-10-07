@@ -17,6 +17,10 @@ import SpriteKit
         CGPoint(x: 795, y: 450)
     ]
 
+    private var travelGeneration = 0
+    private var pendingEntrance: String?
+    private var hasLeft = false
+
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
@@ -67,6 +71,9 @@ import SpriteKit
     }
 
     override func willLeave() {
+        hasLeft = true
+        travelGeneration += 1
+        pendingEntrance = nil
         activeTouch = nil
         moved = false
         super.willLeave()
@@ -285,6 +292,7 @@ import SpriteKit
         glow.fillColor = UIColor(red: 1, green: 0.80, blue: 0.28, alpha: 0.16)
         glow.strokeColor = .clear
         glow.glowWidth = 10
+        glow.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         glow.name = "moonLantern"
         lantern.addChild(glow)
 
@@ -311,7 +319,7 @@ import SpriteKit
             glow.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.45, duration: 1.1),
                 .fadeAlpha(to: 1.0, duration: 1.1)
-            ])))
+            ])), withKey: "ambientPulse")
         }
 
         addChild(lantern)
@@ -336,6 +344,7 @@ import SpriteKit
         glow.fillColor = UIColor(red: 0.95, green: 0.48, blue: 0.72, alpha: 0.17)
         glow.strokeColor = .clear
         glow.glowWidth = 10
+        glow.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         glow.name = "wordGardenLantern"
         lantern.addChild(glow)
 
@@ -362,7 +371,7 @@ import SpriteKit
             glow.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.45, duration: 1.0),
                 .fadeAlpha(to: 1.0, duration: 1.0)
-            ])))
+            ])), withKey: "ambientPulse")
         }
 
         addChild(lantern)
@@ -387,6 +396,7 @@ import SpriteKit
         glow.fillColor = UIColor(red: 0.62, green: 0.50, blue: 0.94, alpha: 0.18)
         glow.strokeColor = .clear
         glow.glowWidth = 12
+        glow.userData = NSMutableDictionary(dictionary: ["decorativeMotionRole": "pulse"])
         glow.name = "puzzlePalaceLantern"
         lantern.addChild(glow)
 
@@ -413,7 +423,7 @@ import SpriteKit
             glow.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.42, duration: 1.05),
                 .fadeAlpha(to: 1.0, duration: 1.05)
-            ])))
+            ])), withKey: "ambientPulse")
         }
 
         addChild(lantern)
@@ -434,77 +444,101 @@ import SpriteKit
         handleTap(at: point)
     }
 
-    override func travel(to destination: CGPoint, then action: (() -> Void)? = nil) {
-        let start = nearestWaypoint(to: valkyrie.position)
-        let end = nearestWaypoint(to: destination)
-        let indices = start <= end
-            ? Array(start...end)
-            : Array((end...start).reversed())
-        follow(indices, forward: start <= end, completion: action)
+    // Project taps onto the painted route rather than snapping to the nearest
+    // waypoint. Reversing direction midway through a bridge should not overshoot.
+    private func routeProjection(_ point: CGPoint) -> (point: CGPoint, progress: CGFloat) {
+        var best = (point: route[0], progress: CGFloat.zero)
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for index in 0..<(route.count - 1) {
+            let a = route[index], b = route[index + 1]
+            let dx = b.x - a.x, dy = b.y - a.y
+            let lengthSquared = dx * dx + dy * dy
+            guard lengthSquared > 0 else { continue }
+            let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared))
+            let projected = CGPoint(x: a.x + t * dx, y: a.y + t * dy)
+            let distance = hypot(point.x - projected.x, point.y - projected.y)
+            if distance < bestDistance {
+                bestDistance = distance
+                best = (projected, CGFloat(index) + t)
+            }
+        }
+        return best
     }
 
-    private func follow(
-        _ indices: [Int],
-        forward: Bool,
-        completion: (() -> Void)?
-    ) {
-        guard let first = indices.first else {
+    override func travel(to destination: CGPoint, then action: (() -> Void)? = nil) {
+        guard !hasLeft else { return }
+        travelGeneration += 1
+        let generation = travelGeneration
+        valkyrie.cancelTravel()
+        pip.cancelTravel()
+        let start = routeProjection(valkyrie.position)
+        let end = routeProjection(destination)
+        let forward = start.progress <= end.progress
+        let between = route.indices.filter {
+            CGFloat($0) > min(start.progress, end.progress)
+                && CGFloat($0) < max(start.progress, end.progress)
+        }
+        var points = forward ? between.map { route[$0] } : between.reversed().map { route[$0] }
+        if hypot(valkyrie.position.x - start.point.x, valkyrie.position.y - start.point.y) > 1 {
+            points.insert(start.point, at: 0)
+        }
+        points.append(end.point)
+        showAttentionCue(at: end.point, width: 70)
+        follow(points, generation: generation, completion: action)
+    }
+
+    private func follow(_ points: [CGPoint], generation: Int, completion: (() -> Void)?) {
+        guard !hasLeft, generation == travelGeneration else { return }
+        guard let first = points.first else {
+            clearAttentionCue()
             completion?()
             return
         }
-
-        super.travel(to: route[first]) { [weak self] in
-            self?.follow(
-                Array(indices.dropFirst()),
-                forward: forward,
-                completion: completion
-            )
+        super.travel(to: first) { [weak self] in
+            self?.follow(Array(points.dropFirst()), generation: generation, completion: completion)
         }
-
-        let behind = max(
-            0,
-            min(route.count - 1, first + (forward ? -1 : 1))
-        )
-        let point = behind == first
-            ? CGPoint(x: route[first].x + 35, y: route[first].y + 25)
-            : route[behind]
-        pip.walk(to: point) {}
-    }
-
-    private func nearestWaypoint(to point: CGPoint) -> Int {
-        route.indices.min {
-            hypot(route[$0].x - point.x, route[$0].y - point.y)
-                < hypot(route[$1].x - point.x, route[$1].y - point.y)
-        } ?? 0
+        // Keep Pip on the same traversable surface, behind Valkyrie's last step.
+        pip.walk(to: routeProjection(valkyrie.position).point) {}
     }
 
     func isOnPath(_ point: CGPoint) -> Bool {
-        for (a, b) in zip(route, route.dropFirst()) {
-            let dx = b.x - a.x
-            let dy = b.y - a.y
-            let lengthSquared = dx * dx + dy * dy
-            guard lengthSquared > 0 else { continue }
-
-            let t = max(
-                0,
-                min(
-                    1,
-                    ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared
-                )
-            )
-            if hypot(
-                point.x - (a.x + t * dx),
-                point.y - (a.y + t * dy)
-            ) <= 38 {
-                return true
-            }
-        }
-        return false
+        let projected = routeProjection(point).point
+        return hypot(point.x - projected.x, point.y - projected.y) <= 38
     }
 
     override func walkIfValid(_ point: CGPoint) {
         if isOnPath(point) {
+            pendingEntrance = nil
             travel(to: point)
+        }
+    }
+
+    private func enterWorld(
+        named name: String,
+        destination: CGPoint,
+        instruction text: String,
+        action: @escaping () -> Void
+    ) {
+        // Repeated taps on the selected beacon must not restart the journey.
+        guard !hasLeft else { return }
+        if pendingEntrance == name, valkyrie.action(forKey: "travel") != nil { return }
+        selectionFeedback()
+        pendingEntrance = name
+        instruction.text = text
+        let enter = { [weak self] in
+            guard let self, !self.hasLeft, self.pendingEntrance == name else { return }
+            self.pendingEntrance = nil
+            action()
+        }
+        if isNear(destination) {
+            // Cancel any remaining companion action before changing worlds.
+            travelGeneration += 1
+            valkyrie.cancelTravel()
+            pip.cancelTravel()
+            clearAttentionCue()
+            enter()
+        } else {
+            travel(to: destination, then: enter)
         }
     }
 
@@ -518,46 +552,31 @@ import SpriteKit
     func handleTap(at point: CGPoint) {
         switch targetName(at: point) {
         case "wordGarden":
-            selectionFeedback()
-            let destination = CGPoint(x: 190, y: 170)
-            if isNear(destination) {
-                state.travel(to: .wordGarden)
-            } else {
-                instruction.text = "Follow the path to the garden light."
-                travel(to: destination)
+            enterWorld(named: "wordGarden", destination: CGPoint(x: 190, y: 170),
+                       instruction: "Valkyrie is on her way to Word Garden.") { [weak self] in
+                self?.state.travel(to: .wordGarden)
             }
 
         case "castle":
-            selectionFeedback()
-            let destination = CGPoint(x: 795, y: 450)
-            if isNear(destination) {
-                state.travel(to: .mathCastle)
-            } else {
-                instruction.text = "Follow the bridge toward the castle light."
-                travel(to: destination)
+            enterWorld(named: "castle", destination: CGPoint(x: 795, y: 450),
+                       instruction: "Across the bridge! Pip is coming to Math Castle.") { [weak self] in
+                self?.state.travel(to: .mathCastle)
             }
 
         case "scienceLab":
-            selectionFeedback()
-            let destination = CGPoint(x: 580, y: 450)
-            if isNear(destination) {
-                state.enterScienceLab()
-            } else {
-                instruction.text = "Follow the upper path toward Milo's green light."
-                travel(to: destination)
+            enterWorld(named: "scienceLab", destination: CGPoint(x: 580, y: 450),
+                       instruction: "Follow the green light. Milo is waiting.") { [weak self] in
+                self?.state.enterScienceLab()
             }
 
         case "puzzlePalace":
-            selectionFeedback()
-            let destination = CGPoint(x: 580, y: 450)
-            if isNear(destination) {
-                state.travel(to: .puzzlePalace)
-            } else {
-                instruction.text = "Follow the upper path toward Tiko's violet light."
-                travel(to: destination)
+            enterWorld(named: "puzzlePalace", destination: CGPoint(x: 580, y: 450),
+                       instruction: "Follow the violet light. Tiko is waiting.") { [weak self] in
+                self?.state.travel(to: .puzzlePalace)
             }
 
         case "pipWind":
+            pendingEntrance = nil
             travel(to: CGPoint(x: 285, y: 235)) { [weak self] in
                 guard let self else { return }
                 self.pip.operate(reducedMotion: self.reducedMotion)
@@ -567,6 +586,7 @@ import SpriteKit
             }
 
         case "storyLight":
+            pendingEntrance = nil
             travel(to: CGPoint(x: 385, y: 275)) { [weak self] in
                 self?.valkyrie.pose(.interact)
                 self?.instruction.text = "A little light. A big adventure. Pip is ready to help."

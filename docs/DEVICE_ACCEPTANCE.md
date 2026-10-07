@@ -61,7 +61,7 @@ The times below are a suggested test order, not timers imposed on the child.
 
 | Time | Action | Expected behavior |
 | --- | --- | --- |
-| 0–2 min | Open Story Tree; tap the castle sign; tap empty sky/chasm. | Valkyrie and Pip remain visible in the world, use painted stair/bridge waypoints, and ignore void taps. Tap the sign after arrival to enter. |
+| 0–2 min | Open Story Tree; tap the castle sign once; try another destination during travel; tap empty sky/chasm. | Valkyrie and Pip remain visible, follow the painted stairs and bridge, and enter the selected world on arrival. Repeated sign taps do not restart the journey. A new destination redirects travel, a valid path tap resumes exploration, and void taps are ignored. |
 | 2–4 min | Approach the active castle object, then manipulate it. | The first distant tap moves Valkyrie; interaction requires arrival. Problem stays above the object and feedback below. |
 | 4–6 min | Tap/drag crystals, overshoot then correct; try an incorrect total. | Quantities respond once per action; cart can be corrected. No shaming, duplicate credit, or accidental hotspot activation from drag release. |
 | 6–8 min | Ask in-scene Pip for successive hints; complete the task. | Support escalates, demonstrates a useful step when needed, and persists. Assisted completion is not independent mastery. |

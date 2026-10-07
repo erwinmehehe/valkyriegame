@@ -966,7 +966,10 @@ import LearningCore
         defer { view.presentScene(nil); window.isHidden = true }
         let garden = WordGardenScene(state: state)
         view.presentScene(garden)
-        try await Task.sleep(for: .seconds(1.5))
+        // Wait for the live preview state before approaching a current flower.
+        try await waitUntil(timeout: 8) {
+            garden.childNode(withName: "targetRune")?.isHidden == true
+        }
         let flowers = garden.children.filter { $0.name == "flowerChoice" }
         XCTAssertGreaterThanOrEqual(flowers.count, 2)
         let firstFlower = try XCTUnwrap(flowers.first)

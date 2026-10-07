@@ -20,6 +20,9 @@ Acceptance:
 - Valkyrie and Pip are immediately visible and readable.
 - The child can identify at least one world destination without adult explanation.
 - Tapping a destination causes immediate feedback and a believable walk.
+- One tap enters the selected adventure on arrival; a second tap is unnecessary.
+- Repeated taps on the same destination do not restart walking. A different destination redirects the journey, and tapping the painted path cancels world entry.
+- Mid-bridge path taps land at the intended spot, and Pip stays on the painted route.
 - No destination label is covered by Valkyrie.
 - No tap on the surrounding chasm moves Valkyrie off the painted route.
 - Settings is easy for a grown-up to reach but does not dominate the child-facing scene.
@@ -107,6 +110,7 @@ Acceptance:
 - Gameplay remains fully understandable.
 - Required state changes still occur.
 - Decorative pulsing, entrance motion and camera emphasis are suppressed where expected.
+- Toggling Reduced Motion during travel preserves movement; beacon and earned-lantern pulses stop immediately and foreground decorations return to their authored positions.
 - No task depends on animation timing to reveal the correct answer.
 
 ## Session verdict
