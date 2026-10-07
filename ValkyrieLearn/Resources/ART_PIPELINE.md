@@ -63,6 +63,8 @@ native. The same timber materials cover the crossing steps and their supports.
 Milo, Tiko, Lumi and Pip now ship with 320×320 production companion art. This
 replaces the previous 84×84 Milo, Tiko and Lumi placeholders and the earlier Pip
 penguin artwork while keeping all existing actor names and gameplay APIs stable.
+`COMPANION_ART_MANIFEST.json` owns their production hashes, dimensions and render
+heights so the preserved v3.31 manifests remain truthful historical provenance.
 
 - Milo, Tiko and Lumi remain single-source companion illustrations. Their existing
   native SpriteKit motion continues to provide idle, travel and interaction
