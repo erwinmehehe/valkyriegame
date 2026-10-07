@@ -288,7 +288,7 @@ import LearningCore
 
         let titleWidth = min(
             CGFloat(400),
-            max(CGFloat(330), CGFloat(worldTitle.count) * 9.4 + 58)
+            max(CGFloat(355), CGFloat(worldTitle.count) * 9.4 + 83)
         )
         let titlePlate = ArtSystem.plaque(
             CGSize(width: titleWidth, height: 42),
