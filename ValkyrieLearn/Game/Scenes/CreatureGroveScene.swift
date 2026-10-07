@@ -26,6 +26,7 @@ import LearningCore
     private var moved = false
 
     override func didMove(to view: SKView) {
+        prepareAdaptiveLandscapeCanvas(for: view)
         super.didMove(to: view)
         applyScienceHUDPolish()
         pip.isHidden = true
@@ -55,7 +56,7 @@ import LearningCore
             stroke: UIColor(red: 0.54, green: 0.82, blue: 0.48, alpha: 0.54),
             radius: 15
         )
-        titlePlate.position = CGPoint(x: 285, y: 672)
+        titlePlate.position = CGPoint(x: 285, y: 672 + verticalViewportInset)
         titlePlate.zPosition = 1988
         titlePlate.name = "worldTitleBackdrop"
         addChild(titlePlate)
@@ -64,22 +65,22 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 140, y: 672)
+        title.position = CGPoint(x: 140, y: 672 + verticalViewportInset)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
 
         if let emblem = childNode(withName: "decorativeWorldEmblem") {
-            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.position = CGPoint(x: 121, y: 672 + verticalViewportInset)
             emblem.setScale(0.72)
         }
 
         if let plate = childNode(withName: "instructionBackdrop") {
             plate.xScale = 0.66
             plate.yScale = 0.80
-            plate.position = CGPoint(x: 710, y: 46)
+            plate.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         }
-        instruction.position = CGPoint(x: 710, y: 46)
+        instruction.position = CGPoint(x: 710, y: 46 - verticalViewportInset)
         instruction.fontName = "AvenirNext-Medium"
         instruction.fontSize = 18
         instruction.preferredMaxLayoutWidth = 620
@@ -89,7 +90,7 @@ import LearningCore
     private func buildScienceHomeControl() {
         let root = SKNode()
         root.name = "scienceGroveHome"
-        root.position = CGPoint(x: 55, y: 672)
+        root.position = CGPoint(x: 55, y: 672 + verticalViewportInset)
         root.zPosition = 2100
 
         let medallion = ArtSystem.medallion(
@@ -125,13 +126,13 @@ import LearningCore
             let preparedTexture = ArtSystem.retinaEnhancedTexture(
                 groveTexture,
                 cacheKey: "word-garden-lower-crop",
-                targetPoints: size,
+                targetPoints: designCanvasSize,
                 sharpness: 0.20
             ) ?? groveTexture
             let backdrop = SKSpriteNode(
                 texture: preparedTexture,
                 color: UIColor(red: 0.58, green: 0.82, blue: 0.58, alpha: 1),
-                size: size
+                size: designCanvasSize
             )
             backdrop.colorBlendFactor = 0.10
             backdrop.position = CGPoint(x: 640, y: 360)
@@ -713,10 +714,25 @@ import LearningCore
 
         case "scienceGroveFinale":
             if groveRestored {
+                selectionFeedback()
+                focusMoment(on: finalePoint)
                 valkyrie.pose(.celebrate)
                 milo.inspect(reducedMotion: reducedMotion)
                 instruction.text = "The grove is active again. Water, food, cover, body parts, and habitat evidence all worked together."
             } else {
+                errorFeedback()
+                switch groveStage {
+                case .arrive:
+                    focusMoment(on: duckPoint)
+                case .animalObserved:
+                    focusMoment(on: habitatPoint)
+                case .habitatMatched:
+                    focusMoment(on: feetPoint)
+                case .bodyPartObserved:
+                    focusMoment(on: comparePoint)
+                case .complete:
+                    focusMoment(on: finalePoint)
+                }
                 instruction.text = "The grove star is still dim. Finish the animal investigation first."
             }
 
@@ -733,6 +749,8 @@ import LearningCore
         valkyrie.pose(.interact)
 
         state.scienceObserveAnimal()
+        selectionFeedback()
+        focusMoment(on: duckPoint)
         refreshStagePresentation(animated: true)
         instruction.text = "Milo observes that the duck uses water, finds food nearby, and needs places with cover. Which habitat offers those resources?"
         refreshGuidanceCue()
@@ -740,10 +758,14 @@ import LearningCore
 
     private func chooseHabitat(_ choice: HabitatChoice) {
         guard groveStage != .arrive else {
+            errorFeedback()
+            focusMoment(on: duckPoint)
             instruction.text = "Observe the duck first so the habitat choice uses evidence."
             return
         }
         guard groveStage == .animalObserved || groveStage == .habitatMatched else {
+            selectionFeedback()
+            focusMoment(on: feetPoint)
             instruction.text = "The habitat match is already recorded. Inspect how the duck moves next."
             return
         }
@@ -753,9 +775,12 @@ import LearningCore
         refreshStagePresentation(animated: choice == .pondEdge)
 
         if choice == .pondEdge {
-            state.audio.play("success")
+            selectionFeedback()
+            focusMoment(on: feetPoint)
             instruction.text = "The pond edge provides water, nearby food, and reed cover. Now inspect a body part that helps the duck use this habitat."
         } else {
+            errorFeedback()
+            focusMoment(on: duckPoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The bare ridge offers little water or cover. Compare that with the needs Milo observed."
         }
@@ -764,6 +789,9 @@ import LearningCore
 
     private func inspectBodyPart() {
         guard groveStage == .habitatMatched || groveStage == .bodyPartObserved else {
+            errorFeedback()
+            let target = groveStage == .arrive ? duckPoint : habitatPoint
+            focusMoment(on: target)
             instruction.text = "Match the duck to a habitat before studying how its body helps there."
             return
         }
@@ -771,6 +799,8 @@ import LearningCore
         milo.inspect(reducedMotion: reducedMotion)
         valkyrie.pose(.interact)
         state.scienceInspectBodyPart()
+        selectionFeedback()
+        focusMoment(on: feetPoint)
         refreshStagePresentation(animated: true)
         instruction.text = "The webbing spreads the foot's surface against the water. That can help the duck push water while swimming. Compare the habitats one more time."
         refreshGuidanceCue()
@@ -778,6 +808,17 @@ import LearningCore
 
     private func compareHabitats(_ choice: HabitatChoice) {
         guard groveStage == .bodyPartObserved || groveStage == .complete else {
+            errorFeedback()
+            switch groveStage {
+            case .arrive:
+                focusMoment(on: duckPoint)
+            case .animalObserved:
+                focusMoment(on: habitatPoint)
+            case .habitatMatched:
+                focusMoment(on: feetPoint)
+            case .bodyPartObserved, .complete:
+                focusMoment(on: comparePoint)
+            }
             instruction.text = "Inspect the duck and its webbed feet before making the final habitat comparison."
             return
         }
@@ -787,10 +828,13 @@ import LearningCore
             renderPond()
             renderFinale()
             refreshStagePresentation(animated: true)
-            state.audio.play("success")
+            successFeedback(at: finalePoint)
+            focusMoment(on: finalePoint, hold: 0.70)
             valkyrie.pose(.celebrate)
             instruction.text = "The pond edge meets more of the duck's observed needs. The grove responded to the evidence and came back to life."
         } else {
+            errorFeedback()
+            focusMoment(on: comparePoint)
             milo.inspect(reducedMotion: reducedMotion)
             instruction.text = "The exposed ridge still lacks water and protective cover. Use the needs we observed, not just where the duck could stand."
         }
