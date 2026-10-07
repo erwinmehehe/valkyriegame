@@ -221,6 +221,44 @@ import LearningCore
         scene.willLeave()
     }
 
+    func testWeatherTowerVisuallyPrioritizesTheCurrentObservationStep() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .scienceWeatherTower)
+        let scene = WeatherTowerScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+
+        let morning = try XCTUnwrap(scene.childNode(withName: "scienceMorningWeather"))
+        let afternoon = try XCTUnwrap(scene.childNode(withName: "scienceAfternoonWeather"))
+        let forecast = try XCTUnwrap(scene.childNode(withName: "scienceForecastBase"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "scienceCreatureGate"))
+
+        XCTAssertEqual(morning.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(afternoon.alpha, 0.5)
+        XCTAssertLessThan(forecast.alpha, afternoon.alpha)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 370, y: 180)
+        scene.handleTap(at: CGPoint(x: 470, y: 305))
+        XCTAssertEqual(scene.weatherStage, .morningObserved)
+        XCTAssertEqual(afternoon.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(forecast.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 605, y: 180)
+        scene.handleTap(at: CGPoint(x: 700, y: 305))
+        XCTAssertEqual(scene.weatherStage, .afternoonObserved)
+        XCTAssertEqual(forecast.alpha, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(gate.alpha, 0.5)
+
+        scene.valkyrie.position = CGPoint(x: 825, y: 180)
+        scene.handleTap(at: CGPoint(x: 985, y: 282))
+        XCTAssertEqual(scene.weatherStage, .complete)
+        XCTAssertEqual(gate.alpha, 1.0, accuracy: 0.001)
+    }
+
     func testWeatherTowerComparisonKeepsWrongForecastSafeAndRainPatternOpensRoute() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         let scene = WeatherTowerScene(state: state)
