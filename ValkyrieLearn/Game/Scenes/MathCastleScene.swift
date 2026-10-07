@@ -50,7 +50,7 @@ import LearningCore
             && state.runtime?.completed == true
     }
     private let questionPlate = SKShapeNode(
-        rectOf: CGSize(width: 500, height: 100),
+        rectOf: CGSize(width: 560, height: 96),
         cornerRadius: 16
     )
     private let questionHeading = ArtSystem.label("PIP'S WORK ORDER", size: 13)
@@ -92,37 +92,56 @@ import LearningCore
             addChild(floor)
         }
 
-        // Ground the active mechanic on a subtle shared workshop footprint while
-        // keeping the approved castle illustration dominant.
-        let workZone = ArtSystem.panel(
-            CGSize(width: 640, height: 275),
-            fill: UIColor(red: 0.10, green: 0.14, blue: 0.20, alpha: 0.14),
-            stroke: UIColor(red: 0.76, green: 0.58, blue: 0.27, alpha: 0.34),
-            radius: 72,
-            lineWidth: 2,
-            shadowAlpha: 0.08,
-            innerHighlight: UIColor(red: 0.95, green: 0.78, blue: 0.42, alpha: 0.05)
-        )
-        workZone.position = CGPoint(x: 820, y: 350)
+        // Ground the active mechanic on a low-perspective workshop dais instead of
+        // a translucent modal panel. The ellipse follows the painted courtyard and
+        // makes every manipulative feel physically installed in the castle.
+        let workZone = SKShapeNode(ellipseOf: CGSize(width: 650, height: 150))
+        workZone.fillColor = UIColor(red: 0.07, green: 0.11, blue: 0.18, alpha: 0.16)
+        workZone.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.34)
+        workZone.lineWidth = 3
+        workZone.position = CGPoint(x: 820, y: 246)
         workZone.zPosition = 5
         workZone.name = "mathWorkZone"
         addChild(workZone)
 
+        let workZoneCore = SKShapeNode(ellipseOf: CGSize(width: 540, height: 104))
+        workZoneCore.fillColor = UIColor(red: 0.08, green: 0.21, blue: 0.28, alpha: 0.08)
+        workZoneCore.strokeColor = UIColor(red: 0.47, green: 0.84, blue: 0.93, alpha: 0.20)
+        workZoneCore.lineWidth = 2
+        workZoneCore.position = CGPoint(x: 820, y: 246)
+        workZoneCore.zPosition = 6
+        workZoneCore.name = "mathWorkZoneCore"
+        addChild(workZoneCore)
+
         let workZoneRail = ArtSystem.box(
-            CGSize(width: 520, height: 5),
-            color: UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.34),
-            radius: 2
+            CGSize(width: 500, height: 7),
+            color: UIColor(red: 0.91, green: 0.70, blue: 0.30, alpha: 0.42),
+            radius: 3
         )
-        workZoneRail.position = CGPoint(x: 820, y: 220)
+        workZoneRail.position = CGPoint(x: 820, y: 205)
         workZoneRail.strokeColor = .clear
         workZoneRail.zPosition = 7
         workZoneRail.name = "mathWorkZoneRail"
         addChild(workZoneRail)
-        // The five workshop seals are mounted on one physical timber rack.
+
+        // The five workshop seals read as a wall-mounted instrument rail rather
+        // than five unrelated floating buttons.
+        let rackBacking = ArtSystem.plaque(
+            CGSize(width: 455, height: 72),
+            fill: UIColor(red: 0.08, green: 0.12, blue: 0.18, alpha: 0.32),
+            stroke: UIColor(red: 0.87, green: 0.66, blue: 0.29, alpha: 0.34),
+            radius: 24
+        )
+        rackBacking.position = CGPoint(x: 300, y: 548)
+        rackBacking.zPosition = 28
+        rackBacking.alpha = 0.72
+        rackBacking.name = "workshopRackBacking"
+        addChild(rackBacking)
+
         let rack = ArtSystem.box(CGSize(width: 440, height: 14), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
         if let texture = ArtSystem.texture("BridgeOakPlank") { rack.fillColor = .white; rack.fillTexture = texture }
         rack.position = CGPoint(x: 300, y: 520); rack.zPosition = 30
-        rack.alpha = 0.58; rack.name = "workshopRack"; addChild(rack)
+        rack.alpha = 0.68; rack.name = "workshopRack"; addChild(rack)
         for x in [150, 510] {
             let post = ArtSystem.box(CGSize(width: 14, height: 142), color: .init(red: 0.55, green: 0.34, blue: 0.13, alpha: 1), radius: 3)
             if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture }
@@ -155,7 +174,7 @@ import LearningCore
         questionPlate.isHidden = true
         addChild(questionPlate)
 
-        for x in [555.0, 1055.0] {
+        for x in [520.0, 1080.0] {
             let hanger = ArtSystem.box(
                 CGSize(width: 10, height: 58),
                 color: .init(red: 0.39, green: 0.27, blue: 0.15, alpha: 1),
@@ -181,8 +200,8 @@ import LearningCore
         addChild(questionHeading)
 
         questionLabel.position = CGPoint(x: 800, y: 608)
-        questionLabel.preferredMaxLayoutWidth = 440
-        questionLabel.fontSize = 19
+        questionLabel.preferredMaxLayoutWidth = 500
+        questionLabel.fontSize = 18
         questionLabel.numberOfLines = 2
         questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
         questionLabel.zPosition = 2000
@@ -210,10 +229,16 @@ import LearningCore
         workflow.name = "workOrderFlow"
         addChild(workflow)
 
-        let light = SKShapeNode(circleOfRadius: 27)
+        let powerMount = ArtSystem.gear(radius: 34)
+        powerMount.position = CGPoint(x: 1105, y: 352)
+        powerMount.zPosition = 39
+        powerMount.name = "castlePowerMount"
+        addChild(powerMount)
+
+        let light = SKShapeNode(circleOfRadius: 17)
         light.position = CGPoint(x: 1105, y: 352); light.zPosition = 40; light.lineWidth = 2
         light.name = "castlePowerLight"
-        light.fillColor = .init(red: 0.21, green: 0.18, blue: 0.32, alpha: 1)
+        light.fillColor = .init(red: 0.14, green: 0.18, blue: 0.29, alpha: 1)
         light.strokeColor = .init(red: 0.95, green: 0.71, blue: 0.32, alpha: 1)
         addChild(light); powerLight = light
         let portal = SKShapeNode(ellipseOf: CGSize(width: 115, height: 170))
