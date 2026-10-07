@@ -55,13 +55,13 @@ import SpriteKit
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        if title.frame.width > 348 {
-            title.fontSize *= 348 / title.frame.width
+        if title.frame.width > 328 {
+            title.fontSize *= 328 / title.frame.width
         }
 
         let titleWidth = min(
-            CGFloat(410),
-            max(CGFloat(390), title.frame.width + 60)
+            CGFloat(390),
+            max(CGFloat(380), title.frame.width + 60)
         )
         let titlePlate = ArtSystem.plaque(
             CGSize(width: titleWidth, height: 42),
