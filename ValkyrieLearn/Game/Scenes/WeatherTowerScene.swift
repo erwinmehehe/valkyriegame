@@ -651,17 +651,22 @@ import LearningCore
         if weatherStage == .complete,
            !creatureRouteOpen,
            let challenge = state.scienceNextFieldStudy(in: .weatherTower),
-           let target,
-           challenge.choiceTargets.contains(target),
-           let stationPoint = weatherFieldStudyPoint(for: target) {
-            if isNear(stationPoint, radius: 155) {
-                answerWeatherFieldStudy(challenge, targetName: target)
-            } else {
-                instruction.text = "Walk to that weather evidence before choosing it."
-                let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 95))
-                travel(to: CGPoint(x: approachX, y: 180))
+           let target {
+            if challenge.choiceTargets.contains(target),
+               let stationPoint = weatherFieldStudyPoint(for: target) {
+                if isNear(stationPoint, radius: 155) {
+                    answerWeatherFieldStudy(challenge, targetName: target)
+                } else {
+                    instruction.text = "Walk to that weather evidence before choosing it."
+                    let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 95))
+                    travel(to: CGPoint(x: approachX, y: 180))
+                }
+                return
             }
-            return
+            if target != "scienceCreatureGate" && target != "scienceWeatherHome" {
+                instruction.text = challenge.prompt
+                return
+            }
         }
 
         switch target {
