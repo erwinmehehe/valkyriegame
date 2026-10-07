@@ -21,6 +21,7 @@ import LearningCore
     private var activeTouch: UITouch?
     private var touchStart = CGPoint.zero
     private var moved = false
+    private var lastScienceKineticReducedMotion: Bool?
 
     override func didMove(to view: SKView) {
         super.didMove(to: view)
@@ -922,6 +923,10 @@ import LearningCore
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
         milo.zPosition = 1000 - milo.position.y
+
+        if lastScienceKineticReducedMotion != reducedMotion {
+            applyGreenhouseFocusState()
+        }
     }
 
     override func willLeave() {
@@ -985,6 +990,7 @@ import LearningCore
         switch greenhouseStage {
         case .arrive:
             state.scienceInspectGreenhouse()
+            playScienceStepReaction(at: seedBenchPoint)
             instruction.text = "Milo notices the soil is dry. What change should we test first?"
         case .inspected:
             instruction.text = "The soil is still dry. The water valve can test our prediction."
@@ -1013,6 +1019,7 @@ import LearningCore
         valkyrie.pose(.interact)
         state.audio.play("crystal")
         state.scienceWaterGreenhouse()
+        playScienceStepReaction(at: waterValvePoint)
         renderPlant()
         instruction.text = "The dry soil darkened, and a sprout appeared. Our water test changed the seed tray."
         refreshGuidanceCue()
@@ -1036,6 +1043,7 @@ import LearningCore
         valkyrie.pose(.interact)
         milo.inspect(reducedMotion: reducedMotion)
         state.scienceLightGreenhouse()
+        playScienceStepReaction(at: sunPrismPoint)
         renderPlant()
         renderGate()
         state.audio.play("success")
@@ -1043,7 +1051,70 @@ import LearningCore
         refreshGuidanceCue()
     }
 
+    private func applyGreenhouseFocusState() {
+        lastScienceKineticReducedMotion = reducedMotion
+
+        func setGroup(_ name: String, alpha: CGFloat, active: Bool) {
+            for node in children where node.name == name {
+                node.removeAction(forKey: "scienceActiveBreath")
+                node.removeAction(forKey: "scienceActiveSpin")
+                node.alpha = alpha
+                node.setScale(1)
+
+                guard active, !reducedMotion else { continue }
+
+                if name == "scienceWaterValve" {
+                    node.run(
+                        .repeatForever(
+                            .rotate(byAngle: .pi * 2, duration: 7.5)
+                        ),
+                        withKey: "scienceActiveSpin"
+                    )
+                } else {
+                    node.run(
+                        .repeatForever(
+                            .sequence([
+                                .scale(to: 1.025, duration: 0.72),
+                                .scale(to: 1.0, duration: 0.72)
+                            ])
+                        ),
+                        withKey: "scienceActiveBreath"
+                    )
+                }
+            }
+        }
+
+        switch greenhouseStage {
+        case .arrive:
+            setGroup("scienceSeedBench", alpha: 1.0, active: true)
+            setGroup("scienceWaterValve", alpha: 0.40, active: false)
+            setGroup("scienceSunPrism", alpha: 0.32, active: false)
+            setGroup("scienceWeatherGate", alpha: 0.34, active: false)
+        case .inspected:
+            setGroup("scienceSeedBench", alpha: 0.72, active: false)
+            setGroup("scienceWaterValve", alpha: 1.0, active: true)
+            setGroup("scienceSunPrism", alpha: 0.34, active: false)
+            setGroup("scienceWeatherGate", alpha: 0.34, active: false)
+        case .watered:
+            setGroup("scienceSeedBench", alpha: 0.72, active: false)
+            setGroup("scienceWaterValve", alpha: 0.72, active: false)
+            setGroup("scienceSunPrism", alpha: 1.0, active: true)
+            setGroup("scienceWeatherGate", alpha: 0.36, active: false)
+        case .lit:
+            setGroup("scienceSeedBench", alpha: 0.74, active: false)
+            setGroup("scienceWaterValve", alpha: 0.74, active: false)
+            setGroup("scienceSunPrism", alpha: 0.74, active: false)
+            setGroup("scienceWeatherGate", alpha: 1.0, active: true)
+        }
+    }
+
+    private func playScienceStepReaction(at point: CGPoint) {
+        guard !reducedMotion else { return }
+        focusMoment(on: point, hold: 0.62)
+    }
+
     private func refreshGuidanceCue() {
+        applyGreenhouseFocusState()
         let tint = UIColor(red: 0.57, green: 0.93, blue: 0.63, alpha: 1)
         switch greenhouseStage {
         case .arrive:
