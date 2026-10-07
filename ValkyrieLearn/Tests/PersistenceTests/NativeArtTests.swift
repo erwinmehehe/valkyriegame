@@ -2588,6 +2588,14 @@ import LearningCore
                 .action(forKey: "stationArrival")
         )
 
+        lively.reducedMotion = true
+        lively.update(1)
+        XCTAssertNil(stationRotor.action(forKey: "idleSpin"))
+        XCTAssertNil(
+            station.childNode(withName: "workshopGearHalo")?
+                .action(forKey: "activeStationPulse")
+        )
+
         let calmState = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
