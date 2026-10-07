@@ -185,6 +185,8 @@ import LearningCore
             (.mathCastle, "◆", { MathCastleScene(state: $0) }),
             (.wordGarden, "✿", { WordGardenScene(state: $0) }),
             (.scienceLab, "⚗", { ScienceLabScene(state: $0) }),
+            (.scienceWeatherTower, "⚗", { WeatherTowerScene(state: $0) }),
+            (.scienceCreatureGrove, "⚗", { CreatureGroveScene(state: $0) }),
             (.puzzlePalace, "◈", { PuzzlePalaceScene(state: $0) })
         ]
         for (world, symbol, makeScene) in cases {
@@ -198,8 +200,10 @@ import LearningCore
             let plate = try XCTUnwrap(scene.childNode(withName: "worldTitleBackdrop"))
             XCTAssertTrue(plate.calculateAccumulatedFrame().contains(title.calculateAccumulatedFrame()),
                           "\(world) title must fit in its themed plate.")
+            XCTAssertTrue(plate.calculateAccumulatedFrame().contains(emblem.calculateAccumulatedFrame()),
+                          "\(world) emblem must fit in its themed plate.")
             XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(title.calculateAccumulatedFrame()),
-                           "World emblem must not cover its title text.")
+                           "\(world) emblem must not cover its title text.")
             XCTAssertFalse(emblem.calculateAccumulatedFrame().intersects(scene.layout.interactionStage))
             XCTAssertNotEqual(scene.targetName(at: emblem.position), "decorativeWorldEmblem")
             scene.willLeave()

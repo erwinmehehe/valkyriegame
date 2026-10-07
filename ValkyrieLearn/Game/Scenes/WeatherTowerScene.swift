@@ -60,10 +60,15 @@ import LearningCore
         title.fontName = "Georgia-Bold"
         title.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 1)
         title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: 115, y: 672)
+        title.position = CGPoint(x: 145, y: 672)
         title.zPosition = 2000
         title.name = "worldTitle"
         addChild(title)
+
+        if let emblem = childNode(withName: "decorativeWorldEmblem") {
+            emblem.position = CGPoint(x: 121, y: 672)
+            emblem.setScale(0.72)
+        }
 
         if let plate = childNode(withName: "instructionBackdrop") {
             plate.xScale = 0.66
