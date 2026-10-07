@@ -1612,6 +1612,7 @@ import LearningCore
             stopGoIndex = 0
             stopGoAcceptingTap = false
             stopGoCurrentSignal = nil
+            errorFeedback()
             valkyrie.pose(.react)
             tiko.pose(.react)
             shakeStopGoOrb()
@@ -1627,6 +1628,7 @@ import LearningCore
             guard stopGoAcceptingTap else { return }
             stopGoAcceptingTap = false
             removeAction(forKey: "stopGoSignal")
+            selectionFeedback()
             valkyrie.pose(.interact)
             tiko.pose(.interact)
             pulseStopGoOrb()
@@ -1655,7 +1657,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
         refreshStopGoProgress(animated: true)
-        state.audio.play("success")
+        successFeedback(at: CGPoint(x: 755, y: 365))
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -2010,6 +2012,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            errorFeedback()
             valkyrie.pose(.react)
             tiko.pose(.react)
             highlightSortingDimension(rule)
@@ -2028,6 +2031,7 @@ import LearningCore
         let destination = bucket == .left
             ? CGPoint(x: 530, y: 355)
             : CGPoint(x: 970, y: 355)
+        selectionFeedback()
         valkyrie.pose(.interact)
         tiko.pose(.interact)
 
@@ -2086,7 +2090,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
         refreshSortingProgress(animated: true)
-        state.audio.play("success")
+        successFeedback(at: CGPoint(x: 755, y: 225))
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -2360,6 +2364,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            errorFeedback()
             valkyrie.pose(.react)
             tiko.pose(.react)
             highlightResortRule(rule)
@@ -2380,6 +2385,7 @@ import LearningCore
         let sideX: CGFloat = bucket == .left ? 475 : 1035
         let offset = CGFloat(resortObjectIndex % 2) * 34 - 17
         let destination = CGPoint(x: sideX + offset, y: 335 + CGFloat(resortObjectIndex / 2) * 38)
+        selectionFeedback()
         valkyrie.pose(.interact)
         tiko.pose(.interact)
         token.run(.move(to: destination, duration: reducedMotion ? 0 : 0.24))
@@ -2428,7 +2434,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
         refreshResortProgress(animated: true)
-        state.audio.play("success")
+        successFeedback(at: CGPoint(x: 755, y: 395))
         valkyrie.pose(.celebrate)
         tiko.pose(.celebrate)
 
@@ -5070,7 +5076,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             refreshRuneGateProgress(animated: true)
-            state.audio.play("success")
+            successFeedback(at: CGPoint(x: 875, y: 455))
             valkyrie.pose(.celebrate)
 
             if state.puzzleRuneGateComplete {
@@ -5102,6 +5108,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            errorFeedback()
             valkyrie.pose(.react)
             nudge(node)
             showPatternHint()
