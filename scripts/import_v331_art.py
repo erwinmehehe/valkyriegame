@@ -70,30 +70,9 @@ reach = character_frame(garden.crop((1182, 0, 1774, 887)))
 for name, image in [('idle_01',idle), ('walk_01',walk1), ('walk_02',walk2), ('interact_01',reach), ('celebrate_01',idle), ('react_01',idle)]:
     output(image, 'Valkyrie.atlas/' + name + '.png')
 
-# Pip's canonical frame includes disconnected number cards/stars. Retain his main
-# connected silhouette and held block, including original edge alpha; no redesign.
-pip = source('characters/pip.png')
-a = pip.getchannel('A'); pixels = a.load(); seen = set(); components = []
-for y in range(pip.height):
-    for x in range(pip.width):
-        if pixels[x,y] < 40 or (x,y) in seen: continue
-        queue = deque([(x,y)]); seen.add((x,y)); component = []
-        while queue:
-            px,py = queue.popleft(); component.append((px,py))
-            for nx,ny in [(px-1,py),(px+1,py),(px,py-1),(px,py+1)]:
-                if 0 <= nx < pip.width and 0 <= ny < pip.height and (nx,ny) not in seen and pixels[nx,ny] >= 40:
-                    seen.add((nx,ny)); queue.append((nx,ny))
-        components.append(component)
-mask = Image.new('L', pip.size)
-for point in max(components, key=len): mask.putpixel(point,255)
-mask = mask.filter(ImageFilter.MaxFilter(7))
-from PIL import ImageChops
-pip.putalpha(ImageChops.multiply(a,mask))
-pip = pip.crop(pip.getchannel('A').getbbox())
-canvas = Image.new('RGBA', (360,420)); pip.thumbnail((350,410), Image.Resampling.LANCZOS)
-canvas.alpha_composite(pip, ((360-pip.width)//2,420-pip.height))
-for pose in ['idle','walk','interact','celebrate','react']:
-    output(canvas, 'Pip.atlas/' + pose + '_01.png')
+# Pip is no longer generated from the v3.31 archive. Production companion art is
+# managed independently by COMPANION_ART_MANIFEST.json so rerunning this importer
+# cannot overwrite the approved HD mascot with the historical penguin artwork.
 
 props = source('adventure-art/props.png')
 for name, box in [('CrystalCart',(512,0,1024,512)), ('Crystal',(1024,512,1536,1024)), ('StoryBloom',(0,0,512,512))]:
