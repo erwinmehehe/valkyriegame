@@ -948,8 +948,15 @@ import LearningCore
            !greenhouseComplete,
            let challenge = state.scienceNextFieldStudy(in: .greenhouse),
            let target,
-           challenge.choiceTargets.contains(target) {
-            answerGreenhouseFieldStudy(challenge, targetName: target)
+           challenge.choiceTargets.contains(target),
+           let stationPoint = greenhouseFieldStudyPoint(for: target) {
+            if isNear(stationPoint, radius: 145) {
+                answerGreenhouseFieldStudy(challenge, targetName: target)
+            } else {
+                instruction.text = "Walk to that evidence station before choosing it."
+                let approachX = max(walkable.minX, min(walkable.maxX, stationPoint.x - 85))
+                travel(to: CGPoint(x: approachX, y: 180))
+            }
             return
         }
 
@@ -1067,6 +1074,15 @@ import LearningCore
         refreshGuidanceCue()
     }
 
+    private func greenhouseFieldStudyPoint(for targetName: String) -> CGPoint? {
+        switch targetName {
+        case "scienceSeedBench": seedBenchPoint
+        case "scienceWaterValve": waterValvePoint
+        case "scienceSunPrism": sunPrismPoint
+        default: nil
+        }
+    }
+
     private func answerGreenhouseFieldStudy(
         _ challenge: ScienceFieldStudyChallenge,
         targetName: String
@@ -1083,7 +1099,7 @@ import LearningCore
                 instruction.text = "Field study complete. The evidence agrees, and the Weather Tower path is open."
             } else if let next = state.scienceNextFieldStudy(in: .greenhouse) {
                 let completed = state.scienceFieldStudyCompletedCount(in: .greenhouse)
-                instruction.text = "Evidence (completed)/(ScienceFieldStudyCatalog.greenhouse.count) confirmed. " + next.prompt
+                instruction.text = "Evidence \\(completed)/\\(ScienceFieldStudyCatalog.greenhouse.count) confirmed. " + next.prompt
             }
         } else {
             instruction.text = "That station does not match this evidence. Look back at what changed during the investigation."
