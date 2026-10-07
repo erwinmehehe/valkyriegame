@@ -1293,15 +1293,60 @@ import LearningCore
         updateChallengeGateAppearance()
     }
 
+    private func resetWorkOrderPresentation(_ hangers: [SKNode]) {
+        questionPlate.removeAction(forKey: "workOrderReveal")
+        questionHeading.removeAction(forKey: "workOrderReveal")
+        questionLabel.removeAction(forKey: "workOrderReveal")
+        questionPlate.position.y = 618
+        questionHeading.position.y = 643
+        questionPlate.alpha = 1
+        questionHeading.alpha = 1
+        questionLabel.alpha = 1
+        for hanger in hangers {
+            hanger.removeAction(forKey: "workOrderReveal")
+            hanger.position.y = 683
+            hanger.alpha = 1
+        }
+    }
+
+    private func revealWorkOrder(_ hangers: [SKNode]) {
+        guard !reducedMotion else { return }
+        let nodes: [SKNode] = [questionPlate, questionHeading, questionLabel] + hangers
+        for (index, node) in nodes.enumerated() {
+            node.removeAction(forKey: "workOrderReveal")
+            node.position.y += index < 3 ? 12 : 8
+            node.alpha = 0
+            let settle = SKAction.moveBy(
+                x: 0,
+                y: index < 3 ? -12 : -8,
+                duration: 0.24 + Double(index) * 0.018
+            )
+            settle.timingMode = .easeOut
+            node.run(
+                .group([
+                    settle,
+                    .fadeIn(withDuration: 0.18)
+                ]),
+                withKey: "workOrderReveal"
+            )
+        }
+    }
+
     private func showQuestion(_ text: String?) {
         let hangers = children.filter { $0.name == "questionPromptHanger" }
+        let wasHidden = questionPlate.isHidden
         guard let text, !text.isEmpty else {
+            resetWorkOrderPresentation(hangers)
             questionPlate.isHidden = true
             questionHeading.isHidden = true
             questionLabel.isHidden = true
             hangers.forEach { $0.isHidden = true }
             questionLabel.text = nil
             return
+        }
+
+        if wasHidden {
+            resetWorkOrderPresentation(hangers)
         }
         questionLabel.text = text
         let longPrompt = text.count > 52
@@ -1311,6 +1356,10 @@ import LearningCore
         questionHeading.isHidden = false
         questionLabel.isHidden = false
         hangers.forEach { $0.isHidden = false }
+
+        if wasHidden {
+            revealWorkOrder(hangers)
+        }
     }
 
     private func openOrder() {
