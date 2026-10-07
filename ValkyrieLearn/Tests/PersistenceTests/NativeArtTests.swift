@@ -2357,10 +2357,14 @@ import LearningCore
         let chain0 = try XCTUnwrap(scene.childNode(withName: "//castleAmbientChain0"))
         let chain1 = try XCTUnwrap(scene.childNode(withName: "//castleAmbientChain1"))
         let powerMount = try XCTUnwrap(scene.childNode(withName: "castlePowerMount"))
+        let workshopRim = try XCTUnwrap(
+            scene.childNode(withName: "//workshopRim_workshop0")
+        )
 
         XCTAssertNotNil(chain0.action(forKey: "ambientChainSway"))
         XCTAssertNotNil(chain1.action(forKey: "ambientChainSway"))
         XCTAssertNotNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNotNil(workshopRim.action(forKey: "ambientWorkshopSpin"))
 
         scene.valkyrie.position = CGPoint(x: 490, y: 175)
         scene.handleTap(at: CGPoint(x: 925, y: 280))
@@ -2377,6 +2381,7 @@ import LearningCore
         XCTAssertNil(chain0.action(forKey: "ambientChainSway"))
         XCTAssertNil(chain1.action(forKey: "ambientChainSway"))
         XCTAssertNil(powerMount.action(forKey: "ambientSpin"))
+        XCTAssertNil(workshopRim.action(forKey: "ambientWorkshopSpin"))
         XCTAssertNil(machine.action(forKey: "activeMachineBreath"))
         XCTAssertEqual(scene.camera?.position.x ?? 0, 640, accuracy: 0.001)
         XCTAssertEqual(scene.camera?.position.y ?? 0, 360, accuracy: 0.001)
