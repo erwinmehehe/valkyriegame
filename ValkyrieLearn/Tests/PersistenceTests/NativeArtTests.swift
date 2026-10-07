@@ -2365,7 +2365,9 @@ import LearningCore
         scene.valkyrie.position = CGPoint(x: 490, y: 175)
         scene.handleTap(at: CGPoint(x: 925, y: 280))
 
-        let machine = try XCTUnwrap(scene.childNode(withName: "//bondMachine"))
+        let machine = try XCTUnwrap(
+            scene.childNode(withName: "//\(MathMechanicID.numberBondMachine)")
+        )
         XCTAssertNotNil(machine.action(forKey: "activeMachineBreath"))
         XCTAssertNotNil(scene.camera?.action(forKey: "focus"))
 
