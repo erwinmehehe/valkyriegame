@@ -35,6 +35,7 @@ import LearningCore
     override var walkable: CGRect { CGRect(x: 105, y: 128, width: 1030, height: 160) }
 
     let tiko = TikoNode()
+    private var lastPalaceKineticReducedMotion: Bool?
     private var encounter: PuzzleEncounter?
     private var memoryEncounter: PuzzleMemoryEncounter?
     private var attempts = 0
@@ -166,6 +167,7 @@ import LearningCore
         }
         tiko.reducedMotion = reducedMotion
         addChild(tiko)
+        syncPuzzlePalaceKinetics()
 
         switch place {
         case .runeGate:
@@ -357,6 +359,138 @@ import LearningCore
 
         makeAccessible(root, label: "Back")
         addChild(root)
+    }
+
+    private func syncPuzzlePalaceKinetics() {
+        lastPalaceKineticReducedMotion = reducedMotion
+
+        var crystalIndex = 0
+        enumerateChildNodes(withName: "//puzzleCrystalFixture") { node, _ in
+            node.removeAction(forKey: "palaceCrystalFloat")
+
+            if node.userData == nil {
+                node.userData = NSMutableDictionary()
+            }
+            if node.userData?["palaceBaseY"] == nil {
+                node.userData?["palaceBaseY"] = node.position.y
+            }
+            if let baseY = node.userData?["palaceBaseY"] as? CGFloat {
+                node.position.y = baseY
+            }
+
+            let authoredAlpha: CGFloat = crystalIndex.isMultiple(of: 2) ? 0.88 : 0.74
+            node.alpha = authoredAlpha
+
+            guard !self.reducedMotion else {
+                crystalIndex += 1
+                return
+            }
+
+            let direction: CGFloat = crystalIndex.isMultiple(of: 2) ? 1 : -1
+            let travel: CGFloat = 3.5 + CGFloat(crystalIndex % 2)
+            let duration = 1.9 + Double(crystalIndex % 3) * 0.22
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .group([
+                            .moveBy(x: 0, y: direction * travel, duration: duration),
+                            .fadeAlpha(to: authoredAlpha * 0.72, duration: duration)
+                        ]),
+                        .group([
+                            .moveBy(x: 0, y: direction * -travel, duration: duration),
+                            .fadeAlpha(to: authoredAlpha, duration: duration)
+                        ])
+                    ])
+                ),
+                withKey: "palaceCrystalFloat"
+            )
+            crystalIndex += 1
+        }
+
+        var glowIndex = 0
+        enumerateChildNodes(withName: "//puzzleAlcoveGlow*") { node, _ in
+            node.removeAction(forKey: "palaceGlowPulse")
+            node.alpha = 1
+            guard !self.reducedMotion else { return }
+
+            let lowAlpha: CGFloat = glowIndex.isMultiple(of: 2) ? 0.44 : 0.54
+            let duration = 1.5 + Double(glowIndex % 3) * 0.25
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .fadeAlpha(to: lowAlpha, duration: duration),
+                        .fadeAlpha(to: 1.0, duration: duration)
+                    ])
+                ),
+                withKey: "palaceGlowPulse"
+            )
+            glowIndex += 1
+        }
+
+        var gemIndex = 0
+        enumerateChildNodes(withName: "//decorativePuzzleVaultGem") { node, _ in
+            node.removeAction(forKey: "palaceVaultPulse")
+            node.setScale(1)
+            guard !self.reducedMotion else { return }
+
+            let delay = Double(gemIndex) * 0.10
+            node.run(
+                .repeatForever(
+                    .sequence([
+                        .wait(forDuration: delay),
+                        .scale(to: 1.10, duration: 0.34),
+                        .scale(to: 1.0, duration: 0.46),
+                        .wait(forDuration: max(0.2, 1.1 - delay))
+                    ])
+                ),
+                withKey: "palaceVaultPulse"
+            )
+            gemIndex += 1
+        }
+
+        if let seal = childNode(withName: "puzzleFloorSeal") {
+            seal.removeAction(forKey: "palaceFloorBreath")
+            seal.alpha = 1
+            guard !reducedMotion else { return }
+
+            seal.run(
+                .repeatForever(
+                    .sequence([
+                        .fadeAlpha(to: 0.58, duration: 1.8),
+                        .fadeAlpha(to: 1.0, duration: 1.8)
+                    ])
+                ),
+                withKey: "palaceFloorBreath"
+            )
+        }
+    }
+
+    private func playPalaceWakeReaction(at point: CGPoint) {
+        guard !reducedMotion else { return }
+
+        focusMoment(on: point, hold: 0.66)
+
+        enumerateChildNodes(withName: "//puzzleCrystalFixture") { node, _ in
+            node.removeAction(forKey: "palaceWake")
+            node.run(
+                .sequence([
+                    .scale(to: 1.10, duration: 0.16),
+                    .scale(to: 1.0, duration: 0.24)
+                ]),
+                withKey: "palaceWake"
+            )
+        }
+
+        if let seal = childNode(withName: "puzzleFloorSeal") {
+            seal.removeAction(forKey: "palaceWake")
+            seal.run(
+                .sequence([
+                    .scale(to: 1.04, duration: 0.18),
+                    .scale(to: 1.0, duration: 0.28)
+                ]),
+                withKey: "palaceWake"
+            )
+        }
     }
 
     override func buildWorld() {
@@ -5169,6 +5303,10 @@ import LearningCore
         super.update(currentTime)
         tiko.reducedMotion = reducedMotion
         tiko.zPosition = 1000 - tiko.position.y
+
+        if lastPalaceKineticReducedMotion != reducedMotion {
+            syncPuzzlePalaceKinetics()
+        }
     }
 
     override func willLeave() {
