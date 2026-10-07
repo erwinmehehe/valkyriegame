@@ -354,7 +354,19 @@ import LearningCore
             let halo = root.childNode(withName: "workshopGearHalo")
             let gear = root.childNode(withName: "workshop\(index)")
             let active = activeIndex == index && !completed
+            halo?.removeAction(forKey: "activeStationPulse")
             halo?.alpha = active ? 0.70 : 0.28
+            if active, !reducedMotion {
+                halo?.run(
+                    .repeatForever(
+                        .sequence([
+                            .fadeAlpha(to: 0.34, duration: 0.82),
+                            .fadeAlpha(to: 0.76, duration: 0.82)
+                        ])
+                    ),
+                    withKey: "activeStationPulse"
+                )
+            }
             gear?.alpha = active ? 1.0 : 0.82
             gear?.setScale(active ? 1.08 : 1.0)
         }
