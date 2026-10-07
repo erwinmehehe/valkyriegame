@@ -816,8 +816,14 @@ import LearningCore
         removeAction(forKey: "wordGardenPreview")
     }
 
+    private func setPersistentGuidanceVisible(_ visible: Bool) {
+        childNode(withName: "instructionBackdrop")?.isHidden = !visible
+        instruction.isHidden = !visible
+    }
+
     private func addPrompt(_ text: String) {
         childNode(withName: "questionPrompt")?.removeFromParent()
+        setPersistentGuidanceVisible(false)
         let prompt = ArtSystem.label(text, size: text.count > 60 ? 17 : 18)
         prompt.name = "questionPrompt"
         prompt.fontName = "AvenirNext-Medium"
@@ -912,6 +918,7 @@ import LearningCore
                     guard let self, !self.hasLeftScene else { return }
                     rune?.isHidden = true
                     self.acceptingChoices = true
+                    self.setPersistentGuidanceVisible(true)
                     self.showAttentionCue(
                         at: CGPoint(x: 755, y: 165),
                         tint: UIColor(red: 1.0, green: 0.66, blue: 0.84, alpha: 1),
@@ -976,6 +983,7 @@ import LearningCore
                     guard let self else { return }
                     preview?.isHidden = true
                     self.acceptingChoices = true
+                    self.setPersistentGuidanceVisible(true)
                     self.showAttentionCue(
                         at: CGPoint(x: 735, y: 155),
                         tint: UIColor(red: 0.88, green: 0.70, blue: 1.0, alpha: 1),
@@ -1504,6 +1512,7 @@ import LearningCore
     private func activateFlowerGate() {
         removeAction(forKey: "wordGardenPreview")
         clearQuestionAndChoices()
+        setPersistentGuidanceVisible(true)
 
         if let gate = childNode(withName: "flowerGate") as? SKShapeNode {
             gate.strokeColor = .systemGreen
@@ -1601,6 +1610,7 @@ import LearningCore
     private func activateSunmillCrossing() {
         removeAction(forKey: "wordGardenPreview")
         clearQuestionAndChoices()
+        setPersistentGuidanceVisible(true)
         refreshSunmillProgress(animated: true)
         childNode(withName: "sunmillBridge")?.isHidden = false
 
@@ -1649,6 +1659,7 @@ import LearningCore
     private func activateStoryHollow() {
         removeAction(forKey: "wordGardenPreview")
         clearQuestionAndChoices()
+        setPersistentGuidanceVisible(true)
         refreshStoryHollowProgress()
 
         if let hollow = childNode(withName: "storyHollow") as? SKShapeNode {
