@@ -1112,7 +1112,10 @@ import LearningCore
         XCTAssertTrue(garden.childNode(withName: "targetRune") == nil || garden.childNode(withName: "targetRune")?.isHidden == true)
         garden.handleTap(at: CGPoint(x: 675, y: 228))
         XCTAssertNil(garden.action(forKey: "wordGardenPreview"))
-        XCTAssertEqual(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count, 3)
+        XCTAssertEqual(
+            state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.count,
+            WordGardenEncounterCatalog.visualLetterShapes.count
+        )
         garden.willLeave()
     }
 

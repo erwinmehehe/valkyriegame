@@ -76,6 +76,36 @@ public enum WordGardenEncounterCatalog {
             answer: "S",
             choices: ["C", "S", "G", "O"],
             transferContext: true
+        ),
+        .init(
+            id: "flowerGate.visual.P",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .symbolic,
+            prompt: "A new rune woke in the gate. Remember its shape, then find its flower.",
+            answer: "P",
+            choices: ["F", "P", "R", "B"],
+            transferContext: true
+        ),
+        .init(
+            id: "flowerGate.visual.K",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .pictorial,
+            prompt: "Watch the branching rune closely. Touch the flower carrying the same lines.",
+            answer: "K",
+            choices: ["H", "X", "K", "R"],
+            transferContext: true
+        ),
+        .init(
+            id: "flowerGate.visual.R",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.letterStones,
+            representation: .symbolic,
+            prompt: "Remember the final gate-rune. Match every curve and line on a flower.",
+            answer: "R",
+            choices: ["P", "B", "R", "K"],
+            transferContext: true
         )
     ]
 
@@ -114,14 +144,52 @@ public enum WordGardenEncounterCatalog {
             choices: ["c", "s", "g", "o"],
             context: "sunmillCrossing",
             transferContext: true
+        ),
+        .init(
+            id: "sunmill.visual.p",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .symbolic,
+            prompt: "The Sunmill turned to a new rune. Pick the leaf with the same shape.",
+            answer: "p",
+            choices: ["q", "p", "b", "d"],
+            context: "sunmillCrossing",
+            transferContext: true
+        ),
+        .init(
+            id: "sunmill.visual.k",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .pictorial,
+            prompt: "Look at the mill-rune's branches. Find the leaf that matches exactly.",
+            answer: "k",
+            choices: ["h", "k", "x", "t"],
+            context: "sunmillCrossing",
+            transferContext: true
+        ),
+        .init(
+            id: "sunmill.visual.r",
+            skillID: LiteracySkills.visualLetterMatch,
+            mechanicID: WordGardenMechanicID.sunmillPair,
+            representation: .symbolic,
+            prompt: "Hold the last mill-rune in memory, then pick its twin leaf.",
+            answer: "r",
+            choices: ["n", "r", "v", "c"],
+            context: "sunmillCrossing",
+            transferContext: true
         )
     ]
 
+    /// Story Hollow stays on visual print memory until recorded phoneme/letter-name
+    /// audio exists. Two separate three-rune memories increase transfer without
+    /// claiming that the child decoded the letter strings as words.
+    public static let storyHollowPatterns: [[String]] = [
+        ["m", "a", "p"],
+        ["r", "i", "n"]
+    ]
+    public static let storyHollowPattern = storyHollowPatterns[0]
+    public static let storyHollowPatternLength = 3
 
-    public static let storyHollowPattern = ["m", "a", "p"]
-
-    /// Story Hollow does not claim that the learner can decode "map".
-    /// It asks the child to remember and rebuild a short printed pattern by position.
     public static let storyHollowSequence: [LiteracyEncounter] = [
         .init(
             id: "storyHollow.sequence.first",
@@ -153,8 +221,75 @@ public enum WordGardenEncounterCatalog {
             choices: ["p", "q", "b", "d"],
             context: "storyHollow",
             transferContext: true
+        ),
+        .init(
+            id: "storyHollow.sequence.transfer.first",
+            skillID: LiteracySkills.visualPrintSequence,
+            mechanicID: WordGardenMechanicID.storySeedSequence,
+            representation: .pictorial,
+            prompt: "A second memory branch woke. Remember its three seed-runes and restore the first shape.",
+            answer: "r",
+            choices: ["r", "n", "v", "c"],
+            context: "storyHollow",
+            transferContext: true
+        ),
+        .init(
+            id: "storyHollow.sequence.transfer.middle",
+            skillID: LiteracySkills.visualPrintSequence,
+            mechanicID: WordGardenMechanicID.storySeedSequence,
+            representation: .symbolic,
+            prompt: "Keep the new memory in mind. Restore the middle seed-rune.",
+            answer: "i",
+            choices: ["i", "l", "j", "t"],
+            context: "storyHollow",
+            transferContext: true
+        ),
+        .init(
+            id: "storyHollow.sequence.transfer.last",
+            skillID: LiteracySkills.visualPrintSequence,
+            mechanicID: WordGardenMechanicID.storySeedSequence,
+            representation: .pictorial,
+            prompt: "Finish the second memory branch by restoring its last seed-rune.",
+            answer: "n",
+            choices: ["n", "m", "h", "r"],
+            context: "storyHollow",
+            transferContext: true
         )
     ]
+
+    public static func storyHollowPattern(for encounter: LiteracyEncounter) -> [String] {
+        guard let index = storyHollowSequence.firstIndex(where: { $0.id == encounter.id }) else {
+            return storyHollowPattern
+        }
+        let patternIndex = min(index / storyHollowPatternLength, storyHollowPatterns.count - 1)
+        return storyHollowPatterns[patternIndex]
+    }
+
+    public static func storyHollowPosition(for encounter: LiteracyEncounter) -> Int {
+        guard let index = storyHollowSequence.firstIndex(where: { $0.id == encounter.id }) else {
+            return 0
+        }
+        return index % storyHollowPatternLength
+    }
+
+    public static func storyHollowVisiblePatternProgress(independentCount: Int) -> (
+        pattern: [String],
+        filledCount: Int
+    ) {
+        let clamped = min(max(0, independentCount), storyHollowSequence.count)
+        if clamped >= storyHollowSequence.count {
+            return (storyHollowPatterns.last ?? storyHollowPattern, storyHollowPatternLength)
+        }
+
+        let patternIndex = min(
+            clamped / storyHollowPatternLength,
+            storyHollowPatterns.count - 1
+        )
+        return (
+            storyHollowPatterns[patternIndex],
+            clamped % storyHollowPatternLength
+        )
+    }
 }
 
 public enum WordGardenDirector {
