@@ -200,7 +200,7 @@ import LearningCore
         addChild(questionHeading)
 
         questionLabel.position = CGPoint(x: 800, y: 608)
-        questionLabel.preferredMaxLayoutWidth = 500
+        questionLabel.preferredMaxLayoutWidth = 440
         questionLabel.fontSize = 18
         questionLabel.numberOfLines = 2
         questionLabel.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.89, alpha: 1)
