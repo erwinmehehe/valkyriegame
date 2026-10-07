@@ -148,6 +148,19 @@ import LearningCore
         if let texture = ArtSystem.texture("BridgeTimber") { stand.fillColor = .white; stand.fillTexture = texture; stand.strokeColor = .clear }
         stand.position = CGPoint(x: 0, y: -40)
         addChild(stand)
+
+        let pivot = ArtSystem.gear(radius: 27)
+        pivot.position = CGPoint(x: 0, y: 40)
+        pivot.zPosition = 2
+        pivot.name = "scalePivot"
+        addChild(pivot)
+
+        let base = ArtSystem.supplyTray(CGSize(width: 126, height: 24))
+        base.position = CGPoint(x: 0, y: -164)
+        base.name = "scaleBase"
+        base.zPosition = -1
+        addChild(base)
+
         let equal = ArtSystem.gear(radius: 36, symbol: "=")
         equal.position = CGPoint(x: 0, y: -115); equal.name = "scaleEqual"
         equalSelection.userData = ["selectionIndicator": true]
@@ -264,6 +277,12 @@ import LearningCore
         // Preserve the machine's touch footprint while opening its frame to the world.
         let shell = ArtSystem.box(CGSize(width: 430, height: 250), color: .clear, radius: 0)
         shell.name = "bondMachine"; addChild(shell)
+
+        let machineBase = ArtSystem.supplyTray(CGSize(width: 468, height: 30))
+        machineBase.position = CGPoint(x: 0, y: -126)
+        machineBase.zPosition = -2
+        machineBase.name = "bondMachineBase"
+        addChild(machineBase)
         for x in [-205, 205] {
             let post = ArtSystem.box(CGSize(width: 18, height: 230), color: .brown, radius: 3)
             if let texture = ArtSystem.texture("BridgeTimber") { post.fillColor = .white; post.fillTexture = texture; post.strokeColor = .clear }
@@ -285,6 +304,34 @@ import LearningCore
         shell.addChild(pipes)
         let totalDial = ArtSystem.gear(radius: 34)
         totalDial.position = CGPoint(x: 0, y: 82); shell.addChild(totalDial)
+
+        let wholePlaque = ArtSystem.plaque(
+            CGSize(width: 88, height: 24),
+            fill: UIColor(red: 0.08, green: 0.12, blue: 0.18, alpha: 0.92),
+            stroke: UIColor(red: 0.89, green: 0.68, blue: 0.31, alpha: 0.66),
+            radius: 10
+        )
+        wholePlaque.position = CGPoint(x: 0, y: 132)
+        wholePlaque.name = "bondWholePlaque"
+        addChild(wholePlaque)
+
+        let wholeCaption = ArtSystem.label("WHOLE", size: 10)
+        wholeCaption.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1)
+        wholeCaption.name = "bondWholePlaque"
+        wholePlaque.addChild(wholeCaption)
+
+        for (index, x) in [CGFloat(-105), 105].enumerated() {
+            let glow = SKShapeNode(ellipseOf: CGSize(width: 176, height: 132))
+            glow.fillColor = index == 0
+                ? UIColor(red: 0.54, green: 0.42, blue: 0.86, alpha: 0.07)
+                : UIColor(red: 0.25, green: 0.78, blue: 0.88, alpha: 0.07)
+            glow.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.32, alpha: 0.16)
+            glow.lineWidth = 2
+            glow.position = CGPoint(x: x, y: -30)
+            glow.zPosition = -1
+            glow.name = index == 0 ? "bondKnownGlow" : "bondBuildGlow"
+            addChild(glow)
+        }
 
         let known = ArtSystem.supplyTray(CGSize(width: 150, height: 115))
         known.position = CGPoint(x: -105, y: -30)
@@ -387,29 +434,75 @@ import LearningCore
         zPosition = 750
         cells.name = "tenFrameCells"
 
-        let brass = UIColor(red: 0.69, green: 0.46, blue: 0.21, alpha: 1)
-        for x in [-183,183] {
-            let pillar = ArtSystem.box(CGSize(width: 22, height: 205), color: brass, radius: 5)
-            pillar.position = CGPoint(x: x, y: -10); addChild(pillar)
+        // Build a physical 2x5 crystal gate. The ten touch cells remain identical
+        // in count and hit size, but the surrounding machine now uses the same
+        // timber/brass vocabulary as the rest of Math Castle.
+        let frame = ArtSystem.supplyTray(CGSize(width: 378, height: 172))
+        frame.position = CGPoint(x: 0, y: -2)
+        frame.zPosition = -3
+        frame.name = "tenFrameGateFrame"
+        addChild(frame)
+
+        let frameInset = ArtSystem.panel(
+            CGSize(width: 344, height: 140),
+            fill: UIColor(red: 0.07, green: 0.12, blue: 0.20, alpha: 0.86),
+            stroke: UIColor(red: 0.72, green: 0.58, blue: 0.30, alpha: 0.62),
+            radius: 18,
+            lineWidth: 2,
+            shadowAlpha: 0,
+            innerHighlight: UIColor(red: 0.55, green: 0.88, blue: 0.96, alpha: 0.08)
+        )
+        frameInset.position = CGPoint(x: 0, y: -2)
+        frameInset.zPosition = -2
+        frameInset.name = "tenFrameGateInset"
+        addChild(frameInset)
+
+        let rowDivider = ArtSystem.box(
+            CGSize(width: 324, height: 8),
+            color: UIColor(red: 0.76, green: 0.56, blue: 0.24, alpha: 0.88),
+            radius: 4
+        )
+        if let texture = ArtSystem.texture("BridgeTimber") {
+            rowDivider.fillColor = .white
+            rowDivider.fillTexture = texture
+            rowDivider.strokeColor = .clear
         }
-        for y in [-118,98] {
-            let crossbar = ArtSystem.box(CGSize(width: 400, height: 24), color: brass, radius: 5)
-            crossbar.position.y = CGFloat(y); addChild(crossbar)
-        }
+        rowDivider.position = CGPoint(x: 0, y: -2)
+        rowDivider.zPosition = -1
+        rowDivider.name = "tenFrameRowDivider"
+        addChild(rowDivider)
+
+        let tenBadge = ArtSystem.gear(radius: 24, symbol: "10")
+        tenBadge.position = CGPoint(x: 0, y: 98)
+        tenBadge.zPosition = 1
+        tenBadge.name = "tenFrameGateBadge"
+        addChild(tenBadge)
 
         for index in 0..<10 {
-            let cell = ArtSystem.box(
+            let cell = ArtSystem.panel(
                 CGSize(width: 62, height: 62),
-                color: .init(red: 0.17, green: 0.20, blue: 0.30, alpha: 1),
-                radius: 8
+                fill: UIColor(red: 0.08, green: 0.13, blue: 0.22, alpha: 0.98),
+                stroke: UIColor(red: 0.47, green: 0.58, blue: 0.72, alpha: 0.62),
+                radius: 11,
+                lineWidth: 2,
+                shadowAlpha: 0.16,
+                innerHighlight: UIColor(red: 0.65, green: 0.90, blue: 0.96, alpha: 0.08)
             )
             let column = index % 5
             let row = index / 5
             cell.position = CGPoint(
                 x: -128 + CGFloat(column) * 64,
-                y: 34 - CGFloat(row) * 64
+                y: 30 - CGFloat(row) * 64
             )
             cell.name = "tenFrameCell"
+
+            let well = SKShapeNode(ellipseOf: CGSize(width: 39, height: 26))
+            well.fillColor = UIColor(red: 0.03, green: 0.08, blue: 0.14, alpha: 0.58)
+            well.strokeColor = UIColor(red: 0.78, green: 0.61, blue: 0.30, alpha: 0.22)
+            well.lineWidth = 1
+            well.position.y = -8
+            well.zPosition = 1
+            cell.addChild(well)
 
             if let crystal = ArtSystem.sprite("Crystal", size: CGSize(width: 34, height: 46)) {
                 crystal.name = "tenFrameCell"
@@ -460,12 +553,12 @@ import LearningCore
             let fixed = index < model.encounter.initialQuantity
 
             shape.fillColor = active
-                ? .systemTeal
-                : UIColor(red: 0.11, green: 0.14, blue: 0.22, alpha: 1)
+                ? UIColor(red: 0.08, green: 0.25, blue: 0.31, alpha: 0.96)
+                : UIColor(red: 0.08, green: 0.13, blue: 0.22, alpha: 0.98)
             shape.strokeColor = active
-                ? UIColor(red: 0.57, green: 0.86, blue: 0.93, alpha: 0.86)
-                : UIColor(red: 0.42, green: 0.47, blue: 0.60, alpha: 0.56)
-            shape.lineWidth = active ? 2.5 : 1.5
+                ? UIColor(red: 0.55, green: 0.90, blue: 0.96, alpha: 0.96)
+                : UIColor(red: 0.47, green: 0.58, blue: 0.72, alpha: 0.62)
+            shape.lineWidth = active ? 3 : 2
             shape.name = previewVisible ? "tenFramePreview"
                 : (fixed ? "tenFrameFixed"
                    : (index < model.filled ? "tenFrameFilled" : "tenFrameCell"))
