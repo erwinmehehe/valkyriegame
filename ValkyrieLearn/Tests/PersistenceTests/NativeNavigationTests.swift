@@ -5,6 +5,54 @@ import LearningCore
 @testable import ValkyrieLearn
 
 @MainActor final class NativeNavigationTests: XCTestCase {
+    func testTapGestureAcceptsSmallMovementButRejectsSwipesAndReturnTrips() {
+        var gesture = SceneTapGesture<Int>()
+        let target = CGPoint(x: 400, y: 300)
+        XCTAssertNil(gesture.end(1, at: target), "A release without a press is not a tap.")
+        gesture.begin(1, at: target)
+        gesture.move(1, to: CGPoint(x: 404, y: 302))
+        XCTAssertEqual(gesture.end(1, at: CGPoint(x: 405, y: 303)), CGPoint(x: 405, y: 303))
+
+        gesture.begin(2, at: target)
+        // A fast swipe may arrive without an intermediate touchesMoved callback.
+        XCTAssertNil(gesture.end(2, at: CGPoint(x: 600, y: 300)))
+        gesture.begin(3, at: target)
+        gesture.move(3, to: CGPoint(x: 600, y: 300))
+        gesture.move(3, to: target)
+        XCTAssertNil(gesture.end(3, at: target), "Returning to the start must not turn a swipe into an answer.")
+
+        gesture.begin(4, at: target)
+        XCTAssertEqual(gesture.end(4, at: target), target, "A swipe must not disable the next deliberate tap.")
+    }
+
+    func testExtraContactsCannotStealOrRepeatATap() {
+        var gesture = SceneTapGesture<Int>()
+        let target = CGPoint(x: 400, y: 300)
+        gesture.begin(1, at: target)
+        gesture.begin(2, at: CGPoint(x: 900, y: 600))
+        gesture.move(2, to: .zero)
+        XCTAssertNil(gesture.end(2, at: .zero))
+        XCTAssertEqual(gesture.end(1, at: target), target)
+        XCTAssertNil(gesture.end(1, at: target), "One contact must dispatch only once.")
+        XCTAssertNil(gesture.end(2, at: target), "A previously ignored contact must stay ignored.")
+    }
+
+    func testCancelledAndAbandonedTapsCannotActivateOnRelease() {
+        var gesture = SceneTapGesture<Int>()
+        let target = CGPoint(x: 400, y: 300)
+        gesture.begin(1, at: target)
+        gesture.cancel(2)
+        XCTAssertEqual(gesture.end(1, at: target), target)
+        gesture.begin(3, at: target)
+        gesture.cancel(3)
+        XCTAssertNil(gesture.end(3, at: target))
+        gesture.begin(4, at: target)
+        gesture.reset() // Leaving a scene clears its unfinished gesture.
+        XCTAssertNil(gesture.end(4, at: target))
+        gesture.begin(5, at: target)
+        XCTAssertEqual(gesture.end(5, at: target), target)
+    }
+
     private func waitUntil(_ condition: @escaping () -> Bool) async throws {
         let deadline = Date().addingTimeInterval(5)
         while !condition(), Date() < deadline {

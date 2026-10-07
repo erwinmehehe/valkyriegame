@@ -113,6 +113,19 @@ Acceptance:
 - Toggling Reduced Motion during travel preserves movement; beacon and earned-lantern pulses stop immediately and foreground decorations return to their authored positions.
 - No task depends on animation timing to reveal the correct answer.
 
+## Deliberate tap check
+
+In Word Garden and Puzzle Palace, swipe across an answer or destination, then
+slide away and back before lifting. Neither gesture should choose an answer,
+move Valkyrie, change rooms or record learning evidence. A short tap with slight
+finger movement should still work. Interrupt a press by opening the iPad app
+switcher; returning and lifting must not activate the old press, and the next
+deliberate tap must respond normally.
+
+During a Palace memory sequence, rotate until the landscape guidance is visible
+or open the app switcher. Gameplay should pause rather than finish the unseen
+sequence. Return to landscape and the foreground to resume from the paused state.
+
 ## Session verdict
 
 A pass requires:
