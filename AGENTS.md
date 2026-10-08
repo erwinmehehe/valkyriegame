@@ -345,6 +345,16 @@ Companions should participate inside the scene, not float as generic hint button
 
 Learning objects should look native to the world: flowers, crystals, carts, gears, bridges, runes, tools, creatures.
 
+### Valkyrie character identity lock
+
+The original native `Valkyrie.atlas` is the only approved Valkyrie character identity. Never regenerate, restyle, reface, repaint, or substitute another girl in concept art, scene mockups, promotional panels, previews, or playable scenes. No modifications to Valkyrie's face, hair, clothing, proportions, pose sprites or textures during world-art tasks.
+
+- Generate **environment-only artwork** with no human figures, girls, HUD, writing, or character portraits baked into the background.
+- Composite Valkyrie only from the actual game's existing SpriteKit node or approved atlas, never from AI generation.
+- Identify AI-generated references as *concepts*, never as real native screenshots.
+- The canonical character is protected by `scripts/validate_native.py` asset hashes and `scripts/check_character_lock.py` in PR validation. Character redesign needs its own explicitly approved PR.
+- Do not merge artwork until actual iPad 9th-generation native screenshots are reviewed.
+
 ## 16. Audio
 
 Core educational audio should use deliberate recordings where correctness matters, especially phonemes.
