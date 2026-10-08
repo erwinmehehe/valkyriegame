@@ -2772,6 +2772,293 @@ import LearningCore
     }
 }
 
+
+@MainActor final class DifferenceBridgeMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("DIFFERENCE BRIDGE", size: 18)
+    private let instructions = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.differenceBridge
+        zPosition = 750
+        let board = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        board.position.y = -14
+        board.zPosition = -5
+        board.name = MathMechanicID.differenceBridge
+        addChild(board)
+        let title = ArtSystem.plaque(
+            CGSize(width: 295, height: 46),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.27, alpha: 0.97),
+            stroke: UIColor(red: 1, green: 0.82, blue: 0.45, alpha: 0.94),
+            radius: 15
+        )
+        title.position.y = 128
+        title.name = MathMechanicID.differenceBridge
+        addChild(title)
+        heading.fontColor = .white
+        heading.fontName = "AvenirNext-Heavy"
+        heading.name = MathMechanicID.differenceBridge
+        title.addChild(heading)
+        instructions.position.y = 96
+        instructions.fontColor = UIColor(red: 1, green: 0.88, blue: 0.64, alpha: 1)
+        instructions.fontName = "AvenirNext-DemiBold"
+        instructions.name = MathMechanicID.differenceBridge
+        addChild(instructions)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func caption(_ value: String, x: CGFloat, y: CGFloat, size: CGFloat = 15) {
+        let text = ArtSystem.label(value, size: size)
+        text.position = CGPoint(x: x, y: y)
+        text.fontColor = .white
+        text.fontName = "AvenirNext-DemiBold"
+        text.name = MathMechanicID.differenceBridge
+        activity.addChild(text)
+    }
+
+    private func counter(x: CGFloat, y: CGFloat, color: UIColor,
+                         matched: Bool = false) {
+        let circle = SKShapeNode(circleOfRadius: 10)
+        circle.position = CGPoint(x: x, y: y)
+        circle.fillColor = color.withAlphaComponent(matched ? 0.26 : 1)
+        circle.strokeColor = .white.withAlphaComponent(matched ? 0.25 : 0.95)
+        circle.lineWidth = 1.5
+        circle.name = MathMechanicID.differenceBridge
+        activity.addChild(circle)
+    }
+
+    private func button(_ label: String, name: String, x: CGFloat) {
+        let surface = ArtSystem.medallion(
+            radius: 34,
+            fill: UIColor(red: 0.12, green: 0.28, blue: 0.40, alpha: 1),
+            stroke: UIColor(red: 0.98, green: 0.79, blue: 0.43, alpha: 1),
+            glow: 0
+        )
+        surface.name = name
+        surface.position = CGPoint(x: x, y: -120)
+        surface.zPosition = 40
+        activity.addChild(surface)
+        let text = ArtSystem.label(label, size: 11)
+        text.fontName = "AvenirNext-Heavy"
+        text.fontColor = .white
+        text.name = name
+        surface.addChild(text)
+
+        let hit = SKShapeNode(circleOfRadius: 38)
+        hit.position = CGPoint(x: x, y: -120)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 60
+        hit.name = name
+        activity.addChild(hit)
+    }
+
+    func render(_ model: DifferenceBridgeModel) {
+        activity.removeAllChildren()
+        if model.isDifference {
+            instructions.text = "MATCH EACH PAIR • COUNT LEFTOVERS"
+            caption("\(model.firstQuantity) BLUE", x: -115, y: 66, size: 16)
+            caption("\(model.secondQuantity) GOLD", x: 115, y: 66, size: 16)
+            for i in 0..<model.firstQuantity {
+                counter(
+                    x: -184 + CGFloat(i % 5) * 34,
+                    y: 31 - CGFloat(i / 5) * 32,
+                    color: UIColor(red: 0.31, green: 0.76, blue: 0.98, alpha: 1),
+                    matched: i < model.matchedPairs
+                )
+            }
+            for i in 0..<model.secondQuantity {
+                counter(
+                    x: 49 + CGFloat(i % 5) * 34,
+                    y: 31 - CGFloat(i / 5) * 32,
+                    color: UIColor(red: 1, green: 0.77, blue: 0.31, alpha: 1),
+                    matched: i < model.matchedPairs
+                )
+            }
+            caption("\(model.matchedPairs) PAIRS", x: -108, y: -53, size: 13)
+            caption("\(model.collectedLeftovers) LEFT OVER", x: 111, y: -53, size: 13)
+            button("PAIR", name: "diffMatch", x: -184)
+            button("BACK", name: "diffUndoMatch", x: -60)
+            button("KEEP", name: "diffCollect", x: 60)
+            button("UNDO", name: "diffUndoCollect", x: 184)
+        } else {
+            instructions.text = "BUILD THE TOTAL • REVERSE THE FACT"
+            caption("START \(model.firstQuantity)", x: -115, y: 62, size: 17)
+            caption("TOTAL \(model.secondQuantity)", x: 115, y: 62, size: 17)
+            for i in 0..<model.firstQuantity {
+                counter(
+                    x: -178 + CGFloat(i % 5) * 26,
+                    y: 30 - CGFloat(i / 5) * 27,
+                    color: UIColor(red: 0.30, green: 0.79, blue: 0.92, alpha: 1)
+                )
+            }
+            for i in 0..<model.joinedCounters {
+                counter(
+                    x: 56 + CGFloat(i % 5) * 26,
+                    y: 30 - CGFloat(i / 5) * 27,
+                    color: UIColor(red: 1, green: 0.76, blue: 0.35, alpha: 1),
+                    matched: i < model.returnedCounters
+                )
+            }
+            caption("ADDED \(model.joinedCounters)", x: -114, y: -56, size: 14)
+            caption("TAKEN BACK \(model.returnedCounters)", x: 118, y: -56, size: 13)
+            button("ADD", name: "inverseAdd", x: -184)
+            button("UNDO", name: "inverseUndoAdd", x: -60)
+            button("TAKE", name: "inverseTake", x: 60)
+            button("BACK", name: "inverseUndoTake", x: 184)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.90, blue: 0.49, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.13),
+            .scale(to: 1, duration: 0.17)
+        ]), withKey: "differenceSuccess")
+    }
+}
+
+@MainActor final class RouteExplorerMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("ROUTE EXPLORER", size: 19)
+    private let instructions = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.routeExplorer
+        zPosition = 750
+        let board = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        board.position.y = -14
+        board.zPosition = -5
+        board.name = MathMechanicID.routeExplorer
+        addChild(board)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 285, height: 46),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.27, alpha: 0.97),
+            stroke: UIColor(red: 0.97, green: 0.81, blue: 0.46, alpha: 1),
+            radius: 15
+        )
+        plaque.position.y = 128
+        plaque.name = MathMechanicID.routeExplorer
+        addChild(plaque)
+        heading.fontColor = .white
+        heading.fontName = "AvenirNext-Heavy"
+        heading.name = MathMechanicID.routeExplorer
+        plaque.addChild(heading)
+
+        instructions.position.y = 97
+        instructions.fontColor = UIColor(red: 1, green: 0.85, blue: 0.56, alpha: 1)
+        instructions.fontName = "AvenirNext-DemiBold"
+        instructions.name = MathMechanicID.routeExplorer
+        addChild(instructions)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func label(_ value: String, x: CGFloat, y: CGFloat, size: CGFloat = 15,
+                       color: UIColor = .white) {
+        let text = ArtSystem.label(value, size: size)
+        text.fontColor = color
+        text.fontName = "AvenirNext-DemiBold"
+        text.position = CGPoint(x: x, y: y)
+        text.name = MathMechanicID.routeExplorer
+        activity.addChild(text)
+    }
+
+    private func arrow(_ symbol: String, name: String, x: CGFloat) {
+        let surface = ArtSystem.medallion(
+            radius: 32,
+            fill: UIColor(red: 0.12, green: 0.27, blue: 0.40, alpha: 1),
+            stroke: UIColor(red: 0.98, green: 0.82, blue: 0.47, alpha: 1),
+            glow: 0
+        )
+        surface.position = CGPoint(x: x, y: -120)
+        surface.name = name
+        surface.zPosition = 50
+        activity.addChild(surface)
+        let mark = ArtSystem.label(symbol, size: 24)
+        mark.fontName = "AvenirNext-Heavy"
+        mark.fontColor = .white
+        mark.name = name
+        surface.addChild(mark)
+
+        let hit = SKShapeNode(circleOfRadius: 36)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.position = CGPoint(x: x, y: -120)
+        hit.name = name
+        hit.zPosition = 70
+        activity.addChild(hit)
+    }
+
+    func render(_ model: RouteExplorerModel) {
+        activity.removeAllChildren()
+        instructions.text = model.isRoute
+            ? "FOLLOW THE MAP • AVOID THE ROCK"
+            : "MOVE ONE SQUARE IN THE RIGHT DIRECTION"
+        for cell in 0..<9 {
+            let column = cell % 3
+            let row = cell / 3
+            let x = CGFloat(column - 1) * 69
+            let y = CGFloat(1 - row) * 57 + 14
+            let blocked = model.blockedCell == cell
+            let reached = model.visitedCells.contains(cell)
+            let tile = ArtSystem.panel(
+                CGSize(width: 61, height: 50),
+                fill: blocked
+                    ? UIColor(red: 0.37, green: 0.36, blue: 0.42, alpha: 1)
+                    : UIColor(red: 0.07, green: 0.23, blue: 0.32, alpha: 0.96),
+                stroke: reached
+                    ? UIColor(red: 0.40, green: 0.87, blue: 0.93, alpha: 1)
+                    : UIColor(red: 0.63, green: 0.78, blue: 0.85, alpha: 0.7),
+                radius: 11,
+                lineWidth: 2,
+                shadowAlpha: 0.06
+            )
+            tile.position = CGPoint(x: x, y: y)
+            tile.name = MathMechanicID.routeExplorer
+            activity.addChild(tile)
+            if blocked {
+                label("✕", x: x, y: y, size: 26)
+            } else if cell == model.currentCell {
+                label("◆", x: x, y: y, size: 25,
+                      color: UIColor(red: 0.32, green: 0.91, blue: 0.95, alpha: 1))
+            } else if cell == model.destination {
+                label("★", x: x, y: y, size: 25,
+                      color: UIColor(red: 1, green: 0.82, blue: 0.35, alpha: 1))
+            } else if reached {
+                label("•", x: x, y: y, size: 24,
+                      color: UIColor(red: 0.50, green: 0.85, blue: 0.86, alpha: 1))
+            }
+        }
+        label("◆  ROVER", x: -177, y: 67, size: 13)
+        label("★  GOAL", x: 172, y: 67, size: 13)
+        label("\(model.movesTaken) MOVES", x: 175, y: 13, size: 14)
+        label(model.isRoute ? "PLAN A PATH" : "ONE-STEP MOVE",
+              x: 173, y: -27, size: 12)
+        arrow("↑", name: "mapNorth", x: -196)
+        arrow("↓", name: "mapSouth", x: -98)
+        arrow("←", name: "mapWest", x: 0)
+        arrow("→", name: "mapEast", x: 98)
+        arrow("↶", name: "mapUndo", x: 196)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.90, blue: 0.48, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.03, duration: 0.13),
+            .scale(to: 1, duration: 0.17)
+        ]), withKey: "routeSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -2801,6 +3088,10 @@ import LearningCore
             return ReasoningStudioMechanic()
         case MathMechanicID.numberTrail:
             return NumberTrailMechanic()
+        case MathMechanicID.differenceBridge:
+            return DifferenceBridgeMechanic()
+        case MathMechanicID.routeExplorer:
+            return RouteExplorerMechanic()
         default:
             return nil
         }
