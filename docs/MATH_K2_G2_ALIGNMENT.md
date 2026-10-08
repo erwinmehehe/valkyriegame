@@ -110,7 +110,9 @@ Grouping Garden adds 61 deterministic counter-grouping and equal-part tasks
 covering five stretch skills: 19 group-building tasks, 19 repeated-addend
 arrangements, 19 equal-sharing distributions, two half-shape partitions,
 and two quarter-shape partitions. The learner must place every berry or
-select a real visible equal part. Incomplete work produces no evidence;
+select a real visible equal part. For repeated addition, the child must also
+enter the sum using separate on-screen controls; merely building equal groups
+cannot earn repeated-addition mastery. Incomplete work produces no evidence;
 unequal groups may be corrected before independent mastery can be recorded.
 The activities require the native SpriteKit basket / fraction controls.
 They are stretch opportunities gated by prerequisite evidence, not an age
