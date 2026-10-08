@@ -325,6 +325,45 @@ import LearningCore
         )
     }
 
+
+    func testNativeRepeatedAdditionNeedsAnExplicitSumAndPersistsItsEdits() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.repeatedAddition)
+                .first(where: { $0.encounter.initialQuantity == 2 &&
+                    $0.encounter.targetQuantity == 2 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        for x in [CGFloat(758), 758, 882, 882] {
+            scene.handleTap(at: CGPoint(x: x, y: 190))
+        }
+        guard case .groupingGarden(let beforeSum)? = state.runtime else {
+            return XCTFail("Repeated addition not active")
+        }
+        XCTAssertFalse(beforeSum.activity.hasCompleteResponse)
+        XCTAssertEqual(beforeSum.activity.bins, [2, 2])
+
+        scene.handleTap(at: CGPoint(x: 963, y: 375)) // separate sum +1
+        guard case .groupingGarden(let afterSum)? = state.runtime else {
+            return XCTFail("Repeated sum disappeared")
+        }
+        XCTAssertEqual(afterSum.activity.selectedSum, 1)
+        XCTAssertFalse(afterSum.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "4 berries grouped; sum set to 1. Pull Pip's lever when you're ready."
+        )
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
