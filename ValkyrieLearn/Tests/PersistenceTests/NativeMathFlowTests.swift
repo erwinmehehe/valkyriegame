@@ -36,6 +36,9 @@ import LearningCore
         let pesos = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
         )
+        let grouping = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -51,7 +54,8 @@ import LearningCore
             (pictureGraph, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 picture tile placed in the graph."),
             (clock, CGPoint(x: 820, y: 310), CGPoint(x: 981, y: 264), "Clock hands now show 1:00."),
             (routines, CGPoint(x: 820, y: 310), CGPoint(x: 645, y: 192), "1 of 4 daily events sorted."),
-            (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins.")
+            (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins."),
+            (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -289,6 +293,102 @@ import LearningCore
         XCTAssertEqual(marketState.profile, marketBefore)
     }
 
+
+    func testGroupingGardenNativeBasketsAndUndoPreserveUnscoredWork() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalSharing)
+                .first(where: { $0.encounter.initialQuantity == 2
+                    && $0.encounter.targetQuantity == 2 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 740, y: 189)) // basket one
+        scene.handleTap(at: CGPoint(x: 900, y: 189)) // basket two
+        scene.handleTap(at: CGPoint(x: 1049, y: 372)) // undo last seed
+        guard case .groupingGarden(let model)? = state.runtime else {
+            return XCTFail("Grouping Garden runtime not active")
+        }
+        XCTAssertEqual(model.groups, [1, 0])
+        XCTAssertEqual(model.unitsPlaced, 1)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 4 garden seeds placed. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testGroupingGardenNativeFractionCutRequiresActualDividerMove() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.halves)
+                .first(where: { $0.encounter.initialQuantity == 4
+                    && $0.encounter.context == "garden.halves.row" })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 767, y: 188)) // move to boundary two
+        scene.handleTap(at: CGPoint(x: 873, y: 188)) // place divider
+        guard case .groupingGarden(let model)? = state.runtime else {
+            return XCTFail("Fraction cuts not active")
+        }
+        XCTAssertEqual(model.selectedBoundary, 2)
+        XCTAssertEqual(model.cuts, [2])
+        XCTAssertFalse(model.completed, "Cut placement alone cannot score")
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 1 fraction cuts placed. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testGroupingGardenNativeRepeatedAdditionMovesRealJumps() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.repeatedAddition)
+                .first(where: { $0.encounter.initialQuantity == 3
+                    && $0.encounter.targetQuantity == 4 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 730, y: 188))
+        scene.handleTap(at: CGPoint(x: 730, y: 188))
+        scene.handleTap(at: CGPoint(x: 910, y: 188))
+        guard case .groupingGarden(let model)? = state.runtime else {
+            return XCTFail("Grouping jumps not active")
+        }
+        XCTAssertEqual(model.jumps, 1)
+        XCTAssertEqual(model.currentJumpTotal, 4)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 jumps make a total of 4. Pull Pip's lever when you're ready."
+        )
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -366,9 +466,12 @@ import LearningCore
         let pesos = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
         )
+        let grouping = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))
