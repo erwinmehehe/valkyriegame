@@ -1628,6 +1628,49 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Difference Bridge: the learner builds both groups and physically
+        // matches every shared column. Unmatched crystals show the difference.
+        // Reverse directions prevent a "gold is always larger" shortcut.
+        for larger in 3...10 {
+            for difference in 1...min(4, larger - 1) {
+                for reversed in [false, true] {
+                    let smaller = larger - difference
+                    let gold = reversed ? smaller : larger
+                    let blue = reversed ? larger : smaller
+                    add(
+                        "prod-difference-\(gold)-\(blue)",
+                        skill: MathSkills.findDifference10,
+                        mechanic: MathMechanicID.differencePairs,
+                        representation: .concrete,
+                        operation: .comparison,
+                        initial: gold,
+                        target: blue,
+                        prompt: "Build \(gold) gold and \(blue) blue crystals. Connect matching pairs to see what is left.",
+                        context: "bridge.difference",
+                        difficulty: larger <= 5 ? 1 : (larger <= 8 ? 2 : 3),
+                        purpose: reversed ? .representationTransfer : .practice
+                    )
+                }
+            }
+        }
+        // Equal-sized rows should visibly reveal zero unmatched crystals.
+        for count in 4...8 {
+            add(
+                "prod-difference-equal-\(count)",
+                skill: MathSkills.findDifference10,
+                mechanic: MathMechanicID.differencePairs,
+                representation: .concrete,
+                operation: .comparison,
+                initial: count,
+                target: count,
+                prompt: "Build two rows of \(count). Pair them all. Are any crystals left?",
+                context: "bridge.difference",
+                difficulty: 2,
+                purpose: .reasoning
+            )
+        }
+
         return result
     }()
 
