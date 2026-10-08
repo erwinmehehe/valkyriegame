@@ -1903,6 +1903,205 @@ import LearningCore
     }
 }
 
+
+@MainActor final class ClockMarketMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("CLOCK & MARKET", size: 19)
+    private let instructions = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.clockMarket
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.clockMarket
+        addChild(tray)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 300, height: 47),
+            fill: UIColor(red: 0.07, green: 0.15, blue: 0.26, alpha: 0.96),
+            stroke: UIColor(red: 0.96, green: 0.78, blue: 0.38, alpha: 0.91),
+            radius: 15
+        )
+        header.position.y = 128
+        header.name = MathMechanicID.clockMarket
+        addChild(header)
+        heading.fontColor = .white
+        heading.fontName = "AvenirNext-Heavy"
+        heading.name = MathMechanicID.clockMarket
+        header.addChild(heading)
+
+        instructions.position.y = 96
+        instructions.fontName = "AvenirNext-DemiBold"
+        instructions.fontColor = UIColor(red: 1, green: 0.86, blue: 0.54, alpha: 1)
+        instructions.name = MathMechanicID.clockMarket
+        addChild(instructions)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func text(_ value: String, x: CGFloat, y: CGFloat, size: CGFloat = 16,
+                      color: UIColor = .white) {
+        let label = ArtSystem.label(value, size: size)
+        label.position = CGPoint(x: x, y: y)
+        label.fontColor = color
+        label.fontName = "AvenirNext-DemiBold"
+        label.name = MathMechanicID.clockMarket
+        activity.addChild(label)
+    }
+
+    private func control(_ mark: String, name: String, x: CGFloat, y: CGFloat,
+                         radius: CGFloat = 34) {
+        let coin = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.12, green: 0.27, blue: 0.39, alpha: 1),
+            stroke: UIColor(red: 1, green: 0.80, blue: 0.46, alpha: 0.95),
+            glow: 0
+        )
+        coin.position = CGPoint(x: x, y: y)
+        coin.zPosition = 50
+        coin.name = name
+        activity.addChild(coin)
+        let label = ArtSystem.label(mark, size: mark.count > 3 ? 13 : 20)
+        label.fontName = "AvenirNext-Heavy"
+        label.fontColor = .white
+        label.name = name
+        coin.addChild(label)
+
+        let touch = SKShapeNode(circleOfRadius: radius + 3)
+        touch.position = CGPoint(x: x, y: y)
+        touch.fillColor = .clear
+        touch.strokeColor = .clear
+        touch.zPosition = 71
+        touch.name = name
+        activity.addChild(touch)
+    }
+
+    func render(_ model: ClockMarketModel) {
+        activity.removeAllChildren()
+        switch model.task {
+        case .hour, .halfHour, .fiveMinutes:
+            renderClock(model)
+        case .routines:
+            renderRoutines(model)
+        case .money:
+            renderMoney(model)
+        }
+    }
+
+    private func renderClock(_ model: ClockMarketModel) {
+        instructions.text = model.task == .hour
+            ? "TURN THE HOUR HAND"
+            : (model.task == .halfHour ? "TURN TO O'CLOCK OR HALF PAST" : "TIME TO FIVE MINUTES")
+        let center = CGPoint(x: -113, y: -12)
+        let face = SKShapeNode(circleOfRadius: 91)
+        face.position = center
+        face.fillColor = UIColor(red: 0.99, green: 0.95, blue: 0.82, alpha: 1)
+        face.strokeColor = UIColor(red: 0.96, green: 0.77, blue: 0.33, alpha: 1)
+        face.lineWidth = 4
+        face.name = MathMechanicID.clockMarket
+        activity.addChild(face)
+
+        for tick in 0..<12 {
+            let angle = CGFloat(tick) * .pi / 6
+            let dot = SKShapeNode(circleOfRadius: 3)
+            dot.fillColor = UIColor(red: 0.09, green: 0.17, blue: 0.27, alpha: 1)
+            dot.strokeColor = .clear
+            dot.position = CGPoint(
+                x: center.x + sin(angle) * 77,
+                y: center.y + cos(angle) * 77
+            )
+            dot.name = MathMechanicID.clockMarket
+            activity.addChild(dot)
+        }
+
+        let hourAngle = (CGFloat(model.hour % 12) + CGFloat(model.minute) / 60) * .pi / 6
+        let minuteAngle = CGFloat(model.minute) * .pi / 30
+        for (angle, length, width) in [
+            (hourAngle, CGFloat(47), CGFloat(6)),
+            (minuteAngle, CGFloat(69), CGFloat(3))
+        ] {
+            let path = CGMutablePath()
+            path.move(to: .zero)
+            path.addLine(to: CGPoint(x: sin(angle) * length, y: cos(angle) * length))
+            let hand = SKShapeNode(path: path)
+            hand.position = center
+            hand.strokeColor = UIColor(red: 0.08, green: 0.19, blue: 0.29, alpha: 1)
+            hand.lineWidth = width
+            hand.lineCap = .round
+            hand.name = MathMechanicID.clockMarket
+            activity.addChild(hand)
+        }
+        let minute = model.targetMinute < 10
+            ? "0\(model.targetMinute)" : "\(model.targetMinute)"
+        let yours = model.minute < 10 ? "0\(model.minute)" : "\(model.minute)"
+        text("TARGET  \(model.targetHour):\(minute)", x: 109, y: 62, size: 20)
+        text("YOURS  \(model.hour):\(yours)", x: 109, y: 28, size: 16)
+        text("HOUR", x: 109, y: 1, size: 12)
+        control("−", name: "clockHourMinus", x: 58, y: -46, radius: 34)
+        control("+", name: "clockHourPlus", x: 161, y: -46, radius: 34)
+        if model.task != .hour {
+            text(model.task == .halfHour ? "HALF-HOUR" : "5 MINUTES",
+                 x: 109, y: -85, size: 12)
+            control("−", name: "clockMinuteMinus", x: 58, y: -125, radius: 33)
+            control("+", name: "clockMinutePlus", x: 161, y: -125, radius: 33)
+        }
+    }
+
+    private func renderRoutines(_ model: ClockMarketModel) {
+        instructions.text = "WHICH PART OF THE DAY?"
+        let event = model.nextRoutine
+        let symbol: String
+        switch event {
+        case .wakeUp: symbol = "☀"
+        case .lunch: symbol = "◉"
+        case .dinner: symbol = "☽"
+        case .sleep: symbol = "★"
+        case nil: symbol = "✓"
+        }
+        text(symbol, x: 0, y: 51, size: 34,
+             color: UIColor(red: 1, green: 0.83, blue: 0.46, alpha: 1))
+        text(event?.title ?? "ALL FOUR SORTED", x: 0, y: 10, size: 18)
+        for (index, part) in ClockMarketDaypart.allCases.enumerated() {
+            let x = CGFloat(index) * 117 - 175.5
+            let icon = ["☀", "◒", "☽", "★"][index]
+            text(icon, x: x, y: -51, size: 24)
+            control(icon, name: "routine\(part.rawValue)", x: x, y: -118,
+                    radius: 33)
+        }
+        text("\(model.routineBins.count) OF 4 EVENTS", x: 0, y: -73, size: 13)
+        control("↶", name: "routineUndo", x: 225, y: 51, radius: 29)
+    }
+
+    private func renderMoney(_ model: ClockMarketModel) {
+        instructions.text = "PHILIPPINE PESO TEACHING COINS"
+        text("PRICE: ₱\(model.targetPesos)", x: 0, y: 67, size: 24)
+        text("COINS SELECTED: ₱\(model.totalPesos)", x: 0, y: 30, size: 18)
+        let count = model.allowedCoins.count
+        let spacing: CGFloat = count == 2 ? 148 : 104
+        for (index, denomination) in model.allowedCoins.enumerated() {
+            let x = CGFloat(index) * spacing - CGFloat(count - 1) * spacing / 2
+            control("₱\(denomination)", name: "marketCoin\(denomination)",
+                    x: x, y: -65, radius: 34)
+        }
+        text("\(model.coins.count) COINS ADDED", x: 0, y: -117, size: 13)
+        control("↶", name: "marketCoinUndo", x: 222, y: 60, radius: 29)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.89, blue: 0.51, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1.0, duration: 0.16)
+        ]), withKey: "clockMarketPulse")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -1924,6 +2123,8 @@ import LearningCore
             return MeasurementWorkshopMechanic()
         case MathMechanicID.dataBoard:
             return DataBoardMechanic()
+        case MathMechanicID.clockMarket:
+            return ClockMarketMechanic()
         default:
             return nil
         }
