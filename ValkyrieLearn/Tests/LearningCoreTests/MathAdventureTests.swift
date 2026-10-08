@@ -131,6 +131,34 @@ final class MathAdventureTests: XCTestCase {
                     XCTAssertTrue(adventure.placeGardenCut())
                 }
             }
+        case .reasoningStudio(let model):
+            switch model.task {
+            case .strategy:
+                XCTAssertTrue(adventure.chooseReasoningStrategy(.countOn))
+                for _ in 0..<model.addend {
+                    XCTAssertTrue(adventure.addReasoningStep())
+                }
+            case .differentWays:
+                for (left, right) in [(1, model.startingValue - 1),
+                                       (2, model.startingValue - 2)] {
+                    for _ in 0..<left {
+                        XCTAssertTrue(adventure.adjustReasoningPair(left: true, delta: 1))
+                    }
+                    for _ in 0..<right {
+                        XCTAssertTrue(adventure.adjustReasoningPair(left: false, delta: 1))
+                    }
+                    XCTAssertTrue(adventure.saveReasoningPair())
+                }
+            case .multiStep:
+                for _ in 0..<model.firstChange {
+                    XCTAssertTrue(adventure.moveReasoningCounter(1))
+                }
+                XCTAssertTrue(adventure.confirmReasoningStage())
+                for _ in 0..<model.secondChange {
+                    XCTAssertTrue(adventure.moveReasoningCounter(model.subtractSecond ? -1 : 1))
+                }
+                XCTAssertTrue(adventure.confirmReasoningStage())
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -180,7 +208,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllTwelveRuntimesAndSessionStateRoundTrip() throws {
+    func testAllThirteenRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -192,7 +220,8 @@ final class MathAdventureTests: XCTestCase {
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter),
-            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter)]
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -464,9 +493,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2086)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2086)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2135)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2321)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2321)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2370)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -491,7 +520,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 67)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 70)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -1197,6 +1226,113 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(fractions.attempts, 2)
     }
 
+
+    func testReasoningStudioCoversThreeRealSkillsAndDistinctTaskFingerprints() throws {
+        for (skill, expected) in [
+            (MathSkills.chooseStrategy, 35),
+            (MathSkills.multipleSolutions, 8),
+            (MathSkills.multiStep, 192)
+        ] {
+            let variants = MathProductionQuestionBank.variants(for: skill)
+            XCTAssertEqual(variants.count, expected)
+            for variant in variants {
+                XCTAssertEqual(variant.encounter.mechanicID, MathMechanicID.reasoningStudio)
+                XCTAssertEqual(variant.encounter.operation, .reasoningStudio)
+                XCTAssertTrue(MathManipulativeSupport.supports(variant.encounter))
+                XCTAssertNoThrow(try ReasoningStudioModel(encounter: variant.encounter, at: epoch))
+            }
+            XCTAssertEqual(
+                Set(variants.map { $0.encounter.fingerprint }).count, expected
+            )
+        }
+    }
+
+    func testReasoningStudioStrategyNeedsChoiceAndEveryPhysicalStep() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
+        )
+        var model = try ReasoningStudioModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch), "Unstarted strategy cannot score")
+        XCTAssertFalse(model.addStrategyStep(), "Must first choose a strategy")
+        XCTAssertTrue(model.chooseStrategy(.countOn))
+        for _ in 0..<(model.addend - 1) {
+            XCTAssertTrue(model.addStrategyStep())
+        }
+        XCTAssertNil(model.submit(at: epoch), "A partial number-line model cannot score")
+        XCTAssertTrue(model.addStrategyStep())
+        XCTAssertTrue(model.addStrategyStep())
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(6))?.outcome, .incorrect)
+        XCTAssertTrue(model.undoStrategyStep())
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(9))?.outcome, .correct)
+        XCTAssertEqual(model.attempts, 2)
+        XCTAssertFalse(model.addStrategyStep())
+        XCTAssertEqual(try JSONDecoder().decode(
+            ReasoningStudioModel.self, from: JSONEncoder().encode(model)), model)
+    }
+
+    func testReasoningStudioNeedsTwoDifferentUnorderedNumberPairs() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.multipleSolutions).first?.encounter
+        )
+        var model = try ReasoningStudioModel(encounter: encounter, at: epoch)
+        let total = model.startingValue
+        XCTAssertNil(model.submit(at: epoch))
+        func fill(_ model: inout ReasoningStudioModel, _ left: Int, _ right: Int) {
+            for _ in 0..<left { XCTAssertTrue(model.adjustPair(left: true, delta: 1)) }
+            for _ in 0..<right { XCTAssertTrue(model.adjustPair(left: false, delta: 1)) }
+            XCTAssertTrue(model.savePair())
+        }
+        fill(&model, 1, total - 1)
+        XCTAssertNil(model.submit(at: epoch))
+        fill(&model, total - 1, 1)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(3))?.outcome, .incorrect,
+                       "Swapping the two piles is not a distinct solution")
+        XCTAssertTrue(model.undoPair())
+        for _ in 0..<(total - 3) {
+            XCTAssertTrue(model.adjustPair(left: true, delta: -1))
+        }
+        XCTAssertTrue(model.adjustPair(left: false, delta: 1))
+        XCTAssertTrue(model.savePair())
+        XCTAssertEqual(model.solutions.count, 2)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+        XCTAssertEqual(model.attempts, 2)
+        XCTAssertEqual(try JSONDecoder().decode(
+            ReasoningStudioModel.self, from: JSONEncoder().encode(model)), model)
+    }
+
+    func testReasoningStudioScoresIntermediateAndFinalStagesSeparately() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.multiStep)
+                .first(where: { $0.encounter.initialQuantity == 5
+                    && $0.encounter.targetQuantity == 22
+                    && $0.encounter.context == "studio.steps.addSubtract" })?.encounter
+        )
+        var model = try ReasoningStudioModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch))
+        XCTAssertFalse(model.confirmStage(), "Untouched stage must not lock")
+        XCTAssertTrue(model.moveCounter(1)) // 6 rather than 7
+        XCTAssertTrue(model.confirmStage())
+        XCTAssertEqual(model.observedIntermediate, 6)
+        XCTAssertNil(model.submit(at: epoch), "Second stage is required")
+        XCTAssertTrue(model.moveCounter(-1))
+        XCTAssertTrue(model.confirmStage())
+        XCTAssertEqual(model.observedFinal, 5)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(3))?.outcome, .incorrect)
+        XCTAssertTrue(model.resetStages())
+        XCTAssertEqual(model.workingValue, 5)
+        for _ in 0..<2 { XCTAssertTrue(model.moveCounter(1)) }
+        XCTAssertTrue(model.confirmStage())
+        for _ in 0..<2 { XCTAssertTrue(model.moveCounter(-1)) }
+        XCTAssertTrue(model.confirmStage())
+        XCTAssertEqual(model.observedIntermediate, 7)
+        XCTAssertEqual(model.observedFinal, 5)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(10))?.outcome, .correct)
+        XCTAssertEqual(model.attempts, 2)
+        XCTAssertFalse(model.resetStages())
+        XCTAssertEqual(try JSONDecoder().decode(
+            ReasoningStudioModel.self, from: JSONEncoder().encode(model)), model)
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
@@ -1205,9 +1341,6 @@ final class MathAdventureTests: XCTestCase {
             MathSkills.inverseFacts10,
             MathSkills.positionalLanguage,
             MathSkills.mapRoute,
-            MathSkills.chooseStrategy,
-            MathSkills.multipleSolutions,
-            MathSkills.multiStep,
         ]
 
         for skillID in unsupportedUntilDedicatedMechanicsExist {
