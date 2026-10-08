@@ -756,6 +756,277 @@ import LearningCore
 
 }
 
+
+@MainActor final class PlaceValueFactoryMechanic: SKNode, MathCastleReactiveMechanic {
+    private let buildGroup = SKNode()
+    private let comparisonGroup = SKNode()
+    private let tensContents = SKNode()
+    private let onesContents = SKNode()
+    private let targetLabel = ArtSystem.label("", size: 34)
+    private let builtLabel = ArtSystem.label("", size: 26)
+    private let leftLabel = ArtSystem.label("", size: 31)
+    private let rightLabel = ArtSystem.label("", size: 31)
+    private let relationLabel = ArtSystem.label("", size: 15)
+    private var latestModel: PlaceValueFactoryModel?
+
+    override init() {
+        super.init()
+        name = MathMechanicID.placeValueFactory
+        zPosition = 750
+
+        let base = ArtSystem.supplyTray(CGSize(width: 520, height: 278))
+        base.name = MathMechanicID.placeValueFactory
+        base.position = CGPoint(x: 0, y: -15)
+        base.zPosition = -5
+        addChild(base)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 292, height: 46),
+            fill: UIColor(red: 0.08, green: 0.12, blue: 0.18, alpha: 0.94),
+            stroke: UIColor(red: 0.93, green: 0.70, blue: 0.30, alpha: 0.74),
+            radius: 15
+        )
+        header.position = CGPoint(x: 0, y: 126)
+        header.name = MathMechanicID.placeValueFactory
+        addChild(header)
+
+        let title = ArtSystem.label("PLACE VALUE FACTORY", size: 16)
+        title.fontName = "AvenirNext-Heavy"
+        title.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.64, alpha: 1)
+        title.name = MathMechanicID.placeValueFactory
+        header.addChild(title)
+
+        buildGroup.name = "placeValueBuildGroup"
+        comparisonGroup.name = "placeValueCompareGroup"
+        addChild(buildGroup)
+        addChild(comparisonGroup)
+
+        let targetPlaque = ArtSystem.plaque(
+            CGSize(width: 126, height: 64),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.23, alpha: 0.94),
+            stroke: UIColor(red: 0.51, green: 0.88, blue: 0.95, alpha: 0.76),
+            radius: 15
+        )
+        targetPlaque.position = CGPoint(x: 0, y: 66)
+        targetPlaque.name = MathMechanicID.placeValueFactory
+        buildGroup.addChild(targetPlaque)
+        targetLabel.fontName = "AvenirNext-Heavy"
+        targetLabel.fontColor = .white
+        targetLabel.name = MathMechanicID.placeValueFactory
+        targetPlaque.addChild(targetLabel)
+
+        for (title, x) in [("TENS", CGFloat(-128)), ("ONES", CGFloat(128))] {
+            let label = ArtSystem.label(title, size: 15)
+            label.fontName = "AvenirNext-Bold"
+            label.fontColor = UIColor(red: 0.94, green: 0.83, blue: 0.52, alpha: 1)
+            label.position = CGPoint(x: x, y: 45)
+            label.name = MathMechanicID.placeValueFactory
+            buildGroup.addChild(label)
+
+            let tray = ArtSystem.panel(
+                CGSize(width: 184, height: 138),
+                fill: UIColor(red: 0.06, green: 0.13, blue: 0.19, alpha: 0.86),
+                stroke: UIColor(red: 0.52, green: 0.70, blue: 0.76, alpha: 0.62),
+                radius: 18,
+                lineWidth: 2,
+                shadowAlpha: 0.10,
+                innerHighlight: UIColor(red: 0.70, green: 0.92, blue: 0.96, alpha: 0.06)
+            )
+            tray.position = CGPoint(x: x, y: -35)
+            tray.name = MathMechanicID.placeValueFactory
+            buildGroup.addChild(tray)
+        }
+
+        buildGroup.addChild(tensContents)
+        buildGroup.addChild(onesContents)
+
+        for (symbol, name, x, y) in [
+            ("+", "placeTensPlus", CGFloat(-178), CGFloat(-118)),
+            ("−", "placeTensMinus", CGFloat(-78), CGFloat(-118)),
+            ("+", "placeOnesPlus", CGFloat(78), CGFloat(-118)),
+            ("−", "placeOnesMinus", CGFloat(178), CGFloat(-118))
+        ] {
+            let gear = ArtSystem.gear(radius: 31, symbol: symbol)
+            gear.position = CGPoint(x: x, y: y)
+            gear.name = name
+            buildGroup.addChild(gear)
+        }
+
+        builtLabel.fontName = "AvenirNext-Bold"
+        builtLabel.fontColor = UIColor(red: 0.90, green: 0.98, blue: 1.0, alpha: 1)
+        builtLabel.position = CGPoint(x: 0, y: -127)
+        builtLabel.name = MathMechanicID.placeValueFactory
+        buildGroup.addChild(builtLabel)
+
+        let leftCard = comparisonCard(x: -145, name: "placeLeft")
+        comparisonGroup.addChild(leftCard)
+        let rightCard = comparisonCard(x: 145, name: "placeRight")
+        comparisonGroup.addChild(rightCard)
+
+        leftLabel.fontName = "AvenirNext-Heavy"
+        leftLabel.fontColor = .white
+        leftLabel.position = CGPoint(x: -145, y: 45)
+        leftLabel.name = "placeLeft"
+        comparisonGroup.addChild(leftLabel)
+
+        rightLabel.fontName = "AvenirNext-Heavy"
+        rightLabel.fontColor = .white
+        rightLabel.position = CGPoint(x: 145, y: 45)
+        rightLabel.name = "placeRight"
+        comparisonGroup.addChild(rightLabel)
+
+        for (symbol, name, x) in [
+            ("◀", "placeLeft", CGFloat(-145)),
+            ("=", "placeEqual", CGFloat(0)),
+            ("▶", "placeRight", CGFloat(145))
+        ] {
+            let gear = ArtSystem.gear(radius: 34, symbol: symbol)
+            gear.position = CGPoint(x: x, y: -118)
+            gear.name = name
+            comparisonGroup.addChild(gear)
+        }
+
+        relationLabel.fontName = "AvenirNext-Bold"
+        relationLabel.fontColor = UIColor(red: 0.94, green: 0.83, blue: 0.52, alpha: 1)
+        relationLabel.position = CGPoint(x: 0, y: 92)
+        relationLabel.name = MathMechanicID.placeValueFactory
+        comparisonGroup.addChild(relationLabel)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func comparisonCard(x: CGFloat, name: String) -> SKNode {
+        let card = ArtSystem.panel(
+            CGSize(width: 210, height: 150),
+            fill: UIColor(red: 0.06, green: 0.15, blue: 0.22, alpha: 0.91),
+            stroke: UIColor(red: 0.55, green: 0.82, blue: 0.90, alpha: 0.70),
+            radius: 20,
+            lineWidth: 3,
+            shadowAlpha: 0.12,
+            innerHighlight: UIColor(red: 0.72, green: 0.93, blue: 0.97, alpha: 0.06)
+        )
+        card.position = CGPoint(x: x, y: 0)
+        card.name = name
+        return card
+    }
+
+    func render(_ model: PlaceValueFactoryModel) {
+        latestModel = model
+        buildGroup.isHidden = model.isComparison
+        comparisonGroup.isHidden = !model.isComparison
+
+        if model.isComparison {
+            leftLabel.text = "\(model.leftNumber)"
+            rightLabel.text = "\(model.rightNumber)"
+            let ordering = model.encounter.skillID == MathSkills.numberOrder20
+                || model.encounter.skillID == MathSkills.orderTwoDigit
+            relationLabel.text = ordering ? "WHICH COMES FIRST?" : "WHICH IS GREATER?"
+            renderComparisonBlocks(number: model.leftNumber, centerX: -145, prefix: "placeLeft")
+            renderComparisonBlocks(number: model.rightNumber, centerX: 145, prefix: "placeRight")
+            return
+        }
+
+        targetLabel.text = "\(model.targetNumber)"
+        builtLabel.text = "\(model.selectedTens) tens + \(model.selectedOnes) ones = \(model.builtNumber)"
+        renderBuildBlocks(model)
+    }
+
+    private func renderBuildBlocks(_ model: PlaceValueFactoryModel) {
+        tensContents.removeAllChildren()
+        onesContents.removeAllChildren()
+
+        for index in 0..<model.selectedTens {
+            let rod = Self.tenRod()
+            rod.position = CGPoint(
+                x: -176 + CGFloat(index % 5) * 24,
+                y: 1 - CGFloat(index / 5) * 65
+            )
+            rod.name = "placeTensBuilt"
+            tensContents.addChild(rod)
+        }
+
+        for index in 0..<model.selectedOnes {
+            let cube = Self.oneCube()
+            cube.position = CGPoint(
+                x: 88 + CGFloat(index % 5) * 25,
+                y: 5 - CGFloat(index / 5) * 27
+            )
+            cube.name = "placeOnesBuilt"
+            onesContents.addChild(cube)
+        }
+    }
+
+    private func renderComparisonBlocks(number: Int, centerX: CGFloat, prefix: String) {
+        let existing = comparisonGroup.children.filter { $0.name?.hasPrefix(prefix + "Block") == true }
+        existing.forEach { $0.removeFromParent() }
+
+        let tens = number / 10
+        let ones = number % 10
+
+        for index in 0..<tens {
+            let rod = Self.tenRod(scale: 0.72)
+            rod.position = CGPoint(
+                x: centerX - 68 + CGFloat(index % 5) * 28,
+                y: 7 - CGFloat(index / 5) * 50
+            )
+            rod.name = prefix + "BlockTen"
+            comparisonGroup.addChild(rod)
+        }
+
+        for index in 0..<ones {
+            let cube = Self.oneCube(scale: 0.78)
+            cube.position = CGPoint(
+                x: centerX - 50 + CGFloat(index % 5) * 24,
+                y: -48 - CGFloat(index / 5) * 24
+            )
+            cube.name = prefix + "BlockOne"
+            comparisonGroup.addChild(cube)
+        }
+    }
+
+    private static func tenRod(scale: CGFloat = 1) -> SKShapeNode {
+        let rod = ArtSystem.box(
+            CGSize(width: 20 * scale, height: 92 * scale),
+            color: UIColor(red: 0.28, green: 0.74, blue: 0.87, alpha: 1),
+            radius: 5 * scale
+        )
+        rod.strokeColor = UIColor(red: 0.86, green: 0.98, blue: 1, alpha: 0.92)
+        rod.lineWidth = max(1, 2 * scale)
+
+        for index in 1..<10 {
+            let mark = SKShapeNode(rectOf: CGSize(width: 14 * scale, height: 1.2 * scale))
+            mark.fillColor = UIColor.white.withAlphaComponent(0.44)
+            mark.strokeColor = .clear
+            mark.position.y = (-46 + CGFloat(index) * 9.2) * scale
+            rod.addChild(mark)
+        }
+        return rod
+    }
+
+    private static func oneCube(scale: CGFloat = 1) -> SKShapeNode {
+        let cube = ArtSystem.box(
+            CGSize(width: 20 * scale, height: 20 * scale),
+            color: UIColor(red: 0.63, green: 0.46, blue: 0.91, alpha: 1),
+            radius: 4 * scale
+        )
+        cube.strokeColor = UIColor(red: 0.94, green: 0.90, blue: 1, alpha: 0.92)
+        cube.lineWidth = max(1, 1.5 * scale)
+        return cube
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        targetLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        leftLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        rightLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        guard !reducedMotion else { return }
+
+        run(.sequence([
+            .scale(to: 1.035, duration: 0.12),
+            .scale(to: 1, duration: 0.18)
+        ]), withKey: "successPulse")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -767,6 +1038,8 @@ import LearningCore
             return TenFrameGateMechanic()
         case MathMechanicID.missingNumberBridge:
             return MissingNumberBridgeMechanic()
+        case MathMechanicID.placeValueFactory:
+            return PlaceValueFactoryMechanic()
         default:
             return nil
         }
