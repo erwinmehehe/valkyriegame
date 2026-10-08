@@ -31,6 +31,27 @@ final class MathAdventureTests: XCTestCase {
                     onesDelta: model.expectedOnes
                 )
             }
+        case .patternLoom(let model):
+            if model.isCreation {
+                let unit: [Int]
+                switch model.family {
+                case .ab: unit = [1, 2]
+                case .aab: unit = [1, 1, 2]
+                case .abc: unit = [1, 2, 3]
+                }
+                for index in 0..<model.slotCount {
+                    XCTAssertTrue(adventure.choosePatternSymbol(unit[index % unit.count]))
+                }
+            } else {
+                XCTAssertTrue(adventure.choosePatternSymbol(model.correctSymbol))
+            }
+        case .shapeForge(let model):
+            if model.isRotation {
+                let forward = (model.targetOrientation - model.currentOrientation + 4) % 4
+                for _ in 0..<forward { XCTAssertTrue(adventure.rotateShape(1)) }
+            } else {
+                XCTAssertTrue(adventure.chooseShapeOption(try XCTUnwrap(model.correctOption)))
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -80,13 +101,15 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllSixRuntimesAndSessionStateRoundTrip() throws {
+    func testAllEightRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue,
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -131,7 +154,9 @@ final class MathAdventureTests: XCTestCase {
         // below is still earned by eligible, real runtime evidence.
         var adventure = MathAdventure(continuingLearner: true)
         var profile = LearnerProfile(); var date = epoch; var seen = Set<String>()
-        for _ in 0..<80 {
+        // With seven mechanics and prerequisite-based variation, give the
+        // planner sufficient independent scored encounters to reach every one.
+        for _ in 0..<180 {
             let selection = try adventure.prepareNext(profile: &profile, now: date)
             if selection == .explorationBreak {
                 adventure.finishExploration(profile: &profile, at: date); continue
@@ -355,9 +380,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1196)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1196)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1245)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1316)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1316)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1365)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -382,7 +407,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 41)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 49)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -467,21 +492,144 @@ final class MathAdventureTests: XCTestCase {
     }
 
 
+
+    func testPatternLoomUnlocksFiveSkillsThroughObservableActions() throws {
+        let skills: [SkillID] = [
+            MathSkills.patternAB, MathSkills.patternAAB, MathSkills.patternABC,
+            MathSkills.patternMissing, MathSkills.patternCreate
+        ]
+        for skill in skills {
+            let encounters = MathProductionQuestionBank.variants(for: skill).map(\.encounter)
+            XCTAssertFalse(encounters.isEmpty)
+            XCTAssertTrue(encounters.allSatisfy {
+                $0.operation == .pattern
+                    && $0.mechanicID == MathMechanicID.patternLoom
+                    && MathManipulativeSupport.supports($0)
+            })
+        }
+
+        let missing = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.patternMissing).first?.encounter
+        )
+        var runtime = try MathMechanicRuntime(encounter: missing, at: epoch)
+        guard case .patternLoom(let model) = runtime else {
+            return XCTFail("Expected a Pattern Loom runtime")
+        }
+        XCTAssertEqual(model.visibleSlots.filter { $0 == nil }.count, 1)
+        XCTAssertNil(runtime.submit(at: epoch))
+        let wrong = model.correctSymbol == 1 ? 2 : 1
+        XCTAssertTrue(runtime.choosePatternSymbol(wrong))
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(runtime.choosePatternSymbol(model.correctSymbol))
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+        XCTAssertFalse(runtime.choosePatternSymbol(wrong), "Completed work must be immutable")
+        XCTAssertNil(runtime.submit(at: epoch.addingTimeInterval(6)))
+        XCTAssertEqual(
+            try JSONDecoder().decode(MathMechanicRuntime.self, from: JSONEncoder().encode(runtime)),
+            runtime
+        )
+    }
+
+    func testPatternCreationRequiresFullRepeatingUnitRatherThanOneCorrectTap() throws {
+        for family in PatternLoomFamily.allCases {
+            let encounter = try XCTUnwrap(
+                MathProductionQuestionBank.variants(for: MathSkills.patternCreate)
+                    .first(where: { $0.encounter.context == "loom.create.\(family.rawValue)" })?
+                    .encounter
+            )
+            var model = try PatternLoomModel(encounter: encounter, at: epoch)
+            XCTAssertFalse(model.isValidCreation)
+            XCTAssertNil(model.submit(at: epoch), "Incomplete patterns cannot be scored")
+
+            for _ in 0..<6 { XCTAssertTrue(model.chooseSymbol(1)) }
+            XCTAssertFalse(model.chooseSymbol(2), "Cannot add a seventh shape")
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(10))?.outcome, .incorrect)
+            for _ in 0..<6 { XCTAssertTrue(model.undo()) }
+
+            let unit: [Int]
+            switch family {
+            case .ab: unit = [1, 2]
+            case .aab: unit = [1, 1, 2]
+            case .abc: unit = [1, 2, 3]
+            }
+            for index in 0..<6 {
+                XCTAssertTrue(model.chooseSymbol(unit[index % unit.count]))
+            }
+            XCTAssertTrue(model.isValidCreation)
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(20))?.outcome, .correct)
+            XCTAssertFalse(model.undo(), "Completed attempts cannot be changed")
+        }
+    }
+
+
+    func testShapeForgeAddsThreeObservableSkillsWithoutPretendingCompositionOrSymmetry() throws {
+        let skills: [SkillID] = [
+            MathSkills.recognizeShapes,
+            MathSkills.shapeAttributes,
+            MathSkills.rotateShapes
+        ]
+        for skill in skills {
+            let variants = MathProductionQuestionBank.variants(for: skill)
+            XCTAssertFalse(variants.isEmpty)
+            XCTAssertTrue(variants.allSatisfy {
+                $0.encounter.mechanicID == MathMechanicID.shapeForge
+                && $0.encounter.operation == .shape
+                && MathManipulativeSupport.supports($0.encounter)
+            })
+        }
+
+        let example = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter
+        )
+        var runtime = try MathMechanicRuntime(encounter: example, at: epoch)
+        guard case .shapeForge(let model) = runtime else {
+            return XCTFail("Expected Shape Forge")
+        }
+        XCTAssertNil(runtime.submit(at: epoch))
+        let right = try XCTUnwrap(model.correctOption)
+        XCTAssertTrue(runtime.chooseShapeOption(right == 1 ? 2 : 1))
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(runtime.chooseShapeOption(right))
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+        XCTAssertFalse(runtime.chooseShapeOption(1))
+        XCTAssertEqual(
+            try JSONDecoder().decode(MathMechanicRuntime.self, from: JSONEncoder().encode(runtime)),
+            runtime
+        )
+
+        let attr = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.shapeAttributes).first?.encounter
+        )
+        let attrModel = try ShapeForgeModel(encounter: attr, at: epoch)
+        XCTAssertEqual(attrModel.cornerChoices.count, 3)
+        XCTAssertEqual(Set(attrModel.cornerChoices), Set([0, 3, 4]))
+        XCTAssertNotNil(attrModel.correctOption)
+    }
+
+    func testShapeForgeRotationRequiresMatchingAnAsymmetricPhysicalShape() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.rotateShapes).first?.encounter
+        )
+        var model = try ShapeForgeModel(encounter: encounter, at: epoch)
+        XCTAssertTrue(model.isRotation)
+        XCTAssertFalse(model.turn(0), "Only quarter turns are allowed")
+        XCTAssertNil(model.submit(at: epoch), "No accidental score before first action for selections")
+        let steps = (model.targetOrientation - model.currentOrientation + 4) % 4
+        for _ in 0..<steps {
+            XCTAssertTrue(model.turn(1))
+        }
+        XCTAssertEqual(model.currentOrientation, model.targetOrientation)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(10))?.outcome, .correct)
+        XCTAssertFalse(model.turn(1), "The completed shape must be immutable")
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
             MathSkills.countOn10,
             MathSkills.findDifference10,
             MathSkills.inverseFacts10,
-            MathSkills.patternAB,
-            MathSkills.patternAAB,
-            MathSkills.patternABC,
-            MathSkills.patternMissing,
-            MathSkills.patternCreate,
-            MathSkills.recognizeShapes,
-            MathSkills.shapeAttributes,
             MathSkills.composeShapes,
-            MathSkills.rotateShapes,
             MathSkills.symmetry,
             MathSkills.positionalLanguage,
             MathSkills.mapRoute,

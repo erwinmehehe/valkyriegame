@@ -9,13 +9,21 @@ import LearningCore
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
+        let pattern = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter
+        )
+        let shape = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
             (MathCastleEncounterCatalog.numberBondMachine[0], CGPoint(x: 925, y: 280), CGPoint(x: 555, y: 280), "1 crystal in the open part."),
             (MathCastleEncounterCatalog.tenFrameGate[0], CGPoint(x: 820, y: 344), CGPoint(x: 550, y: 310), "1 light placed."),
             (MathCastleEncounterCatalog.missingNumberBridge[0], CGPoint(x: 965, y: 330), CGPoint(x: 550, y: 335), "1 plank added."),
-            (placeValue, CGPoint(x: 820, y: 310), CGPoint(x: 642, y: 192), "1 tens and 0 ones make 10.")
+            (placeValue, CGPoint(x: 820, y: 310), CGPoint(x: 642, y: 192), "1 tens and 0 ones make 10."),
+            (pattern, CGPoint(x: 820, y: 310), CGPoint(x: 660, y: 188), "A shape fills the pattern gap."),
+            (shape, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 290), "Shape option 1 selected.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -93,9 +101,15 @@ import LearningCore
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
+        let pattern = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter
+        )
+        let shape = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))
