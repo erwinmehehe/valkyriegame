@@ -205,7 +205,7 @@ import LearningCore
         if let instructionBackdrop = childNode(withName: "instructionBackdrop") {
             instructionBackdrop.xScale = 0.70
             instructionBackdrop.position = CGPoint(x: 755, y: 48)
-            instructionBackdrop.alpha = 0.92
+            instructionBackdrop.alpha = 0.72
         }
         instruction.position = CGPoint(x: 755, y: 48)
         instruction.fontSize = 19
@@ -501,8 +501,9 @@ import LearningCore
         )
         let water = SKShapeNode(path: waterPath)
         water.fillColor = .clear
-        water.strokeColor = UIColor(red: 0.42, green: 0.82, blue: 0.96, alpha: 0.32)
-        water.lineWidth = 62
+        // Painted water carries the detail; a narrow animated current is enough.
+        water.strokeColor = UIColor(red: 0.42, green: 0.82, blue: 0.96, alpha: 0.18)
+        water.lineWidth = 30
         water.glowWidth = 2
         water.name = "sunmillWater"
         water.zPosition = 92
@@ -557,6 +558,7 @@ import LearningCore
         outerGlow.lineWidth = 3
         outerGlow.glowWidth = reducedMotion ? 0 : 7
         outerGlow.name = "sunmillWheel"
+        outerGlow.alpha = 0.45
         wheel.addChild(outerGlow)
 
         for index in 0..<8 {
@@ -571,6 +573,7 @@ import LearningCore
             petal.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.48, alpha: 0.72)
             petal.lineWidth = 3
             petal.name = "sunmillWheel"
+            petal.alpha = 0.72
             wheel.addChild(petal)
         }
 
@@ -756,7 +759,7 @@ import LearningCore
         archPath.closeSubpath()
 
         let hollow = SKShapeNode(path: archPath)
-        hollow.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.12, alpha: 0.18)
+        hollow.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.12, alpha: 0.08)
         hollow.strokeColor = UIColor(red: 0.38, green: 0.25, blue: 0.13, alpha: 0.88)
         hollow.lineWidth = 11
         hollow.name = "storyHollow"
