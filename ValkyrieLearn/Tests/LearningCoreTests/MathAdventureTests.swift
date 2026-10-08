@@ -71,6 +71,19 @@ final class MathAdventureTests: XCTestCase {
             } else {
                 adventure.chooseComparison(model.correctChoice)
             }
+        case .dataBoard(let model):
+            if model.isSorting {
+                for token in model.sortingTokens {
+                    let attribute = try XCTUnwrap(model.sortingAttribute)
+                    XCTAssertTrue(adventure.sortDataObject(into: token.category(for: attribute)))
+                }
+            } else {
+                for (index, count) in model.graphSourceCounts.enumerated() {
+                    for _ in 0..<count {
+                        XCTAssertTrue(adventure.addPicture(to: index + 1))
+                    }
+                }
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -120,7 +133,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllNineRuntimesAndSessionStateRoundTrip() throws {
+    func testAllTenRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -129,7 +142,8 @@ final class MathAdventureTests: XCTestCase {
             MathCastleEncounterCatalog.missingNumberBridge[0], placeValue,
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter),
-            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter)]
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -400,9 +414,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1542)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1542)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1591)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1702)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1702)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1751)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -427,7 +441,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 55)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 57)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -763,6 +777,101 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
+
+    func testDataBoardClassifiesFiveObjectsByVisibleAttributeAndRecordsCorrections() throws {
+        let variants = MathProductionQuestionBank.variants(for: MathSkills.classifyObjects)
+        XCTAssertEqual(variants.count, 96)
+        XCTAssertEqual(Set(variants.map { $0.encounter.context }),
+                       Set(["data.sort.color", "data.sort.shape"]))
+        XCTAssertTrue(variants.allSatisfy { MathManipulativeSupport.supports($0.encounter) })
+
+        for attribute in DataSortAttribute.allCases {
+            let encounter = try XCTUnwrap(
+                variants.first(where: { $0.encounter.context == "data.sort.\(attribute.rawValue)" })?
+                    .encounter
+            )
+            var model = try DataBoardModel(encounter: encounter, at: epoch)
+            XCTAssertEqual(model.sortingTokens.count, 5)
+            XCTAssertNil(model.submit(at: epoch), "Blank sorting must not award evidence")
+            for token in model.sortingTokens.prefix(4) {
+                XCTAssertTrue(model.sortNext(into: token.category(for: attribute)))
+            }
+            XCTAssertNil(model.submit(at: epoch), "Four objects are not a complete sort")
+            let last = try XCTUnwrap(model.nextSortingToken)
+            let right = last.category(for: attribute)
+            let wrong = right == 1 ? 2 : 1
+            XCTAssertTrue(model.sortNext(into: wrong))
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(6))?.outcome, .incorrect)
+            XCTAssertTrue(model.undoSort())
+            XCTAssertTrue(model.sortNext(into: right))
+            let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(10)))
+            XCTAssertEqual(evidence.outcome, .correct)
+            XCTAssertEqual(evidence.attempts, 2)
+            XCTAssertFalse(model.undoSort(), "Submitted correct work must not be edited")
+            XCTAssertEqual(
+                try JSONDecoder().decode(DataBoardModel.self, from: JSONEncoder().encode(model)),
+                model
+            )
+        }
+    }
+
+    func testDataBoardPictureGraphUsesAll64DistinctCountsAndFullTallies() throws {
+        let variants = MathProductionQuestionBank.variants(for: MathSkills.pictureGraph)
+        XCTAssertEqual(variants.count, 64)
+        let signatures = try variants.map {
+            try DataBoardModel(encounter: $0.encounter, at: epoch).graphSourceCounts
+        }
+        XCTAssertEqual(Set(signatures).count, 64)
+        XCTAssertTrue(signatures.allSatisfy { $0.count == 3 && $0.allSatisfy { (1...4).contains($0) } })
+
+        let encounter = try XCTUnwrap(variants.first?.encounter)
+        var runtime = try MathMechanicRuntime(encounter: encounter, at: epoch)
+        guard case .dataBoard(let first) = runtime else {
+            return XCTFail("Expected native Data Board runtime")
+        }
+        XCTAssertEqual(first.graphSourceCounts, [1, 1, 1])
+        XCTAssertNil(runtime.submit(at: epoch))
+        XCTAssertTrue(runtime.addPicture(to: 1))
+        XCTAssertTrue(runtime.addPicture(to: 1))
+        XCTAssertNil(runtime.submit(at: epoch), "Partially filled graph cannot score")
+        XCTAssertTrue(runtime.addPicture(to: 2))
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(5))?.outcome, .incorrect)
+        XCTAssertTrue(runtime.undoPicture())
+        XCTAssertTrue(runtime.undoPicture())
+        XCTAssertTrue(runtime.addPicture(to: 2))
+        XCTAssertTrue(runtime.addPicture(to: 3))
+        let evidence = try XCTUnwrap(runtime.submit(at: epoch.addingTimeInterval(10)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertFalse(runtime.addPicture(to: 1))
+        XCTAssertNil(runtime.submit(at: epoch.addingTimeInterval(12)))
+        XCTAssertEqual(
+            try JSONDecoder().decode(MathMechanicRuntime.self, from: JSONEncoder().encode(runtime)),
+            runtime
+        )
+    }
+
+    func testDataBoardRejectsFakeLearningOperationsAndUnsupportedSeeds() throws {
+        let base = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter
+        )
+        let wrongMechanic = LearningEncounter(
+            id: "invalid-data-mechanic", skillID: MathSkills.classifyObjects,
+            mechanicID: MathMechanicID.dataBoard, representation: .concrete,
+            operation: .counting, initialQuantity: 1, targetQuantity: 5,
+            prompt: "Invalid", context: "data.sort.color"
+        )
+        XCTAssertFalse(MathManipulativeSupport.supports(wrongMechanic))
+        XCTAssertThrowsError(try MathMechanicRuntime(encounter: wrongMechanic, at: epoch))
+        let wrongSeed = LearningEncounter(
+            id: "invalid-data-seed", skillID: base.skillID, mechanicID: base.mechanicID,
+            representation: base.representation, operation: base.operation,
+            initialQuantity: 999, targetQuantity: 5, prompt: "Invalid",
+            context: base.context
+        )
+        XCTAssertFalse(MathManipulativeSupport.supports(wrongSeed))
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
@@ -771,8 +880,6 @@ final class MathAdventureTests: XCTestCase {
             MathSkills.inverseFacts10,
             MathSkills.positionalLanguage,
             MathSkills.mapRoute,
-            MathSkills.classifyObjects,
-            MathSkills.pictureGraph,
             MathSkills.timeDayparts,
             MathSkills.coinValues,
             MathSkills.chooseStrategy,
