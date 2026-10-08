@@ -358,6 +358,31 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.resetReasoningStages() ?? false
     }
 
+    @discardableResult public mutating func revealTrailCollection() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.revealTrailCollection() ?? false
+    }
+
+    @discardableResult public mutating func adjustTrailEstimate(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustTrailEstimate(delta) ?? false
+    }
+
+    @discardableResult public mutating func lockTrailEstimate() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.lockTrailEstimate() ?? false
+    }
+
+    @discardableResult public mutating func addTrailJump() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.addTrailJump() ?? false
+    }
+
+    @discardableResult public mutating func undoTrailJump() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoTrailJump() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -489,6 +514,20 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 if demonstration {
                     _ = runtime?.choosePatternSymbol(model.correctSymbol)
                     cue = "Watch Pip place one repeating shape. Now try the lever."
+                }
+            }
+        case .numberTrail(let model):
+            if model.isEstimate {
+                cue = model.flashObserved
+                    ? "Think about the group you saw briefly. Was it close to your number? Estimating means being close, not counting one by one."
+                    : "Tap FLASH once. Watch the fireflies quickly, then make your best approximate guess after they disappear."
+                // A hint never reveals the target quantity or locks a guess.
+                demonstration = false
+            } else {
+                cue = "Start on \(model.startNumber). Touch +1 once for each new number, saying the numbers as you jump."
+                if demonstration && model.jumps < model.requiredJumps {
+                    _ = runtime?.addTrailJump()
+                    cue = "Pip made one jump as an example. Finish the other jumps."
                 }
             }
         case .reasoningStudio(let model):
