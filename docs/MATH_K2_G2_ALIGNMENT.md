@@ -60,10 +60,10 @@ explicitly non-grade-level.
 
 ## Production question bank
 
-The native Math Castle now has a parameterized production bank of 2,405 variants.
+The native Math Castle now has a parameterized production bank of 2,567 variants.
 
 Together with the 49 existing normal adaptive encounters, the normal adaptive
-candidate pool is 2,454 encounters.
+candidate pool is 2,616 encounters.
 
 Hidden placement and Challenge Gate content remain separate so diagnostic evidence
 and optional challenge evidence do not masquerade as ordinary practice.
@@ -83,7 +83,7 @@ math that has merely been reworded.
 
 ## Native-assessment safety
 
-Only skills that the current fourteen native manipulatives can genuinely observe are
+Only skills that the current sixteen native manipulatives can genuinely observe are
 placed in the production mastery bank.
 
 Current manipulatives:
@@ -102,11 +102,16 @@ Current manipulatives:
 - Grouping Garden
 - Reasoning Studio
 - Number Trail
+- Difference Dock
+- Map Quest
 
-The production bank currently covers 72 of the 76 skill nodes.
+The production bank currently covers all 76 declared skill nodes.
 
-The remaining skills stay in the curriculum graph and alignment matrix, but the app
-does not award mastery for them yet. This is intentional.
+Every declared skill now has a native assessment family. This is an
+engineering coverage milestone, **not** proof of DepEd competency-code
+equivalence, teaching effectiveness, learner mastery, or finished device QA.
+Classroom educators must still review the challenge progression and the
+quality of evidence for each skill.
 
 Number Trail adds 84 observable number-sense activities: 54 brief-flash
 estimation trials (quantities 2–10 in six arrangements) and 30 one-unit
@@ -186,10 +191,18 @@ Place Value Factory now adds native evidence for counting to 20, ordering number
 to 20, one more/one less, grouping tens, tens/ones place value, building and reading
 two-digit numbers, comparing two-digit numbers and ordering two-digit numbers.
 
-Examples that still require dedicated observable mechanics include:
+The final formerly unsupported skill families now have dedicated actions:
 
-- difference/inverse-fact reasoning
-- route/position reasoning
+- **Difference Dock:** pair one-to-one counters to isolate the unmatched
+  quantity, or construct an entire addition before removing the known part to
+  demonstrate its inverse. Both steps must be complete before scoring.
+- **Map Quest:** place Pip in one of eight positions relative to a landmark,
+  or navigate a nine-tile grid through consecutive orthogonal arrows. A
+  destination tap does not teleport Pip in route mode. Partial routes cannot
+  score; incorrect completed work can be undone and repaired.
+
+These address the native assessment gap without changing Valkyrie's approved
+character rendering or reusing those math tokens as world art.
 
 ## Adaptive progression rule
 
@@ -210,12 +223,16 @@ Placement readiness must never be reported to parents as observed mastery.
 ## Next curriculum-engineering milestone
 
 The next major implementation milestone is not "more questions." It is adding the
-missing manipulatives so coverage can grow from 72/76 skills toward the full K2-G2
-matrix without weakening evidence quality.
+missing manipulatives so coverage can grow from native skill coverage to rigorous acceptance and educator-verified K2-G2
+curriculum alignment without weakening evidence quality.
 
 Place Value Factory, Pattern Loom, Shape Forge v2, Measurement Workshop, Data Board, Clock & Market, Grouping Garden, and Reasoning Studio are now implemented. Recommended next order:
 
-1. Remaining gaps — inverse/difference relationships, position and map routes
+1. Complete a physical-iPad acceptance run on current `main`, including
+   Difference Dock pairing/undo and Map Quest directional-tap accuracy
+2. Review age-appropriate directions, mastery thresholds and DepEd/Singapore
+   competency alignment with classroom educators
+3. Validate visual assets, accessibility, offline restore and parent reporting
 
 Every new mechanic should add observable-action tests before its skills become
 mastery-eligible.
