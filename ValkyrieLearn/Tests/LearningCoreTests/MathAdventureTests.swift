@@ -373,7 +373,11 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 32)
 
         for variant in MathProductionQuestionBank.variants {
-            XCTAssertNotNil(MathCurriculumMatrix.alignment(for: variant.encounter.skillID))
+            let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
+            XCTAssertNotNil(alignment)
+            XCTAssertEqual(variant.gradeBand, alignment?.gradeBand)
+            XCTAssertEqual(variant.matatagDomain, alignment?.matatagDomain)
+            XCTAssertEqual(variant.singaporeArea, alignment?.singaporeArea)
             XCTAssertTrue((1...5).contains(variant.difficulty))
             XCTAssertTrue(variant.masteryEligible)
             XCTAssertFalse(variant.placementEligible)
