@@ -45,7 +45,6 @@ final class MathAdventureTests: XCTestCase {
             } else {
                 XCTAssertTrue(adventure.choosePatternSymbol(model.correctSymbol))
             }
-        }
         case .shapeForge(let model):
             if model.isRotation {
                 let forward = (model.targetOrientation - model.currentOrientation + 4) % 4
@@ -53,6 +52,7 @@ final class MathAdventureTests: XCTestCase {
             } else {
                 XCTAssertTrue(adventure.chooseShapeOption(try XCTUnwrap(model.correctOption)))
             }
+        }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
     func testPlacementUsesOnlyPlayableProbesAndDoesNotGrantMastery() throws {
