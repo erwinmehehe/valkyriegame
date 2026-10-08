@@ -358,9 +358,9 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.resetReasoningStages() ?? false
     }
 
-    @discardableResult public mutating func revealTrailCollection() -> Bool {
+    @discardableResult public mutating func revealTrailCollection(at date: Date = Date()) -> Bool {
         guard interactionStarted else { return false }
-        return runtime?.revealTrailCollection() ?? false
+        return runtime?.revealTrailCollection(at: date) ?? false
     }
 
     @discardableResult public mutating func adjustTrailEstimate(_ delta: Int) -> Bool {
@@ -368,9 +368,9 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.adjustTrailEstimate(delta) ?? false
     }
 
-    @discardableResult public mutating func lockTrailEstimate() -> Bool {
+    @discardableResult public mutating func lockTrailEstimate(at date: Date = Date()) -> Bool {
         guard interactionStarted else { return false }
-        return runtime?.lockTrailEstimate() ?? false
+        return runtime?.lockTrailEstimate(at: date) ?? false
     }
 
     @discardableResult public mutating func addTrailJump() -> Bool {
