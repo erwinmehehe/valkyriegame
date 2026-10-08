@@ -48,6 +48,15 @@ import LearningCore
         let countOn = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
         )
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter
+        )
+        let position = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter
+        )
+        let route = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.mapRoute).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -67,7 +76,10 @@ import LearningCore
             (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed."),
             (reasoning, CGPoint(x: 820, y: 310), CGPoint(x: 700, y: 319), "0 steps using counting on."),
             (estimate, CGPoint(x: 820, y: 310), CGPoint(x: 663, y: 188), "Fireflies flashed. Estimate dial is on 5."),
-            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2.")
+            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2."),
+            (difference, CGPoint(x: 820, y: 310), CGPoint(x: 637, y: 189), "1 of 1 pairs matched; 0 extras counted."),
+            (position, CGPoint(x: 820, y: 310), CGPoint(x: 666, y: 363), "Pip was placed on map tile 1."),
+            (route, CGPoint(x: 820, y: 310), CGPoint(x: 994, y: 190), "Pip moved 1 step to tile 2."),
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -525,6 +537,73 @@ import LearningCore
         )
     }
 
+
+    func testDifferenceDockNativeCounterAndAnswerButtonsDoNotScoreIncompleteWork() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+                .first(where: { $0.encounter.initialQuantity == 2
+                    && $0.encounter.targetQuantity == 5 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+
+        scene.handleTap(at: CGPoint(x: 637, y: 189))
+        scene.handleTap(at: CGPoint(x: 881, y: 189))
+        guard case .differenceDock(let model)? = state.runtime else {
+            return XCTFail("Missing Difference Dock model")
+        }
+        XCTAssertEqual(model.constructed, 1)
+        XCTAssertEqual(model.response, 1)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, before)
+    }
+
+    func testMapQuestNativePositionAndConnectedStepsAreNotTeleportations() throws {
+        let position = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage)
+                .first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(position))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        scene.handleTap(at: CGPoint(x: 666, y: 363))
+        guard case .mapQuest(let placed)? = state.runtime else {
+            return XCTFail("Missing Map Quest position model")
+        }
+        XCTAssertEqual(placed.selectedCell, 0)
+        XCTAssertFalse(placed.completed)
+
+        let route = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.mapRoute).first?.encounter
+        )
+        let routeState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(routeState.startWorkshop(route))
+        let routeScene = MathCastleScene(state: routeState)
+        routeScene.reducedMotion = true
+        routeScene.didMove(to: SKView())
+        defer { routeScene.willLeave() }
+        routeScene.valkyrie.position = CGPoint(x: 490, y: 175)
+        routeScene.handleTap(at: CGPoint(x: 820, y: 310))
+        routeScene.handleTap(at: CGPoint(x: 994, y: 190))
+        guard case .mapQuest(let moved)? = routeState.runtime else {
+            return XCTFail("Missing Map Quest route model")
+        }
+        XCTAssertEqual(moved.routeCells, [0, 1])
+        XCTAssertFalse(moved.completed)
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -614,9 +693,18 @@ import LearningCore
         let countOn = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
         )
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter
+        )
+        let position = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter
+        )
+        let route = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.mapRoute).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning, estimate, countOn]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning, estimate, countOn, difference, position, route]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))
