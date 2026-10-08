@@ -21,7 +21,7 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertTrue(cart.add())
         XCTAssertEqual(cart.submit()?.outcome, .incorrect)
         let scaffold = ScaffoldingEngine().next(after: cart.support); cart.apply(scaffold)
-        for _ in 0..<3 { cart.add() }
+        for _ in 0..<(cart.encounter.targetQuantity - cart.quantity) { XCTAssertTrue(cart.add()) }
         let result = cart.submit()
         XCTAssertEqual(result?.outcome, .correct); XCTAssertEqual(result?.attempts, 2)
         XCTAssertEqual(result?.supportLevel, .lightHint); XCTAssertEqual(result?.easySuccess, false)
