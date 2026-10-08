@@ -135,7 +135,22 @@ import LearningCore
         ambientBase.name = "creatureGroveAmbientBase"
         addChild(ambientBase)
 
-        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
+        if let texture = ArtSystem.texture("ScienceCreatureGrovePaintedHD") {
+            let backdrop = SKSpriteNode(
+                texture: texture,
+                size: CGSize(width: 1280, height: 960)
+            )
+            backdrop.position = CGPoint(x: 640, y: 360)
+            backdrop.zPosition = -300
+            backdrop.name = "creatureGroveBackdropHD"
+            backdrop.isUserInteractionEnabled = false
+            backdrop.userData = NSMutableDictionary(dictionary: [
+                "sourceAsset": "ScienceCreatureGrovePaintedHD",
+                "vectorPainted": true,
+                "designSize": "1280x960"
+            ])
+            addChild(backdrop)
+        } else if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
             // Reuse only the high-resolution woodland/story-hollow quadrant.
             // The full source file is a multi-scene contact sheet.
             let groveTexture = SKTexture(
