@@ -922,7 +922,7 @@ import LearningCore
         case .arrive:
             groups = [
                 (["scienceMorningWeather"], 1.0),
-                (["scienceAfternoonWeather"], 0.012),
+                (["scienceAfternoonWeather"], 0.008),
                 (["scienceForecastBase"], 0.001),
                 (["scienceCreatureGate"], 0.001)
             ]
