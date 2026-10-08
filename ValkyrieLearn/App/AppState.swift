@@ -426,6 +426,30 @@ import LearningCore
         beginInteraction()
         if adventure.undoPicture() { persist() }
     }
+    func adjustClockHour(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustClockHour(delta) { persist() }
+    }
+    func adjustClockMinute(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustClockMinute(delta) { persist() }
+    }
+    func placeDailyRoutine(_ daypart: ClockMarketDaypart) {
+        beginInteraction()
+        if adventure.placeDailyRoutine(daypart) { persist() }
+    }
+    func undoDailyRoutine() {
+        beginInteraction()
+        if adventure.undoDailyRoutine() { persist() }
+    }
+    func addPesoCoin(_ pesos: Int) {
+        beginInteraction()
+        if adventure.addPesoCoin(pesos) { persist() }
+    }
+    func undoPesoCoin() {
+        beginInteraction()
+        if adventure.undoPesoCoin() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
