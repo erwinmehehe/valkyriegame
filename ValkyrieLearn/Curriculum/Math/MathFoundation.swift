@@ -881,10 +881,11 @@ public enum MathProductionQuestionBank {
 }
 
 
-/// Authored encounter set for the first reusable Math Castle mechanics.
+/// Seed scenarios for the reusable Math Castle mechanics.
 ///
-/// These are intentionally few and varied. The goal is adaptive delivery across
-/// different representations and mechanics, not a large generated question bank.
+/// The named arrays preserve the original milestone scenarios and regression
+/// fixtures. `all` also includes MathProductionQuestionBank, which supplies the
+/// larger parameterized K2-readiness through Grade 2 adaptive pool.
 public enum MathCastleEncounterCatalog {
     public static let balanceScale: [LearningEncounter] = [
         LearningEncounter(
