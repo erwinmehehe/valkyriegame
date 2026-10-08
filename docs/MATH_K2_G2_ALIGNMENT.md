@@ -60,10 +60,10 @@ explicitly non-grade-level.
 
 ## Production question bank
 
-The native Math Castle now has a parameterized production bank of 2,405 variants.
+The native Math Castle now has a parameterized production bank of 2,612 variants.
 
 Together with the 49 existing normal adaptive encounters, the normal adaptive
-candidate pool is 2,454 encounters.
+candidate pool is 2,661 encounters.
 
 Hidden placement and Challenge Gate content remain separate so diagnostic evidence
 and optional challenge evidence do not masquerade as ordinary practice.
@@ -83,7 +83,7 @@ math that has merely been reworded.
 
 ## Native-assessment safety
 
-Only skills that the current fourteen native manipulatives can genuinely observe are
+Only skills that the current sixteen native manipulatives can genuinely observe are
 placed in the production mastery bank.
 
 Current manipulatives:
@@ -102,11 +102,27 @@ Current manipulatives:
 - Grouping Garden
 - Reasoning Studio
 - Number Trail
+- Difference Bridge
+- Route Explorer
 
-The production bank currently covers 72 of the 76 skill nodes.
+The production bank now contains observable assessments for **all 76 of the
+76 declared Valkyrie Math skills**. This means every internal skill node has
+a candidate native assessment; it does **not** demonstrate that all
+grade-specific DepEd competency codes, accessibility requirements, mastery
+validity, or physical-device acceptance are complete. Those require separate
+curriculum and device review.
 
-The remaining skills stay in the curriculum graph and alignment matrix, but the app
-does not award mastery for them yet. This is intentional.
+Difference Bridge and Route Explorer add 207 deterministic native tasks:
+90 ordered comparisons of two quantities (1–10, unequal) require children
+to physically pair objects and collect remaining unmatched counters;
+45 inverse-fact exercises require the child to build a total by adding the
+missing part and explicitly reverse it by taking that part back;
+24 one-step rover movements assess positional direction;
+and 48 multi-step 3×3 routes assess planning around a blocked rock.
+Incomplete responses cannot score. Incorrect completed work can be undone
+and corrected; actions, attempts, and support persist with the learner.
+These add observable native assessments for findDifference10, inverseFacts10,
+positionalLanguage and mapRoute.
 
 Number Trail adds 84 observable number-sense activities: 54 brief-flash
 estimation trials (quantities 2–10 in six arrangements) and 30 one-unit
@@ -186,10 +202,10 @@ Place Value Factory now adds native evidence for counting to 20, ordering number
 to 20, one more/one less, grouping tens, tens/ones place value, building and reading
 two-digit numbers, comparing two-digit numbers and ordering two-digit numbers.
 
-Examples that still require dedicated observable mechanics include:
-
-- difference/inverse-fact reasoning
-- route/position reasoning
+The original missing difference, inverse-fact, position and route skills
+now have observable native actions. All 76 internal nodes are supported;
+pedagogical validation of their exercise quality, teacher review against
+controlling MATATAG competency codes, and physical iPad checks remain open.
 
 ## Adaptive progression rule
 
@@ -209,13 +225,11 @@ Placement readiness must never be reported to parents as observed mastery.
 
 ## Next curriculum-engineering milestone
 
-The next major implementation milestone is not "more questions." It is adding the
-missing manipulatives so coverage can grow from 72/76 skills toward the full K2-G2
-matrix without weakening evidence quality.
+All 76 internal math skills have candidate native assessments. The next
+priority is **quality and release validation**, not inventing more skills:
+test each manipulative on a physical iPad, review the native room screenshots
+and pre-reader accessibility, verify K2–Grade 2 competency mappings against
+official curriculum documents, and check that scaffolded success is not
+reported as independently mastered skill.
 
-Place Value Factory, Pattern Loom, Shape Forge v2, Measurement Workshop, Data Board, Clock & Market, Grouping Garden, and Reasoning Studio are now implemented. Recommended next order:
-
-1. Remaining gaps — inverse/difference relationships, position and map routes
-
-Every new mechanic should add observable-action tests before its skills become
-mastery-eligible.
+The game is not release-approved until those device and curriculum gates pass.

@@ -48,6 +48,12 @@ import LearningCore
         let countOn = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
         )
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter
+        )
+        let rover = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -67,7 +73,9 @@ import LearningCore
             (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed."),
             (reasoning, CGPoint(x: 820, y: 310), CGPoint(x: 700, y: 319), "0 steps using counting on."),
             (estimate, CGPoint(x: 820, y: 310), CGPoint(x: 663, y: 188), "Fireflies flashed. Estimate dial is on 5."),
-            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2.")
+            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2."),
+            (difference, CGPoint(x: 820, y: 310), CGPoint(x: 636, y: 190), "1 pair matched. 0 leftovers collected."),
+            (rover, CGPoint(x: 820, y: 310), CGPoint(x: 918, y: 190), "Rover moved 1 step on the grid.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -525,6 +533,60 @@ import LearningCore
         )
     }
 
+
+    func testDifferenceBridgeAndMapRoverRequireNativeTouchBeforeScoring() throws {
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+                .first(where: { $0.encounter.initialQuantity == 7
+                    && $0.encounter.targetQuantity == 3 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(difference))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+        scene.handleTap(at: CGPoint(x: 636, y: 190)) // first matching pair
+        scene.handleTap(at: CGPoint(x: 636, y: 190)) // second
+        scene.handleTap(at: CGPoint(x: 760, y: 190)) // undo pair
+        guard case .differenceBridge(let result)? = state.runtime else {
+            return XCTFail("Difference Bridge not active")
+        }
+        XCTAssertEqual(result.matchedPairs, 1)
+        XCTAssertEqual(result.collectedLeftovers, 0)
+        XCTAssertFalse(result.completed)
+        XCTAssertEqual(state.profile, before)
+
+        let position = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage)
+                .first(where: { $0.encounter.initialQuantity == 0
+                    && $0.encounter.targetQuantity == 1 })?.encounter
+        )
+        let roverState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(roverState.startWorkshop(position))
+        let roverScene = MathCastleScene(state: roverState)
+        roverScene.reducedMotion = true
+        roverScene.didMove(to: SKView())
+        defer { roverScene.willLeave() }
+        roverScene.valkyrie.position = CGPoint(x: 490, y: 175)
+        roverScene.handleTap(at: CGPoint(x: 820, y: 310))
+        let roverBefore = roverState.profile
+        roverScene.handleTap(at: CGPoint(x: 918, y: 190)) // right
+        roverScene.handleTap(at: CGPoint(x: 1016, y: 190)) // undo
+        guard case .routeExplorer(let route)? = roverState.runtime else {
+            return XCTFail("Route Explorer not active")
+        }
+        XCTAssertEqual(route.visitedCells, [0])
+        XCTAssertEqual(route.movesTaken, 0)
+        XCTAssertFalse(route.completed)
+        XCTAssertEqual(roverState.profile, roverBefore)
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -614,9 +676,15 @@ import LearningCore
         let countOn = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
         )
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter
+        )
+        let rover = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning, estimate, countOn]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning, estimate, countOn, difference, rover]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))

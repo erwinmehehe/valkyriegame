@@ -1628,6 +1628,95 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Difference Bridge: each left/right display must be matched into
+        // physical pairs before the child collects the unmatched quantity.
+        // 90 ordered comparison pairs (1...10 except equal quantities).
+        for left in 1...10 {
+            for right in 1...10 where left != right {
+                add(
+                    "prod-difference-match-\(left)-\(right)",
+                    skill: MathSkills.findDifference10,
+                    mechanic: MathMechanicID.differenceBridge,
+                    representation: .concrete,
+                    operation: .differenceBridge,
+                    initial: left,
+                    target: right,
+                    prompt: "Match \(left) and \(right) objects in pairs. Count how many are left over.",
+                    context: "difference.match",
+                    difficulty: max(left, right) <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Inverse facts: the child physically adds the missing part to a
+        // starting set, then removes that SAME number to reverse the fact.
+        // 45 authentic part/total combinations up to 10.
+        for start in 1...9 {
+            for total in (start + 1)...10 {
+                add(
+                    "prod-difference-inverse-\(start)-\(total)",
+                    skill: MathSkills.inverseFacts10,
+                    mechanic: MathMechanicID.differenceBridge,
+                    representation: .concrete,
+                    operation: .differenceBridge,
+                    initial: start,
+                    target: total,
+                    prompt: "Start with \(start) counters. Make \(total), then take away the added counters to return to \(start).",
+                    context: "difference.inverse",
+                    difficulty: total <= 5 ? 2 : 3,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        // Position vocabulary: every ordered pair of neighbouring cells in
+        // the 3x3 map requires a deliberate rover move. There are 24.
+        for start in 0..<9 {
+            for finish in 0..<9 where RouteExplorerModel.distance(start, finish) == 1 {
+                let cue: String
+                if finish == start - 3 { cue = "north (up)" }
+                else if finish == start + 3 { cue = "south (down)" }
+                else if finish == start - 1 { cue = "west (left)" }
+                else { cue = "east (right)" }
+                add(
+                    "prod-route-position-\(start)-\(finish)",
+                    skill: MathSkills.positionalLanguage,
+                    mechanic: MathMechanicID.routeExplorer,
+                    representation: .pictorial,
+                    operation: .routeExplorer,
+                    initial: start,
+                    target: finish,
+                    prompt: "Move the rover one square \(cue) to the star.",
+                    context: "route.position",
+                    difficulty: 1,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Map routes: at least two physical adjacent moves, around a blocked
+        // tile, to reach the star. Every start/finish with Manhattan distance
+        // >= 2 is a unique route problem (48 directed pairs on a 3x3 map).
+        for start in 0..<9 {
+            for finish in 0..<9 where RouteExplorerModel.distance(start, finish) >= 2 {
+                add(
+                    "prod-route-map-\(start)-\(finish)",
+                    skill: MathSkills.mapRoute,
+                    mechanic: MathMechanicID.routeExplorer,
+                    representation: .concrete,
+                    operation: .routeExplorer,
+                    initial: start,
+                    target: finish,
+                    prompt: "Guide Pip from the rover to the golden star. Move one square at a time and avoid the rock.",
+                    context: "route.map",
+                    difficulty: RouteExplorerModel.distance(start, finish) >= 3 ? 3 : 2,
+                    purpose: .reasoning
+                )
+            }
+        }
+
         return result
     }()
 

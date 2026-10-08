@@ -1805,6 +1805,284 @@ public struct NumberTrailModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum DifferenceBridgeTask: String, Codable, Sendable {
+    case difference
+    case inverse
+}
+
+/// Learners match corresponding objects and collect the unmatched amount,
+/// or build and reverse the same missing-addend relation in two stages.
+/// A text-only answer is not sufficient evidence for either skill.
+public struct DifferenceBridgeModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error { case invalidConfiguration }
+
+    public let encounter: LearningEncounter
+    public let task: DifferenceBridgeTask
+    public private(set) var matchedPairs: Int
+    public private(set) var collectedLeftovers: Int
+    public private(set) var joinedCounters: Int
+    public private(set) var returnedCounters: Int
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isDifference: Bool { task == .difference }
+    public var firstQuantity: Int { encounter.initialQuantity }
+    public var secondQuantity: Int { encounter.targetQuantity }
+    public var pairGoal: Int { min(firstQuantity, secondQuantity) }
+    public var leftoverGoal: Int { abs(firstQuantity - secondQuantity) }
+    public var missingPart: Int { secondQuantity - firstQuantity }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.differenceBridge,
+              encounter.operation == .differenceBridge else {
+            throw ModelError.invalidConfiguration
+        }
+        let task: DifferenceBridgeTask
+        switch encounter.context {
+        case "difference.match":
+            task = .difference
+            guard encounter.skillID == MathSkills.findDifference10,
+                  (1...10).contains(encounter.initialQuantity),
+                  (1...10).contains(encounter.targetQuantity),
+                  encounter.initialQuantity != encounter.targetQuantity else {
+                throw ModelError.invalidConfiguration
+            }
+        case "difference.inverse":
+            task = .inverse
+            guard encounter.skillID == MathSkills.inverseFacts10,
+                  (1...9).contains(encounter.initialQuantity),
+                  (2...10).contains(encounter.targetQuantity),
+                  encounter.initialQuantity < encounter.targetQuantity else {
+                throw ModelError.invalidConfiguration
+            }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+        self.encounter = encounter
+        self.task = task
+        matchedPairs = 0
+        collectedLeftovers = 0
+        joinedCounters = 0
+        returnedCounters = 0
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func matchPair() -> Bool {
+        guard !completed, isDifference, matchedPairs < pairGoal else { return false }
+        matchedPairs += 1
+        return true
+    }
+
+    @discardableResult public mutating func undoMatch() -> Bool {
+        guard !completed, isDifference, matchedPairs > 0, collectedLeftovers == 0
+        else { return false }
+        matchedPairs -= 1
+        return true
+    }
+
+    @discardableResult public mutating func collectLeftover() -> Bool {
+        guard !completed, isDifference, matchedPairs == pairGoal,
+              collectedLeftovers < min(10, leftoverGoal + 2) else { return false }
+        collectedLeftovers += 1
+        return true
+    }
+
+    @discardableResult public mutating func undoLeftover() -> Bool {
+        guard !completed, isDifference, collectedLeftovers > 0 else { return false }
+        collectedLeftovers -= 1
+        return true
+    }
+
+    @discardableResult public mutating func addToJoin() -> Bool {
+        guard !completed, task == .inverse,
+              joinedCounters < missingPart + 2 else { return false }
+        joinedCounters += 1
+        return true
+    }
+
+    @discardableResult public mutating func undoJoin() -> Bool {
+        guard !completed, task == .inverse,
+              joinedCounters > returnedCounters else { return false }
+        joinedCounters -= 1
+        return true
+    }
+
+    @discardableResult public mutating func returnFromTotal() -> Bool {
+        guard !completed, task == .inverse, joinedCounters >= missingPart,
+              returnedCounters < joinedCounters else { return false }
+        returnedCounters += 1
+        return true
+    }
+
+    @discardableResult public mutating func undoReturn() -> Bool {
+        guard !completed, task == .inverse, returnedCounters > 0 else { return false }
+        returnedCounters -= 1
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed else { return nil }
+        let correct: Bool
+        if isDifference {
+            guard matchedPairs == pairGoal, collectedLeftovers >= leftoverGoal else {
+                return nil
+            }
+            correct = collectedLeftovers == leftoverGoal
+        } else {
+            guard joinedCounters >= missingPart, returnedCounters >= missingPart else {
+                return nil
+            }
+            correct = joinedCounters == missingPart && returnedCounters == missingPart
+        }
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
+public enum MapMove: String, Codable, CaseIterable, Sendable {
+    case north
+    case south
+    case east
+    case west
+}
+
+/// Walk a 3×3 map one adjacent cell at a time. Position prompts require a
+/// single neighbour relation; route prompts require a multi-step path that
+/// avoids a blocked cell. Every travelled cell is saved for undo/restore.
+public struct RouteExplorerModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error { case invalidConfiguration }
+
+    public let encounter: LearningEncounter
+    public let isRoute: Bool
+    public let blockedCell: Int?
+    public private(set) var visitedCells: [Int]
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var startCell: Int { encounter.initialQuantity }
+    public var destination: Int { encounter.targetQuantity }
+    public var currentCell: Int { visitedCells.last ?? startCell }
+    public var movesTaken: Int { max(0, visitedCells.count - 1) }
+    public var hasCompleteResponse: Bool { movesTaken >= (isRoute ? 2 : 1) }
+
+    public static func distance(_ a: Int, _ b: Int) -> Int {
+        abs(a / 3 - b / 3) + abs(a % 3 - b % 3)
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.routeExplorer,
+              encounter.operation == .routeExplorer,
+              (0...8).contains(encounter.initialQuantity),
+              (0...8).contains(encounter.targetQuantity) else {
+            throw ModelError.invalidConfiguration
+        }
+        let route: Bool
+        switch encounter.context {
+        case "route.position":
+            route = false
+            guard encounter.skillID == MathSkills.positionalLanguage,
+                  Self.distance(encounter.initialQuantity, encounter.targetQuantity) == 1 else {
+                throw ModelError.invalidConfiguration
+            }
+        case "route.map":
+            route = true
+            guard encounter.skillID == MathSkills.mapRoute,
+                  Self.distance(encounter.initialQuantity, encounter.targetQuantity) >= 2 else {
+                throw ModelError.invalidConfiguration
+            }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+
+        var blocked: Int?
+        if route {
+            let corners = [0, 2, 6, 8]
+            for i in 0..<corners.count {
+                let cell = corners[(encounter.initialQuantity + encounter.targetQuantity + i) % 4]
+                if cell != encounter.initialQuantity && cell != encounter.targetQuantity {
+                    blocked = cell
+                    break
+                }
+            }
+        }
+
+        self.encounter = encounter
+        isRoute = route
+        blockedCell = blocked
+        visitedCells = [encounter.initialQuantity]
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func move(_ direction: MapMove) -> Bool {
+        guard !completed, visitedCells.count < 13 else { return false }
+        let row = currentCell / 3
+        let column = currentCell % 3
+        var nextRow = row
+        var nextColumn = column
+        switch direction {
+        case .north: nextRow -= 1
+        case .south: nextRow += 1
+        case .east: nextColumn += 1
+        case .west: nextColumn -= 1
+        }
+        guard (0...2).contains(nextRow), (0...2).contains(nextColumn) else {
+            return false
+        }
+        let next = nextRow * 3 + nextColumn
+        guard next != blockedCell else { return false }
+        visitedCells.append(next)
+        return true
+    }
+
+    @discardableResult public mutating func undoMove() -> Bool {
+        guard !completed, visitedCells.count > 1 else { return false }
+        visitedCells.removeLast()
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        attempts += 1
+        let correct = currentCell == destination
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -1820,6 +2098,8 @@ public enum MathMechanicID {
     public static let groupingGarden = "groupingGarden"
     public static let reasoningStudio = "reasoningStudio"
     public static let numberTrail = "numberTrail"
+    public static let differenceBridge = "differenceBridge"
+    public static let routeExplorer = "routeExplorer"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -1835,7 +2115,9 @@ public enum MathMechanicID {
         clockMarket,
         groupingGarden,
         reasoningStudio,
-        numberTrail
+        numberTrail,
+        differenceBridge,
+        routeExplorer
     ]
 }
 
@@ -2206,6 +2488,10 @@ public enum MathManipulativeSupport {
             return (try? ReasoningStudioModel(encounter: encounter)) != nil
         case MathMechanicID.numberTrail:
             return (try? NumberTrailModel(encounter: encounter)) != nil
+        case MathMechanicID.differenceBridge:
+            return (try? DifferenceBridgeModel(encounter: encounter)) != nil
+        case MathMechanicID.routeExplorer:
+            return (try? RouteExplorerModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -2239,6 +2525,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case groupingGarden(GroupingGardenModel)
     case reasoningStudio(ReasoningStudioModel)
     case numberTrail(NumberTrailModel)
+    case differenceBridge(DifferenceBridgeModel)
+    case routeExplorer(RouteExplorerModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -2270,6 +2558,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .reasoningStudio(try ReasoningStudioModel(encounter: encounter, at: date))
         case MathMechanicID.numberTrail:
             self = .numberTrail(try NumberTrailModel(encounter: encounter, at: date))
+        case MathMechanicID.differenceBridge:
+            self = .differenceBridge(try DifferenceBridgeModel(encounter: encounter, at: date))
+        case MathMechanicID.routeExplorer:
+            self = .routeExplorer(try RouteExplorerModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -2291,6 +2583,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.encounter
         case .reasoningStudio(let model): return model.encounter
         case .numberTrail(let model): return model.encounter
+        case .differenceBridge(let model): return model.encounter
+        case .routeExplorer(let model): return model.encounter
         }
     }
 
@@ -2310,6 +2604,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.completed
         case .reasoningStudio(let model): return model.completed
         case .numberTrail(let model): return model.completed
+        case .differenceBridge(let model): return model.completed
+        case .routeExplorer(let model): return model.completed
         }
     }
 
@@ -2329,6 +2625,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.support
         case .reasoningStudio(let model): return model.support
         case .numberTrail(let model): return model.support
+        case .differenceBridge(let model): return model.support
+        case .routeExplorer(let model): return model.support
         }
     }
 
@@ -2350,7 +2648,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail, .differenceBridge, .routeExplorer:
             return false
         }
     }
@@ -2373,7 +2671,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail, .differenceBridge, .routeExplorer:
             return false
         }
     }
@@ -2716,6 +3014,77 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func matchDifferencePair() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.matchPair()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoDifferencePair() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.undoMatch()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func collectDifference() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.collectLeftover()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoDifferenceCollection() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.undoLeftover()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func addInverseCounter() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.addToJoin()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoInverseCounter() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.undoJoin()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func reverseInverseCounter() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.returnFromTotal()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoInverseReverse() -> Bool {
+        guard case .differenceBridge(var model) = self else { return false }
+        let changed = model.undoReturn()
+        self = .differenceBridge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func moveOnMap(_ direction: MapMove) -> Bool {
+        guard case .routeExplorer(var model) = self else { return false }
+        let changed = model.move(direction)
+        self = .routeExplorer(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoMapMove() -> Bool {
+        guard case .routeExplorer(var model) = self else { return false }
+        let changed = model.undoMove()
+        self = .routeExplorer(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -2760,6 +3129,12 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberTrail(var model):
             model.apply(scaffold)
             self = .numberTrail(model)
+        case .differenceBridge(var model):
+            model.apply(scaffold)
+            self = .differenceBridge(model)
+        case .routeExplorer(var model):
+            model.apply(scaffold)
+            self = .routeExplorer(model)
         }
     }
 
@@ -2820,6 +3195,14 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberTrail(var model):
             let evidence = model.submit(at: date)
             self = .numberTrail(model)
+            return evidence
+        case .differenceBridge(var model):
+            let evidence = model.submit(at: date)
+            self = .differenceBridge(model)
+            return evidence
+        case .routeExplorer(var model):
+            let evidence = model.submit(at: date)
+            self = .routeExplorer(model)
             return evidence
         }
     }
