@@ -1330,8 +1330,34 @@ import LearningCore
         handleTap(at: point)
     }
 
+    // Resolve the active machine's physical controls before the generic scene
+    // hit resolver. The illustrated trays overlap these knobs in SpriteKit and
+    // can otherwise intercept taps despite clear named hit shapes.
+    private func handlePlaceValueControl(at point: CGPoint) -> Bool {
+        guard let active = state.runtime,
+              case .placeValueFactory(let model) = active,
+              !model.isComparison,
+              let mechanic,
+              canManipulate() else { return false }
+        let local = mechanic.convert(point, from: self)
+        let controls: [(CGPoint, Int, Int)] = [
+            (CGPoint(x: -178, y: -118), 1, 0),
+            (CGPoint(x: -78, y: -118), -1, 0),
+            (CGPoint(x: 78, y: -118), 0, 1),
+            (CGPoint(x: 178, y: -118), 0, -1)
+        ]
+        for (center, tens, ones) in controls {
+            if hypot(local.x - center.x, local.y - center.y) <= 36 {
+                manipulate { self.state.adjustPlaceValue(tensDelta: tens, onesDelta: ones) }
+                return true
+            }
+        }
+        return false
+    }
+
     // Shared by native touches and hosted interaction tests.
     func handleTap(at point: CGPoint) {
+        if handlePlaceValueControl(at: point) { return }
         let target = targetName(at: point)
         if crossingBridge {
             if target == "home" {
