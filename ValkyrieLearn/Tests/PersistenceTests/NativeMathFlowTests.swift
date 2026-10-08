@@ -843,4 +843,51 @@ import LearningCore
         scene.willLeave()
     }
 
+    func testDifferenceBridgeNativeCrystalsLinkAndUndoWithoutAccidentalCredit() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+                .first(where: { $0.encounter.initialQuantity == 5
+                    && $0.encounter.targetQuantity == 3 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profileBefore = state.profile
+
+        // Controls are on the native Difference Bridge board, not in a quiz.
+        for _ in 0..<5 { scene.handleTap(at: CGPoint(x: 624, y: 189)) }
+        for _ in 0..<3 { scene.handleTap(at: CGPoint(x: 820, y: 189)) }
+        for column in 0..<3 {
+            scene.handleTap(at: CGPoint(x: 613 + 46 * column, y: 312))
+        }
+        guard case .differencePairs(let linked)? = state.runtime else {
+            return XCTFail("Native Difference Bridge runtime missing")
+        }
+        XCTAssertEqual(linked.goldCount, 5)
+        XCTAssertEqual(linked.blueCount, 3)
+        XCTAssertEqual(linked.pairedColumns.count, 3)
+        XCTAssertEqual(linked.discoveredDifference, 2)
+        XCTAssertFalse(linked.completed)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "3 pairs linked. 2 unmatched crystals remain. Pull Pip's lever when you're ready."
+        )
+        XCTAssertEqual(state.profile, profileBefore,
+                       "Building and matching alone must not grant mastery")
+        XCTAssertNotNil(scene.childNode(withName: "//diffMatch2"))
+
+        scene.handleTap(at: CGPoint(x: 1016, y: 189)) // Undo most recent pair
+        guard case .differencePairs(let undone)? = state.runtime else {
+            return XCTFail("Native Difference Bridge disappeared after undo")
+        }
+        XCTAssertEqual(undone.pairedColumns.count, 2)
+        XCTAssertNil(undone.discoveredDifference)
+        XCTAssertEqual(state.profile, profileBefore)
+    }
+
 }
