@@ -1679,6 +1679,7 @@ public struct NumberTrailModel: Codable, Equatable, Sendable {
     public let encounter: LearningEncounter
     public let task: NumberTrailTask
     public private(set) var flashObserved: Bool
+    public private(set) var flashStartedAt: Date?
     public private(set) var dialValue: Int
     public private(set) var lockedEstimate: Int?
     public private(set) var jumps: Int
@@ -1728,6 +1729,7 @@ public struct NumberTrailModel: Codable, Equatable, Sendable {
         self.encounter = encounter
         task = kind
         flashObserved = false
+        flashStartedAt = nil
         dialValue = 5
         lockedEstimate = nil
         jumps = 0
@@ -1737,9 +1739,10 @@ public struct NumberTrailModel: Codable, Equatable, Sendable {
         startedAt = date
     }
 
-    @discardableResult public mutating func revealCollection() -> Bool {
+    @discardableResult public mutating func revealCollection(at now: Date = Date()) -> Bool {
         guard !completed, isEstimate, !flashObserved else { return false }
         flashObserved = true
+        flashStartedAt = now
         return true
     }
 
@@ -1752,8 +1755,11 @@ public struct NumberTrailModel: Codable, Equatable, Sendable {
         return true
     }
 
-    @discardableResult public mutating func lockEstimate() -> Bool {
+    @discardableResult public mutating func lockEstimate(at now: Date = Date()) -> Bool {
+        // Require the 850ms firefly exposure to end before an estimate can
+        // be locked, even when the child's taps outrun the SpriteKit action.
         guard !completed, isEstimate, flashObserved,
+              let flashStartedAt, now.timeIntervalSince(flashStartedAt) >= 0.85,
               lockedEstimate != dialValue else { return false }
         lockedEstimate = dialValue
         return true
