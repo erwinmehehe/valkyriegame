@@ -1237,6 +1237,67 @@ public enum MathProductionQuestionBank {
             )
         }
 
+
+        // Measurement Workshop: children make an explicit, observable decision
+        // after comparing drawn lengths, equal-size mass units, or equal-size
+        // capacity scoops. Every pair includes both directions and equality.
+        for task in [MeasurementWorkshopTask.length, .weight, .capacity] {
+            let skill: SkillID
+            let prompt: String
+            switch task {
+            case .length:
+                skill = MathSkills.compareLength
+                prompt = "Which ribbon is longer, or are both the same length?"
+            case .weight:
+                skill = MathSkills.compareWeight
+                prompt = "Which tray needs more equal-weight stones, or do they balance?"
+            case .capacity:
+                skill = MathSkills.compareCapacity
+                prompt = "Which container holds more equal-size cups, or are they equal?"
+            case .units:
+                continue
+            }
+
+            for left in 1...8 {
+                for right in 1...8 {
+                    add(
+                        "prod-measure-\(task.rawValue)-\(left)-\(right)",
+                        skill: skill,
+                        mechanic: MathMechanicID.measurementWorkshop,
+                        representation: .pictorial,
+                        operation: .measurement,
+                        initial: left,
+                        target: right,
+                        prompt: prompt,
+                        context: "measure.\(task.rawValue)",
+                        difficulty: max(left, right) <= 4 ? 1 : 2,
+                        purpose: .practice
+                    )
+                }
+            }
+        }
+
+        // Nonstandard measurement: place truly equal-sized units end-to-end.
+        // The strip must be completely filled, not merely matched to a number.
+        // Blocks and tiles are different visible concrete representations.
+        for style in ["blocks", "tiles"] {
+            for length in 2...10 {
+                add(
+                    "prod-measure-units-\(style)-\(length)",
+                    skill: MathSkills.nonstandardMeasure,
+                    mechanic: MathMechanicID.measurementWorkshop,
+                    representation: .concrete,
+                    operation: .measurement,
+                    initial: 0,
+                    target: length,
+                    prompt: "Measure the bridge using equal \(style). Place them end-to-end with no gaps.",
+                    context: "measure.units.\(style)",
+                    difficulty: length <= 5 ? 2 : 3,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
         return result
     }()
 
