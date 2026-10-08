@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 1000)
+        XCTAssertEqual(encounters.count, 1245)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -213,6 +213,57 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(bridge.submit()?.outcome, .correct)
     }
 
+
+    func testPlaceValueFactoryBuildAndCompareModelsProduceObservableEvidence() throws {
+        let build = LearningEncounter(
+            id: "place-build-42",
+            skillID: MathSkills.buildTwoDigit,
+            mechanicID: MathMechanicID.placeValueFactory,
+            representation: .concrete,
+            operation: .quantityMatching,
+            initialQuantity: 0,
+            targetQuantity: 42,
+            prompt: "Build 42."
+        )
+        var buildModel = try PlaceValueFactoryModel(encounter: build)
+        XCTAssertEqual(buildModel.expectedTens, 4)
+        XCTAssertEqual(buildModel.expectedOnes, 2)
+        for _ in 0..<4 { XCTAssertTrue(buildModel.addTen()) }
+        for _ in 0..<2 { XCTAssertTrue(buildModel.addOne()) }
+        XCTAssertEqual(buildModel.builtNumber, 42)
+        XCTAssertEqual(try XCTUnwrap(buildModel.submit()).outcome, .correct)
+
+        let compare = LearningEncounter(
+            id: "place-compare-47-39",
+            skillID: MathSkills.compareTwoDigit,
+            mechanicID: MathMechanicID.placeValueFactory,
+            representation: .reasoning,
+            operation: .comparison,
+            initialQuantity: 47,
+            targetQuantity: 39,
+            prompt: "Which is greater?"
+        )
+        var compareModel = try PlaceValueFactoryModel(encounter: compare)
+        XCTAssertEqual(compareModel.correctChoice, .left)
+        compareModel.choose(.left)
+        XCTAssertEqual(try XCTUnwrap(compareModel.submit()).outcome, .correct)
+
+        let order = LearningEncounter(
+            id: "place-order-47-39",
+            skillID: MathSkills.orderTwoDigit,
+            mechanicID: MathMechanicID.placeValueFactory,
+            representation: .reasoning,
+            operation: .comparison,
+            initialQuantity: 47,
+            targetQuantity: 39,
+            prompt: "Which comes first?"
+        )
+        var orderModel = try PlaceValueFactoryModel(encounter: order)
+        XCTAssertEqual(orderModel.correctChoice, .right)
+        orderModel.choose(.right)
+        XCTAssertEqual(try XCTUnwrap(orderModel.submit()).outcome, .correct)
+    }
+
     func testUnifiedRuntimeRejectsUnknownMechanic() {
         let encounter = LearningEncounter(
             id: "unknown-runtime",
@@ -281,7 +332,7 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllFiveMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllSixMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
@@ -321,6 +372,15 @@ final class CrystalCartTests: XCTestCase {
                     XCTAssertTrue(runtime.increment())
                 }
             case .missingBridge(let model): runtime.setValue(model.correctNumber)
+            case .placeValueFactory(let model):
+                if model.isComparison {
+                    runtime.chooseComparison(model.correctChoice)
+                } else {
+                    XCTAssertTrue(runtime.adjustPlaceValue(
+                        tensDelta: model.expectedTens,
+                        onesDelta: model.expectedOnes
+                    ))
+                }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))
             XCTAssertEqual(evidence.outcome, .correct)
