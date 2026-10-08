@@ -1490,6 +1490,100 @@ final class MathAdventureTests: XCTestCase {
         }
     }
 
+
+    func testDifferenceBridgeHas90RealPairsAndCorrectsOvercounting() throws {
+        let variants = MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+        XCTAssertEqual(variants.count, 90)
+        XCTAssertTrue(variants.allSatisfy { MathManipulativeSupport.supports($0.encounter) })
+        let encounter = try XCTUnwrap(variants.first(where: {
+            $0.encounter.initialQuantity == 7 && $0.encounter.targetQuantity == 3
+        })?.encounter)
+        var model = try DifferenceBridgeModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch))
+        for _ in 0..<model.pairGoal { XCTAssertTrue(model.matchPair()) }
+        XCTAssertFalse(model.matchPair())
+        for _ in 0..<(model.leftoverGoal + 1) { XCTAssertTrue(model.collectLeftover()) }
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(5))?.outcome, .incorrect)
+        XCTAssertTrue(model.undoLeftover())
+        let result = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(9)))
+        XCTAssertEqual(result.outcome, .correct)
+        XCTAssertEqual(result.attempts, 2)
+        XCTAssertFalse(model.collectLeftover())
+        XCTAssertEqual(
+            try JSONDecoder().decode(DifferenceBridgeModel.self, from: JSONEncoder().encode(model)),
+            model
+        )
+    }
+
+    func testInverseFactsRequireJoinAndReverseOfExactlyTheSamePart() throws {
+        let variants = MathProductionQuestionBank.variants(for: MathSkills.inverseFacts10)
+        XCTAssertEqual(variants.count, 45)
+        let encounter = try XCTUnwrap(variants.first(where: {
+            $0.encounter.initialQuantity == 3 && $0.encounter.targetQuantity == 7
+        })?.encounter)
+        var model = try DifferenceBridgeModel(encounter: encounter, at: epoch)
+        XCTAssertFalse(model.returnFromTotal())
+        for _ in 0..<model.missingPart {
+            XCTAssertTrue(model.addToJoin())
+        }
+        XCTAssertNil(model.submit(at: epoch), "One-direction addition is not inverse evidence")
+        for _ in 0..<model.missingPart {
+            XCTAssertTrue(model.returnFromTotal())
+        }
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(8)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertFalse(model.returnFromTotal())
+        XCTAssertEqual(
+            try JSONDecoder().decode(DifferenceBridgeModel.self, from: JSONEncoder().encode(model)),
+            model
+        )
+    }
+
+    func testEverySpatialTaskRequiresPhysicalAdjacentGridMovement() throws {
+        let positions = MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage)
+        let routes = MathProductionQuestionBank.variants(for: MathSkills.mapRoute)
+        XCTAssertEqual(positions.count, 24)
+        XCTAssertEqual(routes.count, 48)
+        for variant in positions + routes {
+            XCTAssertTrue(MathManipulativeSupport.supports(variant.encounter))
+            let model = try RouteExplorerModel(encounter: variant.encounter, at: epoch)
+            XCTAssertEqual(model.visitedCells, [model.startCell])
+            XCTAssertNil(model.submit(at: epoch))
+            if model.isRoute {
+                XCTAssertNotNil(model.blockedCell)
+                XCTAssertNotEqual(model.blockedCell, model.startCell)
+                XCTAssertNotEqual(model.blockedCell, model.destination)
+            }
+        }
+
+        let pos = try XCTUnwrap(positions.first(where: {
+            $0.encounter.initialQuantity == 0 && $0.encounter.targetQuantity == 1
+        })?.encounter)
+        var one = try RouteExplorerModel(encounter: pos, at: epoch)
+        XCTAssertFalse(one.move(.north))
+        XCTAssertTrue(one.move(.south))
+        XCTAssertEqual(one.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(one.undoMove())
+        XCTAssertTrue(one.move(.east))
+        XCTAssertEqual(one.submit(at: epoch.addingTimeInterval(4))?.outcome, .correct)
+
+        let example = try XCTUnwrap(routes.first(where: {
+            $0.encounter.initialQuantity == 0 && $0.encounter.targetQuantity == 8
+        })?.encounter)
+        var map = try RouteExplorerModel(encounter: example, at: epoch)
+        XCTAssertEqual(map.blockedCell, 2)
+        XCTAssertTrue(map.move(.south))
+        XCTAssertTrue(map.move(.south))
+        XCTAssertTrue(map.move(.east))
+        XCTAssertTrue(map.move(.east))
+        XCTAssertEqual(map.currentCell, 8)
+        XCTAssertEqual(map.submit(at: epoch.addingTimeInterval(8))?.outcome, .correct)
+        XCTAssertEqual(
+            try JSONDecoder().decode(RouteExplorerModel.self, from: JSONEncoder().encode(map)),
+            map
+        )
+    }
+
     func testWorkshopStationsOfferFreshSupportedReadyChoices() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
