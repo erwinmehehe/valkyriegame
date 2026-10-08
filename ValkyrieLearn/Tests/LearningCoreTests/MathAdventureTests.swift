@@ -63,6 +63,14 @@ final class MathAdventureTests: XCTestCase {
             case .recognize, .attributes:
                 XCTAssertTrue(adventure.chooseShapeOption(try XCTUnwrap(model.correctOption)))
             }
+        case .measurementWorkshop(let model):
+            if model.isUnitMeasurement {
+                for _ in 0..<model.targetUnitCount {
+                    XCTAssertTrue(adventure.placeMeasureUnit())
+                }
+            } else {
+                adventure.chooseComparison(model.correctChoice)
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -112,7 +120,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllEightRuntimesAndSessionStateRoundTrip() throws {
+    func testAllNineRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -120,7 +128,8 @@ final class MathAdventureTests: XCTestCase {
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
             MathCastleEncounterCatalog.missingNumberBridge[0], placeValue,
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter),
-            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter)]
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -391,9 +400,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1332)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1332)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1381)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1542)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1542)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1591)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -418,7 +427,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 51)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 55)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -690,6 +699,70 @@ final class MathAdventureTests: XCTestCase {
         }
     }
 
+
+    func testMeasurementWorkshopCoversFourObservableSkillsWithoutInventingMastery() throws {
+        for skill in [MathSkills.compareLength, MathSkills.compareWeight, MathSkills.compareCapacity] {
+            let encounters = MathProductionQuestionBank.variants(for: skill).map(\.encounter)
+            XCTAssertEqual(encounters.count, 64)
+            XCTAssertTrue(encounters.allSatisfy {
+                $0.mechanicID == MathMechanicID.measurementWorkshop
+                    && $0.operation == .measurement
+                    && MathManipulativeSupport.supports($0)
+            })
+        }
+        let unitEncounters = MathProductionQuestionBank.variants(
+            for: MathSkills.nonstandardMeasure
+        ).map(\.encounter)
+        XCTAssertEqual(unitEncounters.count, 18)
+        XCTAssertEqual(Set(unitEncounters.map(\.context)), ["measure.units.blocks", "measure.units.tiles"])
+
+        let equal = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.compareLength)
+                .first(where: { $0.encounter.initialQuantity == 4
+                    && $0.encounter.targetQuantity == 4 })?.encounter
+        )
+        var comparison = try MeasurementWorkshopModel(encounter: equal, at: epoch)
+        XCTAssertEqual(comparison.correctChoice, .equal)
+        XCTAssertNil(comparison.submit(at: epoch))
+        XCTAssertTrue(comparison.choose(.left))
+        XCTAssertEqual(comparison.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(comparison.choose(.equal))
+        XCTAssertEqual(comparison.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+        XCTAssertFalse(comparison.choose(.right), "Completed assessments must not mutate")
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                MeasurementWorkshopModel.self, from: JSONEncoder().encode(comparison)
+            ),
+            comparison
+        )
+    }
+
+    func testNonstandardMeasurementRequiresContiguousEqualUnitPlacementAndCorrection() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure)
+                .first(where: { $0.encounter.targetQuantity == 4 })?.encounter
+        )
+        var runtime = try MathMechanicRuntime(encounter: encounter, at: epoch)
+        guard case .measurementWorkshop(let model) = runtime else {
+            return XCTFail("Expected a Measurement Workshop runtime")
+        }
+        XCTAssertTrue(model.isUnitMeasurement)
+        XCTAssertEqual(model.targetUnitCount, 4)
+        XCTAssertNil(runtime.submit(at: epoch), "Unstarted measurement cannot award evidence")
+        for _ in 0..<6 { XCTAssertTrue(runtime.placeMeasureUnit()) }
+        XCTAssertFalse(runtime.placeMeasureUnit(), "No indefinite unit spam")
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(4))?.outcome, .incorrect)
+        XCTAssertTrue(runtime.removeMeasureUnit())
+        XCTAssertTrue(runtime.removeMeasureUnit())
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(7))?.outcome, .correct)
+        XCTAssertFalse(runtime.removeMeasureUnit(), "Correctly submitted work is immutable")
+        XCTAssertNil(runtime.submit(at: epoch.addingTimeInterval(8)))
+        XCTAssertEqual(
+            try JSONDecoder().decode(MathMechanicRuntime.self, from: JSONEncoder().encode(runtime)),
+            runtime
+        )
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
@@ -698,10 +771,6 @@ final class MathAdventureTests: XCTestCase {
             MathSkills.inverseFacts10,
             MathSkills.positionalLanguage,
             MathSkills.mapRoute,
-            MathSkills.compareLength,
-            MathSkills.compareWeight,
-            MathSkills.compareCapacity,
-            MathSkills.nonstandardMeasure,
             MathSkills.classifyObjects,
             MathSkills.pictureGraph,
             MathSkills.timeDayparts,
