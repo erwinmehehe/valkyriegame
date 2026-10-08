@@ -250,6 +250,8 @@ public enum MathQuestionPurpose: String, Codable, CaseIterable, Sendable {
 public struct MathQuestionVariant: Equatable, Sendable {
     public let encounter: LearningEncounter
     public let gradeBand: MathGradeBand
+    public let matatagDomain: MatatagMathDomain
+    public let singaporeArea: SingaporeMathArea
     public let difficulty: Int
     public let purpose: MathQuestionPurpose
     public let masteryEligible: Bool
@@ -259,6 +261,8 @@ public struct MathQuestionVariant: Equatable, Sendable {
     public init(
         encounter: LearningEncounter,
         gradeBand: MathGradeBand,
+        matatagDomain: MatatagMathDomain,
+        singaporeArea: SingaporeMathArea,
         difficulty: Int,
         purpose: MathQuestionPurpose,
         masteryEligible: Bool = true,
@@ -267,6 +271,8 @@ public struct MathQuestionVariant: Equatable, Sendable {
     ) {
         self.encounter = encounter
         self.gradeBand = gradeBand
+        self.matatagDomain = matatagDomain
+        self.singaporeArea = singaporeArea
         self.difficulty = min(5, max(1, difficulty))
         self.purpose = purpose
         self.masteryEligible = masteryEligible
@@ -300,7 +306,7 @@ public enum MathProductionQuestionBank {
             purpose: MathQuestionPurpose,
             challengeDepth: Int = 0
         ) {
-            guard let band = MathCurriculumMatrix.gradeBand(for: skill) else {
+            guard let alignment = MathCurriculumMatrix.alignment(for: skill) else {
                 preconditionFailure("Missing curriculum alignment for \(skill.rawValue)")
             }
 
@@ -318,7 +324,9 @@ public enum MathProductionQuestionBank {
                         context: context,
                         challengeDepth: challengeDepth
                     ),
-                    gradeBand: band,
+                    gradeBand: alignment.gradeBand,
+                    matatagDomain: alignment.matatagDomain,
+                    singaporeArea: alignment.singaporeArea,
                     difficulty: difficulty,
                     purpose: purpose
                 )
