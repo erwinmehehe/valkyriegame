@@ -16,6 +16,9 @@ final class CrystalCartTests: XCTestCase {
     }
     func testWrongAttemptThenHintProducesAssistedEvidence() throws {
         var cart = try CrystalCartModel(encounter: MathFoundation.workshopExamples[1])
+        XCTAssertNil(cart.submit(), "Untouched cart must not count as an attempt")
+        XCTAssertEqual(cart.attempts, 0)
+        XCTAssertTrue(cart.add())
         XCTAssertEqual(cart.submit()?.outcome, .incorrect)
         let scaffold = ScaffoldingEngine().next(after: cart.support); cart.apply(scaffold)
         for _ in 0..<3 { cart.add() }
@@ -576,6 +579,45 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(profile.progress(for: MathSkills.bonds10).state.readiness,
                                     SkillState.developing.readiness)
         XCTAssertTrue(graph.isEligible(MathSkills.missing, for: profile))
+    }
+
+
+    func testUntouchedNumericManipulativesDoNotCreateEvidence() throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let cases: [LearningEncounter] = [
+            MathFoundation.workshopExamples[0],
+            MathCastleEncounterCatalog.numberBondMachine[0],
+            MathCastleEncounterCatalog.tenFrameGate[0],
+            MathCastleEncounterCatalog.missingNumberBridge[0],
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter)
+        ]
+        for encounter in cases {
+            var runtime = try MathMechanicRuntime(encounter: encounter, at: now)
+            XCTAssertNil(runtime.submit(at: now.addingTimeInterval(5)),
+                         "Untouched work must not score: \(encounter.mechanicID)")
+            XCTAssertFalse(runtime.completed)
+            let restored = try JSONDecoder().decode(
+                MathMechanicRuntime.self, from: JSONEncoder().encode(runtime)
+            )
+            var restoredCopy = restored
+            XCTAssertNil(restoredCopy.submit(at: now.addingTimeInterval(6)),
+                         "Restoring unchanged work must not create evidence")
+        }
+    }
+
+    func testMovedCartRecordsWrongAttemptAndPreservesCorrection() throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        var cart = try CrystalCartModel(encounter: MathFoundation.workshopExamples[0], at: now)
+        XCTAssertNil(cart.submit(at: now))
+        XCTAssertTrue(cart.add())
+        XCTAssertEqual(cart.submit(at: now.addingTimeInterval(4))?.outcome, .incorrect)
+        XCTAssertEqual(cart.attempts, 1)
+        let remaining = cart.encounter.targetQuantity - cart.quantity
+        for _ in 0..<remaining { XCTAssertTrue(cart.add()) }
+        let evidence = try XCTUnwrap(cart.submit(at: now.addingTimeInterval(8)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertNil(cart.submit(at: now.addingTimeInterval(9)))
     }
 
 }
