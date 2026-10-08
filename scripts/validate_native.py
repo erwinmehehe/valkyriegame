@@ -112,6 +112,30 @@ for character in ['Valkyrie', 'Pip']:
     atlas = ROOT/'ValkyrieLearn/Resources'/(character+'.atlas')
     for pose in ['idle','walk','interact','celebrate','react']:
         assert list(atlas.glob(pose+'_*.png')), (character, pose)
+# Identity lock: environmental art changes must never silently restyle Valkyrie.
+# The signed-off original sprite pixels are pinned in the v3.31 manifest.
+valkyrie_sprite_paths = {
+    name for name in manifest['outputs']
+    if name.startswith('Valkyrie.atlas/') and name.endswith('.png')
+}
+assert valkyrie_sprite_paths == {
+    'Valkyrie.atlas/idle_01.png',
+    'Valkyrie.atlas/walk_01.png',
+    'Valkyrie.atlas/walk_02.png',
+    'Valkyrie.atlas/interact_01.png',
+    'Valkyrie.atlas/celebrate_01.png',
+    'Valkyrie.atlas/react_01.png',
+}
+assert {
+    path.name for path in (ROOT/'ValkyrieLearn/Resources/Valkyrie.atlas').glob('*.png')
+} == {Path(name).name for name in valkyrie_sprite_paths}
+for name in sorted(valkyrie_sprite_paths):
+    actual = hashlib.sha256((ROOT/'ValkyrieLearn/Resources'/name).read_bytes()).hexdigest()
+    assert actual == manifest['outputs'][name]['sha256'], (
+        f'VALKYRIE IDENTITY LOCK: original sprite changed: {name}'
+    )
+print('PASS Valkyrie original sprite identities locked to approved hashes.')
+
 print('PASS approved art hashes, dimensions and required atlas poses.')
 
 # Generated bridge props remain separate from the approved v3.31 import.
