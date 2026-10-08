@@ -110,6 +110,16 @@ final class MathAdventureTests: XCTestCase {
                 }
                 XCTAssertEqual(remaining, 0)
             }
+               case .groupingGarden(let model):
+            if model.activity.targetCells > 0 {
+                XCTAssertTrue(adventure.chooseGardenFraction(0))
+            } else {
+                for group in 0..<model.activity.groupCount {
+                    for _ in 0..<model.activity.itemsPerGroup {
+                        XCTAssertTrue(adventure.placeGroupCounter(in: group))
+                    }
+                }
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -159,7 +169,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllElevenRuntimesAndSessionStateRoundTrip() throws {
+    func testAllTwelveRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -170,7 +180,8 @@ final class MathAdventureTests: XCTestCase {
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter),
-            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter)]
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -441,9 +452,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2006)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2006)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2055)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2067)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2067)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2116)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -468,7 +479,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 62)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 67)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -1032,6 +1043,67 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
+
+    func testGroupingGardenFiveSkillsHaveExactlySixtyOneObservableActivities() throws {
+        let skills = [
+            MathSkills.equalGroups, MathSkills.repeatedAddition,
+            MathSkills.equalSharing, MathSkills.halves, MathSkills.quarters
+        ]
+        XCTAssertEqual(skills.map { MathProductionQuestionBank.variants(for: $0).count },
+                       [19, 19, 19, 2, 2])
+        for skill in skills {
+            for variant in MathProductionQuestionBank.variants(for: skill) {
+                XCTAssertTrue(MathManipulativeSupport.supports(variant.encounter))
+                let runtime = try MathMechanicRuntime(encounter: variant.encounter, at: epoch)
+                if case .groupingGarden(let model) = runtime {
+                    XCTAssertFalse(model.activity.hasCompleteResponse)
+                    XCTAssertFalse(model.completed)
+                } else {
+                    XCTFail("Expected Grouping Garden runtime")
+                }
+            }
+        }
+    }
+
+    func testGroupingGardenMustBuildAllGroupsAndCanCorrectUnequalDistribution() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalSharing)
+                .first(where: { $0.encounter.initialQuantity == 3 &&
+                    $0.encounter.targetQuantity == 2 })?.encounter
+        )
+        var model = try GroupingGardenEncounterModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch))
+        for index in [0, 0, 1, 1, 1] {
+            XCTAssertTrue(model.place(in: index))
+        }
+        XCTAssertNil(model.submit(at: epoch), "Incomplete sharing cannot score")
+        XCTAssertTrue(model.place(in: 2))
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(model.undo())
+        XCTAssertTrue(model.undo())
+        XCTAssertTrue(model.place(in: 2))
+        XCTAssertTrue(model.place(in: 2))
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(4))?.outcome, .correct)
+        XCTAssertFalse(model.undo())
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                GroupingGardenEncounterModel.self, from: JSONEncoder().encode(model)
+            ),
+            model
+        )
+    }
+
+    func testGroupingGardenFractionPartsRequireVisibleSelection() throws {
+        for skill in [MathSkills.halves, MathSkills.quarters] {
+            for variant in MathProductionQuestionBank.variants(for: skill) {
+                var runtime = try MathMechanicRuntime(encounter: variant.encounter, at: epoch)
+                XCTAssertNil(runtime.submit(at: epoch))
+                XCTAssertTrue(runtime.chooseGardenFraction(0))
+                XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(3))?.outcome, .correct)
+            }
+        }
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
@@ -1043,11 +1115,6 @@ final class MathAdventureTests: XCTestCase {
             MathSkills.chooseStrategy,
             MathSkills.multipleSolutions,
             MathSkills.multiStep,
-            MathSkills.equalGroups,
-            MathSkills.repeatedAddition,
-            MathSkills.equalSharing,
-            MathSkills.halves,
-            MathSkills.quarters
         ]
 
         for skillID in unsupportedUntilDedicatedMechanicsExist {
