@@ -22,6 +22,15 @@ final class MathAdventureTests: XCTestCase {
         case .tenFrame(let model):
             for _ in model.filled..<model.encounter.targetQuantity { XCTAssertTrue(adventure.increment(at: after)) }
         case .missingBridge(let model): adventure.setNumber(model.correctNumber)
+        case .placeValueFactory(let model):
+            if model.isComparison {
+                adventure.chooseComparison(model.correctChoice)
+            } else {
+                _ = adventure.adjustPlaceValue(
+                    tensDelta: model.expectedTens,
+                    onesDelta: model.expectedOnes
+                )
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -71,10 +80,13 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllFiveRuntimesAndSessionStateRoundTrip() throws {
+    func testAllSixRuntimesAndSessionStateRoundTrip() throws {
+        let placeValue = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0]]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -342,10 +354,10 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
-    func testProductionQuestionBankBuildsOneThousandNormalAdaptiveEncounters() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 951)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 951)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1000)
+    func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1196)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1196)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1245)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -370,7 +382,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 32)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 41)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -402,21 +414,65 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
-    func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
-        let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
+
+    func testPlaceValueFactoryMakesNinePreviouslyBlockedSkillsNativeAssessable() throws {
+        let newlySupported: [SkillID] = [
             MathSkills.countTo20,
             MathSkills.numberOrder20,
             MathSkills.oneMoreLess20,
-            MathSkills.estimate10,
-            MathSkills.countOn10,
-            MathSkills.findDifference10,
-            MathSkills.inverseFacts10,
             MathSkills.groupTen,
             MathSkills.placeValue,
             MathSkills.buildTwoDigit,
             MathSkills.readTwoDigit,
             MathSkills.compareTwoDigit,
-            MathSkills.orderTwoDigit,
+            MathSkills.orderTwoDigit
+        ]
+
+        for skillID in newlySupported {
+            let variants = MathProductionQuestionBank.variants(for: skillID)
+            XCTAssertFalse(variants.isEmpty, "Missing Place Value Factory variants for \(skillID.rawValue)")
+            XCTAssertTrue(variants.allSatisfy {
+                $0.encounter.mechanicID == MathMechanicID.placeValueFactory
+                    && MathManipulativeSupport.supports($0.encounter)
+            })
+        }
+
+        XCTAssertEqual(
+            Set(newlySupported).intersection(MathProductionQuestionBank.coveredSkillIDs).count,
+            newlySupported.count
+        )
+
+        let build = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.buildTwoDigit).first?.encounter
+        )
+        var buildRuntime = try MathMechanicRuntime(encounter: build, at: epoch)
+        guard case .placeValueFactory(let buildModel) = buildRuntime else {
+            return XCTFail("Expected place-value runtime")
+        }
+        XCTAssertTrue(buildRuntime.adjustPlaceValue(
+            tensDelta: buildModel.expectedTens,
+            onesDelta: buildModel.expectedOnes
+        ))
+        XCTAssertEqual(buildRuntime.submit(at: epoch.addingTimeInterval(10))?.outcome, .correct)
+
+        let compare = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.compareTwoDigit).first?.encounter
+        )
+        var compareRuntime = try MathMechanicRuntime(encounter: compare, at: epoch)
+        guard case .placeValueFactory(let compareModel) = compareRuntime else {
+            return XCTFail("Expected place-value comparison runtime")
+        }
+        compareRuntime.chooseComparison(compareModel.correctChoice)
+        XCTAssertEqual(compareRuntime.submit(at: epoch.addingTimeInterval(10))?.outcome, .correct)
+    }
+
+
+    func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
+        let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
+            MathSkills.estimate10,
+            MathSkills.countOn10,
+            MathSkills.findDifference10,
+            MathSkills.inverseFacts10,
             MathSkills.patternAB,
             MathSkills.patternAAB,
             MathSkills.patternABC,
