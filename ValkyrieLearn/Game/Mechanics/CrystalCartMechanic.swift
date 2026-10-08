@@ -2102,6 +2102,160 @@ import LearningCore
     }
 }
 
+
+@MainActor final class GroupingGardenMechanic: SKNode, MathCastleReactiveMechanic {
+    private let items = SKNode()
+    private let heading = ArtSystem.label("GROUPING GARDEN", size: 19)
+    private let instruction = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.groupingGarden
+        zPosition = 750
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.groupingGarden
+        addChild(tray)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 300, height: 47),
+            fill: UIColor(red: 0.09, green: 0.20, blue: 0.26, alpha: 0.97),
+            stroke: UIColor(red: 0.94, green: 0.79, blue: 0.42, alpha: 0.95),
+            radius: 15
+        )
+        header.position.y = 127
+        header.name = MathMechanicID.groupingGarden
+        addChild(header)
+        heading.fontColor = .white
+        heading.fontName = "AvenirNext-Heavy"
+        heading.name = MathMechanicID.groupingGarden
+        header.addChild(heading)
+        instruction.position.y = 94
+        instruction.fontColor = UIColor(red: 1, green: 0.88, blue: 0.63, alpha: 1)
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.name = MathMechanicID.groupingGarden
+        addChild(instruction)
+        addChild(items)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func text(_ value: String, x: CGFloat, y: CGFloat, size: CGFloat = 14) {
+        let label = ArtSystem.label(value, size: size)
+        label.position = CGPoint(x: x, y: y)
+        label.fontColor = .white
+        label.fontName = "AvenirNext-DemiBold"
+        label.name = MathMechanicID.groupingGarden
+        items.addChild(label)
+    }
+
+    private func control(_ value: String, at point: CGPoint, name: String) {
+        let button = ArtSystem.medallion(
+            radius: 34,
+            fill: UIColor(red: 0.13, green: 0.28, blue: 0.34, alpha: 1),
+            stroke: UIColor(red: 0.99, green: 0.83, blue: 0.50, alpha: 1),
+            glow: 0
+        )
+        button.position = point
+        button.name = name
+        button.zPosition = 50
+        items.addChild(button)
+        let label = ArtSystem.label(value, size: 19)
+        label.name = name
+        label.fontColor = .white
+        button.addChild(label)
+        let hit = SKShapeNode(circleOfRadius: 37)
+        hit.position = point
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 71
+        hit.name = name
+        items.addChild(hit)
+    }
+
+    func render(_ model: GroupingGardenEncounterModel) {
+        items.removeAllChildren()
+        let activity = model.activity
+        switch model.task {
+        case .equalGroups, .repeatedAddition, .equalSharing:
+            instruction.text = model.task == .equalSharing
+                ? "SHARE BERRIES EQUALLY"
+                : (model.task == .repeatedAddition
+                   ? "BUILD THE SAME ADDEND IN EACH GROUP"
+                   : "BUILD EQUAL GROUPS")
+            text("\(activity.placements.count) OF \(activity.totalItems) BERRIES PLACED",
+                 x: 0, y: 65, size: 15)
+            let spacing: CGFloat = activity.groupCount == 5 ? 104 : 124
+            for group in 0..<activity.groupCount {
+                let x = CGFloat(group) * spacing
+                    - CGFloat(activity.groupCount - 1) * spacing / 2
+                let basket = ArtSystem.panel(
+                    CGSize(width: spacing - 8, height: 104),
+                    fill: UIColor(red: 0.10, green: 0.29, blue: 0.31, alpha: 0.95),
+                    stroke: UIColor(red: 0.94, green: 0.77, blue: 0.47, alpha: 0.96),
+                    radius: 15,
+                    lineWidth: 2,
+                    shadowAlpha: 0.05
+                )
+                basket.position = CGPoint(x: x, y: -17)
+                basket.name = MathMechanicID.groupingGarden
+                items.addChild(basket)
+                text("GROUP \(group + 1)", x: x, y: 18, size: 11)
+                for berry in 0..<activity.bins[group] {
+                    let dot = SKShapeNode(circleOfRadius: 7)
+                    dot.position = CGPoint(
+                        x: x - 27 + CGFloat(berry % 4) * 18,
+                        y: -36 + CGFloat(berry / 4) * 18
+                    )
+                    dot.fillColor = UIColor(red: 0.93, green: 0.37, blue: 0.54, alpha: 1)
+                    dot.strokeColor = .white
+                    dot.lineWidth = 1
+                    dot.name = MathMechanicID.groupingGarden
+                    items.addChild(dot)
+                }
+                control("+", at: CGPoint(x: x, y: -120), name: "gardenGroup\(group)")
+            }
+            control("↶", at: CGPoint(x: 229, y: 68), name: "gardenUndo")
+        case .halves, .quarters:
+            instruction.text = activity.targetCells == 2
+                ? "TAP ONE OF TWO EQUAL PARTS"
+                : "TAP ONE OF FOUR EQUAL PARTS"
+            let cells = activity.targetCells
+            let space: CGFloat = cells == 2 ? 142 : 112
+            for index in 0..<cells {
+                let x = CGFloat(index) * space - CGFloat(cells - 1) * space / 2
+                let selected = activity.fractionalCells.contains(index)
+                let piece = ArtSystem.panel(
+                    CGSize(width: space - 9, height: 96),
+                    fill: selected
+                        ? UIColor(red: 0.30, green: 0.78, blue: 0.69, alpha: 1)
+                        : UIColor(red: 0.12, green: 0.28, blue: 0.35, alpha: 1),
+                    stroke: UIColor(red: 1, green: 0.86, blue: 0.55, alpha: 1),
+                    radius: 4,
+                    lineWidth: 3,
+                    shadowAlpha: 0.03
+                )
+                piece.position = CGPoint(x: x, y: 10)
+                piece.name = "gardenPart\(index)"
+                items.addChild(piece)
+                text(selected ? "✓" : "\(index + 1)", x: x, y: 9, size: 24)
+                control("◼", at: CGPoint(x: x, y: -120), name: "gardenPart\(index)")
+            }
+            text(cells == 2 ? "1 / 2" : "1 / 4", x: 0, y: 74, size: 24)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.90, blue: 0.54, alpha: 1)
+        guard !reducedMotion else { return }
+        items.run(.sequence([
+            .scale(to: 1.02, duration: 0.12),
+            .scale(to: 1.0, duration: 0.16)
+        ]), withKey: "gardenCelebrate")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -2125,6 +2279,8 @@ import LearningCore
             return DataBoardMechanic()
         case MathMechanicID.clockMarket:
             return ClockMarketMechanic()
+        case MathMechanicID.groupingGarden:
+            return GroupingGardenMechanic()
         default:
             return nil
         }
