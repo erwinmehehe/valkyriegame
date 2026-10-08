@@ -21,6 +21,12 @@ import LearningCore
         let units = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter
         )
+        let sorting = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter
+        )
+        let pictureGraph = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -31,7 +37,9 @@ import LearningCore
             (pattern, CGPoint(x: 820, y: 310), CGPoint(x: 660, y: 188), "A shape fills the pattern gap."),
             (shape, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 290), "Shape option 1 selected."),
             (comparison, CGPoint(x: 820, y: 310), CGPoint(x: 665, y: 190), "Left measurement selected."),
-            (units, CGPoint(x: 820, y: 310), CGPoint(x: 914, y: 190), "1 equal-size measurement units placed.")
+            (units, CGPoint(x: 820, y: 310), CGPoint(x: 914, y: 190), "1 equal-size measurement units placed."),
+            (sorting, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 of 5 objects sorted."),
+            (pictureGraph, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 picture tile placed in the graph.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -149,6 +157,67 @@ import LearningCore
         )
     }
 
+
+    func testDataBoardNativeSortingAndUndoAreIndependentUnscoredActions() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+
+        scene.handleTap(at: CGPoint(x: 662, y: 189))
+        scene.handleTap(at: CGPoint(x: 820, y: 189))
+        scene.handleTap(at: CGPoint(x: 1050, y: 363))
+        guard case .dataBoard(let model)? = state.runtime else {
+            return XCTFail("Expected native Data Board sorting runtime")
+        }
+        XCTAssertEqual(model.sortedBins, [1])
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 5 objects sorted. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testDataBoardNativePictureGraphUsesThreeColumnTouchControls() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+
+        scene.handleTap(at: CGPoint(x: 662, y: 189))
+        scene.handleTap(at: CGPoint(x: 820, y: 189))
+        scene.handleTap(at: CGPoint(x: 978, y: 189))
+        scene.handleTap(at: CGPoint(x: 1050, y: 361))
+        guard case .dataBoard(let model)? = state.runtime else {
+            return XCTFail("Expected native picture graph runtime")
+        }
+        XCTAssertEqual(model.graphTiles, [1, 1, 0])
+        XCTAssertEqual(model.graphPlacementHistory, [1, 2])
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "2 picture tiles placed in the graph. Pull Pip's lever when you're ready."
+        )
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -213,7 +282,7 @@ import LearningCore
         )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))
