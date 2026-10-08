@@ -256,6 +256,21 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoPicture() ?? false
     }
 
+    @discardableResult public mutating func placeGroupCounter(in group: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.placeGroupCounter(in: group) ?? false
+    }
+
+    @discardableResult public mutating func undoGroupCounter() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoGroupCounter() ?? false
+    }
+
+    @discardableResult public mutating func chooseGardenFraction(_ part: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.chooseGardenFraction(part) ?? false
+    }
+
     @discardableResult public mutating func adjustClockHour(_ delta: Int) -> Bool {
         guard interactionStarted else { return false }
         return runtime?.adjustClockHour(delta) ?? false
@@ -455,6 +470,29 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                     } else {
                         demonstration = false
                     }
+                }
+            }
+        case .groupingGarden(let model):
+            switch model.task {
+            case .equalGroups:
+                cue = "Make every basket hold the same number of berries. Count each basket."
+            case .repeatedAddition:
+                cue = "Build the same number of berries in each basket, then add the groups."
+            case .equalSharing:
+                cue = "Give berries to every basket so each ends with an equal share."
+            case .halves:
+                cue = "A half is one of two equal-size parts. Tap one part."
+            case .quarters:
+                cue = "A quarter is one of four equal-size parts. Tap one part."
+            }
+            if demonstration {
+                if model.activity.targetCells > 0 {
+                    demonstration = false
+                } else if let next = model.activity.bins.firstIndex(where: { $0 < model.activity.itemsPerGroup }) {
+                    _ = runtime?.placeGroupCounter(in: next)
+                    cue = "Pip placed one berry. Keep every basket equally full."
+                } else {
+                    demonstration = false
                 }
             }
         case .dataBoard(let model):
