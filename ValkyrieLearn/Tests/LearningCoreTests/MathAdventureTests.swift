@@ -46,10 +46,21 @@ final class MathAdventureTests: XCTestCase {
                 XCTAssertTrue(adventure.choosePatternSymbol(model.correctSymbol))
             }
         case .shapeForge(let model):
-            if model.isRotation {
+            switch model.task {
+            case .rotate:
                 let forward = (model.targetOrientation - model.currentOrientation + 4) % 4
                 for _ in 0..<forward { XCTAssertTrue(adventure.rotateShape(1)) }
-            } else {
+            case .compose:
+                for turns in model.requiredHalfTurns {
+                    XCTAssertTrue(adventure.placeShapeHalf(turns))
+                }
+            case .symmetry:
+                for (row, shape) in model.symmetryReference.enumerated() {
+                    for _ in 0..<shape.rawValue {
+                        XCTAssertTrue(adventure.cycleMirrorCell(row))
+                    }
+                }
+            case .recognize, .attributes:
                 XCTAssertTrue(adventure.chooseShapeOption(try XCTUnwrap(model.correctOption)))
             }
         }
@@ -380,9 +391,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1316)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1316)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1365)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1332)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1332)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1381)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -407,7 +418,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 49)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 51)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -562,7 +573,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
 
-    func testShapeForgeAddsThreeObservableSkillsWithoutPretendingCompositionOrSymmetry() throws {
+    func testShapeForgeRecognizesShapesCountsCornersAndRotates() throws {
         let skills: [SkillID] = [
             MathSkills.recognizeShapes,
             MathSkills.shapeAttributes,
@@ -623,14 +634,68 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertFalse(model.turn(1), "The completed shape must be immutable")
     }
 
+
+    func testShapeCompositionRequiresBothCorrectlyOrientedPhysicalHalves() throws {
+        let encounters = MathProductionQuestionBank.variants(for: MathSkills.composeShapes)
+            .map(\.encounter)
+        XCTAssertEqual(encounters.count, 4)
+        for encounter in encounters {
+            var model = try ShapeForgeModel(encounter: encounter, at: epoch)
+            XCTAssertEqual(model.task, .compose)
+            XCTAssertNil(model.submit(at: epoch), "A blank composition cannot score.")
+            XCTAssertTrue(model.placeTriangleHalf((model.requiredHalfTurns[0] + 1) % 4))
+            XCTAssertNil(model.submit(at: epoch), "A single triangle is not a composed square.")
+            XCTAssertTrue(model.placeTriangleHalf(model.requiredHalfTurns[1]))
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(4))?.outcome, .incorrect)
+
+            XCTAssertTrue(model.undoTriangleHalf())
+            XCTAssertTrue(model.undoTriangleHalf())
+            for turns in model.requiredHalfTurns {
+                XCTAssertTrue(model.placeTriangleHalf(turns))
+            }
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(9))?.outcome, .correct)
+            XCTAssertFalse(model.placeTriangleHalf(0))
+            XCTAssertEqual(
+                try JSONDecoder().decode(ShapeForgeModel.self, from: JSONEncoder().encode(model)),
+                model
+            )
+        }
+    }
+
+    func testSymmetryRequiresThreeObservedMirroredShapeCells() throws {
+        let encounters = MathProductionQuestionBank.variants(for: MathSkills.symmetry)
+            .map(\.encounter)
+        XCTAssertEqual(encounters.count, 12)
+        let models = try encounters.map { try ShapeForgeModel(encounter: $0, at: epoch) }
+        XCTAssertEqual(Set(models.map { $0.symmetryReference.map(\.rawValue) }).count, 12)
+
+        for encounter in encounters {
+            var model = try ShapeForgeModel(encounter: encounter, at: epoch)
+            XCTAssertEqual(model.task, .symmetry)
+            XCTAssertNil(model.submit(at: epoch))
+            for row in 0..<3 {
+                let desired = model.symmetryReference[row].rawValue
+                for _ in 0..<desired { XCTAssertTrue(model.cycleMirrorCell(row)) }
+                if row != 2 {
+                    XCTAssertNil(model.submit(at: epoch), "An incomplete mirror must not score.")
+                }
+            }
+            XCTAssertEqual(model.mirrorCells.compactMap { $0 }.count, 3)
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(12))?.outcome, .correct)
+            XCTAssertFalse(model.cycleMirrorCell(0))
+            XCTAssertEqual(
+                try JSONDecoder().decode(ShapeForgeModel.self, from: JSONEncoder().encode(model)),
+                model
+            )
+        }
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
             MathSkills.countOn10,
             MathSkills.findDifference10,
             MathSkills.inverseFacts10,
-            MathSkills.composeShapes,
-            MathSkills.symmetry,
             MathSkills.positionalLanguage,
             MathSkills.mapRoute,
             MathSkills.compareLength,
