@@ -36,6 +36,9 @@ import LearningCore
         let pesos = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
         )
+        let equalGroups = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -51,7 +54,8 @@ import LearningCore
             (pictureGraph, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 picture tile placed in the graph."),
             (clock, CGPoint(x: 820, y: 310), CGPoint(x: 981, y: 264), "Clock hands now show 1:00."),
             (routines, CGPoint(x: 820, y: 310), CGPoint(x: 645, y: 192), "1 of 4 daily events sorted."),
-            (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins.")
+            (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins."),
+            (equalGroups, CGPoint(x: 820, y: 310), CGPoint(x: 634, y: 190), "1 of 2 berries placed in groups.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -289,6 +293,38 @@ import LearningCore
         XCTAssertEqual(marketState.profile, marketBefore)
     }
 
+
+    func testGroupingGardenNativeBasketsPersistWithUndoAndNoEarlyMastery() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalSharing)
+                .first(where: { $0.encounter.initialQuantity == 3 &&
+                    $0.encounter.targetQuantity == 2 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 696, y: 190))
+        scene.handleTap(at: CGPoint(x: 820, y: 190))
+        scene.handleTap(at: CGPoint(x: 1049, y: 378))
+        guard case .groupingGarden(let model)? = state.runtime else {
+            return XCTFail("Grouping Garden missing")
+        }
+        XCTAssertEqual(model.activity.bins, [1, 0, 0])
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 6 berries placed in groups. Pull Pip's lever when you're ready."
+        )
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -366,9 +402,12 @@ import LearningCore
         let pesos = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
         )
+        let equalGroups = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, equalGroups]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))
