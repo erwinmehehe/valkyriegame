@@ -1194,6 +1194,216 @@ public struct ClockMarketModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum GroupingGardenTask: String, Codable, Sendable {
+    case equalGroups
+    case repeatedAddition
+    case equalSharing
+    case halves
+    case quarters
+}
+
+public enum GroupingGardenOrientation: String, Codable, Sendable {
+    case row
+    case column
+}
+
+/// Child-produced counters, equal jumps and physical fraction cuts are the
+/// only sources of Grouping Garden evidence. A displayed target never scores.
+public struct GroupingGardenModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: GroupingGardenTask
+    public let orientation: GroupingGardenOrientation?
+    public private(set) var groups: [Int]
+    public private(set) var counterHistory: [Int]
+    public private(set) var jumps: Int
+    public private(set) var selectedBoundary: Int
+    public private(set) var cuts: [Int]
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isGroupPlacement: Bool {
+        task == .equalGroups || task == .equalSharing
+    }
+    public var isRepeatedAddition: Bool { task == .repeatedAddition }
+    public var isFractions: Bool { task == .halves || task == .quarters }
+    public var groupCount: Int { isFractions ? encounter.targetQuantity : encounter.initialQuantity }
+    public var groupSize: Int { isFractions ? unitCells / groupCount : encounter.targetQuantity }
+    public var targetTotal: Int { groupCount * groupSize }
+    public var unitsPlaced: Int { groups.reduce(0, +) }
+    public var currentJumpTotal: Int { jumps * groupSize }
+    public var unitCells: Int { encounter.initialQuantity }
+    public var requiredCuts: [Int] {
+        guard isFractions else { return [] }
+        return (1..<groupCount).map { $0 * groupSize }
+    }
+    public var hasCompleteResponse: Bool {
+        switch task {
+        case .equalGroups, .equalSharing:
+            return unitsPlaced == targetTotal
+        case .repeatedAddition:
+            return jumps >= groupCount
+        case .halves, .quarters:
+            return cuts.count == groupCount - 1
+        }
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.groupingGarden else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .grouping else {
+            throw ModelError.unsupportedOperation
+        }
+        let parts = encounter.context.split(separator: ".").map(String.init)
+        guard parts.count >= 2, parts[0] == "garden",
+              let task = GroupingGardenTask(rawValue: parts[1]) else {
+            throw ModelError.invalidConfiguration
+        }
+
+        let orientation: GroupingGardenOrientation?
+        switch task {
+        case .equalGroups:
+            guard parts.count == 2, encounter.skillID == MathSkills.equalGroups,
+                  (2...5).contains(encounter.initialQuantity),
+                  (1...6).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+            orientation = nil
+        case .repeatedAddition:
+            guard parts.count == 2, encounter.skillID == MathSkills.repeatedAddition,
+                  (2...5).contains(encounter.initialQuantity),
+                  (2...6).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+            orientation = nil
+        case .equalSharing:
+            guard parts.count == 2, encounter.skillID == MathSkills.equalSharing,
+                  (2...5).contains(encounter.initialQuantity),
+                  (1...5).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+            orientation = nil
+        case .halves:
+            guard parts.count == 3, encounter.skillID == MathSkills.halves,
+                  [4, 6, 8, 10, 12].contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 2,
+                  let direction = GroupingGardenOrientation(rawValue: parts[2]) else {
+                throw ModelError.invalidConfiguration
+            }
+            orientation = direction
+        case .quarters:
+            guard parts.count == 3, encounter.skillID == MathSkills.quarters,
+                  [4, 8, 12].contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 4,
+                  let direction = GroupingGardenOrientation(rawValue: parts[2]) else {
+                throw ModelError.invalidConfiguration
+            }
+            orientation = direction
+        }
+        self.encounter = encounter
+        self.task = task
+        self.orientation = orientation
+        groups = task == .equalGroups || task == .equalSharing
+            ? Array(repeating: 0, count: encounter.initialQuantity) : []
+        counterHistory = []
+        jumps = 0
+        selectedBoundary = 1
+        cuts = []
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    /// Physical counter placement into an explicitly selected basket.
+    @discardableResult public mutating func placeSeed(in basket: Int) -> Bool {
+        guard !completed, isGroupPlacement, (1...groupCount).contains(basket),
+              unitsPlaced < targetTotal else { return false }
+        groups[basket - 1] += 1
+        counterHistory.append(basket)
+        return true
+    }
+
+    @discardableResult public mutating func undoSeed() -> Bool {
+        guard !completed, isGroupPlacement,
+              let basket = counterHistory.popLast() else { return false }
+        groups[basket - 1] -= 1
+        return true
+    }
+
+    /// Each hop adds the visible group size on the number line.
+    @discardableResult public mutating func addJump() -> Bool {
+        guard !completed, isRepeatedAddition, jumps < groupCount + 2 else { return false }
+        jumps += 1
+        return true
+    }
+
+    @discardableResult public mutating func undoJump() -> Bool {
+        guard !completed, isRepeatedAddition, jumps > 0 else { return false }
+        jumps -= 1
+        return true
+    }
+
+    @discardableResult public mutating func moveCutSelector(_ delta: Int) -> Bool {
+        guard !completed, isFractions, delta == -1 || delta == 1 else { return false }
+        let next = selectedBoundary + delta
+        guard (1..<unitCells).contains(next) else { return false }
+        selectedBoundary = next
+        return true
+    }
+
+    /// Cuts actually divide a full-length shape into 2 or 4 sections. The
+    /// learner must choose every boundary; a hint never supplies the division.
+    @discardableResult public mutating func placeCut() -> Bool {
+        guard !completed, isFractions, cuts.count < groupCount - 1,
+              !cuts.contains(selectedBoundary) else { return false }
+        cuts.append(selectedBoundary)
+        return true
+    }
+
+    @discardableResult public mutating func undoCut() -> Bool {
+        guard !completed, isFractions, !cuts.isEmpty else { return false }
+        cuts.removeLast()
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        let correct: Bool
+        switch task {
+        case .equalGroups, .equalSharing:
+            correct = groups.allSatisfy { $0 == groupSize }
+        case .repeatedAddition:
+            correct = jumps == groupCount && currentJumpTotal == targetTotal
+        case .halves, .quarters:
+            correct = cuts.sorted() == requiredCuts
+        }
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -1206,6 +1416,7 @@ public enum MathMechanicID {
     public static let measurementWorkshop = "measurementWorkshop"
     public static let dataBoard = "dataBoard"
     public static let clockMarket = "clockMarket"
+    public static let groupingGarden = "groupingGarden"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -1218,7 +1429,8 @@ public enum MathMechanicID {
         shapeForge,
         measurementWorkshop,
         dataBoard,
-        clockMarket
+        clockMarket,
+        groupingGarden
     ]
 }
 
@@ -1583,6 +1795,8 @@ public enum MathManipulativeSupport {
             return (try? DataBoardModel(encounter: encounter)) != nil
         case MathMechanicID.clockMarket:
             return (try? ClockMarketModel(encounter: encounter)) != nil
+        case MathMechanicID.groupingGarden:
+            return (try? GroupingGardenModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -1613,6 +1827,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case measurementWorkshop(MeasurementWorkshopModel)
     case dataBoard(DataBoardModel)
     case clockMarket(ClockMarketModel)
+    case groupingGarden(GroupingGardenModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -1638,6 +1853,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .dataBoard(try DataBoardModel(encounter: encounter, at: date))
         case MathMechanicID.clockMarket:
             self = .clockMarket(try ClockMarketModel(encounter: encounter, at: date))
+        case MathMechanicID.groupingGarden:
+            self = .groupingGarden(try GroupingGardenModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -1656,6 +1873,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .measurementWorkshop(let model): return model.encounter
         case .dataBoard(let model): return model.encounter
         case .clockMarket(let model): return model.encounter
+        case .groupingGarden(let model): return model.encounter
         }
     }
 
@@ -1672,6 +1890,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .measurementWorkshop(let model): return model.completed
         case .dataBoard(let model): return model.completed
         case .clockMarket(let model): return model.completed
+        case .groupingGarden(let model): return model.completed
         }
     }
 
@@ -1688,6 +1907,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .measurementWorkshop(let model): return model.support
         case .dataBoard(let model): return model.support
         case .clockMarket(let model): return model.support
+        case .groupingGarden(let model): return model.support
         }
     }
 
@@ -1709,7 +1929,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden:
             return false
         }
     }
@@ -1732,7 +1952,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden:
             return false
         }
     }
@@ -1925,6 +2145,56 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func placeGardenSeed(in basket: Int) -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.placeSeed(in: basket)
+        self = .groupingGarden(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoGardenSeed() -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.undoSeed()
+        self = .groupingGarden(model)
+        return changed
+    }
+
+    @discardableResult public mutating func addGardenJump() -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.addJump()
+        self = .groupingGarden(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoGardenJump() -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.undoJump()
+        self = .groupingGarden(model)
+        return changed
+    }
+
+    @discardableResult public mutating func moveGardenCut(_ delta: Int) -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.moveCutSelector(delta)
+        self = .groupingGarden(model)
+        return changed
+    }
+
+    @discardableResult public mutating func placeGardenCut() -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.placeCut()
+        self = .groupingGarden(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoGardenCut() -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.undoCut()
+        self = .groupingGarden(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -1960,6 +2230,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .clockMarket(var model):
             model.apply(scaffold)
             self = .clockMarket(model)
+        case .groupingGarden(var model):
+            model.apply(scaffold)
+            self = .groupingGarden(model)
         }
     }
 
@@ -2008,6 +2281,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .clockMarket(var model):
             let evidence = model.submit(at: date)
             self = .clockMarket(model)
+            return evidence
+        case .groupingGarden(var model):
+            let evidence = model.submit(at: date)
+            self = .groupingGarden(model)
             return evidence
         }
     }
