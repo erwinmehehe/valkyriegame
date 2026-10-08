@@ -1661,9 +1661,12 @@ import LearningCore
                 }
             }
         case .dataBoard(let model):
-            change = model.isSorting
-                ? "\(model.sortedBins.count) of 5 objects sorted."
-                : "\(model.placedGraphTotal) picture tiles placed in the graph."
+            if model.isSorting {
+                change = "\(model.sortedBins.count) of 5 objects sorted."
+            } else {
+                let count = model.placedGraphTotal
+                change = "\(count) \(count == 1 ? "picture tile" : "picture tiles") placed in the graph."
+            }
         }
         // Describe only the child's visible edit; the lever still checks the answer.
         instruction.text = change + " Pull Pip's lever when you're ready."
