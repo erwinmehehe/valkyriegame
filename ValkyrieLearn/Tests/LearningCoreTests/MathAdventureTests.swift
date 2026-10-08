@@ -1145,6 +1145,35 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
+
+    func testRepeatedAdditionMustEnterTheComputedTotalAfterBuildingGroups() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.repeatedAddition)
+                .first(where: { $0.encounter.initialQuantity == 3
+                    && $0.encounter.targetQuantity == 2 })?.encounter
+        )
+        var model = try GroupingGardenEncounterModel(encounter: encounter, at: epoch)
+        for group in 0..<3 {
+            for _ in 0..<2 {
+                XCTAssertTrue(model.place(in: group))
+            }
+        }
+        XCTAssertNil(model.submit(at: epoch), "Grouping alone does not demonstrate repeated addition")
+        for _ in 0..<5 { XCTAssertTrue(model.adjustRepeatedSum(1)) }
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(3))?.outcome, .incorrect)
+        XCTAssertTrue(model.adjustRepeatedSum(1))
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(7)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertFalse(model.adjustRepeatedSum(1))
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                GroupingGardenEncounterModel.self, from: JSONEncoder().encode(model)
+            ),
+            model
+        )
+    }
+
     func testGroupingGardenFractionPartsRequireVisibleSelection() throws {
         for skill in [MathSkills.halves, MathSkills.quarters] {
             for variant in MathProductionQuestionBank.variants(for: skill) {
