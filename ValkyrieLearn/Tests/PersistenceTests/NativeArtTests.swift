@@ -2556,7 +2556,9 @@ import LearningCore
             XCTAssertGreaterThan(image.width, 1280)
             XCTAssertGreaterThan(image.height, 720)
             XCTAssertEqual(scene.size, CGSize(width: 1280, height: 960))
-            XCTAssertEqual(painting.size, CGSize(width: 1280, height: 720))
+            XCTAssertEqual(painting.size.height, scene.size.height)
+            XCTAssertGreaterThanOrEqual(painting.size.width, scene.size.width)
+            XCTAssertTrue(painting.userData?["aspectFilledForIPad"] as? Bool ?? false)
             XCTAssertFalse(painting.isUserInteractionEnabled)
             try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
             scene.willLeave()
@@ -3111,6 +3113,8 @@ import LearningCore
 
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseBackdropHD"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseFrame"))
+        XCTAssertLessThan(greenhouse.childNode(withName: "scienceGreenhouseFrame")?.alpha ?? 1, 0.5)
+        XCTAssertLessThan(greenhouse.childNode(withName: "scienceGround")?.alpha ?? 1, 0.3)
         XCTAssertNotNil(greenhouse.childNode(withName: "//scienceGreenhouseGlass"))
         XCTAssertNotNil(greenhouse.childNode(withName: "//scienceGreenhouseRidge"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSeedBench"))
@@ -3156,6 +3160,8 @@ import LearningCore
 
         XCTAssertNotNil(weather.childNode(withName: "weatherBackdropHD"))
         XCTAssertNotNil(weather.childNode(withName: "weatherTowerStructure"))
+        XCTAssertLessThan(weather.childNode(withName: "weatherTowerStructure")?.xScale ?? 1, 0.6)
+        XCTAssertLessThan(weather.childNode(withName: "weatherTerrace")?.alpha ?? 1, 0.3)
         XCTAssertNotNil(weather.childNode(withName: "//weatherObservationGlass"))
         XCTAssertNotNil(weather.childNode(withName: "//weatherTowerRoofTrim"))
         XCTAssertNotNil(weather.childNode(withName: "weatherTerrace"))
@@ -3180,6 +3186,7 @@ import LearningCore
 
         XCTAssertNotNil(grove.childNode(withName: "creatureGroveBackdropHD"))
         XCTAssertNotNil(grove.childNode(withName: "grovePath"))
+        XCTAssertLessThan(grove.childNode(withName: "grovePath")?.alpha ?? 1, 0.3)
         XCTAssertNotNil(grove.childNode(withName: "//grovePondBank"))
         XCTAssertNotNil(grove.childNode(withName: "//grovePondShoreline"))
         XCTAssertNotNil(grove.childNode(withName: "//grovePondRipple"))
