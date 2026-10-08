@@ -1038,6 +1038,158 @@ import LearningCore
     }
 }
 
+
+@MainActor final class PatternLoomMechanic: SKNode, MathCastleReactiveMechanic {
+    private let sequenceGroup = SKNode()
+    private let activityLabel = ArtSystem.label("", size: 17)
+    private let progressLabel = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.patternLoom
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.name = MathMechanicID.patternLoom
+        tray.position.y = -15
+        tray.zPosition = -5
+        addChild(tray)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 275, height: 45),
+            fill: UIColor(red: 0.09, green: 0.11, blue: 0.21, alpha: 0.93),
+            stroke: UIColor(red: 0.94, green: 0.72, blue: 0.32, alpha: 0.82),
+            radius: 15
+        )
+        header.position = CGPoint(x: 0, y: 126)
+        header.name = MathMechanicID.patternLoom
+        addChild(header)
+
+        let heading = ArtSystem.label("PATTERN LOOM", size: 18)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.patternLoom
+        header.addChild(heading)
+
+        activityLabel.fontName = "AvenirNext-DemiBold"
+        activityLabel.fontColor = UIColor(red: 0.95, green: 0.86, blue: 0.60, alpha: 1)
+        activityLabel.position = CGPoint(x: 0, y: 80)
+        activityLabel.name = MathMechanicID.patternLoom
+        addChild(activityLabel)
+
+        progressLabel.fontName = "AvenirNext-DemiBold"
+        progressLabel.fontColor = UIColor(red: 0.82, green: 0.95, blue: 0.99, alpha: 1)
+        progressLabel.position = CGPoint(x: 0, y: -63)
+        progressLabel.name = MathMechanicID.patternLoom
+        addChild(progressLabel)
+
+        addChild(sequenceGroup)
+
+        for (symbol, label, number, x) in [
+            ("●", "Circle", 1, CGFloat(-160)),
+            ("◆", "Diamond", 2, CGFloat(-10)),
+            ("▲", "Triangle", 3, CGFloat(140))
+        ] {
+            let button = ArtSystem.medallion(
+                radius: 30,
+                fill: UIColor(red: 0.10, green: 0.24, blue: 0.35, alpha: 1),
+                stroke: UIColor(red: 0.96, green: 0.77, blue: 0.38, alpha: 0.92),
+                glow: 0
+            )
+            button.position = CGPoint(x: x, y: -122)
+            button.name = "loomSymbol\(number)"
+            button.zPosition = 50
+
+            let mark = ArtSystem.label(symbol, size: 28)
+            mark.fontColor = .white
+            mark.name = button.name
+            button.addChild(mark)
+
+            // Explicit 68pt target above decorative children and behind no overlays.
+            let hit = SKShapeNode(circleOfRadius: 34)
+            hit.fillColor = .clear
+            hit.strokeColor = .clear
+            hit.name = button.name
+            hit.zPosition = 40
+            button.addChild(hit)
+            button.accessibilityLabel = label
+            addChild(button)
+        }
+
+        let undo = ArtSystem.medallion(
+            radius: 25,
+            fill: UIColor(red: 0.18, green: 0.12, blue: 0.19, alpha: 1),
+            stroke: UIColor(red: 0.76, green: 0.75, blue: 0.88, alpha: 0.86),
+            glow: 0
+        )
+        undo.position = CGPoint(x: 229, y: -122)
+        undo.name = "loomUndo"
+        undo.zPosition = 50
+        let undoMark = ArtSystem.label("↶", size: 30)
+        undoMark.name = "loomUndo"
+        undo.addChild(undoMark)
+        addChild(undo)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    func render(_ model: PatternLoomModel) {
+        sequenceGroup.removeAllChildren()
+        activityLabel.text = model.isCreation
+            ? "CREATE A \(model.family.rawValue.uppercased()) PATTERN"
+            : (model.isMissing ? "FILL THE MISSING SHAPE" : "CONTINUE THE PATTERN")
+        progressLabel.text = model.isCreation
+            ? "\(model.selectedSymbols.count) OF \(model.slotCount) SHAPES PLACED"
+            : "TAP A SHAPE TO FILL THE ?"
+
+        let slots = model.visibleSlots
+        let step = min(CGFloat(61), CGFloat(476) / CGFloat(max(1, slots.count)))
+        let startX = -step * CGFloat(slots.count - 1) / 2
+        for (index, symbol) in slots.enumerated() {
+            let isGap = !model.isCreation && index == model.gapIndex
+            let frame = ArtSystem.panel(
+                CGSize(width: step - 5, height: 64),
+                fill: isGap
+                    ? UIColor(red: 0.29, green: 0.20, blue: 0.14, alpha: 0.98)
+                    : UIColor(red: 0.09, green: 0.18, blue: 0.24, alpha: 0.94),
+                stroke: isGap
+                    ? UIColor(red: 0.99, green: 0.79, blue: 0.40, alpha: 1)
+                    : UIColor(red: 0.58, green: 0.82, blue: 0.90, alpha: 0.68),
+                radius: 12,
+                lineWidth: 2,
+                shadowAlpha: 0.08
+            )
+            frame.position = CGPoint(x: startX + CGFloat(index) * step, y: 5)
+            frame.name = MathMechanicID.patternLoom
+            sequenceGroup.addChild(frame)
+
+            let glyph: String
+            switch symbol {
+            case 1: glyph = "●"
+            case 2: glyph = "◆"
+            case 3: glyph = "▲"
+            default: glyph = isGap ? "?" : "·"
+            }
+            let mark = ArtSystem.label(glyph, size: 30)
+            mark.fontName = "AvenirNext-Heavy"
+            mark.fontColor = symbol == nil
+                ? UIColor(red: 1, green: 0.88, blue: 0.53, alpha: 1)
+                : .white
+            mark.name = MathMechanicID.patternLoom
+            frame.addChild(mark)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        activityLabel.fontColor = UIColor(red: 1.0, green: 0.89, blue: 0.47, alpha: 1)
+        guard !reducedMotion else { return }
+        sequenceGroup.run(.sequence([
+            .scale(to: 1.035, duration: 0.13),
+            .scale(to: 1.0, duration: 0.18)
+        ]), withKey: "successPulse")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -1051,6 +1203,8 @@ import LearningCore
             return MissingNumberBridgeMechanic()
         case MathMechanicID.placeValueFactory:
             return PlaceValueFactoryMechanic()
+        case MathMechanicID.patternLoom:
+            return PatternLoomMechanic()
         default:
             return nil
         }
