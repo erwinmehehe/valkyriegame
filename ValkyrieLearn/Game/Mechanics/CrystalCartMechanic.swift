@@ -850,6 +850,17 @@ import LearningCore
             gear.position = CGPoint(x: x, y: y)
             gear.name = name
             buildGroup.addChild(gear)
+
+            // Give each visible control a stable 68pt named hit target above
+            // decorative gear children. SpriteKit nodes(at:) ordering is not
+            // deterministic, so relying on the artwork node alone can lose taps.
+            let hit = SKShapeNode(circleOfRadius: 34)
+            hit.position = CGPoint(x: x, y: y)
+            hit.fillColor = .clear
+            hit.strokeColor = .clear
+            hit.zPosition = 20
+            hit.name = name
+            buildGroup.addChild(hit)
         }
 
         builtLabel.fontName = "AvenirNext-Bold"
