@@ -733,6 +733,199 @@ public struct MeasurementWorkshopModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum DataBoardTask: String, Codable, Sendable {
+    case sort
+    case graph
+}
+
+public enum DataSortAttribute: String, Codable, CaseIterable, Sendable {
+    case color
+    case shape
+}
+
+public struct DataBoardToken: Codable, Equatable, Sendable {
+    public let color: Int   // 1 blue, 2 gold, 3 pink
+    public let shape: Int   // 1 circle, 2 square, 3 triangle
+
+    public init(color: Int, shape: Int) {
+        self.color = color
+        self.shape = shape
+    }
+
+    public func category(for attribute: DataSortAttribute) -> Int {
+        attribute == .color ? color : shape
+    }
+}
+
+/// Children physically assign five objects to bins or construct all three
+/// columns of a picture graph. No selection-only substitute awards mastery.
+public struct DataBoardModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: DataBoardTask
+    public let sortingAttribute: DataSortAttribute?
+    public private(set) var sortedBins: [Int]
+    public private(set) var graphTiles: [Int]
+    public private(set) var graphPlacementHistory: [Int]
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isSorting: Bool { task == .sort }
+    public var sortingTotal: Int { 5 }
+    public var graphTotal: Int { graphSourceCounts.reduce(0, +) }
+    public var placedGraphTotal: Int { graphTiles.reduce(0, +) }
+
+    public var sortingTokens: [DataBoardToken] {
+        guard isSorting else { return [] }
+        let seed = encounter.initialQuantity
+        let divisors = [1, 3, 9, 27, 81]
+        return (0..<sortingTotal).map { index in
+            let primary = ((seed / divisors[index]) % 3) + 1
+            let alternate = ((seed * 7 + index * 11 + index / 2) % 3) + 1
+            if sortingAttribute == .color {
+                return DataBoardToken(color: primary, shape: alternate)
+            }
+            return DataBoardToken(color: alternate, shape: primary)
+        }
+    }
+
+    public var nextSortingToken: DataBoardToken? {
+        let tokens = sortingTokens
+        guard isSorting, sortedBins.count < tokens.count else { return nil }
+        return tokens[sortedBins.count]
+    }
+
+    public var graphSourceCounts: [Int] {
+        guard task == .graph else { return [] }
+        let seed = encounter.initialQuantity
+        return [
+            seed % 4 + 1,
+            (seed / 4) % 4 + 1,
+            (seed / 16) % 4 + 1
+        ]
+    }
+
+    public var hasCompleteResponse: Bool {
+        if isSorting { return sortedBins.count == sortingTotal }
+        return placedGraphTotal >= graphTotal
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.dataBoard else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .data else {
+            throw ModelError.unsupportedOperation
+        }
+        let fields = encounter.context.split(separator: ".").map(String.init)
+        guard fields.count == 3, fields[0] == "data" else {
+            throw ModelError.invalidConfiguration
+        }
+
+        let task: DataBoardTask
+        let attribute: DataSortAttribute?
+        switch (fields[1], fields[2]) {
+        case ("sort", "color"), ("sort", "shape"):
+            task = .sort
+            attribute = DataSortAttribute(rawValue: fields[2])
+            guard encounter.skillID == MathSkills.classifyObjects,
+                  (1...48).contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 5 else {
+                throw ModelError.invalidConfiguration
+            }
+        case ("graph", "pictures"):
+            task = .graph
+            attribute = nil
+            guard encounter.skillID == MathSkills.pictureGraph,
+                  (0...63).contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 3 else {
+                throw ModelError.invalidConfiguration
+            }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+
+        self.encounter = encounter
+        self.task = task
+        sortingAttribute = attribute
+        sortedBins = []
+        graphTiles = [0, 0, 0]
+        graphPlacementHistory = []
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    /// Append a visible object to one of three distinct physical sorting bins.
+    @discardableResult public mutating func sortNext(into bin: Int) -> Bool {
+        guard !completed, isSorting, (1...3).contains(bin),
+              sortedBins.count < sortingTotal else { return false }
+        sortedBins.append(bin)
+        return true
+    }
+
+    @discardableResult public mutating func undoSort() -> Bool {
+        guard !completed, isSorting, !sortedBins.isEmpty else { return false }
+        sortedBins.removeLast()
+        return true
+    }
+
+    /// Each tap adds one visible picture to the selected column. An overfull
+    /// tally can be submitted as incorrect and then corrected by undoing tiles.
+    @discardableResult public mutating func addGraphTile(to column: Int) -> Bool {
+        guard !completed, task == .graph, (1...3).contains(column),
+              graphTiles[column - 1] < 6,
+              placedGraphTotal < graphTotal + 2 else { return false }
+        graphTiles[column - 1] += 1
+        graphPlacementHistory.append(column)
+        return true
+    }
+
+    @discardableResult public mutating func undoGraphTile() -> Bool {
+        guard !completed, task == .graph,
+              let last = graphPlacementHistory.popLast() else { return false }
+        graphTiles[last - 1] -= 1
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        let correct: Bool
+        if isSorting {
+            guard let sortingAttribute else { return nil }
+            let tokens = sortingTokens
+            correct = sortedBins.enumerated().allSatisfy { index, bin in
+                bin == tokens[index].category(for: sortingAttribute)
+            }
+        } else {
+            correct = graphTiles == graphSourceCounts
+        }
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -743,6 +936,7 @@ public enum MathMechanicID {
     public static let patternLoom = "patternLoom"
     public static let shapeForge = "shapeForge"
     public static let measurementWorkshop = "measurementWorkshop"
+    public static let dataBoard = "dataBoard"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -753,7 +947,8 @@ public enum MathMechanicID {
         placeValueFactory,
         patternLoom,
         shapeForge,
-        measurementWorkshop
+        measurementWorkshop,
+        dataBoard
     ]
 }
 
@@ -1114,6 +1309,8 @@ public enum MathManipulativeSupport {
             return (try? ShapeForgeModel(encounter: encounter)) != nil
         case MathMechanicID.measurementWorkshop:
             return (try? MeasurementWorkshopModel(encounter: encounter)) != nil
+        case MathMechanicID.dataBoard:
+            return (try? DataBoardModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -1142,6 +1339,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case patternLoom(PatternLoomModel)
     case shapeForge(ShapeForgeModel)
     case measurementWorkshop(MeasurementWorkshopModel)
+    case dataBoard(DataBoardModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -1163,6 +1361,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .shapeForge(try ShapeForgeModel(encounter: encounter, at: date))
         case MathMechanicID.measurementWorkshop:
             self = .measurementWorkshop(try MeasurementWorkshopModel(encounter: encounter, at: date))
+        case MathMechanicID.dataBoard:
+            self = .dataBoard(try DataBoardModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -1179,6 +1379,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .patternLoom(let model): return model.encounter
         case .shapeForge(let model): return model.encounter
         case .measurementWorkshop(let model): return model.encounter
+        case .dataBoard(let model): return model.encounter
         }
     }
 
@@ -1193,6 +1394,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .patternLoom(let model): return model.completed
         case .shapeForge(let model): return model.completed
         case .measurementWorkshop(let model): return model.completed
+        case .dataBoard(let model): return model.completed
         }
     }
 
@@ -1207,6 +1409,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .patternLoom(let model): return model.support
         case .shapeForge(let model): return model.support
         case .measurementWorkshop(let model): return model.support
+        case .dataBoard(let model): return model.support
         }
     }
 
@@ -1228,7 +1431,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard:
             return false
         }
     }
@@ -1251,7 +1454,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard:
             return false
         }
     }
@@ -1372,6 +1575,35 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func sortDataObject(into bin: Int) -> Bool {
+        guard case .dataBoard(var model) = self else { return false }
+        let changed = model.sortNext(into: bin)
+        self = .dataBoard(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoDataSort() -> Bool {
+        guard case .dataBoard(var model) = self else { return false }
+        let changed = model.undoSort()
+        self = .dataBoard(model)
+        return changed
+    }
+
+    @discardableResult public mutating func addPicture(to column: Int) -> Bool {
+        guard case .dataBoard(var model) = self else { return false }
+        let changed = model.addGraphTile(to: column)
+        self = .dataBoard(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoPicture() -> Bool {
+        guard case .dataBoard(var model) = self else { return false }
+        let changed = model.undoGraphTile()
+        self = .dataBoard(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -1401,6 +1633,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .measurementWorkshop(var model):
             model.apply(scaffold)
             self = .measurementWorkshop(model)
+        case .dataBoard(var model):
+            model.apply(scaffold)
+            self = .dataBoard(model)
         }
     }
 
@@ -1441,6 +1676,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .measurementWorkshop(var model):
             let evidence = model.submit(at: date)
             self = .measurementWorkshop(model)
+            return evidence
+        case .dataBoard(var model):
+            let evidence = model.submit(at: date)
+            self = .dataBoard(model)
             return evidence
         }
     }
