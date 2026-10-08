@@ -382,6 +382,14 @@ import LearningCore
         beginInteraction()
         if adventure.undoPatternSymbol() { persist() }
     }
+    func chooseShapeOption(_ option: Int) {
+        beginInteraction()
+        if adventure.chooseShapeOption(option) { persist() }
+    }
+    func rotateShape(_ delta: Int) {
+        beginInteraction()
+        if adventure.rotateShape(delta) { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
