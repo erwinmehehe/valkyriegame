@@ -1805,6 +1805,253 @@ public struct NumberTrailModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum DifferenceDockTask: String, Codable, Sendable {
+    case difference
+    case inverse
+}
+
+/// Pair equal amounts or physically build a whole and take away a known part.
+/// The child must complete each one-to-one construction before a count can
+/// be submitted. Counting a displayed answer alone never awards mastery.
+public struct DifferenceDockModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic, unsupportedOperation, invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: DifferenceDockTask
+    public private(set) var constructed: Int
+    public private(set) var response: Int
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isDifference: Bool { task == .difference }
+    public var smaller: Int { encounter.initialQuantity }
+    public var larger: Int {
+        task == .difference ? encounter.targetQuantity
+            : encounter.initialQuantity + encounter.targetQuantity
+    }
+    public var constructionRequired: Int { task == .difference ? smaller : larger }
+    public var correctResponse: Int {
+        task == .difference ? larger - smaller : smaller
+    }
+    public var hasCompleteResponse: Bool {
+        constructed == constructionRequired && response > 0
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.differenceDock
+        else { throw ModelError.unsupportedMechanic }
+        guard encounter.operation == .differenceDock
+        else { throw ModelError.unsupportedOperation }
+        let task: DifferenceDockTask
+        switch encounter.context {
+        case "dock.difference":
+            task = .difference
+            guard encounter.skillID == MathSkills.findDifference10,
+                  (1...9).contains(encounter.initialQuantity),
+                  ((encounter.initialQuantity + 1)...10).contains(encounter.targetQuantity)
+            else { throw ModelError.invalidConfiguration }
+        case "dock.inverse":
+            task = .inverse
+            guard encounter.skillID == MathSkills.inverseFacts10,
+                  (1...9).contains(encounter.initialQuantity),
+                  (1...(10 - encounter.initialQuantity)).contains(encounter.targetQuantity)
+            else { throw ModelError.invalidConfiguration }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+
+        self.encounter = encounter
+        self.task = task
+        constructed = 0
+        response = 0
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func placeCounter() -> Bool {
+        guard !completed, constructed < constructionRequired else { return false }
+        constructed += 1
+        return true
+    }
+
+    @discardableResult public mutating func undoCounter() -> Bool {
+        guard !completed, constructed > 0 else { return false }
+        constructed -= 1
+        return true
+    }
+
+    @discardableResult public mutating func adjustResponse(_ delta: Int) -> Bool {
+        guard !completed, [-1, 1].contains(delta),
+              (0...10).contains(response + delta) else { return false }
+        response += delta
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        attempts += 1
+        let correct = response == correctResponse
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
+public enum MapQuestTask: String, Codable, Sendable {
+    case position
+    case route
+}
+
+/// A three-by-three map with eight relative positions around a landmark.
+/// Position tasks place Pip on a named tile; route tasks require consecutive
+/// orthogonal steps—tapping the destination can never teleport the actor.
+public struct MapQuestModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic, unsupportedOperation, invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: MapQuestTask
+    public private(set) var selectedCell: Int?
+    public private(set) var routeCells: [Int]
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isPosition: Bool { task == .position }
+    public var landmarkStyle: Int { task == .position ? encounter.initialQuantity : 0 }
+    public var startCell: Int { task == .route ? encounter.initialQuantity : 4 }
+    public var destination: Int { encounter.targetQuantity }
+    public var currentCell: Int {
+        task == .position ? (selectedCell ?? 4) : (routeCells.last ?? startCell)
+    }
+    public var minimumRouteMoves: Int {
+        Self.distance(from: startCell, to: destination)
+    }
+    public var routeMoves: Int { max(0, routeCells.count - 1) }
+    public var hasCompleteResponse: Bool {
+        if isPosition { return selectedCell != nil }
+        return routeMoves >= minimumRouteMoves
+    }
+
+    public static func distance(from start: Int, to end: Int) -> Int {
+        abs(start / 3 - end / 3) + abs(start % 3 - end % 3)
+    }
+
+    public var positionDescription: String {
+        switch destination {
+        case 0: return "UPPER LEFT"
+        case 1: return "ABOVE"
+        case 2: return "UPPER RIGHT"
+        case 3: return "LEFT"
+        case 5: return "RIGHT"
+        case 6: return "LOWER LEFT"
+        case 7: return "BELOW"
+        case 8: return "LOWER RIGHT"
+        default: return "LANDMARK"
+        }
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.mapQuest
+        else { throw ModelError.unsupportedMechanic }
+        guard encounter.operation == .mapQuest
+        else { throw ModelError.unsupportedOperation }
+        let task: MapQuestTask
+        switch encounter.context {
+        case "map.position":
+            task = .position
+            guard encounter.skillID == MathSkills.positionalLanguage,
+                  (0...2).contains(encounter.initialQuantity),
+                  (0...8).contains(encounter.targetQuantity),
+                  encounter.targetQuantity != 4
+            else { throw ModelError.invalidConfiguration }
+        case "map.route":
+            task = .route
+            guard encounter.skillID == MathSkills.mapRoute,
+                  (0...8).contains(encounter.initialQuantity),
+                  (0...8).contains(encounter.targetQuantity),
+                  Self.distance(from: encounter.initialQuantity,
+                                to: encounter.targetQuantity) >= 2
+            else { throw ModelError.invalidConfiguration }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+
+        self.encounter = encounter
+        self.task = task
+        selectedCell = nil
+        routeCells = task == .route ? [encounter.initialQuantity] : []
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func chooseCell(_ cell: Int) -> Bool {
+        guard !completed, isPosition, (0...8).contains(cell), cell != 4,
+              selectedCell != cell else { return false }
+        selectedCell = cell
+        return true
+    }
+
+    /// A route step is one cardinal grid edge. Diagonal hops, off-map moves,
+    /// and paths over 12 steps are rejected; wrong routes may be revised.
+    @discardableResult public mutating func move(dx: Int, dy: Int) -> Bool {
+        guard !completed, !isPosition, abs(dx) + abs(dy) == 1,
+              routeMoves < 12 else { return false }
+        let from = currentCell
+        let x = from % 3 + dx
+        let y = from / 3 + dy
+        guard (0...2).contains(x), (0...2).contains(y) else { return false }
+        routeCells.append(y * 3 + x)
+        return true
+    }
+
+    @discardableResult public mutating func undoMove() -> Bool {
+        guard !completed, !isPosition, routeCells.count > 1 else { return false }
+        routeCells.removeLast()
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        attempts += 1
+        let correct = currentCell == destination
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -1820,6 +2067,8 @@ public enum MathMechanicID {
     public static let groupingGarden = "groupingGarden"
     public static let reasoningStudio = "reasoningStudio"
     public static let numberTrail = "numberTrail"
+    public static let differenceDock = "differenceDock"
+    public static let mapQuest = "mapQuest"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -1835,7 +2084,9 @@ public enum MathMechanicID {
         clockMarket,
         groupingGarden,
         reasoningStudio,
-        numberTrail
+        numberTrail,
+        differenceDock,
+        mapQuest
     ]
 }
 
@@ -2206,6 +2457,10 @@ public enum MathManipulativeSupport {
             return (try? ReasoningStudioModel(encounter: encounter)) != nil
         case MathMechanicID.numberTrail:
             return (try? NumberTrailModel(encounter: encounter)) != nil
+        case MathMechanicID.differenceDock:
+            return (try? DifferenceDockModel(encounter: encounter)) != nil
+        case MathMechanicID.mapQuest:
+            return (try? MapQuestModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -2239,6 +2494,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case groupingGarden(GroupingGardenModel)
     case reasoningStudio(ReasoningStudioModel)
     case numberTrail(NumberTrailModel)
+    case differenceDock(DifferenceDockModel)
+    case mapQuest(MapQuestModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -2270,6 +2527,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .reasoningStudio(try ReasoningStudioModel(encounter: encounter, at: date))
         case MathMechanicID.numberTrail:
             self = .numberTrail(try NumberTrailModel(encounter: encounter, at: date))
+        case MathMechanicID.differenceDock:
+            self = .differenceDock(try DifferenceDockModel(encounter: encounter, at: date))
+        case MathMechanicID.mapQuest:
+            self = .mapQuest(try MapQuestModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -2291,6 +2552,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.encounter
         case .reasoningStudio(let model): return model.encounter
         case .numberTrail(let model): return model.encounter
+        case .differenceDock(let model): return model.encounter
+        case .mapQuest(let model): return model.encounter
         }
     }
 
@@ -2310,6 +2573,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.completed
         case .reasoningStudio(let model): return model.completed
         case .numberTrail(let model): return model.completed
+        case .differenceDock(let model): return model.completed
+        case .mapQuest(let model): return model.completed
         }
     }
 
@@ -2329,6 +2594,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.support
         case .reasoningStudio(let model): return model.support
         case .numberTrail(let model): return model.support
+        case .differenceDock(let model): return model.support
+        case .mapQuest(let model): return model.support
         }
     }
 
@@ -2350,7 +2617,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail, .differenceDock, .mapQuest:
             return false
         }
     }
@@ -2373,7 +2640,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail, .differenceDock, .mapQuest:
             return false
         }
     }
@@ -2716,6 +2983,49 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func addDockCounter() -> Bool {
+        guard case .differenceDock(var model) = self else { return false }
+        let changed = model.placeCounter()
+        self = .differenceDock(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoDockCounter() -> Bool {
+        guard case .differenceDock(var model) = self else { return false }
+        let changed = model.undoCounter()
+        self = .differenceDock(model)
+        return changed
+    }
+
+    @discardableResult public mutating func adjustDockAnswer(_ delta: Int) -> Bool {
+        guard case .differenceDock(var model) = self else { return false }
+        let changed = model.adjustResponse(delta)
+        self = .differenceDock(model)
+        return changed
+    }
+
+    @discardableResult public mutating func selectMapPosition(_ cell: Int) -> Bool {
+        guard case .mapQuest(var model) = self else { return false }
+        let changed = model.chooseCell(cell)
+        self = .mapQuest(model)
+        return changed
+    }
+
+    @discardableResult public mutating func stepMap(dx: Int, dy: Int) -> Bool {
+        guard case .mapQuest(var model) = self else { return false }
+        let changed = model.move(dx: dx, dy: dy)
+        self = .mapQuest(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoMapStep() -> Bool {
+        guard case .mapQuest(var model) = self else { return false }
+        let changed = model.undoMove()
+        self = .mapQuest(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -2760,6 +3070,12 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberTrail(var model):
             model.apply(scaffold)
             self = .numberTrail(model)
+        case .differenceDock(var model):
+            model.apply(scaffold)
+            self = .differenceDock(model)
+        case .mapQuest(var model):
+            model.apply(scaffold)
+            self = .mapQuest(model)
         }
     }
 
@@ -2820,6 +3136,14 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberTrail(var model):
             let evidence = model.submit(at: date)
             self = .numberTrail(model)
+            return evidence
+        case .differenceDock(var model):
+            let evidence = model.submit(at: date)
+            self = .differenceDock(model)
+            return evidence
+        case .mapQuest(var model):
+            let evidence = model.submit(at: date)
+            self = .mapQuest(model)
             return evidence
         }
     }
