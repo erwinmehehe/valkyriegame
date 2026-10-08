@@ -478,6 +478,19 @@ import LearningCore
         beginInteraction()
         if adventure.undoGardenCut() { persist() }
     }
+    func adjustDifferenceRow(_ row: DifferenceRow, by delta: Int) {
+        beginInteraction()
+        if adventure.adjustDifferenceRow(row, by: delta) { persist() }
+    }
+    func pairDifferenceColumn(_ column: Int) {
+        beginInteraction()
+        if adventure.pairDifferenceColumn(column) { persist() }
+    }
+    func undoDifferencePair() {
+        beginInteraction()
+        if adventure.undoDifferencePair() { persist() }
+    }
+
     func chooseReasoningStrategy(_ choice: ReasoningStudioStrategy) {
         beginInteraction()
         if adventure.chooseReasoningStrategy(choice) { persist() }
