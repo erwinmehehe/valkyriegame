@@ -8,7 +8,7 @@ import sys
 PROTECTED = (
     "ValkyrieLearn/Resources/Valkyrie.atlas/",
     "ValkyrieLearn/Resources/V331_ART_MANIFEST.json",
-    "ValkyrieLearn/Game/Characters/ValkyrieNode.swift",
+    "ValkyrieLearn/Game/Actors/ValkyrieNode.swift",
 )
 base = os.environ.get("VALKYRIE_PR_BASE", "").strip()
 if not base:
