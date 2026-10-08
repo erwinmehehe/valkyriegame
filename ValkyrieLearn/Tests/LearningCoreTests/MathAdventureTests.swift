@@ -237,9 +237,10 @@ final class MathAdventureTests: XCTestCase {
         // below is still earned by eligible, real runtime evidence.
         var adventure = MathAdventure(continuingLearner: true)
         var profile = LearnerProfile(); var date = epoch; var seen = Set<String>()
-        // With seven mechanics and prerequisite-based variation, give the
-        // planner sufficient independent scored encounters to reach every one.
-        for _ in 0..<180 {
+        // Allow the readiness-gated Grade 2 grouping/fraction mechanics to
+        // emerge after legitimately earned prerequisites; they must not be
+        // forced early just to satisfy an arbitrary short simulation.
+        for _ in 0..<320 {
             let selection = try adventure.prepareNext(profile: &profile, now: date)
             if selection == .explorationBreak {
                 adventure.finishExploration(profile: &profile, at: date); continue
