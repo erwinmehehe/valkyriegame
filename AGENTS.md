@@ -345,15 +345,15 @@ Companions should participate inside the scene, not float as generic hint button
 
 Learning objects should look native to the world: flowers, crystals, carts, gears, bridges, runes, tools, creatures.
 
-### Valkyrie character identity lock
+### Canonical Valkyrie identity — immutable unless the owner explicitly approves a character redesign
 
-The original native `Valkyrie.atlas` is the only approved Valkyrie character identity. Never regenerate, restyle, reface, repaint, or substitute another girl in concept art, scene mockups, promotional panels, previews, or playable scenes. No modifications to Valkyrie's face, hair, clothing, proportions, pose sprites or textures during world-art tasks.
+The single approved protagonist is the character in `ValkyrieLearn/Resources/Valkyrie.atlas`, sourced from v3.31. **Keep her exact face, hair, clothing, proportions, colors, and six pose textures**. The production SpriteKit `ValkyrieNode` must continue to render that atlas in every world; no AI-generated substitute, repaint, synthesized lookalike, new outfit, or silhouette swap is permitted during art-polish work.
 
-- Generate **environment-only artwork** with no human figures, girls, HUD, writing, or character portraits baked into the background.
-- Composite Valkyrie only from the actual game's existing SpriteKit node or approved atlas, never from AI generation.
-- Identify AI-generated references as *concepts*, never as real native screenshots.
-- The canonical character is protected by `scripts/validate_native.py` asset hashes and `scripts/check_character_lock.py` in PR validation. Character redesign needs its own explicitly approved PR.
-- Do not merge artwork until actual iPad 9th-generation native screenshots are reviewed.
+**World art creation rule:** create standalone *environment-only* images with no people or humanoid figures and no baked-in Valkyrie. Only add the canonical character through `ValkyrieNode` at runtime. Backgrounds must not contain portraits, HUD, text, answers, or other game-state objects.
+
+**Preview accuracy rule:** don't call generated concepts or collages "current native game" screenshots. Native previews must come from the actual iPad simulator. Do not include a different child/character in visual proposals for this product.
+
+`python3 scripts/verify_valkyrie_identity.py` independently verifies the six source bytes/dimensions; the native pull-request gate also rejects edits to the sprite atlas and the character-rendering code. Explicit future character changes require their own reviewed task and owner approval before altering the lock.
 
 ## 16. Audio
 

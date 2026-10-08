@@ -324,6 +324,213 @@ public enum MathSkillCatalog {
 }
 
 
+public enum MathGradeBand: String, Codable, CaseIterable, Sendable {
+    case k2Readiness
+    case kindergarten
+    case grade1
+    case grade2
+}
+
+public enum MatatagMathDomain: String, Codable, CaseIterable, Sendable {
+    case numberAndAlgebra
+    case measurementAndGeometry
+    case dataAndProbability
+}
+
+public enum SingaporeMathArea: String, Codable, CaseIterable, Sendable {
+    case numbersAndAlgebra
+    case measurement
+    case geometry
+    case statistics
+    case problemSolving
+}
+
+public struct MathCurriculumAlignment: Equatable, Sendable {
+    public let skillID: SkillID
+    public let gradeBand: MathGradeBand
+    public let matatagDomain: MatatagMathDomain
+    public let singaporeArea: SingaporeMathArea
+    public let developmentalOrder: Int
+
+    public init(
+        skillID: SkillID,
+        gradeBand: MathGradeBand,
+        matatagDomain: MatatagMathDomain,
+        singaporeArea: SingaporeMathArea,
+        developmentalOrder: Int
+    ) {
+        self.skillID = skillID
+        self.gradeBand = gradeBand
+        self.matatagDomain = matatagDomain
+        self.singaporeArea = singaporeArea
+        self.developmentalOrder = developmentalOrder
+    }
+}
+
+/// Strand-level curriculum mapping for the K2-readiness -> Grade 2 adaptive path.
+///
+/// K2 is intentionally a readiness bridge, not a claim that DepEd defines a formal
+/// "K2" grade. Grade 1/2 mappings follow the MATATAG progression at the domain level
+/// and use Singapore Primary Mathematics as a secondary progression/pedagogy reference.
+/// Exact competency-code claims belong in separately reviewed curriculum data.
+public enum MathCurriculumMatrix {
+    public static let matatagSourceNote =
+        "DepEd MATATAG Mathematics: strand-level alignment for early numeracy through Grade 2; K2 is readiness-only."
+    public static let singaporeSourceNote =
+        "Singapore MOE Primary Mathematics 2021 syllabus: secondary progression reference for P1/P2 concepts and problem solving."
+
+    private static let k2Readiness: Set<SkillID> = [
+        MathSkills.quantity,
+        MathSkills.oneToOne10,
+        MathSkills.counting,
+        MathSkills.cardinality10,
+        MathSkills.subitizing,
+        MathSkills.patternAB,
+        MathSkills.recognizeShapes,
+        MathSkills.positionalLanguage,
+        MathSkills.compareLength,
+        MathSkills.compareWeight,
+        MathSkills.compareCapacity,
+        MathSkills.classifyObjects,
+        MathSkills.timeDayparts
+    ]
+
+    private static let kindergarten: Set<SkillID> = [
+        MathSkills.numeralQuantity10,
+        MathSkills.countTo20,
+        MathSkills.numberOrder20,
+        MathSkills.oneMoreLess20,
+        MathSkills.compare,
+        MathSkills.estimate10,
+        MathSkills.compose5,
+        MathSkills.decompose5,
+        MathSkills.bonds5,
+        MathSkills.patternAAB,
+        MathSkills.patternABC,
+        MathSkills.patternMissing,
+        MathSkills.patternCreate,
+        MathSkills.shapeAttributes,
+        MathSkills.composeShapes,
+        MathSkills.symmetry,
+        MathSkills.nonstandardMeasure
+    ]
+
+    private static let grade1: Set<SkillID> = [
+        MathSkills.compose10,
+        MathSkills.decompose10,
+        MathSkills.bonds10,
+        MathSkills.make10,
+        MathSkills.doubles10,
+        MathSkills.combine5,
+        MathSkills.addition,
+        MathSkills.addPictures10,
+        MathSkills.addSymbols10,
+        MathSkills.countOn10,
+        MathSkills.missing,
+        MathSkills.storyAddition10,
+        MathSkills.takeAway5,
+        MathSkills.subtraction,
+        MathSkills.subtractPictures10,
+        MathSkills.subtractSymbols10,
+        MathSkills.findDifference10,
+        MathSkills.inverseFacts10,
+        MathSkills.groupTen,
+        MathSkills.placeValue,
+        MathSkills.buildTwoDigit,
+        MathSkills.readTwoDigit,
+        MathSkills.compareTwoDigit,
+        MathSkills.orderTwoDigit,
+        MathSkills.equivalence10,
+        MathSkills.rotateShapes,
+        MathSkills.mapRoute,
+        MathSkills.pictureGraph,
+        MathSkills.coinValues,
+        MathSkills.explainComparison,
+        MathSkills.sameTotalDifferentWay
+    ]
+
+    private static let grade2: Set<SkillID> = [
+        MathSkills.addWithin20,
+        MathSkills.subtractWithin20,
+        MathSkills.reasoning,
+        MathSkills.chooseStrategy,
+        MathSkills.whatChanged,
+        MathSkills.multipleSolutions,
+        MathSkills.multiStep,
+        MathSkills.equalGroups,
+        MathSkills.repeatedAddition,
+        MathSkills.equalSharing,
+        MathSkills.halves,
+        MathSkills.quarters
+    ]
+
+    public static let mappedSkillIDs: Set<SkillID> =
+        k2Readiness.union(kindergarten).union(grade1).union(grade2)
+
+    public static func gradeBand(for skillID: SkillID) -> MathGradeBand? {
+        if k2Readiness.contains(skillID) { return .k2Readiness }
+        if kindergarten.contains(skillID) { return .kindergarten }
+        if grade1.contains(skillID) { return .grade1 }
+        if grade2.contains(skillID) { return .grade2 }
+        return nil
+    }
+
+    public static func matatagDomain(for descriptor: MathSkillDescriptor) -> MatatagMathDomain {
+        if descriptor.id == MathSkills.classifyObjects || descriptor.id == MathSkills.pictureGraph {
+            return .dataAndProbability
+        }
+
+        switch descriptor.strand {
+        case .geometrySpatial, .measurementDataTimeMoney:
+            return .measurementAndGeometry
+        case .numberSense, .numberComposition, .addition, .subtraction,
+             .placeValue, .patternsAlgebra, .reasoning, .stretch:
+            return .numberAndAlgebra
+        }
+    }
+
+    public static func singaporeArea(for descriptor: MathSkillDescriptor) -> SingaporeMathArea {
+        if descriptor.id == MathSkills.classifyObjects || descriptor.id == MathSkills.pictureGraph {
+            return .statistics
+        }
+
+        switch descriptor.strand {
+        case .geometrySpatial:
+            return .geometry
+        case .measurementDataTimeMoney:
+            return .measurement
+        case .reasoning:
+            return .problemSolving
+        case .numberSense, .numberComposition, .addition, .subtraction,
+             .placeValue, .patternsAlgebra, .stretch:
+            return .numbersAndAlgebra
+        }
+    }
+
+    public static let alignments: [MathCurriculumAlignment] =
+        MathSkillCatalog.descriptors.compactMap { descriptor in
+            guard let band = gradeBand(for: descriptor.id) else { return nil }
+            return MathCurriculumAlignment(
+                skillID: descriptor.id,
+                gradeBand: band,
+                matatagDomain: matatagDomain(for: descriptor),
+                singaporeArea: singaporeArea(for: descriptor),
+                developmentalOrder: descriptor.developmentalOrder
+            )
+        }
+
+    public static func alignment(for skillID: SkillID) -> MathCurriculumAlignment? {
+        alignments.first { $0.skillID == skillID }
+    }
+
+    public static func skills(in band: MathGradeBand) -> [MathSkillDescriptor] {
+        MathSkillCatalog.descriptors
+            .filter { gradeBand(for: $0.id) == band }
+            .sorted { $0.developmentalOrder < $1.developmentalOrder }
+    }
+}
+
+
 // MARK: - Parent-facing Math summary
 
 public struct ParentMathSkillSnapshot: Equatable, Sendable {

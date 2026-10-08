@@ -109,25 +109,37 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertFalse(model.decrement())
     }
 
-    func testMathCastleEncounterCatalogIsSupportedUniqueAndSmall() {
+    func testMathCastleEncounterCatalogIsSupportedUniqueAndProductionScale() {
         let encounters = MathCastleEncounterCatalog.all
+        let seedCatalog =
+            MathFoundation.encounters
+            + MathCastleEncounterCatalog.prerequisites
+            + MathCastleEncounterCatalog.balanceScale
+            + MathCastleEncounterCatalog.numberBondMachine
+            + MathCastleEncounterCatalog.tenFrameGate
+            + MathCastleEncounterCatalog.missingNumberBridge
+            + MathCastleEncounterCatalog.reasoningDepth
 
-        XCTAssertGreaterThan(encounters.count, MathFoundation.encounters.count)
-        XCTAssertLessThan(encounters.count, 50)
+        XCTAssertLessThan(seedCatalog.count, 50)
+        XCTAssertEqual(encounters.count, 1000)
+        XCTAssertEqual(
+            encounters.count,
+            seedCatalog.count + MathProductionQuestionBank.encounters.count
+        )
         XCTAssertEqual(Set(encounters.map(\.id)).count, encounters.count)
 
         // Legacy foundation intentionally contains a few different skill IDs that
         // render the same math surface. EngagementDirector blocks those repeats at
-        // runtime. New native mechanics themselves must not introduce duplicates.
-        let newMechanics =
+        // runtime. The production bank itself has stricter fingerprint uniqueness.
+        let newSeedMechanics =
             MathCastleEncounterCatalog.prerequisites
             + MathCastleEncounterCatalog.balanceScale
             + MathCastleEncounterCatalog.numberBondMachine
             + MathCastleEncounterCatalog.tenFrameGate
             + MathCastleEncounterCatalog.missingNumberBridge
         XCTAssertEqual(
-            Set(newMechanics.map(\.fingerprint)).count,
-            newMechanics.count
+            Set(newSeedMechanics.map(\.fingerprint)).count,
+            newSeedMechanics.count
         )
         XCTAssertTrue(encounters.allSatisfy(MathManipulativeSupport.supports))
         XCTAssertTrue(MathMechanicID.adaptiveSet.isSuperset(
@@ -275,7 +287,7 @@ final class CrystalCartTests: XCTestCase {
         var now = Date(timeIntervalSince1970: 1000)
         var seenMechanics = Set<String>()
         // Replan after each real response; never seed skill readiness by hand.
-        for _ in 0..<60 {
+        for _ in 0..<180 {
             let plan = try MathCastleEncounterCatalog.sessionPlan(for: profile,
                 encounterCount: 1, now: now)
             guard let item = plan.encounters.first else { break }
@@ -293,8 +305,14 @@ final class CrystalCartTests: XCTestCase {
                 at: now.addingTimeInterval(-30))
             switch runtime {
             case .crystalCart:
-                for _ in encounter.initialQuantity..<encounter.targetQuantity {
-                    XCTAssertTrue(runtime.increment())
+                if encounter.operation == .subtraction {
+                    for _ in encounter.targetQuantity..<encounter.initialQuantity {
+                        XCTAssertTrue(runtime.decrement())
+                    }
+                } else {
+                    for _ in encounter.initialQuantity..<encounter.targetQuantity {
+                        XCTAssertTrue(runtime.increment())
+                    }
                 }
             case .balanceScale(let model): runtime.chooseComparison(model.correctChoice)
             case .numberBond(let model): runtime.setValue(model.correctMissingPart)

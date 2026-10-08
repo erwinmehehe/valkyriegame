@@ -238,10 +238,662 @@ public enum MathPlacement {
 }
 
 
-/// Authored encounter set for the first reusable Math Castle mechanics.
+public enum MathQuestionPurpose: String, Codable, CaseIterable, Sendable {
+    case instruction
+    case practice
+    case representationTransfer
+    case storyTransfer
+    case review
+    case reasoning
+}
+
+public struct MathQuestionVariant: Equatable, Sendable {
+    public let encounter: LearningEncounter
+    public let gradeBand: MathGradeBand
+    public let matatagDomain: MatatagMathDomain
+    public let singaporeArea: SingaporeMathArea
+    public let difficulty: Int
+    public let purpose: MathQuestionPurpose
+    public let masteryEligible: Bool
+    public let placementEligible: Bool
+    public let reviewEligible: Bool
+
+    public init(
+        encounter: LearningEncounter,
+        gradeBand: MathGradeBand,
+        matatagDomain: MatatagMathDomain,
+        singaporeArea: SingaporeMathArea,
+        difficulty: Int,
+        purpose: MathQuestionPurpose,
+        masteryEligible: Bool = true,
+        placementEligible: Bool = false,
+        reviewEligible: Bool = true
+    ) {
+        self.encounter = encounter
+        self.gradeBand = gradeBand
+        self.matatagDomain = matatagDomain
+        self.singaporeArea = singaporeArea
+        self.difficulty = min(5, max(1, difficulty))
+        self.purpose = purpose
+        self.masteryEligible = masteryEligible
+        self.placementEligible = placementEligible
+        self.reviewEligible = reviewEligible
+    }
+}
+
+/// Parameterized production bank for the native manipulatives that can currently
+/// observe a child's mathematical action.
 ///
-/// These are intentionally few and varied. The goal is adaptive delivery across
-/// different representations and mechanics, not a large generated question bank.
+/// This expands variety without pretending unsupported skills are assessed. Skills
+/// such as place value, patterns, geometry, measurement, strategy choice, equal
+/// groups and fractions stay visible in MathCurriculumMatrix but do not receive
+/// mastery evidence until a native mechanic can actually observe the required act.
+public enum MathProductionQuestionBank {
+    public static let variants: [MathQuestionVariant] = {
+        var result: [MathQuestionVariant] = []
+
+        func add(
+            _ id: String,
+            skill: SkillID,
+            mechanic: String,
+            representation: Representation,
+            operation: CartOperation,
+            initial: Int,
+            target: Int,
+            prompt: String,
+            context: String,
+            difficulty: Int,
+            purpose: MathQuestionPurpose,
+            challengeDepth: Int = 0
+        ) {
+            guard let alignment = MathCurriculumMatrix.alignment(for: skill) else {
+                preconditionFailure("Missing curriculum alignment for \(skill.rawValue)")
+            }
+
+            result.append(
+                MathQuestionVariant(
+                    encounter: LearningEncounter(
+                        id: id,
+                        skillID: skill,
+                        mechanicID: mechanic,
+                        representation: representation,
+                        operation: operation,
+                        initialQuantity: initial,
+                        targetQuantity: target,
+                        prompt: prompt,
+                        context: context,
+                        challengeDepth: challengeDepth
+                    ),
+                    gradeBand: alignment.gradeBand,
+                    matatagDomain: alignment.matatagDomain,
+                    singaporeArea: alignment.singaporeArea,
+                    difficulty: difficulty,
+                    purpose: purpose
+                )
+            )
+        }
+
+        // K2 / Kindergarten: quantities, counting, cardinality, quick-look and numerals.
+        for target in 1...10 {
+            add(
+                "prod-quantity-\(target)",
+                skill: MathSkills.quantity,
+                mechanic: MathMechanicID.crystalCart,
+                representation: .concrete,
+                operation: .counting,
+                initial: 0,
+                target: target,
+                prompt: "Put \(target) crystals in Pip's cart.",
+                context: "prod.quantity",
+                difficulty: target <= 5 ? 1 : 2,
+                purpose: .practice
+            )
+            add(
+                "prod-one-to-one-\(target)",
+                skill: MathSkills.oneToOne10,
+                mechanic: MathMechanicID.crystalCart,
+                representation: .concrete,
+                operation: .counting,
+                initial: 0,
+                target: target,
+                prompt: "Move \(target) crystals one at a time into the cart.",
+                context: "prod.oneToOne",
+                difficulty: target <= 5 ? 1 : 2,
+                purpose: .instruction
+            )
+            add(
+                "prod-count-cardinality-\(target)",
+                skill: MathSkills.counting,
+                mechanic: MathMechanicID.crystalCart,
+                representation: .concrete,
+                operation: .counting,
+                initial: 0,
+                target: target,
+                prompt: "Count out \(target) crystals. How many are in the cart now?",
+                context: "prod.counting",
+                difficulty: target <= 5 ? 1 : 2,
+                purpose: .practice
+            )
+            add(
+                "prod-cardinality-frame-\(target)",
+                skill: MathSkills.cardinality10,
+                mechanic: MathMechanicID.tenFrameGate,
+                representation: .pictorial,
+                operation: .counting,
+                initial: 0,
+                target: target,
+                prompt: "Count and light \(target) spaces. The last count tells how many.",
+                context: "prod.cardinality",
+                difficulty: target <= 5 ? 1 : 2,
+                purpose: .representationTransfer
+            )
+            add(
+                "prod-numeral-quantity-\(target)",
+                skill: MathSkills.numeralQuantity10,
+                mechanic: MathMechanicID.tenFrameGate,
+                representation: .pictorial,
+                operation: .quantityMatching,
+                initial: 0,
+                target: target,
+                prompt: "The rune shows \(target). Make that quantity on the ten-frame.",
+                context: "prod.numeralQuantity",
+                difficulty: target <= 5 ? 1 : 2,
+                purpose: .representationTransfer
+            )
+        }
+
+        for target in 1...5 {
+            add(
+                "prod-subitize-\(target)",
+                skill: MathSkills.subitizing,
+                mechanic: MathMechanicID.tenFrameGate,
+                representation: .pictorial,
+                operation: .quantityMatching,
+                initial: 0,
+                target: target,
+                prompt: "Quick look: remember how many lights flashed, then make the same quantity.",
+                context: "quickLook",
+                difficulty: target <= 3 ? 1 : 2,
+                purpose: .practice
+            )
+        }
+
+        // Quantity comparison, including zero and equality, with both orientations.
+        for left in 0...10 {
+            for right in 0...10 {
+                let relation: String
+                if left == right {
+                    relation = "the same number"
+                } else if left > right {
+                    relation = "more on the left"
+                } else {
+                    relation = "more on the right"
+                }
+                add(
+                    "prod-compare-\(left)-\(right)",
+                    skill: MathSkills.compare,
+                    mechanic: MathMechanicID.balanceScale,
+                    representation: .concrete,
+                    operation: .comparison,
+                    initial: left,
+                    target: right,
+                    prompt: "Compare \(left) and \(right) crystals. Show whether there are \(relation).",
+                    context: "prod.compare",
+                    difficulty: max(left, right) <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Part-whole progression to 5.
+        for whole in 2...5 {
+            for known in 0..<whole {
+                add(
+                    "prod-compose5-\(whole)-\(known)",
+                    skill: MathSkills.compose5,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .concrete,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "\(known) crystals are in one chamber. Complete the whole of \(whole).",
+                    context: "prod.compose5",
+                    difficulty: 1,
+                    purpose: .instruction
+                )
+                add(
+                    "prod-decompose5-\(whole)-\(known)",
+                    skill: MathSkills.decompose5,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .concrete,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "Split \(whole): keep \(known) in this chamber and build the other part.",
+                    context: "prod.decompose5",
+                    difficulty: 2,
+                    purpose: .practice
+                )
+                add(
+                    "prod-bond5-\(whole)-\(known)",
+                    skill: MathSkills.bonds5,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .pictorial,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "Complete the number bond. \(known) and what make \(whole)?",
+                    context: "prod.bonds5",
+                    difficulty: 2,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        // Part-whole progression from 6 through 10.
+        for whole in 6...10 {
+            for known in 1..<whole {
+                add(
+                    "prod-compose10-\(whole)-\(known)",
+                    skill: MathSkills.compose10,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .concrete,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "\(known) crystals are ready. Complete the whole of \(whole).",
+                    context: "prod.compose10",
+                    difficulty: whole <= 8 ? 2 : 3,
+                    purpose: .instruction
+                )
+                add(
+                    "prod-decompose10-\(whole)-\(known)",
+                    skill: MathSkills.decompose10,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .concrete,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "Decompose \(whole): one part is \(known). Build the other part.",
+                    context: "prod.decompose10",
+                    difficulty: whole <= 8 ? 2 : 3,
+                    purpose: .practice
+                )
+                add(
+                    "prod-bond10-\(whole)-\(known)",
+                    skill: MathSkills.bonds10,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .pictorial,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "Complete the number bond: \(known) and what make \(whole)?",
+                    context: "prod.bonds10",
+                    difficulty: whole <= 8 ? 2 : 3,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        for known in 1...9 {
+            add(
+                "prod-make10-\(known)",
+                skill: MathSkills.make10,
+                mechanic: MathMechanicID.numberBondMachine,
+                representation: .pictorial,
+                operation: .numberBond,
+                initial: known,
+                target: 10,
+                prompt: "\(known) is one part. What part makes a whole of 10?",
+                context: "prod.make10",
+                difficulty: 3,
+                purpose: .representationTransfer
+            )
+        }
+
+        for known in 1...5 {
+            add(
+                "prod-doubles-\(known)",
+                skill: MathSkills.doubles10,
+                mechanic: MathMechanicID.numberBondMachine,
+                representation: .pictorial,
+                operation: .numberBond,
+                initial: known,
+                target: known * 2,
+                prompt: "One part is \(known). Build the matching part to make double \(known).",
+                context: "prod.doubles",
+                difficulty: 3,
+                purpose: .practice
+            )
+        }
+
+        // Addition within 5.
+        for start in 1...4 {
+            for addend in 1...(5 - start) {
+                let total = start + addend
+                add(
+                    "prod-combine5-\(start)-\(addend)",
+                    skill: MathSkills.combine5,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .concrete,
+                    operation: .addition,
+                    initial: start,
+                    target: total,
+                    prompt: "Start with \(start) crystals. Add \(addend) more.",
+                    context: "prod.combine5",
+                    difficulty: 1,
+                    purpose: .instruction
+                )
+            }
+        }
+
+        // Addition within 10 across concrete, pictorial/symbolic and story representations.
+        for start in 1...9 {
+            for addend in 1...(10 - start) {
+                let total = start + addend
+                add(
+                    "prod-add10-\(start)-\(addend)",
+                    skill: MathSkills.addition,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .concrete,
+                    operation: .addition,
+                    initial: start,
+                    target: total,
+                    prompt: "There are \(start) crystals. Add \(addend) more.",
+                    context: "prod.addition",
+                    difficulty: total <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+                add(
+                    "prod-add-pictures-\(start)-\(addend)",
+                    skill: MathSkills.addPictures10,
+                    mechanic: MathMechanicID.tenFrameGate,
+                    representation: .pictorial,
+                    operation: .addition,
+                    initial: start,
+                    target: total,
+                    prompt: "\(start) lights are on. Add \(addend) to show the total.",
+                    context: "prod.addPictures",
+                    difficulty: 2,
+                    purpose: .representationTransfer
+                )
+                add(
+                    "prod-add-symbols-\(start)-\(addend)",
+                    skill: MathSkills.addSymbols10,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .symbolic,
+                    operation: .addition,
+                    initial: start,
+                    target: total,
+                    prompt: "\(start) + \(addend) = ?. Build the total.",
+                    context: "prod.addSymbols",
+                    difficulty: 3,
+                    purpose: .representationTransfer
+                )
+                add(
+                    "prod-add-story-\(start)-\(addend)",
+                    skill: MathSkills.storyAddition10,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .story,
+                    operation: .addition,
+                    initial: start,
+                    target: total,
+                    prompt: "\(start) moonstones are ready. \(addend) more arrive. Show how many there are now.",
+                    context: "prod.storyAddition",
+                    difficulty: 3,
+                    purpose: .storyTransfer,
+                    challengeDepth: 1
+                )
+                add(
+                    "prod-missing10-\(start)-\(total)",
+                    skill: MathSkills.missing,
+                    mechanic: MathMechanicID.missingNumberBridge,
+                    representation: .symbolic,
+                    operation: .missingAddend,
+                    initial: start,
+                    target: total,
+                    prompt: "\(start) + □ = \(total). Fill the missing part.",
+                    context: "prod.missing10",
+                    difficulty: 3,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        // Grade 2 bridge: addition within 20 through the native missing-number mechanic.
+        for start in 5...15 {
+            for gap in 2...5 where start + gap <= 20 {
+                let total = start + gap
+                add(
+                    "prod-add20-\(start)-\(gap)",
+                    skill: MathSkills.addWithin20,
+                    mechanic: MathMechanicID.missingNumberBridge,
+                    representation: .symbolic,
+                    operation: .missingAddend,
+                    initial: start,
+                    target: total,
+                    prompt: "\(start) + □ = \(total). Find the missing addend.",
+                    context: "prod.addWithin20",
+                    difficulty: total <= 15 ? 3 : 4,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Subtraction: concrete -> pictorial -> symbolic, bounded by the current cart.
+        for initial in 2...5 {
+            for target in 0..<initial {
+                add(
+                    "prod-takeaway5-\(initial)-\(target)",
+                    skill: MathSkills.takeAway5,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .concrete,
+                    operation: .subtraction,
+                    initial: initial,
+                    target: target,
+                    prompt: "Start with \(initial). Take away \(initial - target). Show what remains.",
+                    context: "prod.takeAway5",
+                    difficulty: 1,
+                    purpose: .instruction
+                )
+            }
+        }
+
+        for initial in 2...10 {
+            for target in 0..<initial {
+                let removed = initial - target
+                add(
+                    "prod-sub10-\(initial)-\(target)",
+                    skill: MathSkills.subtraction,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .concrete,
+                    operation: .subtraction,
+                    initial: initial,
+                    target: target,
+                    prompt: "There are \(initial) crystals. Take away \(removed).",
+                    context: "prod.subtraction",
+                    difficulty: initial <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+                add(
+                    "prod-sub-pictures-\(initial)-\(target)",
+                    skill: MathSkills.subtractPictures10,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .pictorial,
+                    operation: .subtraction,
+                    initial: initial,
+                    target: target,
+                    prompt: "The picture starts with \(initial). Remove \(removed) and show what is left.",
+                    context: "prod.subtractPictures",
+                    difficulty: 2,
+                    purpose: .representationTransfer
+                )
+                add(
+                    "prod-sub-symbols-\(initial)-\(target)",
+                    skill: MathSkills.subtractSymbols10,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .symbolic,
+                    operation: .subtraction,
+                    initial: initial,
+                    target: target,
+                    prompt: "\(initial) - \(removed) = ?. Build the answer.",
+                    context: "prod.subtractSymbols",
+                    difficulty: 3,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        // Current cart renders safely only through 12, so Grade 2 subtraction is
+        // deliberately partial rather than falsely claiming full within-20 coverage.
+        for initial in 11...12 {
+            for removed in 1...5 {
+                let target = initial - removed
+                add(
+                    "prod-sub20-\(initial)-\(removed)",
+                    skill: MathSkills.subtractWithin20,
+                    mechanic: MathMechanicID.crystalCart,
+                    representation: .story,
+                    operation: .subtraction,
+                    initial: initial,
+                    target: target,
+                    prompt: "\(initial) crystals arrive. \(removed) power the lift. Show how many remain.",
+                    context: "prod.subtractWithin20",
+                    difficulty: 4,
+                    purpose: .storyTransfer,
+                    challengeDepth: 1
+                )
+            }
+        }
+
+        // Deeper reasoning that the current physical manipulatives can genuinely score.
+        for whole in 5...10 {
+            for known in 1..<whole {
+                add(
+                    "prod-equivalence-\(whole)-\(known)",
+                    skill: MathSkills.equivalence10,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .reasoning,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "Another machine also makes \(whole). Complete this different part-whole form with \(known) already shown.",
+                    context: "prod.equivalence",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 2
+                )
+            }
+        }
+
+        for whole in 6...10 {
+            for known in 1..<whole {
+                add(
+                    "prod-same-total-\(whole)-\(known)",
+                    skill: MathSkills.sameTotalDifferentWay,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .reasoning,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "Make the same total of \(whole) using \(known) as one part.",
+                    context: "prod.sameTotal",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 2
+                )
+            }
+        }
+
+        for known in 1...5 {
+            for whole in (known + 2)...min(10, known + 5) {
+                add(
+                    "prod-error-analysis-\(known)-\(whole)",
+                    skill: MathSkills.reasoning,
+                    mechanic: MathMechanicID.numberBondMachine,
+                    representation: .reasoning,
+                    operation: .numberBond,
+                    initial: known,
+                    target: whole,
+                    prompt: "Pip's machine is wrong. Keep \(known) here and repair the other part so the whole is \(whole).",
+                    context: "prod.errorAnalysis",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 2
+                )
+            }
+        }
+
+        for start in 2...8 {
+            let maximumChange = min(4, 10 - start)
+            if maximumChange > 0 {
+                for change in 1...maximumChange {
+                    add(
+                        "prod-what-changed-\(start)-\(change)",
+                        skill: MathSkills.whatChanged,
+                        mechanic: MathMechanicID.crystalCart,
+                        representation: .reasoning,
+                        operation: .addition,
+                        initial: start,
+                        target: start + change,
+                        prompt: "The cart changed from \(start) to \(start + change). Rebuild what changed.",
+                        context: "prod.whatChanged",
+                        difficulty: 4,
+                        purpose: .reasoning,
+                        challengeDepth: 2
+                    )
+                }
+            }
+        }
+
+        var comparisonReasoningCount = 0
+        outer: for left in 1...10 {
+            for right in 1...10 where left != right {
+                add(
+                    "prod-explain-compare-\(left)-\(right)",
+                    skill: MathSkills.explainComparison,
+                    mechanic: MathMechanicID.balanceScale,
+                    representation: .reasoning,
+                    operation: .comparison,
+                    initial: left,
+                    target: right,
+                    prompt: "Compare \(left) and \(right). Choose the relationship that the quantities prove.",
+                    context: "prod.explainComparison",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 2
+                )
+                comparisonReasoningCount += 1
+                if comparisonReasoningCount == 30 { break outer }
+            }
+        }
+
+        return result
+    }()
+
+    public static let encounters: [LearningEncounter] = variants.map(\.encounter)
+
+    public static let coveredSkillIDs: Set<SkillID> = Set(encounters.map(\.skillID))
+
+    public static func hasNativeAssessment(for skillID: SkillID) -> Bool {
+        coveredSkillIDs.contains(skillID)
+    }
+
+    public static func variants(for skillID: SkillID) -> [MathQuestionVariant] {
+        variants.filter { $0.encounter.skillID == skillID }
+    }
+
+    public static func variants(in band: MathGradeBand) -> [MathQuestionVariant] {
+        variants.filter { $0.gradeBand == band }
+    }
+}
+
+
+/// Seed scenarios for the reusable Math Castle mechanics.
+///
+/// The named arrays preserve the original milestone scenarios and regression
+/// fixtures. `all` also includes MathProductionQuestionBank, which supplies the
+/// larger parameterized K2-readiness through Grade 2 adaptive pool.
 public enum MathCastleEncounterCatalog {
     public static let balanceScale: [LearningEncounter] = [
         LearningEncounter(
@@ -573,6 +1225,7 @@ public enum MathCastleEncounterCatalog {
         + tenFrameGate
         + missingNumberBridge
         + reasoningDepth
+        + MathProductionQuestionBank.encounters
 
     public static func sessionPlan(
         for profile: LearnerProfile,
