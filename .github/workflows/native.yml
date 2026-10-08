@@ -29,6 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validate canonical Valkyrie identity
+        run: python3 scripts/verify_valkyrie_identity.py
+      - name: Test Valkyrie identity guard
+        run: python3 -m unittest discover -s scripts -p 'test_verify_valkyrie_identity.py'
+      - name: Reject character changes in unrelated PRs
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
+          git diff --name-only --no-renames FETCH_HEAD HEAD | python3 scripts/verify_valkyrie_identity.py --changed-stdin
       - run: python3 scripts/validate_native.py
 
   ipad-build-and-tests:
