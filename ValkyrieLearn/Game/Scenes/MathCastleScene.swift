@@ -1334,8 +1334,19 @@ import LearningCore
     // Explicitly test knob centers in mechanic-local coordinates before generic
     // SpriteKit hit ancestry: illustrated trays can overlap visible controls.
     private func handleMechanicDirectControl(at point: CGPoint) -> Bool {
-        guard let active = state.runtime, let mechanic, canManipulate() else { return false }
+        guard let active = state.runtime, let mechanic else { return false }
         let local = mechanic.convert(point, from: self)
+        // Engage via the machine's actual interactive panel first: decorative
+        // child sprites can mask its generic node name at the center.
+        if !canManipulate() {
+            if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
+               active.encounter.mechanicID == MathMechanicID.placeValueFactory
+                    || active.encounter.mechanicID == MathMechanicID.patternLoom {
+                engageMachine()
+                return true
+            }
+            return false
+        }
         switch active {
         case .placeValueFactory(let model) where !model.isComparison:
             let controls: [(CGPoint, Int, Int)] = [
