@@ -77,7 +77,7 @@ assert science_art['retinaTarget'] == [2560, 1920]
 assert len(science_art['assets']) == 2
 for path, metadata in science_art['assets'].items():
     raw = (ROOT/path).read_bytes()
-    assert raw.startswith(b'%PDF-1.4\\n'), path
+    assert raw.startswith(b'%PDF-1.4'), path
     assert b'/MediaBox [0 0 1280 960]' in raw, path
     assert b'/Type /Page' in raw, path
     assert raw.rstrip().endswith(b'%%EOF'), path
