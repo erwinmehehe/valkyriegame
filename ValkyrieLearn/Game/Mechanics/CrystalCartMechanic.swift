@@ -2102,6 +2102,269 @@ import LearningCore
     }
 }
 
+
+@MainActor final class GroupingGardenMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("GROUPING GARDEN", size: 19)
+    private let instruction = ArtSystem.label("", size: 14)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.groupingGarden
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.groupingGarden
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 302, height: 47),
+            fill: UIColor(red: 0.08, green: 0.23, blue: 0.21, alpha: 0.97),
+            stroke: UIColor(red: 0.95, green: 0.83, blue: 0.43, alpha: 1),
+            radius: 16
+        )
+        plaque.position.y = 128
+        plaque.name = MathMechanicID.groupingGarden
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.groupingGarden
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.95, green: 0.86, blue: 0.62, alpha: 1)
+        instruction.position.y = 98
+        instruction.name = MathMechanicID.groupingGarden
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func text(_ string: String, x: CGFloat, y: CGFloat, size: CGFloat = 15) {
+        let label = ArtSystem.label(string, size: size)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.position = CGPoint(x: x, y: y)
+        label.name = MathMechanicID.groupingGarden
+        activity.addChild(label)
+    }
+
+    private func control(_ title: String, name: String, x: CGFloat, y: CGFloat,
+                         radius: CGFloat = 33) {
+        let medallion = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.10, green: 0.31, blue: 0.30, alpha: 1),
+            stroke: UIColor(red: 0.93, green: 0.84, blue: 0.48, alpha: 1),
+            glow: 0
+        )
+        medallion.name = name
+        medallion.position = CGPoint(x: x, y: y)
+        medallion.zPosition = 50
+        activity.addChild(medallion)
+
+        let label = ArtSystem.label(title, size: title.count > 3 ? 14 : 20)
+        label.fontName = "AvenirNext-Heavy"
+        label.fontColor = .white
+        label.name = name
+        medallion.addChild(label)
+
+        let hit = SKShapeNode(circleOfRadius: radius + 5)
+        hit.position = CGPoint(x: x, y: y)
+        hit.name = name
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 70
+        activity.addChild(hit)
+    }
+
+    private func seed(x: CGFloat, y: CGFloat, radius: CGFloat = 8) {
+        let pip = SKShapeNode(circleOfRadius: radius)
+        pip.position = CGPoint(x: x, y: y)
+        pip.fillColor = UIColor(red: 0.46, green: 0.89, blue: 0.59, alpha: 1)
+        pip.strokeColor = UIColor(red: 0.97, green: 0.92, blue: 0.61, alpha: 1)
+        pip.lineWidth = 1.5
+        pip.name = MathMechanicID.groupingGarden
+        activity.addChild(pip)
+    }
+
+    func render(_ model: GroupingGardenModel) {
+        activity.removeAllChildren()
+        switch model.task {
+        case .equalGroups, .equalSharing:
+            renderGroupBaskets(model)
+        case .repeatedAddition:
+            renderRepeatedJumps(model)
+        case .halves, .quarters:
+            renderFractionCuts(model)
+        }
+    }
+
+    private func renderGroupBaskets(_ model: GroupingGardenModel) {
+        instruction.text = model.task == .equalGroups
+            ? "PLACE \(model.groupSize) SEEDS IN EACH BASKET"
+            : "SHARE \(model.targetTotal) SEEDS EQUALLY"
+        let n = model.groupCount
+        let spacing: CGFloat = n == 2 ? 160 : (n == 3 ? 137 : 102)
+        for index in 0..<n {
+            let x = (CGFloat(index) - CGFloat(n - 1) / 2) * spacing
+            let card = ArtSystem.panel(
+                CGSize(width: n == 5 ? 94 : 117, height: 115),
+                fill: UIColor(red: 0.12, green: 0.25, blue: 0.21, alpha: 0.96),
+                stroke: UIColor(red: 0.81, green: 0.77, blue: 0.45, alpha: 0.88),
+                radius: 12, lineWidth: 2, shadowAlpha: 0.08
+            )
+            card.position = CGPoint(x: x, y: 0)
+            card.name = MathMechanicID.groupingGarden
+            activity.addChild(card)
+            text("BASKET \(index + 1)", x: x, y: 39, size: n == 5 ? 11 : 13)
+
+            let count = model.groups[index]
+            for piece in 0..<min(count, 12) {
+                let dx = CGFloat(piece % 4) * 19 - 28.5
+                let dy = CGFloat(piece / 4) * 21 - 33
+                seed(x: x + dx, y: dy, radius: 7)
+            }
+            if count > 12 {
+                text("+\(count - 12)", x: x, y: -42, size: 12)
+            }
+            control("＋", name: "gardenBasket\(index + 1)", x: x, y: -121,
+                    radius: 32)
+        }
+        control("↶", name: "gardenUndoSeed", x: 229, y: 62, radius: 28)
+        text("\(model.unitsPlaced) OF \(model.targetTotal) SEEDS PLACED",
+             x: 0, y: -73, size: 13)
+    }
+
+    private func renderRepeatedJumps(_ model: GroupingGardenModel) {
+        instruction.text = "COUNT BY \(model.groupSize) WITH \(model.groupCount) JUMPS"
+        let n = model.groupCount
+        let spacing: CGFloat = n == 2 ? 155 : (n == 3 ? 145 : 108)
+        for i in 0..<n {
+            let x = (CGFloat(i) - CGFloat(n - 1) / 2) * spacing
+            let bg = ArtSystem.panel(
+                CGSize(width: 98, height: 63),
+                fill: UIColor(red: 0.13, green: 0.28, blue: 0.24, alpha: 1),
+                stroke: UIColor(red: 0.74, green: 0.84, blue: 0.50, alpha: 0.78),
+                radius: 9, lineWidth: 1.5, shadowAlpha: 0.04
+            )
+            bg.position = CGPoint(x: x, y: 38)
+            bg.name = MathMechanicID.groupingGarden
+            activity.addChild(bg)
+            for j in 0..<model.groupSize {
+                seed(x: x - CGFloat(model.groupSize - 1) * 8.5 + CGFloat(j) * 17,
+                     y: 38, radius: 5.4)
+            }
+        }
+
+        let originX: CGFloat = -198
+        let stepX: CGFloat = 57
+        for index in 0...min(model.jumps + 1, model.groupCount + 2) {
+            let x = originX + CGFloat(index) * stepX
+            if index <= model.jumps {
+                let dot = SKShapeNode(circleOfRadius: 8)
+                dot.position = CGPoint(x: x, y: -32)
+                dot.fillColor = UIColor(red: 0.95, green: 0.81, blue: 0.36, alpha: 1)
+                dot.strokeColor = .white
+                dot.name = MathMechanicID.groupingGarden
+                activity.addChild(dot)
+                text("\(index * model.groupSize)", x: x, y: -57, size: 11)
+            }
+            if index > 0, index <= model.jumps {
+                let line = SKShapeNode(
+                    rectOf: CGSize(width: stepX - 14, height: 4)
+                )
+                line.fillColor = UIColor(red: 0.91, green: 0.77, blue: 0.36, alpha: 1)
+                line.strokeColor = .clear
+                line.position = CGPoint(x: x - stepX / 2, y: -32)
+                line.name = MathMechanicID.groupingGarden
+                activity.addChild(line)
+            }
+        }
+        text("\(model.jumps) JUMPS  =  \(model.currentJumpTotal)",
+             x: 85, y: -82, size: 15)
+        control("＋", name: "gardenJumpAdd", x: -90, y: -122)
+        control("↶", name: "gardenJumpUndo", x: 90, y: -122)
+    }
+
+    private func renderFractionCuts(_ model: GroupingGardenModel) {
+        let parts = model.groupCount
+        let horizontal = model.orientation == .row
+        instruction.text = parts == 2
+            ? "MOVE THE CUT TO MAKE 2 EQUAL PARTS"
+            : "PLACE 3 CUTS TO MAKE 4 EQUAL PARTS"
+
+        let count = model.unitCells
+        let segmentSize: CGFloat = horizontal ? min(38, 348 / CGFloat(count))
+            : min(25, 156 / CGFloat(count))
+        let centerY: CGFloat = -4
+        for cell in 0..<count {
+            let part = SKShapeNode(
+                rectOf: horizontal
+                    ? CGSize(width: segmentSize - 1.5, height: 54)
+                    : CGSize(width: 100, height: segmentSize - 1)
+            )
+            let offset = (CGFloat(cell) + 0.5 - CGFloat(count) / 2) * segmentSize
+            part.position = horizontal
+                ? CGPoint(x: offset, y: centerY)
+                : CGPoint(x: 0, y: centerY + offset)
+            part.fillColor = UIColor(red: 0.27, green: 0.62, blue: 0.37, alpha: 1)
+            part.strokeColor = UIColor(red: 0.79, green: 0.87, blue: 0.63, alpha: 0.9)
+            part.lineWidth = 1
+            part.name = MathMechanicID.groupingGarden
+            activity.addChild(part)
+        }
+        for cut in model.cuts {
+            let position = (CGFloat(cut) - CGFloat(count) / 2) * segmentSize
+            let section = SKShapeNode(
+                rectOf: horizontal
+                    ? CGSize(width: 4, height: 72)
+                    : CGSize(width: 118, height: 4)
+            )
+            section.position = horizontal
+                ? CGPoint(x: position, y: centerY)
+                : CGPoint(x: 0, y: centerY + position)
+            section.fillColor = UIColor(red: 1, green: 0.87, blue: 0.41, alpha: 1)
+            section.strokeColor = .clear
+            section.name = MathMechanicID.groupingGarden
+            activity.addChild(section)
+        }
+
+        let cursor = (CGFloat(model.selectedBoundary) - CGFloat(count) / 2) * segmentSize
+        let marker = SKShapeNode(
+            rectOf: horizontal
+                ? CGSize(width: 3, height: 85)
+                : CGSize(width: 132, height: 3)
+        )
+        marker.fillColor = UIColor(red: 0.32, green: 0.87, blue: 0.96, alpha: 1)
+        marker.strokeColor = .white
+        marker.lineWidth = 1
+        marker.position = horizontal
+            ? CGPoint(x: cursor, y: centerY)
+            : CGPoint(x: 0, y: centerY + cursor)
+        marker.name = MathMechanicID.groupingGarden
+        activity.addChild(marker)
+
+        text("\(model.cuts.count) OF \(parts - 1) CUTS - DIVIDER \(model.selectedBoundary)",
+             x: 0, y: -90, size: 13)
+        control("◀", name: "gardenCutLeft", x: -159, y: -122)
+        control("▶", name: "gardenCutRight", x: -53, y: -122)
+        control("CUT", name: "gardenCutPlace", x: 53, y: -122)
+        control("↶", name: "gardenCutUndo", x: 159, y: -122)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 0.99, green: 0.94, blue: 0.59, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.02, duration: 0.13),
+            .scale(to: 1.0, duration: 0.18)
+        ]), withKey: "gardenCompletion")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -2125,6 +2388,8 @@ import LearningCore
             return DataBoardMechanic()
         case MathMechanicID.clockMarket:
             return ClockMarketMechanic()
+        case MathMechanicID.groupingGarden:
+            return GroupingGardenMechanic()
         default:
             return nil
         }
