@@ -426,6 +426,18 @@ import LearningCore
         beginInteraction()
         if adventure.undoPicture() { persist() }
     }
+    func placeGroupCounter(in group: Int) {
+        beginInteraction()
+        if adventure.placeGroupCounter(in: group) { persist() }
+    }
+    func undoGroupCounter() {
+        beginInteraction()
+        if adventure.undoGroupCounter() { persist() }
+    }
+    func chooseGardenFraction(_ part: Int) {
+        beginInteraction()
+        if adventure.chooseGardenFraction(part) { persist() }
+    }
     func adjustClockHour(_ delta: Int) {
         beginInteraction()
         if adventure.adjustClockHour(delta) { persist() }
