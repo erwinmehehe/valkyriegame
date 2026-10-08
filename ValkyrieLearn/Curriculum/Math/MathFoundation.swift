@@ -1216,6 +1216,7 @@ public enum MathCastleEncounterCatalog {
         + tenFrameGate
         + missingNumberBridge
         + reasoningDepth
+        + MathProductionQuestionBank.encounters
 
     public static func sessionPlan(
         for profile: LearnerProfile,
