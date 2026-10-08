@@ -438,6 +438,10 @@ import LearningCore
         beginInteraction()
         if adventure.chooseGardenFraction(part) { persist() }
     }
+    func adjustGardenSum(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustGardenSum(delta) { persist() }
+    }
     func adjustClockHour(_ delta: Int) {
         beginInteraction()
         if adventure.adjustClockHour(delta) { persist() }
