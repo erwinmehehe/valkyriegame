@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 1365)
+        XCTAssertEqual(encounters.count, 1381)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -396,12 +396,23 @@ final class CrystalCartTests: XCTestCase {
                     XCTAssertTrue(runtime.choosePatternSymbol(model.correctSymbol))
                 }
             case .shapeForge(let model):
-                if model.isRotation {
+                switch model.task {
+                case .rotate:
                     let forward = (model.targetOrientation - model.currentOrientation + 4) % 4
                     for _ in 0..<forward {
                         XCTAssertTrue(runtime.rotateShape(1))
                     }
-                } else {
+                case .compose:
+                    for turns in model.requiredHalfTurns {
+                        XCTAssertTrue(runtime.placeShapeHalf(turns))
+                    }
+                case .symmetry:
+                    for (row, shape) in model.symmetryReference.enumerated() {
+                        for _ in 0..<shape.rawValue {
+                            XCTAssertTrue(runtime.cycleMirrorCell(row))
+                        }
+                    }
+                case .recognize, .attributes:
                     XCTAssertTrue(runtime.chooseShapeOption(try XCTUnwrap(model.correctOption)))
                 }
             }

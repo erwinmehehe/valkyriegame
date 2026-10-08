@@ -1312,6 +1312,119 @@ import LearningCore
                 label.name = frame.name
                 frame.addChild(label)
             }
+        case .compose:
+            instructionLabel.text = "FILL THE SQUARE • \(model.placedHalfTurns.count) / 2 PIECES"
+
+            // The gold pieces show two complementary right-triangle halves;
+            // cyan triangles show the child's actual placement.
+            for (index, turns) in model.requiredHalfTurns.enumerated() {
+                let target = Self.angledTriangle(size: 120)
+                target.position = CGPoint(x: 0, y: -8)
+                target.zRotation = CGFloat(turns) * .pi / 2
+                target.fillColor = UIColor(
+                    red: index == 0 ? 0.96 : 0.80, green: 0.75, blue: 0.39, alpha: 0.10
+                )
+                target.strokeColor = UIColor(red: 0.98, green: 0.81, blue: 0.47, alpha: 0.83)
+                target.lineWidth = 2
+                target.name = MathMechanicID.shapeForge
+                display.addChild(target)
+            }
+
+            for (index, turns) in model.placedHalfTurns.enumerated() {
+                let piece = Self.angledTriangle(size: 120)
+                piece.position = CGPoint(x: 0, y: -8)
+                piece.zRotation = CGFloat(turns) * .pi / 2
+                piece.fillColor = UIColor(
+                    red: index == 0 ? 0.24 : 0.28,
+                    green: index == 0 ? 0.75 : 0.61,
+                    blue: 0.91, alpha: 0.88
+                )
+                piece.strokeColor = .white
+                piece.lineWidth = 2
+                piece.name = MathMechanicID.shapeForge
+                display.addChild(piece)
+            }
+
+            let squareOutline = SKShapeNode(rectOf: CGSize(width: 122, height: 122))
+            squareOutline.position = CGPoint(x: 0, y: -8)
+            squareOutline.fillColor = .clear
+            squareOutline.strokeColor = UIColor(red: 0.99, green: 0.86, blue: 0.53, alpha: 1)
+            squareOutline.lineWidth = 3
+            squareOutline.name = MathMechanicID.shapeForge
+            display.addChild(squareOutline)
+
+            for orientation in 0...3 {
+                let name = "forgeHalf\(orientation)"
+                let x = CGFloat(orientation) * 110 - 165
+                let button = ArtSystem.medallion(
+                    radius: 29,
+                    fill: UIColor(red: 0.12, green: 0.26, blue: 0.36, alpha: 1),
+                    stroke: UIColor(red: 0.86, green: 0.82, blue: 0.57, alpha: 0.96),
+                    glow: 0
+                )
+                button.position = CGPoint(x: x, y: -122)
+                button.name = name
+                display.addChild(button)
+                let piece = Self.angledTriangle(size: 32)
+                piece.zRotation = CGFloat(orientation) * .pi / 2
+                piece.fillColor = UIColor(red: 0.33, green: 0.75, blue: 0.92, alpha: 1)
+                piece.strokeColor = .white
+                piece.name = name
+                button.addChild(piece)
+            }
+
+            let undo = ArtSystem.label("UNDO", size: 15)
+            undo.position = CGPoint(x: 213, y: 24)
+            undo.fontColor = UIColor(red: 1, green: 0.87, blue: 0.55, alpha: 1)
+            undo.name = "forgeUndoHalf"
+            display.addChild(undo)
+        case .symmetry:
+            instructionLabel.text = "MIRROR THE LEFT-HAND SHAPES"
+            let axisPath = CGMutablePath()
+            axisPath.move(to: CGPoint(x: 0, y: 58))
+            axisPath.addLine(to: CGPoint(x: 0, y: -103))
+            let axis = SKShapeNode(path: axisPath)
+            axis.strokeColor = UIColor(red: 0.99, green: 0.83, blue: 0.46, alpha: 0.94)
+            axis.lineWidth = 3
+            axis.name = MathMechanicID.shapeForge
+            display.addChild(axis)
+
+            for row in 0..<3 {
+                let y = CGFloat(33 - row * 54)
+                for column in 0..<2 {
+                    let rightSide = column == 1
+                    let panel = ArtSystem.panel(
+                        CGSize(width: 87, height: 47),
+                        fill: UIColor(red: 0.08, green: 0.20, blue: 0.29, alpha: 0.96),
+                        stroke: rightSide
+                            ? UIColor(red: 0.99, green: 0.78, blue: 0.42, alpha: 0.94)
+                            : UIColor(red: 0.52, green: 0.82, blue: 0.91, alpha: 0.74),
+                        radius: 12,
+                        lineWidth: 2,
+                        shadowAlpha: 0.06
+                    )
+                    panel.position = CGPoint(x: rightSide ? 103 : -103, y: y)
+                    let name = rightSide ? "forgeMirror\(row)" : MathMechanicID.shapeForge
+                    panel.name = name
+                    display.addChild(panel)
+                    let shape: ForgeShape?
+                    if rightSide {
+                        shape = model.mirrorCells[row].flatMap { ForgeShape(rawValue: $0) }
+                    } else {
+                        shape = model.symmetryReference[row]
+                    }
+                    if let shape {
+                        let drawn = Self.shapeNode(shape, size: 27)
+                        drawn.name = name
+                        panel.addChild(drawn)
+                    } else {
+                        let marker = ArtSystem.label("?", size: 28)
+                        marker.name = name
+                        marker.fontColor = UIColor(red: 0.99, green: 0.84, blue: 0.55, alpha: 1)
+                        panel.addChild(marker)
+                    }
+                }
+            }
         case .rotate:
             instructionLabel.text = "MATCH THE GOLD OUTLINE"
             let target = Self.angledTriangle(size: 87)

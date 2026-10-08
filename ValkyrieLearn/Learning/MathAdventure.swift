@@ -211,6 +211,21 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.rotateShape(delta) ?? false
     }
 
+    @discardableResult public mutating func placeShapeHalf(_ turns: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.placeShapeHalf(turns) ?? false
+    }
+
+    @discardableResult public mutating func undoShapeHalf() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoShapeHalf() ?? false
+    }
+
+    @discardableResult public mutating func cycleMirrorCell(_ row: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.cycleMirrorCell(row) ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -319,6 +334,15 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                         demonstration = false
                     }
                 }
+            case .compose:
+                cue = "A square can be made from two matching right triangles. Turn the first piece to the gold seam, then place the second opposite it."
+                // The child must position both halves. Never auto-complete a
+                // composition from a scaffold.
+                demonstration = false
+            case .symmetry:
+                cue = "Imagine a mirror down the middle. Tap each right-hand cell until its shape matches the left at the same height."
+                // An independent three-cell reconstruction is observable.
+                demonstration = false
             }
         case .patternLoom(let model):
             if model.isCreation {
