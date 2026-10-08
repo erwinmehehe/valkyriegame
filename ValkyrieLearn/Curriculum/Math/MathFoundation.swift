@@ -1586,6 +1586,48 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Number Trail: a brief collection flash prevents the learner from
+        // slowly counting a permanently displayed pile during estimation.
+        for arrangement in 0...5 {
+            for total in 2...10 {
+                add(
+                    "prod-trail-estimate-\(arrangement)-\(total)",
+                    skill: MathSkills.estimate10,
+                    mechanic: MathMechanicID.numberTrail,
+                    representation: .pictorial,
+                    operation: .numberTrail,
+                    initial: arrangement,
+                    target: total,
+                    prompt: "Look quickly at the fireflies. About how many did you see?",
+                    context: "trail.estimate",
+                    difficulty: total <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Counting-on: child-controlled one-unit number-line jumps from a
+        // nonzero start. No passive strategy button is allowed to earn this
+        // prerequisite, which unlocks later add-within-20 practice.
+        for start in 1...9 {
+            for jumps in 1...min(4, 10 - start) {
+                add(
+                    "prod-trail-count-on-\(start)-\(jumps)",
+                    skill: MathSkills.countOn10,
+                    mechanic: MathMechanicID.numberTrail,
+                    representation: .concrete,
+                    operation: .numberTrail,
+                    initial: start,
+                    target: jumps,
+                    prompt: "Start at \(start). Count ON \(jumps) more using one jump at a time.",
+                    context: "trail.countOn",
+                    difficulty: start + jumps <= 6 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
         return result
     }()
 
