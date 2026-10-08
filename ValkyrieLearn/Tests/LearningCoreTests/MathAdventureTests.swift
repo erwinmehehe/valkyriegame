@@ -131,6 +131,16 @@ final class MathAdventureTests: XCTestCase {
                     XCTAssertTrue(adventure.placeGardenCut())
                 }
             }
+        case .differencePairs(let model):
+            for _ in 0..<model.goldTarget {
+                XCTAssertTrue(adventure.adjustDifferenceRow(.gold, by: 1))
+            }
+            for _ in 0..<model.blueTarget {
+                XCTAssertTrue(adventure.adjustDifferenceRow(.blue, by: 1))
+            }
+            for column in 0..<min(model.goldTarget, model.blueTarget) {
+                XCTAssertTrue(adventure.pairDifferenceColumn(column))
+            }
         case .numberTrail(let model):
             if model.isEstimate {
                 XCTAssertTrue(adventure.revealTrailCollection(at: date))
@@ -508,9 +518,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2405)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2405)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2454)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2468)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2468)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2517)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -535,7 +545,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 72)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 73)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -1437,9 +1447,79 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
+    func testDifferenceBridgeVariantsUseRealDistinctNativePairActions() throws {
+        let variants = MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+        XCTAssertEqual(variants.count, 63)
+        XCTAssertTrue(variants.allSatisfy {
+            $0.encounter.mechanicID == MathMechanicID.differencePairs
+                && $0.encounter.operation == .comparison
+                && $0.encounter.context == "bridge.difference"
+                && $0.encounter.representation == .concrete
+                && MathManipulativeSupport.supports($0.encounter)
+        })
+        XCTAssertEqual(Set(variants.map { $0.encounter.fingerprint }).count, variants.count)
+        XCTAssertTrue(variants.contains { $0.encounter.initialQuantity > $0.encounter.targetQuantity })
+        XCTAssertTrue(variants.contains { $0.encounter.initialQuantity < $0.encounter.targetQuantity })
+        XCTAssertTrue(variants.contains { $0.encounter.initialQuantity == $0.encounter.targetQuantity })
+    }
+
+    func testDifferenceBridgeCannotScoreBeforeBothRowsAndTheirPairsExist() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+                .first(where: { $0.encounter.initialQuantity == 7 &&
+                                 $0.encounter.targetQuantity == 4 })?.encounter
+        )
+        var model = try DifferencePairsModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch))
+        XCTAssertFalse(model.matchColumn(0))
+        for _ in 0..<7 { XCTAssertTrue(model.adjust(.gold, by: 1)) }
+        XCTAssertNil(model.submit(at: epoch))
+        for _ in 0..<4 { XCTAssertTrue(model.adjust(.blue, by: 1)) }
+        for column in 0..<3 { XCTAssertTrue(model.matchColumn(column)) }
+        XCTAssertNil(model.submit(at: epoch), "Three of four pairs is not enough")
+        XCTAssertNil(model.discoveredDifference)
+        XCTAssertTrue(model.matchColumn(3))
+        XCTAssertFalse(model.matchColumn(3), "A pair cannot count twice")
+        XCTAssertEqual(model.discoveredDifference, 3)
+        XCTAssertTrue(model.undoPair())
+        XCTAssertNil(model.discoveredDifference)
+        XCTAssertTrue(model.matchColumn(3))
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(20)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 1)
+        XCTAssertEqual(evidence.supportLevel, .independent)
+        XCTAssertFalse(model.adjust(.gold, by: 1))
+        XCTAssertFalse(model.undoPair())
+        XCTAssertEqual(try JSONDecoder().decode(DifferencePairsModel.self,
+                    from: JSONEncoder().encode(model)), model)
+    }
+
+    func testDifferenceBridgeWrongRowsCanBeCorrectedWithAssistanceTracked() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+                .first(where: { $0.encounter.initialQuantity == 6 &&
+                                 $0.encounter.targetQuantity == 3 })?.encounter
+        )
+        var model = try DifferencePairsModel(encounter: encounter, at: epoch)
+        for _ in 0..<5 { XCTAssertTrue(model.adjust(.gold, by: 1)) }
+        for _ in 0..<3 { XCTAssertTrue(model.adjust(.blue, by: 1)) }
+        for column in 0..<3 { XCTAssertTrue(model.matchColumn(column)) }
+        XCTAssertEqual(model.discoveredDifference, 2)
+        let wrong = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(2)))
+        XCTAssertEqual(wrong.outcome, .incorrect)
+        model.apply(Scaffold(support: .lightHint, cue: "Match each pair", demonstratesStep: false))
+        XCTAssertTrue(model.adjust(.gold, by: 1))
+        XCTAssertEqual(model.discoveredDifference, 3)
+        let fixed = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(15)))
+        XCTAssertEqual(fixed.outcome, .correct)
+        XCTAssertEqual(fixed.attempts, 2)
+        XCTAssertEqual(fixed.supportLevel, .lightHint)
+        XCTAssertEqual(try JSONDecoder().decode(DifferencePairsModel.self,
+                    from: JSONEncoder().encode(model)), model)
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
-            MathSkills.findDifference10,
             MathSkills.inverseFacts10,
             MathSkills.positionalLanguage,
             MathSkills.mapRoute,
