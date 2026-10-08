@@ -42,6 +42,12 @@ import LearningCore
         let reasoning = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
         )
+        let estimate = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter
+        )
+        let countOn = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -59,7 +65,9 @@ import LearningCore
             (routines, CGPoint(x: 820, y: 310), CGPoint(x: 645, y: 192), "1 of 4 daily events sorted."),
             (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins."),
             (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed."),
-            (reasoning, CGPoint(x: 820, y: 310), CGPoint(x: 700, y: 319), "0 steps using counting on.")
+            (reasoning, CGPoint(x: 820, y: 310), CGPoint(x: 700, y: 319), "0 steps using counting on."),
+            (estimate, CGPoint(x: 820, y: 310), CGPoint(x: 663, y: 188), "Fireflies flashed. Estimate dial is on 5."),
+            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -462,6 +470,61 @@ import LearningCore
         XCTAssertEqual(state.profile, profile)
     }
 
+
+    func testNumberTrailNativeFlashRequiresObservationAndCountOnUsesRealUndo() throws {
+        let flash = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter
+        )
+        let flashState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(flashState.startWorkshop(flash))
+        let flashScene = MathCastleScene(state: flashState)
+        flashScene.reducedMotion = true
+        flashScene.didMove(to: SKView())
+        defer { flashScene.willLeave() }
+        flashScene.valkyrie.position = CGPoint(x: 490, y: 175)
+        flashScene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = flashState.profile
+        flashScene.handleTap(at: CGPoint(x: 663, y: 188))
+        flashScene.handleTap(at: CGPoint(x: 837, y: 188)) // dial − 1
+        guard case .numberTrail(let estimateModel)? = flashState.runtime else {
+            return XCTFail("Expected estimate encounter")
+        }
+        XCTAssertTrue(estimateModel.flashObserved)
+        XCTAssertEqual(estimateModel.dialValue, 4)
+        XCTAssertNil(estimateModel.lockedEstimate)
+        XCTAssertNil(estimateModel.lockedEstimate, "A flash alone cannot select an estimate")
+        XCTAssertEqual(flashState.profile, before)
+
+        let line = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.countOn10)
+                .first(where: { $0.encounter.initialQuantity == 4
+                    && $0.encounter.targetQuantity == 3 })?.encounter
+        )
+        let lineState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(lineState.startWorkshop(line))
+        let scene = MathCastleScene(state: lineState)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profileBefore = lineState.profile
+        scene.handleTap(at: CGPoint(x: 922, y: 188))
+        scene.handleTap(at: CGPoint(x: 922, y: 188))
+        scene.handleTap(at: CGPoint(x: 718, y: 188))
+        guard case .numberTrail(let countModel)? = lineState.runtime else {
+            return XCTFail("Expected count-on runtime")
+        }
+        XCTAssertEqual(countModel.jumps, 1)
+        XCTAssertEqual(countModel.markerNumber, 5)
+        XCTAssertFalse(countModel.completed)
+        XCTAssertEqual(lineState.profile, profileBefore)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 3 jumps placed. Marker at 5. Pull Pip's lever when you're ready."
+        )
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -545,9 +608,15 @@ import LearningCore
         let reasoning = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
         )
+        let estimate = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter
+        )
+        let countOn = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning, estimate, countOn]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))

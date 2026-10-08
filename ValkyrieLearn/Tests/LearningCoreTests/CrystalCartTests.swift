@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 2370)
+        XCTAssertEqual(encounters.count, 2454)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -332,7 +332,7 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllThirteenMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllFourteenMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
@@ -510,6 +510,19 @@ final class CrystalCartTests: XCTestCase {
                         XCTAssertTrue(runtime.moveReasoningCounter(model.subtractSecond ? -1 : 1))
                     }
                     XCTAssertTrue(runtime.confirmReasoningStage())
+                }
+            case .numberTrail(let model):
+                if model.isEstimate {
+                    XCTAssertTrue(runtime.revealTrailCollection(at: now.addingTimeInterval(-2)))
+                    let direction = model.collectionSize > 5 ? 1 : -1
+                    for _ in 0..<abs(model.collectionSize - 5) {
+                        XCTAssertTrue(runtime.adjustTrailEstimate(direction))
+                    }
+                    XCTAssertTrue(runtime.lockTrailEstimate(at: now))
+                } else {
+                    for _ in 0..<model.requiredJumps {
+                        XCTAssertTrue(runtime.addTrailJump())
+                    }
                 }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))

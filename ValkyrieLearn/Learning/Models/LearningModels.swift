@@ -40,7 +40,7 @@ public enum StoryRewardID: String, Codable, CaseIterable, Hashable, Sendable {
 }
 
 public enum CartOperation: String, Codable, CaseIterable, Sendable {
-    case counting, quantityMatching, addition, subtraction, numberBond, missingAddend, comparison, equalGroups, pattern, shape, measurement, data, clockMarket, grouping, reasoningStudio
+    case counting, quantityMatching, addition, subtraction, numberBond, missingAddend, comparison, equalGroups, pattern, shape, measurement, data, clockMarket, grouping, reasoningStudio, numberTrail
 }
 
 public struct LearningEncounter: Identifiable, Codable, Equatable, Sendable {
