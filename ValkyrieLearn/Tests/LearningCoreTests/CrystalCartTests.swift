@@ -471,6 +471,11 @@ final class CrystalCartTests: XCTestCase {
                             XCTAssertTrue(runtime.placeGroupCounter(in: group))
                         }
                     }
+                    if model.task == .repeatedAddition {
+                        for _ in 0..<model.activity.totalItems {
+                            XCTAssertTrue(runtime.adjustGardenSum(1))
+                        }
+                    }
                 }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))
