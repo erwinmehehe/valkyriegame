@@ -1799,7 +1799,7 @@ import LearningCore
             if model.isGroupPlacement {
                 change = "\(model.unitsPlaced) of \(model.targetTotal) garden seeds placed."
             } else if model.isRepeatedAddition {
-                change = "\(model.jumps) jumps make a total of \(model.currentJumpTotal)."
+                change = "\(model.jumps) \(model.jumps == 1 ? "jump" : "jumps") make a total of \(model.currentJumpTotal)."
             } else {
                 change = "\(model.cuts.count) of \(model.groupCount - 1) fraction cuts placed."
             }
