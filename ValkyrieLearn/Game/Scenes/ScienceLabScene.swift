@@ -209,7 +209,7 @@ import LearningCore
         house.name = "scienceGreenhouseFrame"
         // The illustration already contains the greenhouse's visual depth. Keep
         // just a quiet architectural frame, not an engineering grid over the art.
-        house.alpha = 0.32
+        house.alpha = 0.001
 
         let glass = ArtSystem.box(
             CGSize(width: 860, height: 430),
@@ -1143,23 +1143,23 @@ import LearningCore
         case .arrive:
             groups = [
                 (["scienceSeedBench"], 1.0),
-                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.42),
-                (["scienceSunPrism", "sciencePrismBeam"], 0.30),
-                (["scienceWeatherGate"], 0.34)
+                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.001),
+                (["scienceSunPrism", "sciencePrismBeam"], 0.001),
+                (["scienceWeatherGate"], 0.001)
             ]
         case .inspected:
             groups = [
                 (["scienceSeedBench"], 0.72),
                 (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 1.0),
-                (["scienceSunPrism", "sciencePrismBeam"], 0.34),
-                (["scienceWeatherGate"], 0.34)
+                (["scienceSunPrism", "sciencePrismBeam"], 0.001),
+                (["scienceWeatherGate"], 0.001)
             ]
         case .watered:
             groups = [
                 (["scienceSeedBench"], 0.72),
                 (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.72),
                 (["scienceSunPrism", "sciencePrismBeam"], 1.0),
-                (["scienceWeatherGate"], 0.36)
+                (["scienceWeatherGate"], 0.001)
             ]
         case .lit:
             if greenhouseComplete {
@@ -1174,7 +1174,7 @@ import LearningCore
                     (["scienceSeedBench"], 1.0),
                     (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 1.0),
                     (["scienceSunPrism", "sciencePrismBeam"], 1.0),
-                    (["scienceWeatherGate"], 0.34)
+                    (["scienceWeatherGate"], 0.001)
                 ]
             }
         }
