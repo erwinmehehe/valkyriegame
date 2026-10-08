@@ -84,6 +84,32 @@ final class MathAdventureTests: XCTestCase {
                     }
                 }
             }
+        case .clockMarket(let model):
+            if model.isClock {
+                let hours = model.targetHour == 12 ? 12 : model.targetHour
+                for _ in 0..<hours {
+                    XCTAssertTrue(adventure.adjustClockHour(1))
+                }
+                let interval = model.task == .halfHour ? 30 : 5
+                if model.task != .hour {
+                    for _ in 0..<(model.targetMinute / interval) {
+                        XCTAssertTrue(adventure.adjustClockMinute(1))
+                    }
+                }
+            } else if model.isRoutines {
+                for card in model.routineCards {
+                    XCTAssertTrue(adventure.placeDailyRoutine(card.daypart))
+                }
+            } else {
+                var remaining = model.targetPesos
+                for coin in model.allowedCoins.reversed() {
+                    while remaining >= coin {
+                        XCTAssertTrue(adventure.addPesoCoin(coin))
+                        remaining -= coin
+                    }
+                }
+                XCTAssertEqual(remaining, 0)
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -133,7 +159,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllTenRuntimesAndSessionStateRoundTrip() throws {
+    func testAllElevenRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -143,7 +169,8 @@ final class MathAdventureTests: XCTestCase {
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter),
-            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter)]
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -389,15 +416,15 @@ final class MathAdventureTests: XCTestCase {
         let catalogIDs = Set(MathSkillCatalog.descriptors.map(\.id))
         let alignedIDs = Set(MathCurriculumMatrix.alignments.map(\.skillID))
 
-        XCTAssertEqual(MathSkillCatalog.descriptors.count, 73)
-        XCTAssertEqual(MathCurriculumMatrix.alignments.count, 73)
+        XCTAssertEqual(MathSkillCatalog.descriptors.count, 76)
+        XCTAssertEqual(MathCurriculumMatrix.alignments.count, 76)
         XCTAssertEqual(MathCurriculumMatrix.mappedSkillIDs, catalogIDs)
         XCTAssertEqual(alignedIDs, catalogIDs)
 
-        XCTAssertEqual(MathCurriculumMatrix.skills(in: .k2Readiness).count, 13)
+        XCTAssertEqual(MathCurriculumMatrix.skills(in: .k2Readiness).count, 14)
         XCTAssertEqual(MathCurriculumMatrix.skills(in: .kindergarten).count, 17)
-        XCTAssertEqual(MathCurriculumMatrix.skills(in: .grade1).count, 31)
-        XCTAssertEqual(MathCurriculumMatrix.skills(in: .grade2).count, 12)
+        XCTAssertEqual(MathCurriculumMatrix.skills(in: .grade1).count, 32)
+        XCTAssertEqual(MathCurriculumMatrix.skills(in: .grade2).count, 13)
 
         XCTAssertEqual(
             MathCurriculumMatrix.alignment(for: MathSkills.pictureGraph)?.matatagDomain,
@@ -414,9 +441,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1702)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1702)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1751)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2006)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2006)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2055)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -441,7 +468,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 57)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 62)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -872,6 +899,139 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertFalse(MathManipulativeSupport.supports(wrongSeed))
     }
 
+
+    func testClockMarketCatalogAndSeparateK2Grade1Grade2ClockSkills() throws {
+        let expected: [(SkillID, Int)] = [
+            (MathSkills.clockHour, 12),
+            (MathSkills.clockHalfHour, 24),
+            (MathSkills.clockFiveMinutes, 144),
+            (MathSkills.timeDayparts, 24),
+            (MathSkills.coinValues, 100)
+        ]
+        var allFingerprints = Set<String>()
+        for (skill, quantity) in expected {
+            let variants = MathProductionQuestionBank.variants(for: skill)
+            XCTAssertEqual(variants.count, quantity, "Wrong count for \(skill.rawValue)")
+            for variant in variants {
+                let encounter = variant.encounter
+                XCTAssertEqual(encounter.operation, .clockMarket)
+                XCTAssertEqual(encounter.mechanicID, MathMechanicID.clockMarket)
+                XCTAssertTrue(MathManipulativeSupport.supports(encounter))
+                XCTAssertTrue(allFingerprints.insert(encounter.fingerprint).inserted)
+                var runtime = try MathMechanicRuntime(encounter: encounter, at: epoch)
+                XCTAssertNil(runtime.submit(at: epoch), "Blank work cannot award mastery")
+            }
+        }
+        XCTAssertEqual(allFingerprints.count, 304)
+        XCTAssertEqual(MathCurriculumMatrix.gradeBand(for: MathSkills.clockHour), .k2Readiness)
+        XCTAssertEqual(MathCurriculumMatrix.gradeBand(for: MathSkills.clockHalfHour), .grade1)
+        XCTAssertEqual(MathCurriculumMatrix.gradeBand(for: MathSkills.clockFiveMinutes), .grade2)
+    }
+
+    func testClockMarketTimeRequiresHandActionsAndCorrectHalfHourSteps() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockFiveMinutes)
+                .first(where: { $0.encounter.initialQuantity == 3
+                    && $0.encounter.targetQuantity == 35 })?.encounter
+        )
+        var model = try ClockMarketModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch))
+        XCTAssertFalse(model.adjustHour(2))
+        for _ in 0..<3 { XCTAssertTrue(model.adjustHour(1)) }
+        for _ in 0..<6 { XCTAssertTrue(model.adjustMinute(1)) }
+        XCTAssertEqual(model.minute, 30)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(model.adjustMinute(1))
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(5)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertFalse(model.adjustHour(1))
+
+        let half = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockHalfHour)
+                .first(where: { $0.encounter.targetQuantity == 30 })?.encounter
+        )
+        var halfModel = try ClockMarketModel(encounter: half, at: epoch)
+        XCTAssertTrue(halfModel.adjustMinute(1))
+        XCTAssertEqual(halfModel.minute, 30)
+        XCTAssertTrue(halfModel.adjustMinute(1))
+        XCTAssertEqual(halfModel.minute, 0)
+        XCTAssertFalse(halfModel.adjustMinute(2))
+    }
+
+    func testClockMarketDaypartPermutationsRequireAllFourEventsAndAllowUndo() throws {
+        let variants = MathProductionQuestionBank.variants(for: MathSkills.timeDayparts)
+        let permutations = try variants.map {
+            try ClockMarketModel(encounter: $0.encounter, at: epoch)
+                .routineCards.map(\.rawValue)
+        }
+        XCTAssertEqual(Set(permutations).count, 24)
+        for variant in variants {
+            var model = try ClockMarketModel(encounter: variant.encounter, at: epoch)
+            XCTAssertNil(model.submit(at: epoch))
+            for card in model.routineCards.prefix(3) {
+                XCTAssertTrue(model.placeRoutine(in: card.daypart))
+            }
+            XCTAssertNil(model.submit(at: epoch), "Three cards cannot be scored")
+            let last = try XCTUnwrap(model.nextRoutine)
+            let wrong: ClockMarketDaypart = last.daypart == .morning ? .night : .morning
+            XCTAssertTrue(model.placeRoutine(in: wrong))
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(4))?.outcome, .incorrect)
+            XCTAssertTrue(model.undoRoutine())
+            XCTAssertTrue(model.placeRoutine(in: last.daypart))
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+            XCTAssertFalse(model.undoRoutine())
+        }
+    }
+
+    func testClockMarketPhilippineCoinLimitsPayExactAndPreserveAssistance() throws {
+        let variants = MathProductionQuestionBank.variants(for: MathSkills.coinValues)
+        XCTAssertEqual(variants.count, 100)
+        for variant in variants {
+            let encounter = variant.encounter
+            var model = try ClockMarketModel(encounter: encounter, at: epoch)
+            XCTAssertNil(model.submit(at: epoch))
+            let denominations: [Int]
+            switch model.stage {
+            case .k2: denominations = [1, 5]
+            case .grade1: denominations = [1, 5, 10]
+            case .grade2: denominations = [1, 5, 10, 20]
+            }
+            XCTAssertEqual(model.allowedCoins, denominations)
+            XCTAssertFalse(model.addCoin(50))
+            var remaining = model.targetPesos
+            for coin in denominations.reversed() {
+                while remaining >= coin {
+                    XCTAssertTrue(model.addCoin(coin))
+                    remaining -= coin
+                }
+            }
+            XCTAssertEqual(remaining, 0)
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+        }
+
+        let money = try XCTUnwrap(
+            variants.first(where: { $0.encounter.context == "market.money.grade2"
+                && $0.encounter.targetQuantity == 35 })?.encounter
+        )
+        var model = try ClockMarketModel(encounter: money, at: epoch)
+        XCTAssertTrue(model.addCoin(20))
+        XCTAssertTrue(model.addCoin(20))
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(model.undoCoin())
+        XCTAssertTrue(model.addCoin(10))
+        XCTAssertTrue(model.addCoin(5))
+        model.apply(Scaffold(cue: "Use matching coins", support: .strongHint))
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(7)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertEqual(evidence.supportLevel, .strongHint)
+        XCTAssertEqual(
+            try JSONDecoder().decode(ClockMarketModel.self, from: JSONEncoder().encode(model)),
+            model
+        )
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
@@ -880,8 +1040,6 @@ final class MathAdventureTests: XCTestCase {
             MathSkills.inverseFacts10,
             MathSkills.positionalLanguage,
             MathSkills.mapRoute,
-            MathSkills.timeDayparts,
-            MathSkills.coinValues,
             MathSkills.chooseStrategy,
             MathSkills.multipleSolutions,
             MathSkills.multiStep,
