@@ -442,7 +442,7 @@ import LearningCore
         let greenhouseArt = try XCTUnwrap(
             greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
         )
-        XCTAssertEqual(greenhouseArt.size, CGSize(width: 1280, height: 720))
+        XCTAssertEqual(greenhouseArt.size, CGSize(width: 1280, height: 960))
         greenhouse.willLeave()
 
         state.travel(to: .scienceWeatherTower)
@@ -462,7 +462,7 @@ import LearningCore
         let groveArt = try XCTUnwrap(
             grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
         )
-        XCTAssertEqual(groveArt.size, CGSize(width: 1280, height: 720))
+        XCTAssertEqual(groveArt.size, CGSize(width: 1280, height: 960))
         grove.willLeave()
     }
 
