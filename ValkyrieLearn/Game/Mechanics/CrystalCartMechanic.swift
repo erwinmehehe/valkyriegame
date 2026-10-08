@@ -2772,6 +2772,268 @@ import LearningCore
     }
 }
 
+
+@MainActor final class DifferenceDockMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let title = ArtSystem.label("DIFFERENCE DOCK", size: 18)
+    private let instruction = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.differenceDock
+        zPosition = 750
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.differenceDock
+        addChild(tray)
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 294, height: 47),
+            fill: UIColor(red: 0.10, green: 0.19, blue: 0.28, alpha: 0.97),
+            stroke: UIColor(red: 0.98, green: 0.79, blue: 0.43, alpha: 1),
+            radius: 15
+        )
+        plaque.position.y = 127
+        plaque.name = MathMechanicID.differenceDock
+        addChild(plaque)
+        title.fontName = "AvenirNext-Heavy"
+        title.fontColor = .white
+        title.name = MathMechanicID.differenceDock
+        plaque.addChild(title)
+        instruction.position.y = 93
+        instruction.fontColor = UIColor(red: 1, green: 0.86, blue: 0.56, alpha: 1)
+        instruction.name = MathMechanicID.differenceDock
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 15) {
+        let l = ArtSystem.label(text, size: size)
+        l.position = CGPoint(x: x, y: y)
+        l.fontName = "AvenirNext-DemiBold"
+        l.fontColor = .white
+        l.name = MathMechanicID.differenceDock
+        activity.addChild(l)
+    }
+
+    private func button(_ text: String, name: String, x: CGFloat) {
+        let medallion = ArtSystem.medallion(
+            radius: 33,
+            fill: UIColor(red: 0.10, green: 0.25, blue: 0.38, alpha: 1),
+            stroke: UIColor(red: 0.99, green: 0.83, blue: 0.51, alpha: 1),
+            glow: 0
+        )
+        medallion.position = CGPoint(x: x, y: -121)
+        medallion.name = name
+        activity.addChild(medallion)
+        let words = ArtSystem.label(text, size: text.count > 4 ? 10 : 14)
+        words.fontColor = .white
+        words.fontName = "AvenirNext-Heavy"
+        words.name = name
+        medallion.addChild(words)
+    }
+
+    func render(_ model: DifferenceDockModel) {
+        activity.removeAllChildren()
+        instruction.text = model.isDifference
+            ? "PAIR THE COUNTERS · COUNT THE EXTRA"
+            : "BUILD THE WHOLE · TAKE AWAY A PART"
+
+        // Source quantities remain visible throughout. The child creates one
+        // real pair or one whole counter per tap, then counts the remainder.
+        for index in 0..<model.larger {
+            let x = -205 + CGFloat(index) * 30
+            let chip = SKShapeNode(circleOfRadius: 11)
+            chip.position = CGPoint(x: x, y: 36)
+            chip.fillColor = index < model.constructed
+                ? UIColor(red: 0.27, green: 0.74, blue: 0.77, alpha: 1)
+                : UIColor(red: 0.96, green: 0.76, blue: 0.33, alpha: 1)
+            chip.strokeColor = .white
+            chip.lineWidth = 2
+            chip.name = MathMechanicID.differenceDock
+            activity.addChild(chip)
+        }
+
+        if model.isDifference {
+            for index in 0..<model.smaller {
+                let x = -205 + CGFloat(index) * 30
+                let chip = SKShapeNode(circleOfRadius: 10)
+                chip.position = CGPoint(x: x, y: -11)
+                chip.fillColor = UIColor(red: 0.32, green: 0.68, blue: 0.95, alpha: 1)
+                chip.strokeColor = .white
+                chip.lineWidth = 2
+                chip.name = MathMechanicID.differenceDock
+                activity.addChild(chip)
+                if index < model.constructed {
+                    let segment = CGMutablePath()
+                    segment.move(to: CGPoint(x: x, y: 2))
+                    segment.addLine(to: CGPoint(x: x, y: 23))
+                    let line = SKShapeNode(path: segment)
+                    line.lineWidth = 2
+                    line.strokeColor = UIColor(red: 0.99, green: 0.92, blue: 0.58, alpha: 1)
+                    line.name = MathMechanicID.differenceDock
+                    activity.addChild(line)
+                }
+            }
+            label("\(model.constructed) / \(model.smaller) PAIRED", x: -58, y: -57)
+        } else {
+            for index in 0..<model.constructed {
+                let x = -205 + CGFloat(index) * 30
+                let chip = SKShapeNode(circleOfRadius: 10)
+                chip.position = CGPoint(x: x, y: -10)
+                chip.fillColor = index < model.response
+                    ? UIColor(red: 0.87, green: 0.39, blue: 0.42, alpha: 1)
+                    : UIColor(red: 0.25, green: 0.73, blue: 0.84, alpha: 1)
+                chip.strokeColor = .white
+                chip.lineWidth = 2
+                chip.name = MathMechanicID.differenceDock
+                activity.addChild(chip)
+            }
+            label("\(model.constructed) / \(model.larger) BUILT", x: -58, y: -57)
+        }
+
+        label(model.isDifference ? "EXTRA" : "TAKE AWAY", x: 178, y: 27, size: 13)
+        label("\(model.response)", x: 178, y: -17, size: 33)
+        button("BUILD+", name: "dockBuild", x: -183)
+        button("UNDO", name: "dockUnbuild", x: -61)
+        button("COUNT+", name: "dockAnswerPlus", x: 61)
+        button("COUNT−", name: "dockAnswerMinus", x: 183)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        title.fontColor = UIColor(red: 1, green: 0.90, blue: 0.54, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.03, duration: 0.12),
+            .scale(to: 1, duration: 0.16)
+        ]), withKey: "dockSuccess")
+    }
+}
+
+@MainActor final class MapQuestMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let title = ArtSystem.label("MAP QUEST", size: 20)
+    private let instruction = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.mapQuest
+        zPosition = 750
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 283))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.mapQuest
+        addChild(tray)
+        let header = ArtSystem.plaque(
+            CGSize(width: 260, height: 47),
+            fill: UIColor(red: 0.09, green: 0.17, blue: 0.29, alpha: 0.96),
+            stroke: UIColor(red: 0.98, green: 0.79, blue: 0.43, alpha: 1),
+            radius: 15
+        )
+        header.position.y = 127
+        header.name = MathMechanicID.mapQuest
+        addChild(header)
+        title.fontColor = .white
+        title.fontName = "AvenirNext-Heavy"
+        title.name = MathMechanicID.mapQuest
+        header.addChild(title)
+        instruction.position.y = 96
+        instruction.fontColor = UIColor(red: 1, green: 0.86, blue: 0.54, alpha: 1)
+        instruction.name = MathMechanicID.mapQuest
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func control(_ mark: String, name: String, x: CGFloat,
+                         y: CGFloat = -120, radius: CGFloat = 34) {
+        let medallion = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.10, green: 0.25, blue: 0.38, alpha: 1),
+            stroke: UIColor(red: 0.99, green: 0.80, blue: 0.43, alpha: 1),
+            glow: 0
+        )
+        medallion.position = CGPoint(x: x, y: y)
+        medallion.name = name
+        activity.addChild(medallion)
+        let icon = ArtSystem.label(mark, size: 24)
+        icon.fontColor = .white
+        icon.name = name
+        medallion.addChild(icon)
+    }
+
+    func render(_ model: MapQuestModel) {
+        activity.removeAllChildren()
+        instruction.text = model.isPosition
+            ? "PLACE PIP \(model.positionDescription) THE LANDMARK"
+            : "MOVE PIP TO THE GOLDEN STAR"
+
+        for cell in 0...8 {
+            let point = CGPoint(x: CGFloat(cell % 3 - 1) * 154,
+                                y: CGFloat(1 - cell / 3) * 53)
+            let tile = ArtSystem.panel(
+                CGSize(width: 105, height: 45),
+                fill: UIColor(red: 0.10, green: 0.24, blue: 0.33, alpha: 0.98),
+                stroke: UIColor(red: 0.61, green: 0.87, blue: 0.88, alpha: 0.77),
+                radius: 10, lineWidth: 2, shadowAlpha: 0.04
+            )
+            tile.position = point
+            tile.name = "mapCell\(cell)"
+            activity.addChild(tile)
+
+            if model.isPosition && cell == 4 {
+                let names = ["TREE", "HOUSE", "POND"]
+                let name = ArtSystem.label(names[model.landmarkStyle], size: 13)
+                name.fontName = "AvenirNext-Heavy"
+                name.fontColor = UIColor(red: 1, green: 0.81, blue: 0.45, alpha: 1)
+                name.name = tile.name
+                tile.addChild(name)
+            } else if !model.isPosition && cell == model.destination {
+                let star = ArtSystem.label("★", size: 29)
+                star.fontColor = UIColor(red: 1, green: 0.84, blue: 0.39, alpha: 1)
+                star.name = tile.name
+                tile.addChild(star)
+            }
+
+            let pipHere = cell == model.currentCell
+                && (!model.isPosition || model.selectedCell != nil)
+            if pipHere {
+                let pipMarker = SKShapeNode(circleOfRadius: 16)
+                pipMarker.fillColor = UIColor(red: 0.25, green: 0.76, blue: 0.85, alpha: 1)
+                pipMarker.strokeColor = .white
+                pipMarker.lineWidth = 2
+                pipMarker.name = tile.name
+                tile.addChild(pipMarker)
+                let letter = ArtSystem.label("P", size: 18)
+                letter.fontName = "AvenirNext-Heavy"
+                letter.fontColor = UIColor(red: 0.04, green: 0.19, blue: 0.29, alpha: 1)
+                letter.name = tile.name
+                pipMarker.addChild(letter)
+            }
+        }
+
+        if !model.isPosition {
+            control("←", name: "mapLeft", x: -174)
+            control("↑", name: "mapUp", x: -58)
+            control("↓", name: "mapDown", x: 58)
+            control("→", name: "mapRight", x: 174)
+            control("↶", name: "mapUndo", x: 230, y: 75, radius: 29)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        title.fontColor = UIColor(red: 1, green: 0.90, blue: 0.54, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.13),
+            .scale(to: 1, duration: 0.17)
+        ]), withKey: "mapQuestSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -2801,6 +3063,10 @@ import LearningCore
             return ReasoningStudioMechanic()
         case MathMechanicID.numberTrail:
             return NumberTrailMechanic()
+        case MathMechanicID.differenceDock:
+            return DifferenceDockMechanic()
+        case MathMechanicID.mapQuest:
+            return MapQuestMechanic()
         default:
             return nil
         }
