@@ -1291,7 +1291,9 @@ final class MathAdventureTests: XCTestCase {
         for _ in 0..<(total - 3) {
             XCTAssertTrue(model.adjustPair(left: true, delta: -1))
         }
-        XCTAssertTrue(model.adjustPair(left: false, delta: 1))
+        for _ in 0..<(total - 3) {
+            XCTAssertTrue(model.adjustPair(left: false, delta: 1))
+        }
         XCTAssertTrue(model.savePair())
         XCTAssertEqual(model.solutions.count, 2)
         XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
