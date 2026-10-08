@@ -112,6 +112,9 @@ public extension MathSkills {
     static let classifyObjects = SkillID(rawValue: "math.data.classifyObjects")
     static let pictureGraph = SkillID(rawValue: "math.data.pictureGraph")
     static let timeDayparts = SkillID(rawValue: "math.time.dayparts")
+    static let clockHour = SkillID(rawValue: "math.time.clockHour")
+    static let clockHalfHour = SkillID(rawValue: "math.time.clockHalfHour")
+    static let clockFiveMinutes = SkillID(rawValue: "math.time.clockFiveMinutes")
     static let coinValues = SkillID(rawValue: "math.money.coinValues")
 
     // Reasoning
@@ -260,8 +263,16 @@ public enum MathSkillCatalog {
         .init(id: MathSkills.pictureGraph, strand: .measurementDataTimeMoney, title: "Read a Picture Graph", developmentalOrder: 59,
               prerequisites: [MathSkills.classifyObjects, MathSkills.counting]),
         .init(id: MathSkills.timeDayparts, strand: .measurementDataTimeMoney, title: "Sequence Dayparts and Events", developmentalOrder: 60),
-        .init(id: MathSkills.coinValues, strand: .measurementDataTimeMoney, title: "Compare Simple Coin Values", developmentalOrder: 61,
+        .init(id: MathSkills.coinValues, strand: .measurementDataTimeMoney, title: "Identify and Combine Philippine Coin Values", developmentalOrder: 61,
               prerequisites: [MathSkills.numeralQuantity10, MathSkills.compare]),
+        // Added as distinct assessable skills: telling time is not the same
+        // observable concept as sequencing the parts of a day.
+        .init(id: MathSkills.clockHour, strand: .measurementDataTimeMoney, title: "Read and Set the Clock to the Hour", developmentalOrder: 74,
+              prerequisites: [MathSkills.timeDayparts]),
+        .init(id: MathSkills.clockHalfHour, strand: .measurementDataTimeMoney, title: "Read and Set Half-Hour Times", developmentalOrder: 75,
+              prerequisites: [MathSkills.clockHour]),
+        .init(id: MathSkills.clockFiveMinutes, strand: .measurementDataTimeMoney, title: "Read and Set Times to Five Minutes", developmentalOrder: 76,
+              prerequisites: [MathSkills.clockHalfHour]),
 
         // Mathematical reasoning.
         .init(id: MathSkills.explainComparison, strand: .reasoning, title: "Explain Which Quantity Is Greater", developmentalOrder: 62,
@@ -392,7 +403,8 @@ public enum MathCurriculumMatrix {
         MathSkills.compareWeight,
         MathSkills.compareCapacity,
         MathSkills.classifyObjects,
-        MathSkills.timeDayparts
+        MathSkills.timeDayparts,
+        MathSkills.clockHour
     ]
 
     private static let kindergarten: Set<SkillID> = [
@@ -445,6 +457,7 @@ public enum MathCurriculumMatrix {
         MathSkills.mapRoute,
         MathSkills.pictureGraph,
         MathSkills.coinValues,
+        MathSkills.clockHalfHour,
         MathSkills.explainComparison,
         MathSkills.sameTotalDifferentWay
     ]
@@ -453,6 +466,7 @@ public enum MathCurriculumMatrix {
         MathSkills.addWithin20,
         MathSkills.subtractWithin20,
         MathSkills.reasoning,
+        MathSkills.clockFiveMinutes,
         MathSkills.chooseStrategy,
         MathSkills.whatChanged,
         MathSkills.multipleSolutions,
