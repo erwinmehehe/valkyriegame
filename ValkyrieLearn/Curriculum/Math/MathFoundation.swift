@@ -284,10 +284,10 @@ public struct MathQuestionVariant: Equatable, Sendable {
 /// Parameterized production bank for the native manipulatives that can currently
 /// observe a child's mathematical action.
 ///
-/// This expands variety without pretending unsupported skills are assessed. Skills
-/// such as place value, patterns, geometry, measurement, strategy choice, equal
-/// groups and fractions stay visible in MathCurriculumMatrix but do not receive
-/// mastery evidence until a native mechanic can actually observe the required act.
+/// This expands variety without pretending unsupported skills are assessed. Place
+/// value is now observed by its dedicated factory; patterns, geometry, measurement,
+/// strategy choice, equal groups and fractions stay visible in MathCurriculumMatrix
+/// but do not receive mastery evidence until a native mechanic can observe the act.
 public enum MathProductionQuestionBank {
     public static let variants: [MathQuestionVariant] = {
         var result: [MathQuestionVariant] = []
