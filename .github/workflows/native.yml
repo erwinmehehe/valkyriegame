@@ -31,6 +31,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate canonical Valkyrie identity
         run: python3 scripts/verify_valkyrie_identity.py
+      - name: Test Valkyrie identity guard
+        run: python3 -m unittest discover -s scripts -p 'test_verify_valkyrie_identity.py'
       - name: Reject character changes in unrelated PRs
         if: github.event_name == 'pull_request'
         shell: bash
