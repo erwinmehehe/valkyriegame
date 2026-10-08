@@ -28,9 +28,9 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     }
 
     // Only actually implemented mechanics enter the native placement adventure.
-    // Unsupported probes such as place value remain authored future content until
-    // their native manipulative exists; advanced reasoning is mapped onto the
-    // existing Number Bond machine instead of being hidden behind an age ceiling.
+    // Place value now enters through its dedicated native factory; unsupported
+    // future probes remain excluded. Advanced reasoning is mapped onto the existing
+    // Number Bond machine instead of being hidden behind an age ceiling.
     public static var playableProbes: [PlacementProbe] {
         MathPlacement.probes.compactMap { probe in
             if probe.band == 1 {
@@ -42,8 +42,8 @@ public struct MathAdventure: Codable, Equatable, Sendable {
             }
             if probe.band == 9 {
                 // Reuse the existing Number Bond machine as Pip's mistake machine so
-                // a strong learner can still demonstrate reasoning in Milestone A
-                // without pretending the not-yet-built place-value factory exists.
+                // a strong learner can demonstrate reasoning without requiring a
+                // separate error-analysis machine.
                 return PlacementProbe(id: probe.id, band: probe.band, encounter:
                     LearningEncounter(id: probe.encounter.id, skillID: probe.skillID,
                         mechanicID: MathMechanicID.numberBondMachine, representation: .reasoning,
@@ -186,6 +186,11 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     public mutating func chooseComparison(_ choice: ComparisonChoice) {
         guard interactionStarted else { return }; runtime?.chooseComparison(choice)
     }
+    @discardableResult
+    public mutating func adjustPlaceValue(tensDelta: Int = 0, onesDelta: Int = 0) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustPlaceValue(tensDelta: tensDelta, onesDelta: onesDelta) ?? false
+    }
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -268,6 +273,36 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 if model.selectedNumber < model.correctNumber { _ = increment(at: now) }
                 else if model.selectedNumber > model.correctNumber { _ = decrement(at: now) }
                 else { demonstration = false }
+            }
+        case .placeValueFactory(let model):
+            if model.isComparison {
+                cue = model.encounter.skillID == MathSkills.numberOrder20
+                    || model.encounter.skillID == MathSkills.orderTwoDigit
+                    ? "Compare the tens first, then the ones. Which number comes first from least to greatest?"
+                    : "Compare the tens first. If the tens match, compare the ones."
+                if demonstration {
+                    runtime?.chooseComparison(model.correctChoice)
+                    cue = "Watch Pip compare the tens and ones. Now pull the lever."
+                }
+            } else {
+                cue = "Build the number with tens rods and ones cubes."
+                if demonstration {
+                    if model.selectedTens < model.expectedTens {
+                        _ = runtime?.adjustPlaceValue(tensDelta: 1)
+                        cue = "Watch Pip add one tens rod. Now keep building."
+                    } else if model.selectedTens > model.expectedTens {
+                        _ = runtime?.adjustPlaceValue(tensDelta: -1)
+                        cue = "Watch Pip remove one tens rod. Now keep building."
+                    } else if model.selectedOnes < model.expectedOnes {
+                        _ = runtime?.adjustPlaceValue(onesDelta: 1)
+                        cue = "Watch Pip add one ones cube. Now keep building."
+                    } else if model.selectedOnes > model.expectedOnes {
+                        _ = runtime?.adjustPlaceValue(onesDelta: -1)
+                        cue = "Watch Pip remove one ones cube. Now keep building."
+                    } else {
+                        demonstration = false
+                    }
+                }
             }
         }
         return Scaffold(support: next.support, cue: cue, demonstratesStep: demonstration)

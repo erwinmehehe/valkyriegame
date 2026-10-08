@@ -284,10 +284,10 @@ public struct MathQuestionVariant: Equatable, Sendable {
 /// Parameterized production bank for the native manipulatives that can currently
 /// observe a child's mathematical action.
 ///
-/// This expands variety without pretending unsupported skills are assessed. Skills
-/// such as place value, patterns, geometry, measurement, strategy choice, equal
-/// groups and fractions stay visible in MathCurriculumMatrix but do not receive
-/// mastery evidence until a native mechanic can actually observe the required act.
+/// This expands variety without pretending unsupported skills are assessed. Place
+/// value is now observed by its dedicated factory; patterns, geometry, measurement,
+/// strategy choice, equal groups and fractions stay visible in MathCurriculumMatrix
+/// but do not receive mastery evidence until a native mechanic can observe the act.
 public enum MathProductionQuestionBank {
     public static let variants: [MathQuestionVariant] = {
         var result: [MathQuestionVariant] = []
@@ -865,6 +865,226 @@ public enum MathProductionQuestionBank {
                 )
                 comparisonReasoningCount += 1
                 if comparisonReasoningCount == 30 { break outer }
+            }
+        }
+
+        // Place Value Factory opens the prerequisite-safe bridge from teen numbers
+        // into two-digit place value without pretending unsupported geometry or
+        // measurement skills are assessed.
+        for target in 11...20 {
+            add(
+                "prod-count20-\(target)",
+                skill: MathSkills.countTo20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: 0,
+                target: target,
+                prompt: "Build \(target) with tens and ones.",
+                context: "prod.countTo20",
+                difficulty: 2,
+                purpose: .practice
+            )
+        }
+
+        for smaller in 10...19 {
+            let larger = smaller + 1
+            add(
+                "prod-order20-left-\(smaller)-\(larger)",
+                skill: MathSkills.numberOrder20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .pictorial,
+                operation: .comparison,
+                initial: smaller,
+                target: larger,
+                prompt: "Which number comes first from least to greatest: \(smaller) or \(larger)?",
+                context: "prod.numberOrder20",
+                difficulty: 2,
+                purpose: .representationTransfer
+            )
+            add(
+                "prod-order20-right-\(larger)-\(smaller)",
+                skill: MathSkills.numberOrder20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .pictorial,
+                operation: .comparison,
+                initial: larger,
+                target: smaller,
+                prompt: "Which number comes first from least to greatest: \(larger) or \(smaller)?",
+                context: "prod.numberOrder20",
+                difficulty: 2,
+                purpose: .review
+            )
+        }
+
+        for base in 10...19 {
+            add(
+                "prod-one-more-\(base)",
+                skill: MathSkills.oneMoreLess20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: base,
+                target: base + 1,
+                prompt: "Build one more than \(base).",
+                context: "prod.oneMore20",
+                difficulty: 2,
+                purpose: .practice
+            )
+        }
+        for base in 11...20 {
+            add(
+                "prod-one-less-\(base)",
+                skill: MathSkills.oneMoreLess20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: base,
+                target: base - 1,
+                prompt: "Build one less than \(base).",
+                context: "prod.oneLess20",
+                difficulty: 2,
+                purpose: .review
+            )
+        }
+
+        for tens in 1...9 {
+            let target = tens * 10
+            add(
+                "prod-group-ten-\(target)",
+                skill: MathSkills.groupTen,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: 0,
+                target: target,
+                prompt: "Trade the ones for tens. Build \(target) as groups of ten.",
+                context: "prod.groupTen",
+                difficulty: tens <= 3 ? 2 : 3,
+                purpose: .instruction
+            )
+        }
+
+        for tens in 1...9 {
+            for ones in [0, 2, 4, 6, 8] {
+                let number = tens * 10 + ones
+                add(
+                    "prod-place-value-\(number)",
+                    skill: MathSkills.placeValue,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .concrete,
+                    operation: .quantityMatching,
+                    initial: 0,
+                    target: number,
+                    prompt: "Build \(number) using the correct tens and ones.",
+                    context: "prod.placeValue",
+                    difficulty: number < 50 ? 2 : 3,
+                    purpose: .instruction
+                )
+            }
+        }
+
+        for tens in 1...9 {
+            for ones in [1, 3, 5, 7, 9] {
+                let number = tens * 10 + ones
+                add(
+                    "prod-build-two-digit-\(number)",
+                    skill: MathSkills.buildTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .concrete,
+                    operation: .quantityMatching,
+                    initial: 0,
+                    target: number,
+                    prompt: "Make \(number) with tens rods and ones cubes.",
+                    context: "prod.buildTwoDigit",
+                    difficulty: number < 50 ? 2 : 3,
+                    purpose: .practice
+                )
+            }
+        }
+
+        func numberWords(_ number: Int) -> String {
+            let ones = [
+                0: "zero", 1: "one", 2: "two", 3: "three", 4: "four",
+                5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine",
+                10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen",
+                14: "fourteen", 15: "fifteen", 16: "sixteen",
+                17: "seventeen", 18: "eighteen", 19: "nineteen"
+            ]
+            if let word = ones[number] { return word }
+            let tensWords = [
+                2: "twenty", 3: "thirty", 4: "forty", 5: "fifty",
+                6: "sixty", 7: "seventy", 8: "eighty", 9: "ninety"
+            ]
+            let tens = number / 10
+            let remainder = number % 10
+            guard let tensWord = tensWords[tens] else { return "\(number)" }
+            guard remainder > 0, let onesWord = ones[remainder] else { return tensWord }
+            return "\(tensWord)-\(onesWord)"
+        }
+
+        for tens in 1...9 {
+            for ones in [0, 4, 7, 9] {
+                let number = tens * 10 + ones
+                add(
+                    "prod-read-two-digit-\(number)",
+                    skill: MathSkills.readTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .symbolic,
+                    operation: .quantityMatching,
+                    initial: 0,
+                    target: number,
+                    prompt: "Build the number named \(numberWords(number)).",
+                    context: "prod.readTwoDigit",
+                    difficulty: number < 50 ? 3 : 4,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        for tens in 2...9 {
+            for ones in [1, 4, 7, 9] {
+                let a = tens * 10 + ones
+                let b = (tens - 1) * 10 + (9 - ones)
+                let left = tens.isMultiple(of: 2) ? a : b
+                let right = tens.isMultiple(of: 2) ? b : a
+                add(
+                    "prod-compare-two-digit-\(left)-\(right)",
+                    skill: MathSkills.compareTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .reasoning,
+                    operation: .comparison,
+                    initial: left,
+                    target: right,
+                    prompt: "Compare \(left) and \(right). Which number is greater?",
+                    context: "prod.compareTwoDigit",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 1
+                )
+            }
+        }
+
+        for tens in 2...8 {
+            for ones in [2, 5, 8, 9] {
+                let a = tens * 10 + ones
+                let b = (tens + 1) * 10 + max(0, 9 - ones)
+                let left = ones.isMultiple(of: 2) ? a : b
+                let right = ones.isMultiple(of: 2) ? b : a
+                add(
+                    "prod-order-two-digit-\(left)-\(right)",
+                    skill: MathSkills.orderTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .reasoning,
+                    operation: .comparison,
+                    initial: left,
+                    target: right,
+                    prompt: "Put these in least-to-greatest order. Which comes first: \(left) or \(right)?",
+                    context: "prod.orderTwoDigit",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 1
+                )
             }
         }
 

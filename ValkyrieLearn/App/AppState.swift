@@ -369,6 +369,11 @@ import LearningCore
     func addCrystal() { beginInteraction(); _ = adventure.increment(at: Date()); persist() }
     func removeCrystal() { beginInteraction(); _ = adventure.decrement(at: Date()); persist() }
     func chooseComparison(_ choice: ComparisonChoice) { beginInteraction(); adventure.chooseComparison(choice); persist() }
+    func adjustPlaceValue(tensDelta: Int = 0, onesDelta: Int = 0) {
+        beginInteraction()
+        _ = adventure.adjustPlaceValue(tensDelta: tensDelta, onesDelta: onesDelta)
+        persist()
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
