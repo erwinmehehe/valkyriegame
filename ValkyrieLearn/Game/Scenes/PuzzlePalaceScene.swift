@@ -2800,7 +2800,7 @@ import LearningCore
 
         instruction.text = attemptSupport == .independent
             ? "Same stones, new rule—both sorts held. Another vault set is waking."
-            : "That re-sort is stable. Repeat this same-set rule change independently."
+            : "That re-sort is stable. Try the next vault set independently."
 
         run(.sequence([
             .wait(forDuration: reducedMotion ? 0.22 : 0.95),
@@ -3792,7 +3792,27 @@ import LearningCore
         if resetSupport { support = .independent }
         startedAt = Date()
         solved = false
-        pathAcceptingInput = true
+
+        // Tiko ends a successful route on top of the map. Return the
+        // companion to the walkable lane before a new map becomes tappable,
+        // otherwise he obscures the next challenge's actual tiles.
+        let companionStart = CGPoint(x: 305, y: 190)
+        if tiko.position.y > walkable.maxY {
+            pathAcceptingInput = false
+            if reducedMotion {
+                tiko.position = companionStart
+                pathAcceptingInput = true
+            } else {
+                tiko.run(.sequence([
+                    .fadeOut(withDuration: 0.12),
+                    .run { [weak self] in self?.tiko.position = companionStart },
+                    .fadeIn(withDuration: 0.12),
+                    .run { [weak self] in self?.pathAcceptingInput = true }
+                ]), withKey: "pathCompanionReset")
+            }
+        } else {
+            pathAcceptingInput = true
+        }
 
         let grid = SKNode()
         grid.name = "pathGrid"
@@ -5448,7 +5468,7 @@ import LearningCore
 
             instruction.text = attemptSupport == .independent
                 ? "That seal is awake. Tiko found the next rune lock."
-                : "Tiko helped with that seal. Solve the same pattern independently next."
+                : "Tiko helped with that seal. Try the next rune lock independently."
 
             run(
                 .sequence([
