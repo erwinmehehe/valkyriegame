@@ -56,13 +56,6 @@ import LearningCore
     )
     private let questionHeading = ArtSystem.label("PIP'S WORK ORDER", size: 13)
     private let questionLabel = ArtSystem.label("", size: 23)
-    private let workshopGroups: [[LearningEncounter]] = [
-        MathFoundation.workshopExamples,
-        MathCastleEncounterCatalog.balanceScale,
-        MathCastleEncounterCatalog.numberBondMachine,
-        MathCastleEncounterCatalog.tenFrameGate,
-        MathCastleEncounterCatalog.missingNumberBridge
-    ]
     private var workshopIndices = [0, 0, 0, 0, 0]
 
     override func didMove(to view: SKView) {
@@ -2042,7 +2035,15 @@ import LearningCore
         if let runtime = state.runtime, !runtime.completed, !state.workshop {
             instruction.text = "Finish Pip's work order before opening his workshop."; return
         }
-        let examples = workshopGroups[index]
+        let examples = MathWorkshopCatalog.choices(
+            at: index,
+            profile: state.profile,
+            graph: state.graph
+        )
+        guard !examples.isEmpty else {
+            instruction.text = "Pip has no new ready challenge at this station. Try another machine."
+            return
+        }
         // Try the next unused authored example; the learning layer owns repetition policy.
         for offset in 0..<examples.count {
             let next = (workshopIndices[index] + offset) % examples.count

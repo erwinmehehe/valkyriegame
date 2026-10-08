@@ -1458,4 +1458,26 @@ final class MathAdventureTests: XCTestCase {
     }
 
 
+
+    func testWorkshopStationsOfferFreshSupportedReadyChoices() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        XCTAssertEqual(MathWorkshopCatalog.stationNames.count, 5)
+        XCTAssertEqual(MathWorkshopCatalog.stationMechanics.count, 5)
+        let families = Set(MathWorkshopCatalog.stationMechanics.flatMap { $0 })
+        XCTAssertTrue(MathMechanicID.adaptiveSet.isSuperset(of: families))
+        for station in 0..<5 {
+            let choices = MathWorkshopCatalog.choices(at: station, profile: profile, graph: graph)
+            let allowed = Set(MathWorkshopCatalog.stationMechanics[station])
+            XCTAssertTrue(choices.allSatisfy { allowed.contains($0.mechanicID) })
+            XCTAssertEqual(Set(choices.map(\.fingerprint)).count, choices.count)
+            XCTAssertTrue(choices.allSatisfy { MathManipulativeSupport.supports($0) })
+            XCTAssertTrue(choices.allSatisfy { graph.isEligible($0.skillID, for: profile) })
+        }
+        let first = try XCTUnwrap(MathWorkshopCatalog.choices(at: 0, profile: profile, graph: graph).first)
+        profile.begin(first, at: epoch)
+        XCTAssertFalse(MathWorkshopCatalog.choices(at: 0, profile: profile, graph: graph)
+            .contains(where: { $0.fingerprint == first.fingerprint }))
+        XCTAssertTrue(MathWorkshopCatalog.choices(at: 99, profile: profile, graph: graph).isEmpty)
+    }
 }
