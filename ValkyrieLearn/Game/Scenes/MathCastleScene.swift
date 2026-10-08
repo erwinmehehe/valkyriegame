@@ -1264,6 +1264,7 @@ import LearningCore
         case .measurementWorkshop(let model): (mechanic as? MeasurementWorkshopMechanic)?.render(model)
         case .dataBoard(let model): (mechanic as? DataBoardMechanic)?.render(model)
         case .clockMarket(let model): (mechanic as? ClockMarketMechanic)?.render(model)
+        case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1342,7 +1343,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1398,6 +1399,52 @@ import LearningCore
                     let y = CGFloat(33 - row * 54)
                     if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
                         manipulate { self.state.cycleMirrorCell(row) }
+                        return true
+                    }
+                }
+            }
+        case .groupingGarden(let model):
+            if model.isGroupPlacement {
+                if hypot(local.x - 229, local.y - 62) <= 38 {
+                    manipulate { self.state.undoGardenSeed() }
+                    return true
+                }
+                let spacing: CGFloat = model.groupCount == 2 ? 160
+                    : (model.groupCount == 3 ? 137 : 102)
+                for index in 0..<model.groupCount {
+                    let x = (CGFloat(index) - CGFloat(model.groupCount - 1) / 2) * spacing
+                    if hypot(local.x - x, local.y + 121) <= 39 {
+                        manipulate { self.state.placeGardenSeed(in: index + 1) }
+                        return true
+                    }
+                }
+            } else if model.isRepeatedAddition {
+                if hypot(local.x + 90, local.y + 122) <= 40 {
+                    manipulate { self.state.addGardenJump() }
+                    return true
+                }
+                if hypot(local.x - 90, local.y + 122) <= 40 {
+                    manipulate { self.state.undoGardenJump() }
+                    return true
+                }
+            } else if model.isFractions {
+                for (x, action) in [
+                    (CGFloat(-159), "left"),
+                    (CGFloat(-53), "right"),
+                    (CGFloat(53), "place"),
+                    (CGFloat(159), "undo")
+                ] {
+                    if hypot(local.x - x, local.y + 122) <= 39 {
+                        switch action {
+                        case "left":
+                            manipulate { self.state.moveGardenCut(-1) }
+                        case "right":
+                            manipulate { self.state.moveGardenCut(1) }
+                        case "place":
+                            manipulate { self.state.placeGardenCut() }
+                        default:
+                            manipulate { self.state.undoGardenCut() }
+                        }
                         return true
                     }
                 }
@@ -1589,6 +1636,18 @@ import LearningCore
         case "marketCoin10": manipulate { self.state.addPesoCoin(10) }
         case "marketCoin20": manipulate { self.state.addPesoCoin(20) }
         case "marketCoinUndo": manipulate { self.state.undoPesoCoin() }
+        case "gardenBasket1": manipulate { self.state.placeGardenSeed(in: 1) }
+        case "gardenBasket2": manipulate { self.state.placeGardenSeed(in: 2) }
+        case "gardenBasket3": manipulate { self.state.placeGardenSeed(in: 3) }
+        case "gardenBasket4": manipulate { self.state.placeGardenSeed(in: 4) }
+        case "gardenBasket5": manipulate { self.state.placeGardenSeed(in: 5) }
+        case "gardenUndoSeed": manipulate { self.state.undoGardenSeed() }
+        case "gardenJumpAdd": manipulate { self.state.addGardenJump() }
+        case "gardenJumpUndo": manipulate { self.state.undoGardenJump() }
+        case "gardenCutLeft": manipulate { self.state.moveGardenCut(-1) }
+        case "gardenCutRight": manipulate { self.state.moveGardenCut(1) }
+        case "gardenCutPlace": manipulate { self.state.placeGardenCut() }
+        case "gardenCutUndo": manipulate { self.state.undoGardenCut() }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1636,7 +1695,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1735,6 +1794,14 @@ import LearningCore
                 change = "\(model.routineBins.count) of 4 daily events sorted."
             } else {
                 change = "₱\(model.totalPesos) in selected teaching coins."
+            }
+        case .groupingGarden(let model):
+            if model.isGroupPlacement {
+                change = "\(model.unitsPlaced) of \(model.targetTotal) garden seeds placed."
+            } else if model.isRepeatedAddition {
+                change = "\(model.jumps) \(model.jumps == 1 ? "jump" : "jumps") \(model.jumps == 1 ? "makes" : "make") a total of \(model.currentJumpTotal)."
+            } else {
+                change = "\(model.cuts.count) of \(model.groupCount - 1) fraction cuts placed."
             }
         }
         // Describe only the child's visible edit; the lever still checks the answer.

@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 2055)
+        XCTAssertEqual(encounters.count, 2135)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -332,7 +332,7 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllElevenMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllTwelveMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
@@ -461,6 +461,27 @@ final class CrystalCartTests: XCTestCase {
                         }
                     }
                     XCTAssertEqual(remaining, 0)
+                }
+            case .groupingGarden(let model):
+                if model.isGroupPlacement {
+                    for basket in 1...model.groupCount {
+                        for _ in 0..<model.groupSize {
+                            XCTAssertTrue(runtime.placeGardenSeed(in: basket))
+                        }
+                    }
+                } else if model.isRepeatedAddition {
+                    for _ in 0..<model.groupCount {
+                        XCTAssertTrue(runtime.addGardenJump())
+                    }
+                } else {
+                    var cursor = model.selectedBoundary
+                    for boundary in model.requiredCuts {
+                        while cursor < boundary {
+                            XCTAssertTrue(runtime.moveGardenCut(1))
+                            cursor += 1
+                        }
+                        XCTAssertTrue(runtime.placeGardenCut())
+                    }
                 }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))

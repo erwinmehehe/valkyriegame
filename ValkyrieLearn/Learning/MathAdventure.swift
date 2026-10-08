@@ -286,6 +286,41 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoPesoCoin() ?? false
     }
 
+    @discardableResult public mutating func placeGardenSeed(in basket: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.placeGardenSeed(in: basket) ?? false
+    }
+
+    @discardableResult public mutating func undoGardenSeed() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoGardenSeed() ?? false
+    }
+
+    @discardableResult public mutating func addGardenJump() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.addGardenJump() ?? false
+    }
+
+    @discardableResult public mutating func undoGardenJump() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoGardenJump() ?? false
+    }
+
+    @discardableResult public mutating func moveGardenCut(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.moveGardenCut(delta) ?? false
+    }
+
+    @discardableResult public mutating func placeGardenCut() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.placeGardenCut() ?? false
+    }
+
+    @discardableResult public mutating func undoGardenCut() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoGardenCut() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -418,6 +453,35 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                     _ = runtime?.choosePatternSymbol(model.correctSymbol)
                     cue = "Watch Pip place one repeating shape. Now try the lever."
                 }
+            }
+        case .groupingGarden(let model):
+            switch model.task {
+            case .equalGroups:
+                cue = "Grow equal baskets. Count each seed as you place it in a basket."
+                if demonstration, model.unitsPlaced < model.targetTotal,
+                   let index = model.groups.firstIndex(where: { $0 < model.groupSize }) {
+                    _ = runtime?.placeGardenSeed(in: index + 1)
+                    cue = "Pip planted one seed in a basket. Now fill every basket equally."
+                }
+            case .equalSharing:
+                cue = "Give one seed to each friend in turn. Each friend should get the same number."
+                if demonstration, model.unitsPlaced < model.targetTotal,
+                   let index = model.groups.firstIndex(where: { $0 < model.groupSize }) {
+                    _ = runtime?.placeGardenSeed(in: index + 1)
+                    cue = "Pip shared one seed as an example. Finish the equal share."
+                }
+            case .repeatedAddition:
+                cue = "Each jump adds one full group of seeds. Count the jumps and the running total."
+                if demonstration, model.jumps < model.groupCount {
+                    _ = runtime?.addGardenJump()
+                    cue = "Pip showed one group-sized jump. Add the rest."
+                }
+            case .halves:
+                cue = "Two equal parts need one cut in the exact middle. Move the divider, then tap CUT."
+                demonstration = false
+            case .quarters:
+                cue = "Four equal parts need three evenly spaced cuts. Move the divider between cells."
+                demonstration = false
             }
         case .clockMarket(let model):
             switch model.task {
