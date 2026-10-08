@@ -226,6 +226,16 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.cycleMirrorCell(row) ?? false
     }
 
+    @discardableResult public mutating func placeMeasureUnit() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.placeMeasureUnit() ?? false
+    }
+
+    @discardableResult public mutating func removeMeasureUnit() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.removeMeasureUnit() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -357,6 +367,30 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 if demonstration {
                     _ = runtime?.choosePatternSymbol(model.correctSymbol)
                     cue = "Watch Pip place one repeating shape. Now try the lever."
+                }
+            }
+        case .measurementWorkshop(let model):
+            switch model.task {
+            case .length:
+                cue = "Put both ribbons against the same starting line. Compare where they end."
+            case .weight:
+                cue = "Each stone weighs the same. Which tray has more equal-weight stones?"
+            case .capacity:
+                cue = "Each level represents one equal measuring cup. Which vessel holds more?"
+            case .units:
+                cue = "Place the same-size units from one end of the bridge to the other. No gaps or overlaps."
+            }
+            if demonstration {
+                if model.isUnitMeasurement {
+                    if model.placedUnits < model.targetUnitCount {
+                        _ = runtime?.placeMeasureUnit()
+                        cue = "Pip placed one measuring unit. Fill the remaining length."
+                    } else {
+                        demonstration = false
+                    }
+                } else {
+                    runtime?.chooseComparison(model.correctChoice)
+                    cue = "Pip chose a comparison. Pull the lever to check, then try another."
                 }
             }
         case .placeValueFactory(let model):
