@@ -1190,6 +1190,179 @@ import LearningCore
     }
 }
 
+
+@MainActor final class ShapeForgeMechanic: SKNode, MathCastleReactiveMechanic {
+    private let display = SKNode()
+    private let title = ArtSystem.label("SHAPE FORGE", size: 18)
+    private let instructionLabel = ArtSystem.label("", size: 17)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.shapeForge
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 284))
+        tray.name = MathMechanicID.shapeForge
+        tray.position.y = -15
+        tray.zPosition = -5
+        addChild(tray)
+
+        let heading = ArtSystem.plaque(
+            CGSize(width: 282, height: 47),
+            fill: UIColor(red: 0.07, green: 0.13, blue: 0.22, alpha: 0.95),
+            stroke: UIColor(red: 0.95, green: 0.76, blue: 0.38, alpha: 0.84),
+            radius: 15
+        )
+        heading.position.y = 126
+        heading.name = MathMechanicID.shapeForge
+        addChild(heading)
+        title.fontName = "AvenirNext-Heavy"
+        title.fontColor = .white
+        title.name = MathMechanicID.shapeForge
+        heading.addChild(title)
+
+        instructionLabel.fontName = "AvenirNext-DemiBold"
+        instructionLabel.fontColor = UIColor(red: 0.96, green: 0.84, blue: 0.57, alpha: 1)
+        instructionLabel.position.y = 82
+        instructionLabel.name = MathMechanicID.shapeForge
+        addChild(instructionLabel)
+        addChild(display)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private static func shapeNode(_ shape: ForgeShape, size: CGFloat) -> SKShapeNode {
+        let node: SKShapeNode
+        switch shape {
+        case .circle:
+            node = SKShapeNode(circleOfRadius: size * 0.48)
+        case .square:
+            node = SKShapeNode(rectOf: CGSize(width: size, height: size))
+        case .rectangle:
+            node = SKShapeNode(rectOf: CGSize(width: size * 1.17, height: size * 0.73))
+        case .triangle:
+            let p = CGMutablePath()
+            p.move(to: CGPoint(x: 0, y: size * 0.59))
+            p.addLine(to: CGPoint(x: -size * 0.54, y: -size * 0.41))
+            p.addLine(to: CGPoint(x: size * 0.54, y: -size * 0.41))
+            p.closeSubpath()
+            node = SKShapeNode(path: p)
+        }
+        node.fillColor = UIColor(red: 0.22, green: 0.67, blue: 0.77, alpha: 1)
+        node.strokeColor = UIColor(red: 0.94, green: 0.93, blue: 0.72, alpha: 1)
+        node.lineWidth = 3
+        node.glowWidth = 1
+        return node
+    }
+
+    private static func angledTriangle(size: CGFloat) -> SKShapeNode {
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: -size * 0.5, y: -size * 0.5))
+        p.addLine(to: CGPoint(x: size * 0.5, y: -size * 0.5))
+        p.addLine(to: CGPoint(x: -size * 0.5, y: size * 0.5))
+        p.closeSubpath()
+        return SKShapeNode(path: p)
+    }
+
+    private func choiceFrame(name: String, at x: CGFloat, y: CGFloat) -> SKNode {
+        let plate = ArtSystem.panel(
+            CGSize(width: 108, height: 104),
+            fill: UIColor(red: 0.07, green: 0.20, blue: 0.27, alpha: 0.96),
+            stroke: UIColor(red: 0.57, green: 0.87, blue: 0.92, alpha: 0.81),
+            radius: 17,
+            lineWidth: 2,
+            shadowAlpha: 0.08
+        )
+        plate.position = CGPoint(x: x, y: y)
+        plate.name = name
+        plate.zPosition = 10
+        display.addChild(plate)
+        return plate
+    }
+
+    func render(_ model: ShapeForgeModel) {
+        display.removeAllChildren()
+        switch model.task {
+        case .recognize:
+            instructionLabel.text = "FIND THE \(model.shape?.name.uppercased() ?? "SHAPE")"
+            for (index, shape) in model.shapeChoices.enumerated() {
+                let x = CGFloat(index - 1) * 158
+                let frame = choiceFrame(name: "forgeChoice\(index + 1)", at: x, y: -20)
+                let artwork = Self.shapeNode(shape, size: 62)
+                artwork.name = frame.name
+                frame.addChild(artwork)
+                let number = ArtSystem.label("\(index + 1)", size: 14)
+                number.name = frame.name
+                number.position.y = -65
+                frame.addChild(number)
+            }
+        case .attributes:
+            instructionLabel.text = "COUNT THE CORNERS"
+            if let shape = model.shape {
+                let shapeNode = Self.shapeNode(shape, size: 83)
+                shapeNode.position.y = 28
+                shapeNode.name = MathMechanicID.shapeForge
+                display.addChild(shapeNode)
+            }
+            for (index, corners) in model.cornerChoices.enumerated() {
+                let frame = choiceFrame(name: "forgeChoice\(index + 1)", at: CGFloat(index - 1) * 153, y: -104)
+                let label = ArtSystem.label("\(corners)", size: 31)
+                label.fontName = "AvenirNext-Heavy"
+                label.fontColor = .white
+                label.name = frame.name
+                frame.addChild(label)
+            }
+        case .rotate:
+            instructionLabel.text = "MATCH THE GOLD OUTLINE"
+            let target = Self.angledTriangle(size: 87)
+            target.position = CGPoint(x: -121, y: -6)
+            target.zRotation = CGFloat(model.targetOrientation) * .pi / 2
+            target.fillColor = UIColor(red: 0.96, green: 0.79, blue: 0.40, alpha: 0.11)
+            target.strokeColor = UIColor(red: 0.99, green: 0.85, blue: 0.43, alpha: 1)
+            target.lineWidth = 4
+            target.name = MathMechanicID.shapeForge
+            display.addChild(target)
+
+            let selected = Self.angledTriangle(size: 87)
+            selected.position = CGPoint(x: 121, y: -6)
+            selected.zRotation = CGFloat(model.currentOrientation) * .pi / 2
+            selected.fillColor = UIColor(red: 0.25, green: 0.74, blue: 0.88, alpha: 1)
+            selected.strokeColor = .white
+            selected.lineWidth = 3
+            selected.name = MathMechanicID.shapeForge
+            display.addChild(selected)
+
+            for (name, symbol, x) in [
+                ("forgeTurnLeft", "↺", CGFloat(-104)),
+                ("forgeTurnRight", "↻", CGFloat(104))
+            ] {
+                let button = ArtSystem.medallion(
+                    radius: 35,
+                    fill: UIColor(red: 0.11, green: 0.26, blue: 0.37, alpha: 1),
+                    stroke: UIColor(red: 0.97, green: 0.79, blue: 0.40, alpha: 0.96),
+                    glow: 0
+                )
+                button.position = CGPoint(x: x, y: -118)
+                button.name = name
+                display.addChild(button)
+                let mark = ArtSystem.label(symbol, size: 32)
+                mark.fontColor = .white
+                mark.name = name
+                button.addChild(mark)
+            }
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        title.fontColor = UIColor(red: 1, green: 0.90, blue: 0.53, alpha: 1)
+        guard !reducedMotion else { return }
+        display.run(.sequence([
+            .scale(to: 1.03, duration: 0.12),
+            .scale(to: 1, duration: 0.16)
+        ]), withKey: "shapeSuccessPulse")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -1205,6 +1378,8 @@ import LearningCore
             return PlaceValueFactoryMechanic()
         case MathMechanicID.patternLoom:
             return PatternLoomMechanic()
+        case MathMechanicID.shapeForge:
+            return ShapeForgeMechanic()
         default:
             return nil
         }
