@@ -191,6 +191,16 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         guard interactionStarted else { return false }
         return runtime?.adjustPlaceValue(tensDelta: tensDelta, onesDelta: onesDelta) ?? false
     }
+    @discardableResult public mutating func choosePatternSymbol(_ symbol: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.choosePatternSymbol(symbol) ?? false
+    }
+
+    @discardableResult public mutating func undoPatternSymbol() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoPatternSymbol() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -273,6 +283,21 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 if model.selectedNumber < model.correctNumber { _ = increment(at: now) }
                 else if model.selectedNumber > model.correctNumber { _ = decrement(at: now) }
                 else { demonstration = false }
+            }
+        case .patternLoom(let model):
+            if model.isCreation {
+                cue = "Make a repeat group. AB has two different shapes; AAB repeats one twice; ABC uses three different shapes."
+                // Creating a pattern requires an independent sequence of choices.
+                // Do not silently complete it for the learner.
+                demonstration = false
+            } else {
+                cue = next.support == .lightHint
+                    ? "Look for the group that repeats. Which shape belongs in the empty space?"
+                    : "Find the first repeating group, then follow it to the missing space."
+                if demonstration {
+                    _ = runtime?.choosePatternSymbol(model.correctSymbol)
+                    cue = "Watch Pip place one repeating shape. Now try the lever."
+                }
             }
         case .placeValueFactory(let model):
             if model.isComparison {
