@@ -57,7 +57,7 @@ native. The same timber materials cover the crossing steps and their supports.
 
 ## Companion HD art pass
 
-Milo, Tiko and Lumi now ship with dedicated 256×256 transparent WebP production
+Milo, Tiko and Lumi now ship with dedicated 256×256 transparent PNG production
 cutouts instead of the former tiny single-frame source images. At their authored
 native scene sizes, these assets remove the visible low-resolution companion
 presentation while preserving each character's real aspect ratio.
