@@ -1194,6 +1194,132 @@ public struct ClockMarketModel: Codable, Equatable, Sendable {
     }
 }
 
+
+/// The first Grouping Garden milestone is deliberately a learning-only model.
+/// It must not enter the mastery question bank until a child can manipulate
+/// actual SpriteKit objects and the native touch path is regression tested.
+public enum GroupingGardenTask: String, Codable, Sendable {
+    case equalGroups
+    case repeatedAddition
+    case equalSharing
+    case halves
+    case quarters
+}
+
+public struct GroupingGardenModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case invalidConfiguration
+    }
+
+    public let task: GroupingGardenTask
+    public let groupCount: Int
+    public let itemsPerGroup: Int
+    public private(set) var bins: [Int]
+    public private(set) var fractionalCells: Set<Int>
+    public private(set) var placements: [Int]
+    public private(set) var attempts: Int
+    public private(set) var completed: Bool
+    public private(set) var support: SupportLevel
+
+    public var totalItems: Int { groupCount * itemsPerGroup }
+    public var targetCells: Int {
+        switch task {
+        case .halves: return 2
+        case .quarters: return 4
+        default: return 0
+        }
+    }
+
+    public var hasCompleteResponse: Bool {
+        switch task {
+        case .halves, .quarters:
+            return fractionalCells.count == 1
+        case .equalGroups, .repeatedAddition, .equalSharing:
+            return bins.reduce(0, +) == totalItems
+        }
+    }
+
+    public init(task: GroupingGardenTask, groupCount: Int, itemsPerGroup: Int) throws {
+        switch task {
+        case .equalGroups, .repeatedAddition, .equalSharing:
+            guard (2...5).contains(groupCount), (1...6).contains(itemsPerGroup),
+                  groupCount * itemsPerGroup <= 20 else {
+                throw ModelError.invalidConfiguration
+            }
+        case .halves:
+            guard groupCount == 2, itemsPerGroup == 1 else {
+                throw ModelError.invalidConfiguration
+            }
+        case .quarters:
+            guard groupCount == 4, itemsPerGroup == 1 else {
+                throw ModelError.invalidConfiguration
+            }
+        }
+        self.task = task
+        self.groupCount = groupCount
+        self.itemsPerGroup = itemsPerGroup
+        bins = Array(repeating: 0, count: groupCount)
+        fractionalCells = []
+        placements = []
+        attempts = 0
+        completed = false
+        support = .independent
+    }
+
+    @discardableResult
+    public mutating func placeCounter(in group: Int) -> Bool {
+        guard !completed, targetCells == 0,
+              (0..<groupCount).contains(group),
+              placements.count < totalItems else { return false }
+        bins[group] += 1
+        placements.append(group)
+        return true
+    }
+
+    @discardableResult
+    public mutating func undoCounter() -> Bool {
+        guard !completed, targetCells == 0, let last = placements.popLast()
+        else { return false }
+        bins[last] -= 1
+        return true
+    }
+
+    @discardableResult
+    public mutating func toggleFractionalCell(_ index: Int) -> Bool {
+        guard !completed, targetCells > 0,
+              (0..<targetCells).contains(index) else { return false }
+        if fractionalCells.contains(index) {
+            fractionalCells.remove(index)
+        } else {
+            // Selecting one equal part represents one-half or one-quarter.
+            fractionalCells = [index]
+        }
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        if scaffold.support.rawValue > support.rawValue {
+            support = scaffold.support
+        }
+    }
+
+    /// Returns nil until the visible manipulation is complete. Assessment
+    /// integration must wrap this decision in MathMechanicRuntime evidence.
+    public mutating func check() -> Outcome? {
+        guard !completed, hasCompleteResponse else { return nil }
+        attempts += 1
+        let correct: Bool
+        switch task {
+        case .equalGroups, .repeatedAddition, .equalSharing:
+            correct = bins.allSatisfy { $0 == itemsPerGroup }
+        case .halves, .quarters:
+            correct = fractionalCells.count == 1
+        }
+        completed = correct
+        return correct ? .correct : .incorrect
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
