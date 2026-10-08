@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "format": "PDF vector original",
+  "sourceCanvas": [
+    1280,
+    960
+  ],
+  "retinaTarget": [
+    2560,
+    1920
+  ],
+  "note": "Standalone original vector scenery, not a generated photograph or upscale; no characters, UI, challenge answers, or changes to existing approved reference art.",
+  "assets": {
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/ScienceGreenhousePaintedHD.imageset/art.pdf": {
+      "asset": "ScienceGreenhousePaintedHD",
+      "blobSHA": "d61b557b768562fd668af501f6216138409d324d"
+    },
+    "ValkyrieLearn/Resources/AdventureArt.xcassets/ScienceCreatureGrovePaintedHD.imageset/art.pdf": {
+      "asset": "ScienceCreatureGrovePaintedHD",
+      "blobSHA": "9435708cf024428501b503f4a64b1fae030e0854"
+    }
+  }
+}
