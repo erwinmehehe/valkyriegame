@@ -1263,6 +1263,7 @@ import LearningCore
         case .shapeForge(let model): (mechanic as? ShapeForgeMechanic)?.render(model)
         case .measurementWorkshop(let model): (mechanic as? MeasurementWorkshopMechanic)?.render(model)
         case .dataBoard(let model): (mechanic as? DataBoardMechanic)?.render(model)
+        case .clockMarket(let model): (mechanic as? ClockMarketMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1341,7 +1342,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1397,6 +1398,51 @@ import LearningCore
                     let y = CGFloat(33 - row * 54)
                     if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
                         manipulate { self.state.cycleMirrorCell(row) }
+                        return true
+                    }
+                }
+            }
+        case .clockMarket(let model):
+            if model.isClock {
+                for (x, y, hourDelta, minuteDelta) in [
+                    (CGFloat(58), CGFloat(-46), -1, 0),
+                    (CGFloat(161), CGFloat(-46), 1, 0),
+                    (CGFloat(58), CGFloat(-125), 0, -1),
+                    (CGFloat(161), CGFloat(-125), 0, 1)
+                ] {
+                    if hourDelta == 0 && model.task == .hour { continue }
+                    if hypot(local.x - x, local.y - y) <= 38 {
+                        if hourDelta != 0 {
+                            manipulate { self.state.adjustClockHour(hourDelta) }
+                        } else {
+                            manipulate { self.state.adjustClockMinute(minuteDelta) }
+                        }
+                        return true
+                    }
+                }
+            } else if model.isRoutines {
+                if hypot(local.x - 225, local.y - 51) <= 37 {
+                    manipulate { self.state.undoDailyRoutine() }
+                    return true
+                }
+                for (index, daypart) in ClockMarketDaypart.allCases.enumerated() {
+                    let x = CGFloat(index) * 117 - 175.5
+                    if hypot(local.x - x, local.y + 118) <= 37 {
+                        manipulate { self.state.placeDailyRoutine(daypart) }
+                        return true
+                    }
+                }
+            } else if model.isMoney {
+                if hypot(local.x - 222, local.y - 60) <= 37 {
+                    manipulate { self.state.undoPesoCoin() }
+                    return true
+                }
+                let count = model.allowedCoins.count
+                let spacing: CGFloat = count == 2 ? 148 : 104
+                for (index, coin) in model.allowedCoins.enumerated() {
+                    let x = CGFloat(index) * spacing - CGFloat(count - 1) * spacing / 2
+                    if hypot(local.x - x, local.y + 65) <= 38 {
+                        manipulate { self.state.addPesoCoin(coin) }
                         return true
                     }
                 }
@@ -1529,6 +1575,20 @@ import LearningCore
         case "dataGraph1": manipulate { self.state.addPicture(to: 1) }
         case "dataGraph2": manipulate { self.state.addPicture(to: 2) }
         case "dataGraph3": manipulate { self.state.addPicture(to: 3) }
+        case "clockHourMinus": manipulate { self.state.adjustClockHour(-1) }
+        case "clockHourPlus": manipulate { self.state.adjustClockHour(1) }
+        case "clockMinuteMinus": manipulate { self.state.adjustClockMinute(-1) }
+        case "clockMinutePlus": manipulate { self.state.adjustClockMinute(1) }
+        case "routinemorning": manipulate { self.state.placeDailyRoutine(.morning) }
+        case "routineafternoon": manipulate { self.state.placeDailyRoutine(.afternoon) }
+        case "routineevening": manipulate { self.state.placeDailyRoutine(.evening) }
+        case "routinenight": manipulate { self.state.placeDailyRoutine(.night) }
+        case "routineUndo": manipulate { self.state.undoDailyRoutine() }
+        case "marketCoin1": manipulate { self.state.addPesoCoin(1) }
+        case "marketCoin5": manipulate { self.state.addPesoCoin(5) }
+        case "marketCoin10": manipulate { self.state.addPesoCoin(10) }
+        case "marketCoin20": manipulate { self.state.addPesoCoin(20) }
+        case "marketCoinUndo": manipulate { self.state.undoPesoCoin() }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1576,7 +1636,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1666,6 +1726,15 @@ import LearningCore
             } else {
                 let count = model.placedGraphTotal
                 change = "\(count) \(count == 1 ? "picture tile" : "picture tiles") placed in the graph."
+            }
+        case .clockMarket(let model):
+            if model.isClock {
+                let minuteText = model.minute < 10 ? "0\(model.minute)" : "\(model.minute)"
+                change = "Clock hands now show \(model.hour):\(minuteText)."
+            } else if model.isRoutines {
+                change = "\(model.routineBins.count) of 4 daily events sorted."
+            } else {
+                change = "₱\(model.totalPesos) in selected teaching coins."
             }
         }
         // Describe only the child's visible edit; the lever still checks the answer.

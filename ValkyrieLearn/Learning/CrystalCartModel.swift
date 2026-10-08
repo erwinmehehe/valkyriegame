@@ -926,6 +926,274 @@ public struct DataBoardModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum ClockMarketStage: String, Codable, CaseIterable, Sendable {
+    case k2
+    case grade1
+    case grade2
+}
+
+public enum ClockMarketTask: String, Codable, Sendable {
+    case hour
+    case halfHour
+    case fiveMinutes
+    case routines
+    case money
+}
+
+public enum ClockMarketDaypart: String, Codable, CaseIterable, Sendable {
+    case morning
+    case afternoon
+    case evening
+    case night
+}
+
+public enum ClockMarketRoutine: Int, Codable, CaseIterable, Sendable {
+    case wakeUp = 1
+    case lunch
+    case dinner
+    case sleep
+
+    public var title: String {
+        switch self {
+        case .wakeUp: return "WAKE UP"
+        case .lunch: return "EAT LUNCH"
+        case .dinner: return "EAT DINNER"
+        case .sleep: return "GO TO SLEEP"
+        }
+    }
+
+    public var daypart: ClockMarketDaypart {
+        switch self {
+        case .wakeUp: return .morning
+        case .lunch: return .afternoon
+        case .dinner: return .evening
+        case .sleep: return .night
+        }
+    }
+}
+
+/// Clock hands, daypart cards and peso coins share one Codable evidence model.
+/// Clock-reading skills remain separate from sequencing daily events.
+public struct ClockMarketModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: ClockMarketTask
+    public let stage: ClockMarketStage
+    public private(set) var hour: Int
+    public private(set) var minute: Int
+    public private(set) var handMoves: Int
+    public private(set) var routineBins: [ClockMarketDaypart]
+    public private(set) var coins: [Int]
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public static let pesoDenominations = [1, 5, 10, 20]
+    public var isClock: Bool {
+        task == .hour || task == .halfHour || task == .fiveMinutes
+    }
+    public var isRoutines: Bool { task == .routines }
+    public var isMoney: Bool { task == .money }
+    public var targetHour: Int { encounter.initialQuantity }
+    public var targetMinute: Int { encounter.targetQuantity }
+    public var targetPesos: Int { encounter.targetQuantity }
+    public var totalPesos: Int { coins.reduce(0, +) }
+
+    public var allowedCoins: [Int] {
+        switch stage {
+        case .k2: return [1, 5]
+        case .grade1: return [1, 5, 10]
+        case .grade2: return Self.pesoDenominations
+        }
+    }
+
+    public var routineCards: [ClockMarketRoutine] {
+        guard isRoutines else { return [] }
+        var cards = ClockMarketRoutine.allCases
+        var seed = encounter.initialQuantity
+        for index in 0..<cards.count {
+            let remaining = cards.count - index
+            let offset = seed % remaining
+            cards.swapAt(index, index + offset)
+            seed /= remaining
+        }
+        return cards
+    }
+
+    public var nextRoutine: ClockMarketRoutine? {
+        let cards = routineCards
+        guard isRoutines, routineBins.count < cards.count else { return nil }
+        return cards[routineBins.count]
+    }
+
+    public var hasCompleteResponse: Bool {
+        switch task {
+        case .hour, .halfHour, .fiveMinutes: return handMoves > 0
+        case .routines: return routineBins.count == 4
+        case .money: return !coins.isEmpty
+        }
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.clockMarket else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .clockMarket else {
+            throw ModelError.unsupportedOperation
+        }
+
+        let fields = encounter.context.split(separator: ".").map(String.init)
+        let task: ClockMarketTask
+        let stage: ClockMarketStage
+        switch fields {
+        case ["clock", "hour"]:
+            task = .hour
+            stage = .k2
+            guard encounter.skillID == MathSkills.clockHour,
+                  (1...12).contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 0 else {
+                throw ModelError.invalidConfiguration
+            }
+        case ["clock", "halfHour"]:
+            task = .halfHour
+            stage = .grade1
+            guard encounter.skillID == MathSkills.clockHalfHour,
+                  (1...12).contains(encounter.initialQuantity),
+                  [0, 30].contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+        case ["clock", "fiveMinutes"]:
+            task = .fiveMinutes
+            stage = .grade2
+            guard encounter.skillID == MathSkills.clockFiveMinutes,
+                  (1...12).contains(encounter.initialQuantity),
+                  (0...55).contains(encounter.targetQuantity),
+                  encounter.targetQuantity % 5 == 0 else {
+                throw ModelError.invalidConfiguration
+            }
+        case ["market", "routines"]:
+            task = .routines
+            stage = .k2
+            guard encounter.skillID == MathSkills.timeDayparts,
+                  (0..<24).contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 4 else {
+                throw ModelError.invalidConfiguration
+            }
+        case ["market", "money", "k2"], ["market", "money", "grade1"],
+             ["market", "money", "grade2"]:
+            task = .money
+            guard let grade = ClockMarketStage(rawValue: fields[2]),
+                  encounter.skillID == MathSkills.coinValues,
+                  encounter.initialQuantity == 0 else {
+                throw ModelError.invalidConfiguration
+            }
+            stage = grade
+            let ceiling: Int
+            switch grade {
+            case .k2: ceiling = 10
+            case .grade1: ceiling = 30
+            case .grade2: ceiling = 60
+            }
+            guard (1...ceiling).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+
+        self.encounter = encounter
+        self.task = task
+        self.stage = stage
+        hour = 12
+        minute = 0
+        handMoves = 0
+        routineBins = []
+        coins = []
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func adjustHour(_ step: Int) -> Bool {
+        guard !completed, isClock, step == -1 || step == 1 else { return false }
+        hour = (hour - 1 + step + 12) % 12 + 1
+        handMoves += 1
+        return true
+    }
+
+    @discardableResult public mutating func adjustMinute(_ step: Int) -> Bool {
+        guard !completed, task == .halfHour || task == .fiveMinutes,
+              step == -1 || step == 1 else { return false }
+        let interval = task == .halfHour ? 30 : 5
+        minute = (minute + step * interval + 60) % 60
+        handMoves += 1
+        return true
+    }
+
+    @discardableResult public mutating func placeRoutine(in part: ClockMarketDaypart) -> Bool {
+        guard !completed, isRoutines, routineBins.count < 4 else { return false }
+        routineBins.append(part)
+        return true
+    }
+
+    @discardableResult public mutating func undoRoutine() -> Bool {
+        guard !completed, isRoutines, !routineBins.isEmpty else { return false }
+        routineBins.removeLast()
+        return true
+    }
+
+    @discardableResult public mutating func addCoin(_ pesos: Int) -> Bool {
+        guard !completed, isMoney,
+              allowedCoins.contains(pesos), coins.count < 16,
+              totalPesos + pesos <= targetPesos + 20 else { return false }
+        coins.append(pesos)
+        return true
+    }
+
+    @discardableResult public mutating func undoCoin() -> Bool {
+        guard !completed, isMoney, !coins.isEmpty else { return false }
+        coins.removeLast()
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        let correct: Bool
+        switch task {
+        case .hour, .halfHour, .fiveMinutes:
+            correct = hour == targetHour && minute == targetMinute
+        case .routines:
+            correct = zip(routineCards, routineBins).allSatisfy {
+                $0.daypart == $1
+            }
+        case .money:
+            correct = totalPesos == targetPesos
+        }
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -937,6 +1205,7 @@ public enum MathMechanicID {
     public static let shapeForge = "shapeForge"
     public static let measurementWorkshop = "measurementWorkshop"
     public static let dataBoard = "dataBoard"
+    public static let clockMarket = "clockMarket"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -948,7 +1217,8 @@ public enum MathMechanicID {
         patternLoom,
         shapeForge,
         measurementWorkshop,
-        dataBoard
+        dataBoard,
+        clockMarket
     ]
 }
 
@@ -1311,6 +1581,8 @@ public enum MathManipulativeSupport {
             return (try? MeasurementWorkshopModel(encounter: encounter)) != nil
         case MathMechanicID.dataBoard:
             return (try? DataBoardModel(encounter: encounter)) != nil
+        case MathMechanicID.clockMarket:
+            return (try? ClockMarketModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -1340,6 +1612,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case shapeForge(ShapeForgeModel)
     case measurementWorkshop(MeasurementWorkshopModel)
     case dataBoard(DataBoardModel)
+    case clockMarket(ClockMarketModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -1363,6 +1636,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .measurementWorkshop(try MeasurementWorkshopModel(encounter: encounter, at: date))
         case MathMechanicID.dataBoard:
             self = .dataBoard(try DataBoardModel(encounter: encounter, at: date))
+        case MathMechanicID.clockMarket:
+            self = .clockMarket(try ClockMarketModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -1380,6 +1655,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .shapeForge(let model): return model.encounter
         case .measurementWorkshop(let model): return model.encounter
         case .dataBoard(let model): return model.encounter
+        case .clockMarket(let model): return model.encounter
         }
     }
 
@@ -1395,6 +1671,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .shapeForge(let model): return model.completed
         case .measurementWorkshop(let model): return model.completed
         case .dataBoard(let model): return model.completed
+        case .clockMarket(let model): return model.completed
         }
     }
 
@@ -1410,6 +1687,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .shapeForge(let model): return model.support
         case .measurementWorkshop(let model): return model.support
         case .dataBoard(let model): return model.support
+        case .clockMarket(let model): return model.support
         }
     }
 
@@ -1431,7 +1709,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket:
             return false
         }
     }
@@ -1454,7 +1732,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket:
             return false
         }
     }
@@ -1604,6 +1882,49 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func adjustClockHour(_ delta: Int) -> Bool {
+        guard case .clockMarket(var model) = self else { return false }
+        let changed = model.adjustHour(delta)
+        self = .clockMarket(model)
+        return changed
+    }
+
+    @discardableResult public mutating func adjustClockMinute(_ delta: Int) -> Bool {
+        guard case .clockMarket(var model) = self else { return false }
+        let changed = model.adjustMinute(delta)
+        self = .clockMarket(model)
+        return changed
+    }
+
+    @discardableResult public mutating func placeDailyRoutine(_ daypart: ClockMarketDaypart) -> Bool {
+        guard case .clockMarket(var model) = self else { return false }
+        let changed = model.placeRoutine(in: daypart)
+        self = .clockMarket(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoDailyRoutine() -> Bool {
+        guard case .clockMarket(var model) = self else { return false }
+        let changed = model.undoRoutine()
+        self = .clockMarket(model)
+        return changed
+    }
+
+    @discardableResult public mutating func addPesoCoin(_ pesos: Int) -> Bool {
+        guard case .clockMarket(var model) = self else { return false }
+        let changed = model.addCoin(pesos)
+        self = .clockMarket(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoPesoCoin() -> Bool {
+        guard case .clockMarket(var model) = self else { return false }
+        let changed = model.undoCoin()
+        self = .clockMarket(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -1636,6 +1957,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .dataBoard(var model):
             model.apply(scaffold)
             self = .dataBoard(model)
+        case .clockMarket(var model):
+            model.apply(scaffold)
+            self = .clockMarket(model)
         }
     }
 
@@ -1680,6 +2004,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .dataBoard(var model):
             let evidence = model.submit(at: date)
             self = .dataBoard(model)
+            return evidence
+        case .clockMarket(var model):
+            let evidence = model.submit(at: date)
+            self = .clockMarket(model)
             return evidence
         }
     }

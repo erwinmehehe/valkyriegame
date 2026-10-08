@@ -31,15 +31,15 @@ curriculum-review pass against the controlling DepEd source for that grade/year.
 
 ## Current curriculum matrix
 
-The adaptive graph contains 73 ordered math skills.
+The adaptive graph contains 76 ordered math skills, including three explicit clock-reading skills added to the original 73.
 
 | Band | Skills |
 | --- | ---: |
-| K2 readiness | 13 |
+| K2 readiness | 14 |
 | Kindergarten | 17 |
-| Grade 1 | 31 |
-| Grade 2 | 12 |
-| Total | 73 |
+| Grade 1 | 32 |
+| Grade 2 | 13 |
+| Total | 76 |
 
 Each skill is mapped to:
 
@@ -60,10 +60,10 @@ explicitly non-grade-level.
 
 ## Production question bank
 
-The native Math Castle now has a parameterized production bank of 1,702 variants.
+The native Math Castle now has a parameterized production bank of 2,006 variants.
 
 Together with the 49 existing normal adaptive encounters, the normal adaptive
-candidate pool is 1,751 encounters.
+candidate pool is 2,055 encounters.
 
 Hidden placement and Challenge Gate content remain separate so diagnostic evidence
 and optional challenge evidence do not masquerade as ordinary practice.
@@ -83,7 +83,7 @@ math that has merely been reworded.
 
 ## Native-assessment safety
 
-Only skills that the current ten native manipulatives can genuinely observe are
+Only skills that the current eleven native manipulatives can genuinely observe are
 placed in the production mastery bank.
 
 Current manipulatives:
@@ -98,11 +98,24 @@ Current manipulatives:
 - Shape Forge
 - Measurement Workshop
 - Data Board
+- Clock & Market
 
-The production bank currently covers 57 of the 73 skill nodes.
+The production bank currently covers 62 of the 76 skill nodes.
 
 The remaining skills stay in the curriculum graph and alignment matrix, but the app
 does not award mastery for them yet. This is intentional.
+
+Clock & Market adds 304 deterministic tasks with fully observable controls:
+12 clocks to the hour (K2 readiness), 24 half-hour settings (Grade 1), 144
+five-minute settings (Grade 2), 24 four-card daypart orderings, and 100
+stage-scaffolded Philippine peso sums. Three clock-reading skills were added
+explicitly to the skill graph rather than incorrectly counting clock mastery
+as daypart sequencing. Activities remain mastery-eligible only after the
+child adjusts actual hands, sorts every routine card, or adds peso tokens;
+Pip help is tracked as supported rather than independent work. The coin
+icons are simplified denomination markers, not official Bangko Sentral coin
+replicas. Stage mappings are strand-level instructional decisions and
+require educator review before claiming DepEd competency-code equivalence.
 
 Data Board adds 96 five-object classification variants split between
 sorting by COLOR and sorting by SHAPE. The learner selects a real destination
@@ -144,7 +157,6 @@ Examples that still require dedicated observable mechanics include:
 - count-on strategy evidence
 - difference/inverse-fact reasoning
 - route/position reasoning
-- time and Philippine money
 - explicit strategy choice and multiple-solution reasoning
 - equal groups / repeated addition
 - equal sharing
@@ -169,14 +181,13 @@ Placement readiness must never be reported to parents as observed mastery.
 ## Next curriculum-engineering milestone
 
 The next major implementation milestone is not "more questions." It is adding the
-missing manipulatives so coverage can grow from 57/73 skills toward the full K2-G2
+missing manipulatives so coverage can grow from 62/76 skills toward the full K2-G2
 matrix without weakening evidence quality.
 
-Place Value Factory, Pattern Loom, Shape Forge v2, Measurement Workshop and Data Board are now implemented. Recommended next order:
+Place Value Factory, Pattern Loom, Shape Forge v2, Measurement Workshop, Data Board, and Clock & Market are now implemented. Recommended next order:
 
-1. Clock & Market — time/dayparts and Philippine money
-2. Grouping Garden — equal groups, repeated addition, equal sharing, halves/quarters
-3. Reasoning Studio — strategy choice, multiple solutions and multi-step problems
+1. Grouping Garden — equal groups, repeated addition, equal sharing, halves/quarters
+2. Reasoning Studio — strategy choice, multiple solutions and multi-step problems
 
 Every new mechanic should add observable-action tests before its skills become
 mastery-eligible.

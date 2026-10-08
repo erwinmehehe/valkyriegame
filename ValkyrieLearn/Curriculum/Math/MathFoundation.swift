@@ -1340,6 +1340,101 @@ public enum MathProductionQuestionBank {
             )
         }
 
+
+        // Clock & Market: five distinct concepts, including three newly
+        // declared clock-reading skills (NOT aliases for daypart sequencing).
+        // Each clock challenge requires an actual hand adjustment.
+        for hour in 1...12 {
+            add(
+                "prod-clock-hour-\(hour)",
+                skill: MathSkills.clockHour,
+                mechanic: MathMechanicID.clockMarket,
+                representation: .concrete,
+                operation: .clockMarket,
+                initial: hour,
+                target: 0,
+                prompt: "Turn the clock hands to \(hour) o'clock.",
+                context: "clock.hour",
+                difficulty: 1,
+                purpose: .practice
+            )
+            for minute in [0, 30] {
+                add(
+                    "prod-clock-half-\(hour)-\(minute)",
+                    skill: MathSkills.clockHalfHour,
+                    mechanic: MathMechanicID.clockMarket,
+                    representation: .pictorial,
+                    operation: .clockMarket,
+                    initial: hour,
+                    target: minute,
+                    prompt: "Set the hour and minute hands to \(hour):\(minute == 0 ? "00" : "30").",
+                    context: "clock.halfHour",
+                    difficulty: 2,
+                    purpose: .representationTransfer
+                )
+            }
+            for five in 0..<12 {
+                let minute = five * 5
+                let minuteText = minute < 10 ? "0\(minute)" : "\(minute)"
+                add(
+                    "prod-clock-five-\(hour)-\(minute)",
+                    skill: MathSkills.clockFiveMinutes,
+                    mechanic: MathMechanicID.clockMarket,
+                    representation: .pictorial,
+                    operation: .clockMarket,
+                    initial: hour,
+                    target: minute,
+                    prompt: "Move both hands to \(hour):\(minuteText).",
+                    context: "clock.fiveMinutes",
+                    difficulty: 3,
+                    purpose: .reasoning
+                )
+            }
+        }
+
+        // Four pictured daily events need four deliberate daypart assignments.
+        // Every one of the 24 card orders is observably different.
+        for permutation in 0..<24 {
+            add(
+                "prod-clock-dayparts-\(permutation)",
+                skill: MathSkills.timeDayparts,
+                mechanic: MathMechanicID.clockMarket,
+                representation: .story,
+                operation: .clockMarket,
+                initial: permutation,
+                target: 4,
+                prompt: "Sort wake-up, lunch, dinner and bedtime into the right part of the day.",
+                context: "market.routines",
+                difficulty: 1,
+                purpose: .practice
+            )
+        }
+
+        // Philippine peso teaching tokens: ₱1, ₱5, ₱10 and ₱20. Coin
+        // illustrations are denomination markers, not official NGC replicas.
+        // Each grade stage has a distinct response context and allowed coins.
+        for (stage, maximum) in [
+            (ClockMarketStage.k2, 10),
+            (.grade1, 30),
+            (.grade2, 60)
+        ] {
+            for pesos in 1...maximum {
+                add(
+                    "prod-market-\(stage.rawValue)-\(pesos)",
+                    skill: MathSkills.coinValues,
+                    mechanic: MathMechanicID.clockMarket,
+                    representation: .concrete,
+                    operation: .clockMarket,
+                    initial: 0,
+                    target: pesos,
+                    prompt: "Choose real peso denominations to pay exactly ₱\(pesos).",
+                    context: "market.money.\(stage.rawValue)",
+                    difficulty: stage == .k2 ? 1 : (stage == .grade1 ? 2 : 3),
+                    purpose: .practice
+                )
+            }
+        }
+
         return result
     }()
 

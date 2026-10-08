@@ -27,6 +27,15 @@ import LearningCore
         let pictureGraph = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
         )
+        let clock = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter
+        )
+        let routines = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.timeDayparts).first?.encounter
+        )
+        let pesos = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -39,7 +48,10 @@ import LearningCore
             (comparison, CGPoint(x: 820, y: 310), CGPoint(x: 665, y: 190), "Left measurement selected."),
             (units, CGPoint(x: 820, y: 310), CGPoint(x: 914, y: 190), "1 equal-size measurement units placed."),
             (sorting, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 of 5 objects sorted."),
-            (pictureGraph, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 picture tile placed in the graph.")
+            (pictureGraph, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 picture tile placed in the graph."),
+            (clock, CGPoint(x: 820, y: 310), CGPoint(x: 981, y: 264), "Clock hands now show 1:00."),
+            (routines, CGPoint(x: 820, y: 310), CGPoint(x: 645, y: 192), "1 of 4 daily events sorted."),
+            (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -218,6 +230,65 @@ import LearningCore
         )
     }
 
+
+    func testClockMarketNativeHourMinuteButtonsAndMoneyUndoWithoutPrematureScoring() throws {
+        let clock = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockFiveMinutes)
+                .first(where: { $0.encounter.initialQuantity == 3
+                    && $0.encounter.targetQuantity == 35 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(clock))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+        scene.handleTap(at: CGPoint(x: 981, y: 264))  // hour + 1
+        scene.handleTap(at: CGPoint(x: 981, y: 185))  // minute + 5
+        guard case .clockMarket(let clockModel)? = state.runtime else {
+            return XCTFail("Missing Clock Market hands")
+        }
+        XCTAssertEqual(clockModel.hour, 1)
+        XCTAssertEqual(clockModel.minute, 5)
+        XCTAssertEqual(clockModel.handMoves, 2)
+        XCTAssertFalse(clockModel.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "Clock hands now show 1:05. Pull Pip's lever when you're ready."
+        )
+
+        let market = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.coinValues)
+                .first(where: { $0.encounter.context == "market.money.grade2"
+                    && $0.encounter.targetQuantity == 21 })?.encounter
+        )
+        let marketState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(marketState.startWorkshop(market))
+        let marketScene = MathCastleScene(state: marketState)
+        marketScene.reducedMotion = true
+        marketScene.didMove(to: SKView())
+        defer { marketScene.willLeave() }
+        marketScene.valkyrie.position = CGPoint(x: 490, y: 175)
+        marketScene.handleTap(at: CGPoint(x: 820, y: 310))
+        let marketBefore = marketState.profile
+        marketScene.handleTap(at: CGPoint(x: 985, y: 245)) // ₱20
+        marketScene.handleTap(at: CGPoint(x: 768, y: 245)) // ₱5
+        marketScene.handleTap(at: CGPoint(x: 1042, y: 370)) // undo
+        guard case .clockMarket(let moneyModel)? = marketState.runtime else {
+            return XCTFail("Missing Philippine peso runtime")
+        }
+        XCTAssertEqual(moneyModel.coins, [20])
+        XCTAssertEqual(moneyModel.totalPesos, 20)
+        XCTAssertFalse(moneyModel.completed)
+        XCTAssertEqual(marketState.profile, marketBefore)
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -286,9 +357,18 @@ import LearningCore
         let pictureGraph = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
         )
+        let clock = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter
+        )
+        let routines = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.timeDayparts).first?.encounter
+        )
+        let pesos = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))
