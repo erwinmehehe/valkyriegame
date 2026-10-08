@@ -131,6 +131,19 @@ final class MathAdventureTests: XCTestCase {
                     XCTAssertTrue(adventure.placeGardenCut())
                 }
             }
+        case .numberTrail(let model):
+            if model.isEstimate {
+                XCTAssertTrue(adventure.revealTrailCollection(at: date))
+                let delta = model.collectionSize > 5 ? 1 : -1
+                for _ in 0..<abs(model.collectionSize - 5) {
+                    XCTAssertTrue(adventure.adjustTrailEstimate(delta))
+                }
+                XCTAssertTrue(adventure.lockTrailEstimate(at: after))
+            } else {
+                for _ in 0..<model.requiredJumps {
+                    XCTAssertTrue(adventure.addTrailJump())
+                }
+            }
         case .reasoningStudio(let model):
             switch model.task {
             case .strategy:
@@ -208,7 +221,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllThirteenRuntimesAndSessionStateRoundTrip() throws {
+    func testAllFourteenRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -221,7 +234,9 @@ final class MathAdventureTests: XCTestCase {
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter),
-            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter)]
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -493,9 +508,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2321)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2321)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2370)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2405)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2405)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2454)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -520,7 +535,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 70)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 72)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -1335,10 +1350,95 @@ final class MathAdventureTests: XCTestCase {
             ReasoningStudioModel.self, from: JSONEncoder().encode(model)), model)
     }
 
+
+    func testNumberTrailAddsTwoSkillsWith84ValidDistinctManipulatives() throws {
+        let estimates = MathProductionQuestionBank.variants(for: MathSkills.estimate10)
+        let countOn = MathProductionQuestionBank.variants(for: MathSkills.countOn10)
+        XCTAssertEqual(estimates.count, 54)
+        XCTAssertEqual(countOn.count, 30)
+        let encounters = (estimates + countOn).map(\.encounter)
+        XCTAssertEqual(Set(encounters.map(\.fingerprint)).count, 84)
+        for encounter in encounters {
+            XCTAssertEqual(encounter.mechanicID, MathMechanicID.numberTrail)
+            XCTAssertEqual(encounter.operation, .numberTrail)
+            XCTAssertTrue(MathManipulativeSupport.supports(encounter))
+            XCTAssertNoThrow(try MathMechanicRuntime(encounter: encounter, at: epoch))
+        }
+    }
+
+    func testEstimateFlashMustEndBeforeLockAndCorrectedApproximationCanScore() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10)
+                .first(where: { $0.encounter.initialQuantity == 0
+                    && $0.encounter.targetQuantity == 2 })?.encounter
+        )
+        var model = try NumberTrailModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch))
+        XCTAssertFalse(model.lockEstimate(at: epoch))
+        XCTAssertFalse(model.turnDial(1))
+        XCTAssertTrue(model.revealCollection(at: epoch))
+        XCTAssertFalse(model.revealCollection(at: epoch), "Cannot continuously reveal the answer")
+        XCTAssertFalse(model.lockEstimate(at: epoch.addingTimeInterval(0.2)))
+        XCTAssertTrue(model.lockEstimate(at: epoch.addingTimeInterval(1)))
+        XCTAssertEqual(model.lockedEstimate, 5)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(model.turnDial(-1))
+        XCTAssertTrue(model.turnDial(-1))
+        XCTAssertTrue(model.turnDial(-1))
+        XCTAssertEqual(model.dialValue, 2)
+        XCTAssertTrue(model.lockEstimate(at: epoch.addingTimeInterval(3)))
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(4)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertFalse(model.turnDial(1))
+        XCTAssertEqual(
+            try JSONDecoder().decode(NumberTrailModel.self, from: JSONEncoder().encode(model)),
+            model
+        )
+    }
+
+    func testEstimateAcceptsGenuinelyCloseAnswersButNotExactCountingWithoutFlash() throws {
+        let example = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10)
+                .first(where: { $0.encounter.targetQuantity == 6 })?.encounter
+        )
+        var model = try NumberTrailModel(encounter: example, at: epoch)
+        XCTAssertFalse(model.lockEstimate(at: epoch.addingTimeInterval(12)))
+        XCTAssertNil(model.submit(at: epoch.addingTimeInterval(12)))
+        XCTAssertTrue(model.revealCollection(at: epoch))
+        // The unlocked starting dial is 5: one fewer than the six dots.
+        XCTAssertTrue(model.lockEstimate(at: epoch.addingTimeInterval(1)))
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(3))?.outcome, .correct)
+    }
+
+    func testCountingOnRequiresVisibleUnitJumpsAndPreservesWrongAttempt() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.countOn10)
+                .first(where: { $0.encounter.initialQuantity == 4
+                    && $0.encounter.targetQuantity == 3 })?.encounter
+        )
+        var model = try NumberTrailModel(encounter: encounter, at: epoch)
+        XCTAssertNil(model.submit(at: epoch), "Unmoved marker cannot score")
+        XCTAssertEqual(model.markerNumber, 4)
+        XCTAssertTrue(model.jumpOne())
+        XCTAssertEqual(model.markerNumber, 5)
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(3))?.outcome, .incorrect)
+        XCTAssertTrue(model.jumpOne())
+        XCTAssertTrue(model.jumpOne())
+        XCTAssertEqual(model.markerNumber, 7)
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(8)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertFalse(model.jumpOne(), "Correctly submitted activity must be immutable")
+        XCTAssertFalse(model.undoJump())
+        XCTAssertEqual(
+            try JSONDecoder().decode(NumberTrailModel.self, from: JSONEncoder().encode(model)),
+            model
+        )
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
-            MathSkills.estimate10,
-            MathSkills.countOn10,
             MathSkills.findDifference10,
             MathSkills.inverseFacts10,
             MathSkills.positionalLanguage,
