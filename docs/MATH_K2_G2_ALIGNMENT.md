@@ -60,10 +60,10 @@ explicitly non-grade-level.
 
 ## Production question bank
 
-The native Math Castle now has a parameterized production bank of 951 variants.
+The native Math Castle now has a parameterized production bank of 1,196 variants.
 
 Together with the 49 existing normal adaptive encounters, the normal adaptive
-candidate pool is 1,000 encounters.
+candidate pool is 1,245 encounters.
 
 Hidden placement and Challenge Gate content remain separate so diagnostic evidence
 and optional challenge evidence do not masquerade as ordinary practice.
@@ -83,7 +83,7 @@ math that has merely been reworded.
 
 ## Native-assessment safety
 
-Only skills that the current five native manipulatives can genuinely observe are
+Only skills that the current six native manipulatives can genuinely observe are
 placed in the production mastery bank.
 
 Current manipulatives:
@@ -93,17 +93,22 @@ Current manipulatives:
 - Number Bond Machine
 - Ten-Frame Gate
 - Missing-Number Bridge
+- Place Value Factory
 
-The production bank currently covers 32 of the 73 skill nodes.
+The production bank currently covers 41 of the 73 skill nodes.
 
 The remaining skills stay in the curriculum graph and alignment matrix, but the app
 does not award mastery for them yet. This is intentional.
 
+Place Value Factory now adds native evidence for counting to 20, ordering numbers
+to 20, one more/one less, grouping tens, tens/ones place value, building and reading
+two-digit numbers, comparing two-digit numbers and ordering two-digit numbers.
+
 Examples that still require dedicated observable mechanics include:
 
-- counting and ordering through 20 beyond current display limits
-- one more / one less strategy evidence
-- place value and two-digit construction
+- estimation
+- count-on strategy evidence
+- difference/inverse-fact reasoning
 - pattern extension and creation
 - shape attributes, composition, rotation and symmetry
 - route/position reasoning
@@ -134,19 +139,18 @@ Placement readiness must never be reported to parents as observed mastery.
 ## Next curriculum-engineering milestone
 
 The next major implementation milestone is not "more questions." It is adding the
-missing manipulatives so coverage can grow from 32/73 skills toward the full K2-G2
+missing manipulatives so coverage can grow from 41/73 skills toward the full K2-G2
 matrix without weakening evidence quality.
 
-Recommended order:
+Place Value Factory is now implemented. Recommended next order:
 
-1. Place Value Factory — tens/ones, two-digit building, reading, comparison
-2. Pattern Loom — AB/AAB/ABC, missing element, pattern creation
-3. Shape Forge — attributes, composition, rotation, symmetry
-4. Measurement Workshop — length, weight, capacity, repeated units
-5. Data Board — sorting/classification and picture graphs
-6. Clock & Market — time/dayparts and Philippine money
-7. Grouping Garden — equal groups, repeated addition, equal sharing, halves/quarters
-8. Reasoning Studio — strategy choice, multiple solutions and multi-step problems
+1. Pattern Loom — AB/AAB/ABC, missing element, pattern creation
+2. Shape Forge — attributes, composition, rotation, symmetry
+3. Measurement Workshop — length, weight, capacity, repeated units
+4. Data Board — sorting/classification and picture graphs
+5. Clock & Market — time/dayparts and Philippine money
+6. Grouping Garden — equal groups, repeated addition, equal sharing, halves/quarters
+7. Reasoning Studio — strategy choice, multiple solutions and multi-step problems
 
 Every new mechanic should add observable-action tests before its skills become
 mastery-eligible.
