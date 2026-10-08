@@ -63,8 +63,7 @@ def verify_pr_changes(paths: list[str]) -> list[str]:
         elif path in PROTECTED_CODE:
             errors.append(f"Character rendering/art-provenance file needs separate explicit approval: {path}")
         elif (lower.startswith("valkyrielearn/resources/") and
-              "valkyrie" in Path(path).name.lower() and
-              path != "ValkyrieLearn/Resources/Info.plist"):
+              "valkyrie" in lower.removeprefix("valkyrielearn/resources/")):
             errors.append(f"New Valkyrie-looking asset must not be added in room-art changes: {path}")
     return errors
 
