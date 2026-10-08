@@ -131,6 +131,47 @@ final class MathAdventureTests: XCTestCase {
                     XCTAssertTrue(adventure.placeGardenCut())
                 }
             }
+        case .differenceBridge(let model):
+            if model.isDifference {
+                for _ in 0..<model.pairGoal {
+                    XCTAssertTrue(adventure.matchDifferencePair())
+                }
+                for _ in 0..<model.leftoverGoal {
+                    XCTAssertTrue(adventure.collectDifference())
+                }
+            } else {
+                for _ in 0..<model.missingPart {
+                    XCTAssertTrue(adventure.addInverseCounter())
+                }
+                for _ in 0..<model.missingPart {
+                    XCTAssertTrue(adventure.reverseInverseCounter())
+                }
+            }
+        case .routeExplorer(let model):
+            var cell = model.startCell
+            for _ in 0..<12 where cell != model.destination {
+                let row = cell / 3
+                let column = cell % 3
+                let targetRow = model.destination / 3
+                let targetColumn = model.destination % 3
+                let choices: [(MapMove, Int, Bool)] = [
+                    (.north, cell - 3, row > 0 && row > targetRow),
+                    (.south, cell + 3, row < 2 && row < targetRow),
+                    (.west, cell - 1, column > 0 && column > targetColumn),
+                    (.east, cell + 1, column < 2 && column < targetColumn)
+                ]
+                var advanced = false
+                for (direction, nextCell, eligible) in choices
+                    where eligible && nextCell != model.blockedCell {
+                    XCTAssertTrue(adventure.moveOnMap(direction))
+                    cell = nextCell
+                    advanced = true
+                    break
+                }
+                XCTAssertTrue(advanced, "A shortest path must avoid the single rock")
+                if !advanced { break }
+            }
+            XCTAssertEqual(cell, model.destination)
         case .numberTrail(let model):
             if model.isEstimate {
                 XCTAssertTrue(adventure.revealTrailCollection(at: date))
@@ -221,7 +262,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllFourteenRuntimesAndSessionStateRoundTrip() throws {
+    func testAllSixteenRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -236,7 +277,9 @@ final class MathAdventureTests: XCTestCase {
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter),
-            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter)]
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -508,9 +551,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2405)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2405)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2454)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2612)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2612)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2661)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -535,7 +578,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 72)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 76)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -1437,27 +1480,15 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
-    func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
-        let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
-            MathSkills.findDifference10,
-            MathSkills.inverseFacts10,
-            MathSkills.positionalLanguage,
-            MathSkills.mapRoute,
-        ]
-
-        for skillID in unsupportedUntilDedicatedMechanicsExist {
-            XCTAssertNotNil(
-                MathCurriculumMatrix.alignment(for: skillID),
-                "Unsupported skills must stay visible in the curriculum matrix."
-            )
-            XCTAssertFalse(
-                MathProductionQuestionBank.hasNativeAssessment(for: skillID),
-                "Do not award mastery for \(skillID.rawValue) until a mechanic can observe the required act."
-            )
+    func testEveryDeclaredMathSkillHasAnObservableNativeAssessment() {
+        let declared = Set(MathSkillCatalog.descriptors.map(\.id))
+        XCTAssertEqual(declared.count, 76)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs, declared)
+        for skill in declared {
+            XCTAssertNotNil(MathCurriculumMatrix.alignment(for: skill))
+            XCTAssertTrue(MathProductionQuestionBank.hasNativeAssessment(for: skill))
         }
     }
-
-
 
     func testWorkshopStationsOfferFreshSupportedReadyChoices() throws {
         let graph = try MathSkills.graph()
