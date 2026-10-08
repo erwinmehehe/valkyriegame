@@ -383,6 +383,21 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoTrailJump() ?? false
     }
 
+    @discardableResult public mutating func adjustDifferenceRow(_ row: DifferenceRow, by delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustDifferenceRow(row, by: delta) ?? false
+    }
+
+    @discardableResult public mutating func pairDifferenceColumn(_ column: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.pairDifferenceColumn(column) ?? false
+    }
+
+    @discardableResult public mutating func undoDifferencePair() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoDifferencePair() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -516,6 +531,14 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                     cue = "Watch Pip place one repeating shape. Now try the lever."
                 }
             }
+        case .differencePairs(let model):
+            cue = "Build the two rows with + and -. Touch each aligned gold and blue pair to connect them."
+            if model.goldCount > 0 && model.blueCount > 0 {
+                cue = "Look at the connected pairs. The crystals without partners show the difference."
+            }
+            // A supported hint may indicate the pairing strategy, but must
+            // not secretly add crystals or pairs on the child's behalf.
+            demonstration = false
         case .numberTrail(let model):
             if model.isEstimate {
                 cue = model.flashObserved
@@ -708,7 +731,7 @@ public enum MathWorkshopCatalog {
 
     public static let stationMechanics: [[String]] = [
         [MathMechanicID.crystalCart, MathMechanicID.groupingGarden, MathMechanicID.numberTrail],
-        [MathMechanicID.balanceScale, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard],
+        [MathMechanicID.balanceScale, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.differencePairs],
         [MathMechanicID.numberBondMachine, MathMechanicID.placeValueFactory, MathMechanicID.reasoningStudio],
         [MathMechanicID.tenFrameGate, MathMechanicID.patternLoom, MathMechanicID.shapeForge],
         [MathMechanicID.missingNumberBridge, MathMechanicID.clockMarket]
