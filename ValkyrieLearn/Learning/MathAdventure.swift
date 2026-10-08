@@ -28,9 +28,9 @@ public struct MathAdventure: Codable, Equatable, Sendable {
     }
 
     // Only actually implemented mechanics enter the native placement adventure.
-    // Unsupported probes such as place value remain authored future content until
-    // their native manipulative exists; advanced reasoning is mapped onto the
-    // existing Number Bond machine instead of being hidden behind an age ceiling.
+    // Place value now enters through its dedicated native factory; unsupported
+    // future probes remain excluded. Advanced reasoning is mapped onto the existing
+    // Number Bond machine instead of being hidden behind an age ceiling.
     public static var playableProbes: [PlacementProbe] {
         MathPlacement.probes.compactMap { probe in
             if probe.band == 1 {
