@@ -27,11 +27,11 @@ app_files = stable_paths(p for folder in ['App','Game','Parent','Persistence'] f
 core_tests = stable_paths((ROOT/'ValkyrieLearn/Tests/LearningCoreTests').glob('*.swift'))
 store_tests = stable_paths((ROOT/'ValkyrieLearn/Tests/PersistenceTests').glob('*.swift'))
 resource_root = ROOT/'ValkyrieLearn/Resources'
-resources = stable_paths(list(resource_root.glob('*.wav')) + list(resource_root.glob('*.webp')) + list(resource_root.glob('*.atlas')) + list(resource_root.glob('*.xcassets')))
+resources = stable_paths(list(resource_root.glob('*.wav')) + list(resource_root.glob('*.webp')) + list(resource_root.glob('*.png')) + list(resource_root.glob('*.atlas')) + list(resource_root.glob('*.xcassets')))
 file_refs = {}
 for p in app_files + core_tests + store_tests + resources:
     rel = p.relative_to(ROOT).as_posix()
-    file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType={'.swift':'sourcecode.swift', '.wav':'audio.wav', '.webp':'file', '.atlas':'folder.skatlas', '.xcassets':'folder.assetcatalog'}[p.suffix], path=rel, sourceTree='<group>')
+    file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType={'.swift':'sourcecode.swift', '.wav':'audio.wav', '.webp':'file', '.png':'image.png', '.atlas':'folder.skatlas', '.xcassets':'folder.assetcatalog'}[p.suffix], path=rel, sourceTree='<group>')
 # Include learning sources and curriculum for browsing; package owns their compilation.
 for p in stable_paths((ROOT/'ValkyrieLearn/Learning').rglob('*.swift')) + stable_paths((ROOT/'ValkyrieLearn/Curriculum').rglob('*.swift')):
     rel = p.relative_to(ROOT).as_posix(); file_refs[rel] = put(rel, 'PBXFileReference', lastKnownFileType='sourcecode.swift', path=rel, sourceTree='<group>')
