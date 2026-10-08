@@ -1899,11 +1899,12 @@ import LearningCore
         if let runtime = state.runtime, !runtime.completed, !state.workshop {
             instruction.text = "Finish Pip's work order before opening his workshop."; return
         }
-        guard let examples = try? MathWorkshopCatalog.choices(
+        let examples = MathWorkshopCatalog.choices(
             at: index,
             profile: state.profile,
             graph: state.graph
-        ), !examples.isEmpty else {
+        )
+        guard !examples.isEmpty else {
             instruction.text = "Pip has no new ready challenge at this station. Try another machine."
             return
         }
