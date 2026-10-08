@@ -60,10 +60,10 @@ explicitly non-grade-level.
 
 ## Production question bank
 
-The native Math Castle now has a parameterized production bank of 1,542 variants.
+The native Math Castle now has a parameterized production bank of 1,702 variants.
 
 Together with the 49 existing normal adaptive encounters, the normal adaptive
-candidate pool is 1,591 encounters.
+candidate pool is 1,751 encounters.
 
 Hidden placement and Challenge Gate content remain separate so diagnostic evidence
 and optional challenge evidence do not masquerade as ordinary practice.
@@ -83,7 +83,7 @@ math that has merely been reworded.
 
 ## Native-assessment safety
 
-Only skills that the current nine native manipulatives can genuinely observe are
+Only skills that the current ten native manipulatives can genuinely observe are
 placed in the production mastery bank.
 
 Current manipulatives:
@@ -97,11 +97,23 @@ Current manipulatives:
 - Pattern Loom
 - Shape Forge
 - Measurement Workshop
+- Data Board
 
-The production bank currently covers 55 of the 73 skill nodes.
+The production bank currently covers 57 of the 73 skill nodes.
 
 The remaining skills stay in the curriculum graph and alignment matrix, but the app
 does not award mastery for them yet. This is intentional.
+
+Data Board adds 96 five-object classification variants split between
+sorting by COLOR and sorting by SHAPE. The learner selects a real destination
+bin for each pictured object, can undo a placement and must sort all five
+before the response is scored. It also adds 64 picture-graph variants covering
+all combinations of three source-group counts from one through four.
+Learners count the displayed shapes and physically place one picture for
+each object in its matching graph column. A partial graph earns no evidence;
+a wrongly distributed complete tally is incorrect but can be corrected.
+These activities add native evidence to classifyObjects and pictureGraph,
+without converting passive viewing into mastery.
 
 Measurement Workshop adds 210 deterministic activities covering comparison
 of lengths using equal-size ribbon segments, weights using equal-weight stones,
@@ -132,7 +144,6 @@ Examples that still require dedicated observable mechanics include:
 - count-on strategy evidence
 - difference/inverse-fact reasoning
 - route/position reasoning
-- picture graphs and classification
 - time and Philippine money
 - explicit strategy choice and multiple-solution reasoning
 - equal groups / repeated addition
@@ -158,15 +169,14 @@ Placement readiness must never be reported to parents as observed mastery.
 ## Next curriculum-engineering milestone
 
 The next major implementation milestone is not "more questions." It is adding the
-missing manipulatives so coverage can grow from 55/73 skills toward the full K2-G2
+missing manipulatives so coverage can grow from 57/73 skills toward the full K2-G2
 matrix without weakening evidence quality.
 
-Place Value Factory, Pattern Loom and Shape Forge v2 are now implemented. Recommended next order:
+Place Value Factory, Pattern Loom, Shape Forge v2, Measurement Workshop and Data Board are now implemented. Recommended next order:
 
-1. Data Board — sorting/classification and picture graphs
-2. Clock & Market — time/dayparts and Philippine money
-3. Grouping Garden — equal groups, repeated addition, equal sharing, halves/quarters
-4. Reasoning Studio — strategy choice, multiple solutions and multi-step problems
+1. Clock & Market — time/dayparts and Philippine money
+2. Grouping Garden — equal groups, repeated addition, equal sharing, halves/quarters
+3. Reasoning Studio — strategy choice, multiple solutions and multi-step problems
 
 Every new mechanic should add observable-action tests before its skills become
 mastery-eligible.

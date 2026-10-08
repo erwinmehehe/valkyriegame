@@ -236,6 +236,26 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.removeMeasureUnit() ?? false
     }
 
+    @discardableResult public mutating func sortDataObject(into bin: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.sortDataObject(into: bin) ?? false
+    }
+
+    @discardableResult public mutating func undoDataSort() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoDataSort() ?? false
+    }
+
+    @discardableResult public mutating func addPicture(to column: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.addPicture(to: column) ?? false
+    }
+
+    @discardableResult public mutating func undoPicture() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoPicture() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -367,6 +387,28 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 if demonstration {
                     _ = runtime?.choosePatternSymbol(model.correctSymbol)
                     cue = "Watch Pip place one repeating shape. Now try the lever."
+                }
+            }
+        case .dataBoard(let model):
+            if model.isSorting {
+                cue = model.sortingAttribute == .color
+                    ? "Look at each object's color. Send it to the bin with the matching color."
+                    : "Look at each object's shape. Send it to the bin with the matching shape."
+                if demonstration, let token = model.nextSortingToken,
+                   let attribute = model.sortingAttribute {
+                    _ = runtime?.sortDataObject(into: token.category(for: attribute))
+                    cue = "Pip sorted one object as an example. Sort the rest yourself."
+                }
+            } else {
+                cue = "Count the shapes in each group above. Put one matching picture in that graph column for each object."
+                if demonstration {
+                    let counts = model.graphSourceCounts
+                    if let index = (0..<3).first(where: { model.graphTiles[$0] < counts[$0] }) {
+                        _ = runtime?.addPicture(to: index + 1)
+                        cue = "Pip placed one graph picture. Finish the other columns."
+                    } else {
+                        demonstration = false
+                    }
                 }
             }
         case .measurementWorkshop(let model):

@@ -410,6 +410,22 @@ import LearningCore
         beginInteraction()
         if adventure.removeMeasureUnit() { persist() }
     }
+    func sortDataObject(into bin: Int) {
+        beginInteraction()
+        if adventure.sortDataObject(into: bin) { persist() }
+    }
+    func undoDataSort() {
+        beginInteraction()
+        if adventure.undoDataSort() { persist() }
+    }
+    func addPicture(to column: Int) {
+        beginInteraction()
+        if adventure.addPicture(to: column) { persist() }
+    }
+    func undoPicture() {
+        beginInteraction()
+        if adventure.undoPicture() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()

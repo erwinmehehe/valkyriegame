@@ -1298,6 +1298,48 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Data Board sorting: 96 authentic five-object placements, using
+        // visible color or shape attributes rather than answer-option labels.
+        for attribute in DataSortAttribute.allCases {
+            for seed in 1...48 {
+                add(
+                    "prod-data-sort-\(attribute.rawValue)-\(seed)",
+                    skill: MathSkills.classifyObjects,
+                    mechanic: MathMechanicID.dataBoard,
+                    representation: .concrete,
+                    operation: .data,
+                    initial: seed,
+                    target: 5,
+                    prompt: attribute == .color
+                        ? "Sort five magical objects by their COLORS. Put each in the matching bin."
+                        : "Sort five magical objects by their SHAPES. Put each in the matching bin.",
+                    context: "data.sort.\(attribute.rawValue)",
+                    difficulty: attribute == .color ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Data Board graphs: all 64 unique 1...4 count triples, with three
+        // visible source groups; children physically build one picture per
+        // source object into the corresponding graph column.
+        for seed in 0...63 {
+            add(
+                "prod-data-graph-\(seed)",
+                skill: MathSkills.pictureGraph,
+                mechanic: MathMechanicID.dataBoard,
+                representation: .pictorial,
+                operation: .data,
+                initial: seed,
+                target: 3,
+                prompt: "Count the objects in each group. Build a three-column picture graph. One picture means one object.",
+                context: "data.graph.pictures",
+                difficulty: seed < 16 ? 2 : 3,
+                purpose: .representationTransfer
+            )
+        }
+
         return result
     }()
 
