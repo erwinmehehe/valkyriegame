@@ -1217,6 +1217,8 @@ public struct GroupingGardenModel: Codable, Equatable, Sendable {
     public private(set) var bins: [Int]
     public private(set) var fractionalCells: Set<Int>
     public private(set) var placements: [Int]
+    public private(set) var selectedSum: Int
+    public private(set) var sumMoves: Int
     public private(set) var attempts: Int
     public private(set) var completed: Bool
     public private(set) var support: SupportLevel
@@ -1234,7 +1236,9 @@ public struct GroupingGardenModel: Codable, Equatable, Sendable {
         switch task {
         case .halves, .quarters:
             return fractionalCells.count == 1
-        case .equalGroups, .repeatedAddition, .equalSharing:
+        case .repeatedAddition:
+            return bins.reduce(0, +) == totalItems && sumMoves > 0
+        case .equalGroups, .equalSharing:
             return bins.reduce(0, +) == totalItems
         }
     }
@@ -1261,6 +1265,8 @@ public struct GroupingGardenModel: Codable, Equatable, Sendable {
         bins = Array(repeating: 0, count: groupCount)
         fractionalCells = []
         placements = []
+        selectedSum = 0
+        sumMoves = 0
         attempts = 0
         completed = false
         support = .independent
@@ -1281,6 +1287,16 @@ public struct GroupingGardenModel: Codable, Equatable, Sendable {
         guard !completed, targetCells == 0, let last = placements.popLast()
         else { return false }
         bins[last] -= 1
+        return true
+    }
+
+    @discardableResult
+    public mutating func adjustRepeatedSum(_ delta: Int) -> Bool {
+        guard !completed, task == .repeatedAddition,
+              delta == -1 || delta == 1,
+              (0...20).contains(selectedSum + delta) else { return false }
+        selectedSum += delta
+        sumMoves += 1
         return true
     }
 
@@ -1310,7 +1326,9 @@ public struct GroupingGardenModel: Codable, Equatable, Sendable {
         attempts += 1
         let correct: Bool
         switch task {
-        case .equalGroups, .repeatedAddition, .equalSharing:
+        case .repeatedAddition:
+            correct = bins.allSatisfy { $0 == itemsPerGroup } && selectedSum == totalItems
+        case .equalGroups, .equalSharing:
             correct = bins.allSatisfy { $0 == itemsPerGroup }
         case .halves, .quarters:
             correct = fractionalCells.count == 1
@@ -1389,6 +1407,11 @@ public struct GroupingGardenEncounterModel: Codable, Equatable, Sendable {
     @discardableResult
     public mutating func chooseFractionPart(_ cell: Int) -> Bool {
         activity.toggleFractionalCell(cell)
+    }
+
+    @discardableResult
+    public mutating func adjustRepeatedSum(_ delta: Int) -> Bool {
+        activity.adjustRepeatedSum(delta)
     }
 
     public mutating func apply(_ scaffold: Scaffold) {
@@ -2167,6 +2190,13 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     @discardableResult public mutating func chooseGardenFraction(_ index: Int) -> Bool {
         guard case .groupingGarden(var model) = self else { return false }
         let changed = model.chooseFractionPart(index)
+        self = .groupingGarden(model)
+        return changed
+    }
+
+    @discardableResult public mutating func adjustGardenSum(_ delta: Int) -> Bool {
+        guard case .groupingGarden(var model) = self else { return false }
+        let changed = model.adjustRepeatedSum(delta)
         self = .groupingGarden(model)
         return changed
     }
