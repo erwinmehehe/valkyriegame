@@ -1628,6 +1628,87 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Difference Dock: one-to-one pairing and independently counted
+        // leftovers, or a fully built addition followed by its inverse.
+        for smaller in 1...9 {
+            for larger in (smaller + 1)...10 {
+                add(
+                    "prod-dock-difference-\(smaller)-\(larger)",
+                    skill: MathSkills.findDifference10,
+                    mechanic: MathMechanicID.differenceDock,
+                    representation: .concrete,
+                    operation: .differenceDock,
+                    initial: smaller,
+                    target: larger,
+                    prompt: "Pair each of the \(smaller) blue counters with one of the \(larger) golden counters. Count what is left without a partner.",
+                    context: "dock.difference",
+                    difficulty: larger <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+        for first in 1...9 {
+            for second in 1...(10 - first) {
+                add(
+                    "prod-dock-inverse-\(first)-\(second)",
+                    skill: MathSkills.inverseFacts10,
+                    mechanic: MathMechanicID.differenceDock,
+                    representation: .reasoning,
+                    operation: .differenceDock,
+                    initial: first,
+                    target: second,
+                    prompt: "Build \(first) + \(second) with counters, then take away \(first). Show that \(second) remain.",
+                    context: "dock.inverse",
+                    difficulty: first + second <= 6 ? 2 : 3,
+                    purpose: .reasoning
+                )
+            }
+        }
+
+        // Map Quest: physically place Pip relative to one of three landmarks,
+        // then follow a connected four-direction path without teleporting.
+        for landmark in 0...2 {
+            for destination in 0...8 where destination != 4 {
+                let directions = [
+                    "upper left", "above", "upper right", "left", "center",
+                    "right", "lower left", "below", "lower right"
+                ]
+                let places = ["the oak tree", "the blue cottage", "the pond"]
+                add(
+                    "prod-map-position-\(landmark)-\(destination)",
+                    skill: MathSkills.positionalLanguage,
+                    mechanic: MathMechanicID.mapQuest,
+                    representation: .pictorial,
+                    operation: .mapQuest,
+                    initial: landmark,
+                    target: destination,
+                    prompt: "Place Pip \(directions[destination]) \(places[landmark]).",
+                    context: "map.position",
+                    difficulty: destination % 2 == 1 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+        for start in 0...8 {
+            for goal in 0...8
+                where MapQuestModel.distance(from: start, to: goal) >= 2 {
+                add(
+                    "prod-map-route-\(start)-\(goal)",
+                    skill: MathSkills.mapRoute,
+                    mechanic: MathMechanicID.mapQuest,
+                    representation: .reasoning,
+                    operation: .mapQuest,
+                    initial: start,
+                    target: goal,
+                    prompt: "Follow a connected route across the map from Pip to the golden star. Use one arrow for each step.",
+                    context: "map.route",
+                    difficulty: MapQuestModel.distance(from: start, to: goal) <= 2 ? 2 : 3,
+                    purpose: .reasoning
+                )
+            }
+        }
+
         return result
     }()
 
