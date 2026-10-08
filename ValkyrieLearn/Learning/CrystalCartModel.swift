@@ -1805,6 +1805,114 @@ public struct NumberTrailModel: Codable, Equatable, Sendable {
     }
 }
 
+/// Two physically built rows must be matched column by column. The uncovered
+/// crystals, not a guessed numeral, make the difference observable.
+public enum DifferenceRow: String, Codable, Equatable, Sendable {
+    case gold, blue
+}
+
+public struct DifferencePairsModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic, unsupportedOperation, invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public private(set) var goldCount: Int
+    public private(set) var blueCount: Int
+    public private(set) var pairedColumns: [Int]
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var goldTarget: Int { encounter.initialQuantity }
+    public var blueTarget: Int { encounter.targetQuantity }
+    public var matchingCount: Int { min(goldCount, blueCount) }
+    public var goldUnmatched: Int { goldCount - pairedColumns.count }
+    public var blueUnmatched: Int { blueCount - pairedColumns.count }
+    public var discoveredDifference: Int? {
+        guard hasCompleteResponse else { return nil }
+        return goldUnmatched + blueUnmatched
+    }
+    public var hasCompleteResponse: Bool {
+        goldCount > 0 && blueCount > 0
+            && pairedColumns.count == matchingCount
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.differencePairs else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .comparison else {
+            throw ModelError.unsupportedOperation
+        }
+        guard encounter.skillID == MathSkills.findDifference10,
+              encounter.context == "bridge.difference",
+              (1...10).contains(encounter.initialQuantity),
+              (1...10).contains(encounter.targetQuantity) else {
+            throw ModelError.invalidConfiguration
+        }
+
+        self.encounter = encounter
+        goldCount = 0
+        blueCount = 0
+        pairedColumns = []
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func adjust(_ row: DifferenceRow, by delta: Int) -> Bool {
+        guard !completed, delta == 1 || delta == -1 else { return false }
+        switch row {
+        case .gold:
+            guard (0...10).contains(goldCount + delta) else { return false }
+            goldCount += delta
+        case .blue:
+            guard (0...10).contains(blueCount + delta) else { return false }
+            blueCount += delta
+        }
+        // Removing a stone also unlinks any pair that no longer has both ends.
+        pairedColumns.removeAll { $0 >= matchingCount }
+        return true
+    }
+
+    @discardableResult public mutating func matchColumn(_ column: Int) -> Bool {
+        guard !completed, column >= 0, column < matchingCount,
+              !pairedColumns.contains(column) else { return false }
+        pairedColumns.append(column)
+        return true
+    }
+
+    @discardableResult public mutating func undoPair() -> Bool {
+        guard !completed, !pairedColumns.isEmpty else { return false }
+        pairedColumns.removeLast()
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        let correct = goldCount == goldTarget && blueCount == blueTarget
+            && pairedColumns.count == min(goldTarget, blueTarget)
+            && discoveredDifference == abs(goldTarget - blueTarget)
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -1820,6 +1928,7 @@ public enum MathMechanicID {
     public static let groupingGarden = "groupingGarden"
     public static let reasoningStudio = "reasoningStudio"
     public static let numberTrail = "numberTrail"
+    public static let differencePairs = "differencePairs"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -1835,7 +1944,8 @@ public enum MathMechanicID {
         clockMarket,
         groupingGarden,
         reasoningStudio,
-        numberTrail
+        numberTrail,
+        differencePairs
     ]
 }
 
@@ -2206,6 +2316,8 @@ public enum MathManipulativeSupport {
             return (try? ReasoningStudioModel(encounter: encounter)) != nil
         case MathMechanicID.numberTrail:
             return (try? NumberTrailModel(encounter: encounter)) != nil
+        case MathMechanicID.differencePairs:
+            return (try? DifferencePairsModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -2239,6 +2351,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case groupingGarden(GroupingGardenModel)
     case reasoningStudio(ReasoningStudioModel)
     case numberTrail(NumberTrailModel)
+    case differencePairs(DifferencePairsModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -2270,6 +2383,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .reasoningStudio(try ReasoningStudioModel(encounter: encounter, at: date))
         case MathMechanicID.numberTrail:
             self = .numberTrail(try NumberTrailModel(encounter: encounter, at: date))
+        case MathMechanicID.differencePairs:
+            self = .differencePairs(try DifferencePairsModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -2291,6 +2406,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.encounter
         case .reasoningStudio(let model): return model.encounter
         case .numberTrail(let model): return model.encounter
+        case .differencePairs(let model): return model.encounter
         }
     }
 
@@ -2310,6 +2426,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.completed
         case .reasoningStudio(let model): return model.completed
         case .numberTrail(let model): return model.completed
+        case .differencePairs(let model): return model.completed
         }
     }
 
@@ -2329,6 +2446,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(let model): return model.support
         case .reasoningStudio(let model): return model.support
         case .numberTrail(let model): return model.support
+        case .differencePairs(let model): return model.support
         }
     }
 
@@ -2350,7 +2468,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail, .differencePairs:
             return false
         }
     }
@@ -2373,7 +2491,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail, .differencePairs:
             return false
         }
     }
@@ -2716,6 +2834,27 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+    @discardableResult public mutating func adjustDifferenceRow(_ row: DifferenceRow, by delta: Int) -> Bool {
+        guard case .differencePairs(var model) = self else { return false }
+        let changed = model.adjust(row, by: delta)
+        self = .differencePairs(model)
+        return changed
+    }
+
+    @discardableResult public mutating func pairDifferenceColumn(_ column: Int) -> Bool {
+        guard case .differencePairs(var model) = self else { return false }
+        let changed = model.matchColumn(column)
+        self = .differencePairs(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoDifferencePair() -> Bool {
+        guard case .differencePairs(var model) = self else { return false }
+        let changed = model.undoPair()
+        self = .differencePairs(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -2760,6 +2899,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberTrail(var model):
             model.apply(scaffold)
             self = .numberTrail(model)
+        case .differencePairs(var model):
+            model.apply(scaffold)
+            self = .differencePairs(model)
         }
     }
 
@@ -2820,6 +2962,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberTrail(var model):
             let evidence = model.submit(at: date)
             self = .numberTrail(model)
+            return evidence
+        case .differencePairs(var model):
+            let evidence = model.submit(at: date)
+            self = .differencePairs(model)
             return evidence
         }
     }
