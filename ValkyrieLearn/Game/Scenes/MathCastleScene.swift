@@ -1258,6 +1258,7 @@ import LearningCore
         case .numberBond(let model): (mechanic as? NumberBondMachineMechanic)?.render(model)
         case .tenFrame(let model): (mechanic as? TenFrameGateMechanic)?.render(model, allowPreview: engaged && state.previewVisible)
         case .missingBridge(let model): (mechanic as? MissingNumberBridgeMechanic)?.render(model)
+        case .placeValueFactory(let model): (mechanic as? PlaceValueFactoryMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1356,9 +1357,13 @@ import LearningCore
             manipulate { self.state.addCrystal() }
         case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus", "missingPlank":
             manipulate { self.state.removeCrystal() }
-        case "scaleLeft": manipulate { self.state.chooseComparison(.left) }
-        case "scaleRight": manipulate { self.state.chooseComparison(.right) }
-        case "scaleEqual": manipulate { self.state.chooseComparison(.equal) }
+        case "placeTensPlus": manipulate { self.state.adjustPlaceValue(tensDelta: 1) }
+        case "placeTensMinus": manipulate { self.state.adjustPlaceValue(tensDelta: -1) }
+        case "placeOnesPlus": manipulate { self.state.adjustPlaceValue(onesDelta: 1) }
+        case "placeOnesMinus": manipulate { self.state.adjustPlaceValue(onesDelta: -1) }
+        case "scaleLeft", "placeLeft": manipulate { self.state.chooseComparison(.left) }
+        case "scaleRight", "placeRight": manipulate { self.state.chooseComparison(.right) }
+        case "scaleEqual", "placeEqual": manipulate { self.state.chooseComparison(.equal) }
         case "submit": submit()
         case "help":
             if canManipulate() { showScaffold() } else { engageMachine() }
@@ -1396,7 +1401,8 @@ import LearningCore
         case "challengeGate":
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
+             "placeTensBuilt", "placeOnesBuilt",
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1442,6 +1448,17 @@ import LearningCore
             case .right: change = "Right pan selected."
             case .equal: change = "Equal gear selected."
             case nil: return
+            }
+        case .placeValueFactory(let model):
+            if model.isComparison {
+                switch model.selectedComparison {
+                case .left: change = "Left number selected."
+                case .right: change = "Right number selected."
+                case .equal: change = "Equal selected."
+                case nil: return
+                }
+            } else {
+                change = "\(model.selectedTens) tens and \(model.selectedOnes) ones make \(model.builtNumber)."
             }
         }
         // Describe only the child's visible edit; the lever still checks the answer.
