@@ -2,6 +2,93 @@ import XCTest
 @testable import LearningCore
 
 final class PuzzleRotationTests: XCTestCase {
+    private func recordPalace(
+        _ id: String, skill: SkillID, support: SupportLevel = .independent,
+        in profile: inout LearnerProfile
+    ) {
+        MasteryEngine().record(LearningEvidence(
+            encounterID: id, skillID: skill, outcome: .correct,
+            supportLevel: support, representation: .pictorial,
+            mechanicID: "puzzlePalace", timestamp: Date()
+        ), in: &profile)
+    }
+
+    func testEarlyPalaceRoomsPreferFreshUnfinishedTasksAfterAssistance() throws {
+        var profile = LearnerProfile()
+
+        let rune = PuzzlePalaceDirector.nextRuneGateEncounter(profile: profile)
+        recordPalace(rune.id, skill: rune.skillID, support: .lightHint, in: &profile)
+        XCTAssertNotEqual(PuzzlePalaceDirector.nextRuneGateEncounter(profile: profile).id, rune.id)
+        for item in PuzzlePalaceEncounterCatalog.runeGate {
+            recordPalace(item.id, skill: item.skillID, in: &profile)
+        }
+        XCTAssertTrue(PuzzlePalaceDirector.runeGateComplete(profile: profile))
+
+        let memory = try XCTUnwrap(PuzzlePalaceDirector.nextMemoryBridgeEncounter(profile: profile))
+        recordPalace(memory.id, skill: memory.skillID, support: .lightHint, in: &profile)
+        XCTAssertNotEqual(try XCTUnwrap(PuzzlePalaceDirector.nextMemoryBridgeEncounter(profile: profile)).id, memory.id)
+        for item in PuzzlePalaceEncounterCatalog.memoryBridge {
+            recordPalace(item.id, skill: item.skillID, in: &profile)
+        }
+
+        let stopGo = try XCTUnwrap(PuzzlePalaceDirector.nextStopGoEncounter(profile: profile))
+        recordPalace(stopGo.id, skill: stopGo.skillID, support: .strongHint, in: &profile)
+        XCTAssertNotEqual(try XCTUnwrap(PuzzlePalaceDirector.nextStopGoEncounter(profile: profile)).id, stopGo.id)
+        for item in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            recordPalace(item.id, skill: item.skillID, in: &profile)
+        }
+
+        let sorting = try XCTUnwrap(PuzzlePalaceDirector.nextSortingFoundationEncounter(profile: profile))
+        recordPalace(sorting.id, skill: sorting.skillID, support: .lightHint, in: &profile)
+        XCTAssertNotEqual(
+            try XCTUnwrap(PuzzlePalaceDirector.nextSortingFoundationEncounter(profile: profile)).id,
+            sorting.id
+        )
+        for item in PuzzlePalaceEncounterCatalog.sortingFoundation {
+            recordPalace(item.id, skill: item.skillID, in: &profile)
+        }
+
+        let switching = try XCTUnwrap(PuzzlePalaceDirector.nextRuleSwitchingEncounter(profile: profile))
+        recordPalace(switching.id, skill: switching.skillID, support: .lightHint, in: &profile)
+        XCTAssertNotEqual(
+            try XCTUnwrap(PuzzlePalaceDirector.nextRuleSwitchingEncounter(profile: profile)).id,
+            switching.id
+        )
+        for item in PuzzlePalaceEncounterCatalog.ruleSwitching {
+            recordPalace(item.id, skill: item.skillID, in: &profile)
+        }
+
+        let resort = try XCTUnwrap(PuzzlePalaceDirector.nextChangedRuleResortEncounter(profile: profile))
+        recordPalace(resort.id, skill: resort.skillID, support: .lightHint, in: &profile)
+        XCTAssertNotEqual(
+            try XCTUnwrap(PuzzlePalaceDirector.nextChangedRuleResortEncounter(profile: profile)).id,
+            resort.id
+        )
+        for item in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            recordPalace(item.id, skill: item.skillID, in: &profile)
+        }
+
+        let mirror = try XCTUnwrap(PuzzlePalaceDirector.nextMirrorHallEncounter(profile: profile))
+        recordPalace(mirror.id, skill: mirror.skillID, support: .lightHint, in: &profile)
+        XCTAssertNotEqual(
+            try XCTUnwrap(PuzzlePalaceDirector.nextMirrorHallEncounter(profile: profile)).id,
+            mirror.id
+        )
+    }
+
+    func testEarlyPalaceRetriesCycleAwayFromMostRecentlySeenAnswer() throws {
+        var profile = LearnerProfile()
+        let tasks = PuzzlePalaceEncounterCatalog.runeGate
+        for task in tasks {
+            recordPalace(task.id, skill: task.skillID, support: .lightHint, in: &profile)
+        }
+        XCTAssertFalse(PuzzlePalaceDirector.runeGateComplete(profile: profile))
+        let next = PuzzlePalaceDirector.nextRuneGateEncounter(profile: profile)
+        XCTAssertNotEqual(next.id, tasks.last?.id)
+        recordPalace(next.id, skill: next.skillID, in: &profile)
+        XCTAssertEqual(PuzzlePalaceDirector.runeGateIndependentSuccessCount(profile: profile), 1)
+    }
+
     private func recordOrientation(in profile: inout LearnerProfile, support: SupportLevel = .independent) {
         for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
             MasteryEngine().record(LearningEvidence(
