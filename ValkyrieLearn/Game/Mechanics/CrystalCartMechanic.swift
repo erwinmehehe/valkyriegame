@@ -2184,8 +2184,15 @@ import LearningCore
                 : (model.task == .repeatedAddition
                    ? "BUILD THE SAME ADDEND IN EACH GROUP"
                    : "BUILD EQUAL GROUPS")
-            text("\(activity.placements.count) OF \(activity.totalItems) BERRIES PLACED",
-                 x: 0, y: 65, size: 15)
+            if model.task == .repeatedAddition {
+                text("\(activity.placements.count) OF \(activity.totalItems) BERRIES", x: 0, y: 79, size: 12)
+                text("SUM = \(activity.selectedSum)", x: 0, y: 51, size: 18)
+                control("−", at: CGPoint(x: -143, y: 65), name: "gardenSumMinus")
+                control("+", at: CGPoint(x: 143, y: 65), name: "gardenSumPlus")
+            } else {
+                text("\(activity.placements.count) OF \(activity.totalItems) BERRIES PLACED",
+                     x: 0, y: 65, size: 15)
+            }
             let spacing: CGFloat = activity.groupCount == 5 ? 104 : 124
             for group in 0..<activity.groupCount {
                 let x = CGFloat(group) * spacing
