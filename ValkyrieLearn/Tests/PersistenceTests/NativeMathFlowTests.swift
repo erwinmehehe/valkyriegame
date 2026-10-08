@@ -45,6 +45,70 @@ import LearningCore
         }
     }
 
+
+    func testShapeForgeCompositionUsesTwoRealNativeTrianglePlacements() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.composeShapes).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profileBefore = state.profile
+
+        scene.handleTap(at: CGPoint(x: 655, y: 188)) // first half: orientation 0
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 2 triangle halves placed. Pull Pip's lever when you're ready."
+        )
+        scene.handleTap(at: CGPoint(x: 875, y: 188)) // second half: orientation 2
+        XCTAssertEqual(
+            scene.instruction.text,
+            "2 of 2 triangle halves placed. Pull Pip's lever when you're ready."
+        )
+        guard case .shapeForge(let model)? = state.runtime else {
+            return XCTFail("Shape Forge runtime disappeared")
+        }
+        XCTAssertEqual(model.placedHalfTurns, [0, 2])
+        XCTAssertFalse(model.completed, "Placement alone must not submit or award mastery")
+        XCTAssertEqual(state.profile, profileBefore)
+    }
+
+    func testShapeForgeMirroringRequiresThreeNativeCells() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.symmetry).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profileBefore = state.profile
+
+        scene.handleTap(at: CGPoint(x: 923, y: 343)) // row 0 -> circle
+        scene.handleTap(at: CGPoint(x: 923, y: 289)) // row 1 -> circle
+        scene.handleTap(at: CGPoint(x: 923, y: 235)) // row 2 -> circle
+        scene.handleTap(at: CGPoint(x: 923, y: 235)) // row 2 -> square
+        XCTAssertEqual(
+            scene.instruction.text,
+            "3 of 3 mirror cells filled. Pull Pip's lever when you're ready."
+        )
+        guard case .shapeForge(let model)? = state.runtime else {
+            return XCTFail("Mirror runtime disappeared")
+        }
+        XCTAssertEqual(model.mirrorCells, [1, 1, 2])
+        XCTAssertEqual(model.symmetryReference.map(\.rawValue), [1, 1, 2])
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profileBefore)
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))

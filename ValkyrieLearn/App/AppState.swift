@@ -390,6 +390,18 @@ import LearningCore
         beginInteraction()
         if adventure.rotateShape(delta) { persist() }
     }
+    func placeShapeHalf(_ quarterTurns: Int) {
+        beginInteraction()
+        if adventure.placeShapeHalf(quarterTurns) { persist() }
+    }
+    func undoShapeHalf() {
+        beginInteraction()
+        if adventure.undoShapeHalf() { persist() }
+    }
+    func cycleMirrorCell(_ row: Int) {
+        beginInteraction()
+        if adventure.cycleMirrorCell(row) { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()

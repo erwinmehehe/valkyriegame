@@ -1361,20 +1361,40 @@ import LearningCore
                 }
             }
         case .shapeForge(let model):
-            if model.isRotation {
+            switch model.task {
+            case .rotate:
                 for (x, delta) in [(CGFloat(-104), -1), (CGFloat(104), 1)] {
                     if hypot(local.x - x, local.y + 118) <= 40 {
                         manipulate { self.state.rotateShape(delta) }
                         return true
                     }
                 }
-            } else {
+            case .recognize, .attributes:
                 let centerY: CGFloat = model.task == .attributes ? -104 : -20
                 let spacing: CGFloat = model.task == .attributes ? 153 : 158
                 for option in 1...3 {
                     let x = CGFloat(option - 2) * spacing
                     if hypot(local.x - x, local.y - centerY) <= 55 {
                         manipulate { self.state.chooseShapeOption(option) }
+                        return true
+                    }
+                }
+            case .compose:
+                if hypot(local.x - 213, local.y - 24) <= 45 {
+                    manipulate { self.state.undoShapeHalf() }
+                    return true
+                }
+                for turns in 0...3 {
+                    if hypot(local.x - (CGFloat(turns) * 110 - 165), local.y + 122) <= 37 {
+                        manipulate { self.state.placeShapeHalf(turns) }
+                        return true
+                    }
+                }
+            case .symmetry:
+                for row in 0..<3 {
+                    let y = CGFloat(33 - row * 54)
+                    if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
+                        manipulate { self.state.cycleMirrorCell(row) }
                         return true
                     }
                 }
@@ -1443,6 +1463,14 @@ import LearningCore
         case "forgeChoice3": manipulate { self.state.chooseShapeOption(3) }
         case "forgeTurnLeft": manipulate { self.state.rotateShape(-1) }
         case "forgeTurnRight": manipulate { self.state.rotateShape(1) }
+        case "forgeHalf0": manipulate { self.state.placeShapeHalf(0) }
+        case "forgeHalf1": manipulate { self.state.placeShapeHalf(1) }
+        case "forgeHalf2": manipulate { self.state.placeShapeHalf(2) }
+        case "forgeHalf3": manipulate { self.state.placeShapeHalf(3) }
+        case "forgeUndoHalf": manipulate { self.state.undoShapeHalf() }
+        case "forgeMirror0": manipulate { self.state.cycleMirrorCell(0) }
+        case "forgeMirror1": manipulate { self.state.cycleMirrorCell(1) }
+        case "forgeMirror2": manipulate { self.state.cycleMirrorCell(2) }
         case "scaleLeft", "placeLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight", "placeRight": manipulate { self.state.chooseComparison(.right) }
         case "scaleEqual", "placeEqual": manipulate { self.state.chooseComparison(.equal) }
@@ -1547,9 +1575,14 @@ import LearningCore
                 ? "\(model.selectedSymbols.count) of \(model.slotCount) pattern shapes placed."
                 : "A shape fills the pattern gap."
         case .shapeForge(let model):
-            if model.isRotation {
+            switch model.task {
+            case .rotate:
                 change = "The triangle turned one quarter-turn."
-            } else {
+            case .compose:
+                change = "\(model.placedHalfTurns.count) of 2 triangle halves placed."
+            case .symmetry:
+                change = "\(model.mirrorCells.compactMap { $0 }.count) of 3 mirror cells filled."
+            case .recognize, .attributes:
                 change = "Shape option \(model.selectedOption ?? 0) selected."
             }
         }
