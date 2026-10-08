@@ -334,7 +334,7 @@ import LearningCore
         }
     }
 
-    func testScienceWorldsReuseRetinaPreparedIllustratedBackdrops() throws {
+    func testScienceWorldsUseDedicatedVectorRetinaPaintings() throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
@@ -347,16 +347,18 @@ import LearningCore
             greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
         )
         XCTAssertEqual(
-            greenhouseBackdrop.userData?["retinaPrepared"] as? Bool,
-            true
+            greenhouseBackdrop.userData?["vectorPainted"] as? Bool,
+            true,
+            "Standalone vector painting must load; atlas fallback is not accepted."
         )
         XCTAssertEqual(
-            greenhouseBackdrop.userData?["sourceCrop"] as? String,
-            "word-garden-upper-crop"
+            greenhouseBackdrop.userData?["sourceAsset"] as? String,
+            "ScienceGreenhousePaintedHD"
         )
+        XCTAssertEqual(greenhouseBackdrop.userData?["designSize"] as? String, "1280x960")
         let greenhouseImage = try XCTUnwrap(greenhouseBackdrop.texture?.cgImage())
         XCTAssertGreaterThanOrEqual(greenhouseImage.width, 2560)
-        XCTAssertGreaterThanOrEqual(greenhouseImage.height, 1440)
+        XCTAssertGreaterThanOrEqual(greenhouseImage.height, 1920)
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSeedBench"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterValve"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSunPrism"))
@@ -393,16 +395,18 @@ import LearningCore
             grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
         )
         XCTAssertEqual(
-            groveBackdrop.userData?["retinaPrepared"] as? Bool,
-            true
+            groveBackdrop.userData?["vectorPainted"] as? Bool,
+            true,
+            "Standalone vector painting must load; atlas fallback is not accepted."
         )
         XCTAssertEqual(
-            groveBackdrop.userData?["sourceCrop"] as? String,
-            "word-garden-lower-crop"
+            groveBackdrop.userData?["sourceAsset"] as? String,
+            "ScienceCreatureGrovePaintedHD"
         )
+        XCTAssertEqual(groveBackdrop.userData?["designSize"] as? String, "1280x960")
         let groveImage = try XCTUnwrap(groveBackdrop.texture?.cgImage())
         XCTAssertGreaterThanOrEqual(groveImage.width, 2560)
-        XCTAssertGreaterThanOrEqual(groveImage.height, 1440)
+        XCTAssertGreaterThanOrEqual(groveImage.height, 1920)
         XCTAssertNotNil(grove.childNode(withName: "scienceGroveDuck"))
         XCTAssertNotNil(grove.childNode(withName: "scienceHabitatPond"))
         XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
