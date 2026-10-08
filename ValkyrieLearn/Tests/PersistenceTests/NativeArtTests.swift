@@ -937,6 +937,66 @@ import LearningCore
     }
 
 
+    func testTikoReturnsToTheWalkableLaneBetweenPathTileMaps() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let view = SKView(frame: window.bounds)
+        let controller = UIViewController()
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation + PuzzlePalaceEncounterCatalog.ruleSwitching {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzlePathTilesAvailable)
+        let puzzle = try XCTUnwrap(state.nextPuzzlePathTilesEncounter())
+        let correctIndex = try XCTUnwrap(puzzle.choices.indices.first {
+            puzzle.isValidChoice($0)
+        })
+        state.travel(to: .pathTiles)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+
+        let ys: [CGFloat] = [325, 245, 165]
+        scene.handleTap(at: CGPoint(x: 1100, y: ys[correctIndex]))
+        try await waitUntil(timeout: 4) { scene.childNode(withName: "pathNext") != nil }
+        XCTAssertGreaterThan(scene.tiko.position.y, scene.walkable.maxY,
+                             "Successful path demonstration should reach the map goal")
+        scene.handleTap(at: CGPoint(x: 1160, y: 145))
+        XCTAssertNotNil(scene.childNode(withName: "pathGrid"))
+        XCTAssertLessThanOrEqual(scene.tiko.position.y, scene.walkable.maxY,
+                                 "Tiko must not cover the next map after choosing Next")
+        scene.willLeave()
+    }
+
     func testPuzzlePalaceRouteSingleTapWalksIntoMemoryBridgeWithoutSecondTap() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let view = SKView(frame: window.bounds)
