@@ -1982,7 +1982,8 @@ import LearningCore
             }
         case .differenceBridge(let model):
             if model.isDifference {
-                change = "\(model.matchedPairs) pairs matched. \(model.collectedLeftovers) leftovers collected."
+                let pairWord = model.matchedPairs == 1 ? "pair" : "pairs"
+                change = "\(model.matchedPairs) \(pairWord) matched. \(model.collectedLeftovers) leftovers collected."
             } else {
                 change = "\(model.joinedCounters) counters added, then \(model.returnedCounters) taken back."
             }
