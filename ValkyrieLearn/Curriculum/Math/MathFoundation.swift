@@ -1148,9 +1148,8 @@ public enum MathProductionQuestionBank {
         }
 
 
-        // Shape Forge begins with observable choices and physical rotations.
-        // Composition and symmetry remain blocked until dedicated manipulatives
-        // can verify spatial arrangements rather than a memorized button choice.
+        // Shape Forge measures actual shape choices, turns, piece placement,
+        // and mirror reconstruction. Each task has its own observable action contract.
         for shape in ForgeShape.allCases {
             for shift in 0...2 {
                 add(
@@ -1198,6 +1197,44 @@ public enum MathProductionQuestionBank {
                     purpose: .reasoning
                 )
             }
+        }
+
+
+        // Two complementary right triangles must physically fill the square,
+        // with the seam orientation visible. Neither a single piece nor a
+        // multiple-choice answer earns composition evidence.
+        for quarterTurn in 0...3 {
+            add(
+                "prod-forge-compose-square-\(quarterTurn)",
+                skill: MathSkills.composeShapes,
+                mechanic: MathMechanicID.shapeForge,
+                representation: .concrete,
+                operation: .shape,
+                initial: 0,
+                target: quarterTurn,
+                prompt: "Place two right triangles so they fill the square along its gold seam.",
+                context: "forge.compose",
+                difficulty: 3,
+                purpose: .practice
+            )
+        }
+
+        // Twelve distinct three-cell mirror layouts. The left-hand pattern
+        // comes from the seed; the child must complete every reflected cell.
+        for seed in 0...11 {
+            add(
+                "prod-forge-symmetry-\(seed)",
+                skill: MathSkills.symmetry,
+                mechanic: MathMechanicID.shapeForge,
+                representation: .pictorial,
+                operation: .shape,
+                initial: seed,
+                target: 3,
+                prompt: "Complete the right side so it mirrors all three shapes on the left.",
+                context: "forge.symmetry",
+                difficulty: 3,
+                purpose: .representationTransfer
+            )
         }
 
         return result
