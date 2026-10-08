@@ -31,6 +31,20 @@ final class MathAdventureTests: XCTestCase {
                     onesDelta: model.expectedOnes
                 )
             }
+        case .patternLoom(let model):
+            if model.isCreation {
+                let unit: [Int]
+                switch model.family {
+                case .ab: unit = [1, 2]
+                case .aab: unit = [1, 1, 2]
+                case .abc: unit = [1, 2, 3]
+                }
+                for index in 0..<model.slotCount {
+                    XCTAssertTrue(adventure.choosePatternSymbol(unit[index % unit.count]))
+                }
+            } else {
+                XCTAssertTrue(adventure.choosePatternSymbol(model.correctSymbol))
+            }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
     }
@@ -80,13 +94,14 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllSixRuntimesAndSessionStateRoundTrip() throws {
+    func testAllSevenRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue,
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
             XCTAssertTrue(try adventure.startWorkshop(encounter, profile: &profile, now: epoch))
@@ -355,9 +370,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1196)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1196)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1245)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 1280)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 1280)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1329)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -382,7 +397,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 41)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 46)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -467,17 +482,81 @@ final class MathAdventureTests: XCTestCase {
     }
 
 
+
+    func testPatternLoomUnlocksFiveSkillsThroughObservableActions() throws {
+        let skills: [SkillID] = [
+            MathSkills.patternAB, MathSkills.patternAAB, MathSkills.patternABC,
+            MathSkills.patternMissing, MathSkills.patternCreate
+        ]
+        for skill in skills {
+            let encounters = MathProductionQuestionBank.variants(for: skill).map(\.encounter)
+            XCTAssertFalse(encounters.isEmpty)
+            XCTAssertTrue(encounters.allSatisfy {
+                $0.operation == .pattern
+                    && $0.mechanicID == MathMechanicID.patternLoom
+                    && MathManipulativeSupport.supports($0)
+            })
+        }
+
+        let missing = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.patternMissing).first?.encounter
+        )
+        var runtime = try MathMechanicRuntime(encounter: missing, at: epoch)
+        guard case .patternLoom(let model) = runtime else {
+            return XCTFail("Expected a Pattern Loom runtime")
+        }
+        XCTAssertEqual(model.visibleSlots.filter { $0 == nil }.count, 1)
+        XCTAssertNil(runtime.submit(at: epoch))
+        let wrong = model.correctSymbol == 1 ? 2 : 1
+        XCTAssertTrue(runtime.choosePatternSymbol(wrong))
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(runtime.choosePatternSymbol(model.correctSymbol))
+        XCTAssertEqual(runtime.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+        XCTAssertFalse(runtime.choosePatternSymbol(wrong), "Completed work must be immutable")
+        XCTAssertNil(runtime.submit(at: epoch.addingTimeInterval(6)))
+        XCTAssertEqual(
+            try JSONDecoder().decode(MathMechanicRuntime.self, from: JSONEncoder().encode(runtime)),
+            runtime
+        )
+    }
+
+    func testPatternCreationRequiresFullRepeatingUnitRatherThanOneCorrectTap() throws {
+        for family in PatternLoomFamily.allCases {
+            let encounter = try XCTUnwrap(
+                MathProductionQuestionBank.variants(for: MathSkills.patternCreate)
+                    .first(where: { $0.encounter.context == "loom.create.\(family.rawValue)" })?
+                    .encounter
+            )
+            var model = try PatternLoomModel(encounter: encounter, at: epoch)
+            XCTAssertFalse(model.isValidCreation)
+            XCTAssertNil(model.submit(at: epoch), "Incomplete patterns cannot be scored")
+
+            for _ in 0..<6 { XCTAssertTrue(model.chooseSymbol(1)) }
+            XCTAssertFalse(model.chooseSymbol(2), "Cannot add a seventh shape")
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(10))?.outcome, .incorrect)
+            for _ in 0..<6 { XCTAssertTrue(model.undo()) }
+
+            let unit: [Int]
+            switch family {
+            case .ab: unit = [1, 2]
+            case .aab: unit = [1, 1, 2]
+            case .abc: unit = [1, 2, 3]
+            }
+            for index in 0..<6 {
+                XCTAssertTrue(model.chooseSymbol(unit[index % unit.count]))
+            }
+            XCTAssertTrue(model.isValidCreation)
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(20))?.outcome, .correct)
+            XCTAssertFalse(model.undo(), "Completed attempts cannot be changed")
+        }
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
         let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
             MathSkills.estimate10,
             MathSkills.countOn10,
             MathSkills.findDifference10,
             MathSkills.inverseFacts10,
-            MathSkills.patternAB,
-            MathSkills.patternAAB,
-            MathSkills.patternABC,
-            MathSkills.patternMissing,
-            MathSkills.patternCreate,
             MathSkills.recognizeShapes,
             MathSkills.shapeAttributes,
             MathSkills.composeShapes,
