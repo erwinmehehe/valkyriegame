@@ -1686,6 +1686,213 @@ import LearningCore
     }
 }
 
+
+@MainActor final class DataBoardMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("DATA BOARD", size: 19)
+    private let instruction = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.dataBoard
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.name = MathMechanicID.dataBoard
+        tray.position.y = -14
+        tray.zPosition = -5
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 276, height: 46),
+            fill: UIColor(red: 0.09, green: 0.16, blue: 0.27, alpha: 0.97),
+            stroke: UIColor(red: 0.97, green: 0.81, blue: 0.48, alpha: 0.9),
+            radius: 15
+        )
+        plaque.position.y = 127
+        plaque.name = MathMechanicID.dataBoard
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.dataBoard
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.99, green: 0.87, blue: 0.61, alpha: 1)
+        instruction.position.y = 99
+        instruction.name = MathMechanicID.dataBoard
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func tokenColor(_ code: Int) -> UIColor {
+        switch code {
+        case 1: return UIColor(red: 0.29, green: 0.73, blue: 0.98, alpha: 1)
+        case 2: return UIColor(red: 1.00, green: 0.78, blue: 0.32, alpha: 1)
+        default: return UIColor(red: 0.99, green: 0.49, blue: 0.72, alpha: 1)
+        }
+    }
+
+    private func shapeToken(
+        shape: Int, color: Int, radius: CGFloat, name: String
+    ) -> SKShapeNode {
+        let node: SKShapeNode
+        switch shape {
+        case 1: node = SKShapeNode(circleOfRadius: radius)
+        case 2:
+            node = SKShapeNode(rectOf: CGSize(width: radius * 1.8, height: radius * 1.8),
+                               cornerRadius: 3)
+        default:
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: radius))
+            path.addLine(to: CGPoint(x: -radius, y: -radius * 0.8))
+            path.addLine(to: CGPoint(x: radius, y: -radius * 0.8))
+            path.closeSubpath()
+            node = SKShapeNode(path: path)
+        }
+        node.name = name
+        node.fillColor = tokenColor(color)
+        node.strokeColor = .white
+        node.lineWidth = 2
+        return node
+    }
+
+    private func text(_ title: String, at position: CGPoint, size: CGFloat = 14,
+                      name: String = MathMechanicID.dataBoard) {
+        let label = ArtSystem.label(title, size: size)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.position = position
+        label.name = name
+        activity.addChild(label)
+    }
+
+    private func panel(_ width: CGFloat, _ height: CGFloat, at point: CGPoint,
+                       name: String = MathMechanicID.dataBoard) {
+        let node = ArtSystem.panel(
+            CGSize(width: width, height: height),
+            fill: UIColor(red: 0.08, green: 0.23, blue: 0.30, alpha: 0.98),
+            stroke: UIColor(red: 0.56, green: 0.85, blue: 0.94, alpha: 0.80),
+            radius: 13,
+            lineWidth: 2,
+            shadowAlpha: 0.07
+        )
+        node.position = point
+        node.name = name
+        activity.addChild(node)
+    }
+
+    private func button(_ mark: String, name: String, x: CGFloat, y: CGFloat = -121) {
+        let gear = ArtSystem.gear(radius: 34, symbol: mark)
+        gear.position = CGPoint(x: x, y: y)
+        gear.zPosition = 50
+        gear.name = name
+        activity.addChild(gear)
+        let hit = SKShapeNode(circleOfRadius: 37)
+        hit.position = CGPoint(x: x, y: y)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 70
+        hit.name = name
+        activity.addChild(hit)
+    }
+
+    func render(_ model: DataBoardModel) {
+        activity.removeAllChildren()
+        if model.isSorting {
+            renderSorting(model)
+        } else {
+            renderGraph(model)
+        }
+    }
+
+    private func renderSorting(_ model: DataBoardModel) {
+        instruction.text = model.sortingAttribute == .color
+            ? "SORT EACH OBJECT BY COLOR"
+            : "SORT EACH OBJECT BY SHAPE"
+        let tokens = model.sortingTokens
+        if let current = model.nextSortingToken {
+            let node = shapeToken(shape: current.shape, color: current.color,
+                                  radius: 25, name: MathMechanicID.dataBoard)
+            node.position = CGPoint(x: 0, y: 50)
+            activity.addChild(node)
+        } else {
+            text("ALL SORTED — CHECK WITH PIP", at: CGPoint(x: 0, y: 48), size: 15)
+        }
+
+        for category in 1...3 {
+            let x = CGFloat(category - 2) * 158
+            panel(144, 66, at: CGPoint(x: x, y: -36))
+            let name: String
+            if model.sortingAttribute == .color {
+                name = ["BLUE", "GOLD", "PINK"][category - 1]
+            } else {
+                name = ["CIRCLES", "SQUARES", "TRIANGLES"][category - 1]
+            }
+            text(name, at: CGPoint(x: x, y: 5), size: 13)
+            for (index, bin) in model.sortedBins.enumerated() where bin == category {
+                let slot = model.sortedBins.prefix(index + 1).filter { $0 == category }.count - 1
+                let tok = tokens[index]
+                let drawn = shapeToken(shape: tok.shape, color: tok.color,
+                                       radius: 10, name: MathMechanicID.dataBoard)
+                drawn.position = CGPoint(x: x - 40 + CGFloat(slot) * 20, y: -39)
+                activity.addChild(drawn)
+            }
+            let symbol = model.sortingAttribute == .color
+                ? ["●", "●", "●"][category - 1] : ["●", "■", "▲"][category - 1]
+            button(symbol, name: "dataBin\(category)", x: x)
+        }
+
+        button("↶", name: "dataUndo", x: 230, y: 53)
+        text("\(model.sortedBins.count) OF 5 OBJECTS SORTED",
+             at: CGPoint(x: 0, y: -81), size: 13)
+    }
+
+    private func renderGraph(_ model: DataBoardModel) {
+        instruction.text = "ONE PICTURE = ONE OBJECT"
+        let counts = model.graphSourceCounts
+        for column in 1...3 {
+            let x = CGFloat(column - 2) * 158
+            text(["CIRCLES", "SQUARES", "TRIANGLES"][column - 1],
+                 at: CGPoint(x: x, y: 79), size: 12)
+            let sourceCount = counts[column - 1]
+            for index in 0..<sourceCount {
+                let shape = shapeToken(
+                    shape: column, color: column, radius: 9, name: MathMechanicID.dataBoard
+                )
+                shape.position = CGPoint(
+                    x: x - CGFloat(sourceCount - 1) * 14 + CGFloat(index) * 28,
+                    y: 55
+                )
+                activity.addChild(shape)
+            }
+
+            panel(116, 110, at: CGPoint(x: x, y: -37))
+            for index in 0..<model.graphTiles[column - 1] {
+                let tile = shapeToken(shape: column, color: column, radius: 10,
+                                      name: MathMechanicID.dataBoard)
+                tile.position = CGPoint(x: x, y: -78 + CGFloat(index) * 18)
+                activity.addChild(tile)
+            }
+            button("+", name: "dataGraph\(column)", x: x)
+        }
+        button("↶", name: "dataUndo", x: 230, y: 51)
+        text("\(model.placedGraphTotal) PICTURES PLACED",
+             at: CGPoint(x: 0, y: 23), size: 13)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.91, blue: 0.55, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.13),
+            .scale(to: 1.0, duration: 0.16)
+        ]), withKey: "dataBoardSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -1705,6 +1912,8 @@ import LearningCore
             return ShapeForgeMechanic()
         case MathMechanicID.measurementWorkshop:
             return MeasurementWorkshopMechanic()
+        case MathMechanicID.dataBoard:
+            return DataBoardMechanic()
         default:
             return nil
         }
