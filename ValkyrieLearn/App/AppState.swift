@@ -450,6 +450,34 @@ import LearningCore
         beginInteraction()
         if adventure.undoPesoCoin() { persist() }
     }
+    func placeGardenSeed(in basket: Int) {
+        beginInteraction()
+        if adventure.placeGardenSeed(in: basket) { persist() }
+    }
+    func undoGardenSeed() {
+        beginInteraction()
+        if adventure.undoGardenSeed() { persist() }
+    }
+    func addGardenJump() {
+        beginInteraction()
+        if adventure.addGardenJump() { persist() }
+    }
+    func undoGardenJump() {
+        beginInteraction()
+        if adventure.undoGardenJump() { persist() }
+    }
+    func moveGardenCut(_ delta: Int) {
+        beginInteraction()
+        if adventure.moveGardenCut(delta) { persist() }
+    }
+    func placeGardenCut() {
+        beginInteraction()
+        if adventure.placeGardenCut() { persist() }
+    }
+    func undoGardenCut() {
+        beginInteraction()
+        if adventure.undoGardenCut() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
