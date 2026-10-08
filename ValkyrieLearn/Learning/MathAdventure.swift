@@ -601,3 +601,65 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return Scaffold(support: next.support, cue: cue, demonstratesStep: demonstration)
     }
 }
+
+// MARK: - Optional hands-on workshop variety
+
+/// The five existing physical stations can practice all native Math manipulatives,
+/// not only the five original milestone demos. The workshop is deliberately
+/// unscored: adaptive work orders remain the source of mastery evidence.
+public enum MathWorkshopCatalog {
+    public static let stationNames = [
+        "Crystals and groups",
+        "Compare and measure",
+        "Number builders",
+        "Patterns and shapes",
+        "Bridges and time"
+    ]
+
+    public static let stationMechanics: [[String]] = [
+        [MathMechanicID.crystalCart, MathMechanicID.groupingGarden],
+        [MathMechanicID.balanceScale, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard],
+        [MathMechanicID.numberBondMachine, MathMechanicID.placeValueFactory],
+        [MathMechanicID.tenFrameGate, MathMechanicID.patternLoom, MathMechanicID.shapeForge],
+        [MathMechanicID.missingNumberBridge, MathMechanicID.clockMarket]
+    ]
+
+    /// Return only safe, ready, never-before-used physical challenges.
+    /// Selecting a workshop example must never advance a learner's mastery.
+    public static func choices(
+        at station: Int,
+        profile: LearnerProfile,
+        graph: SkillGraph
+    ) -> [LearningEncounter] {
+        guard stationMechanics.indices.contains(station) else { return [] }
+        let mechanics = Set(stationMechanics[station])
+        let engagement = EngagementDirector()
+        var seenFingerprints: Set<String> = []
+
+        let ready = (MathFoundation.workshopExamples + MathCastleEncounterCatalog.all).filter { encounter in
+            guard mechanics.contains(encounter.mechanicID),
+                  MathManipulativeSupport.supports(encounter),
+                  graph.isEligible(encounter.skillID, for: profile),
+                  engagement.allows(encounter, profile: profile) else {
+                return false
+            }
+            return seenFingerprints.insert(encounter.fingerprint).inserted
+        }
+
+        // Rotate the physical machine family when practical, instead of walking
+        // the child through a long run of visually identical problems.
+        let recent = profile.recentActivities.suffix(6)
+        func recentUses(of mechanic: String) -> Int {
+            recent.filter { $0.mechanicID == mechanic }.count
+        }
+        return ready.sorted { left, right in
+            let leftUses = recentUses(of: left.mechanicID)
+            let rightUses = recentUses(of: right.mechanicID)
+            if leftUses != rightUses { return leftUses < rightUses }
+            if left.challengeDepth != right.challengeDepth {
+                return left.challengeDepth < right.challengeDepth
+            }
+            return left.id < right.id
+        }
+    }
+}
