@@ -383,6 +383,36 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoTrailJump() ?? false
     }
 
+    @discardableResult public mutating func addDockCounter() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.addDockCounter() ?? false
+    }
+
+    @discardableResult public mutating func undoDockCounter() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoDockCounter() ?? false
+    }
+
+    @discardableResult public mutating func adjustDockAnswer(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustDockAnswer(delta) ?? false
+    }
+
+    @discardableResult public mutating func selectMapPosition(_ cell: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.selectMapPosition(cell) ?? false
+    }
+
+    @discardableResult public mutating func stepMap(dx: Int, dy: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.stepMap(dx: dx, dy: dy) ?? false
+    }
+
+    @discardableResult public mutating func undoMapStep() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoMapStep() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -516,6 +546,21 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                     cue = "Watch Pip place one repeating shape. Now try the lever."
                 }
             }
+        case .differenceDock(let model):
+            cue = model.isDifference
+                ? "Pair one blue counter with one golden counter at a time. Count the unmatched gold counters after all blue counters have partners."
+                : "Build the full addition with counters. Then mark how many counters you take away to undo the first part."
+            if demonstration && model.constructed < model.constructionRequired {
+                _ = runtime?.addDockCounter()
+                cue = "Pip showed one counter action. Build and count the rest yourself."
+            }
+        case .mapQuest(let model):
+            cue = model.isPosition
+                ? "Look at the landmark in the center. Tap the tile that is \(model.positionDescription.lowercased()) it."
+                : "Move Pip by one square per arrow. You can use several connected steps; you cannot jump across the map."
+            // Spatial assessment is built on child-authored route steps;
+            // showing a whole route as a scaffold would leak the answer.
+            demonstration = false
         case .numberTrail(let model):
             if model.isEstimate {
                 cue = model.flashObserved
