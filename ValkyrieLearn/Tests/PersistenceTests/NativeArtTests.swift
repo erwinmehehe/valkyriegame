@@ -3111,7 +3111,13 @@ import LearningCore
         greenhouse.reducedMotion = true
         greenhouse.didMove(to: SKView())
 
-        XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseBackdropHD"))
+        let greenhouseArt = try XCTUnwrap(
+            greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(greenhouseArt.userData?["sourceAsset"] as? String, "ScienceGreenhousePaintedHD")
+        XCTAssertTrue(greenhouseArt.userData?["vectorPainted"] as? Bool ?? false)
+        XCTAssertEqual(greenhouseArt.size, CGSize(width: 1280, height: 960))
+        XCTAssertFalse(greenhouseArt.isUserInteractionEnabled)
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseFrame"))
         XCTAssertLessThan(greenhouse.childNode(withName: "scienceGreenhouseFrame")?.alpha ?? 1, 0.01)
         XCTAssertLessThan(greenhouse.childNode(withName: "scienceGround")?.alpha ?? 1, 0.3)
@@ -3191,7 +3197,13 @@ import LearningCore
         grove.reducedMotion = true
         grove.didMove(to: SKView())
 
-        XCTAssertNotNil(grove.childNode(withName: "creatureGroveBackdropHD"))
+        let groveArt = try XCTUnwrap(
+            grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(groveArt.userData?["sourceAsset"] as? String, "ScienceCreatureGrovePaintedHD")
+        XCTAssertTrue(groveArt.userData?["vectorPainted"] as? Bool ?? false)
+        XCTAssertEqual(groveArt.size, CGSize(width: 1280, height: 960))
+        XCTAssertFalse(groveArt.isUserInteractionEnabled)
         XCTAssertNotNil(grove.childNode(withName: "grovePath"))
         XCTAssertLessThan(grove.childNode(withName: "grovePath")?.alpha ?? 1, 0.3)
         XCTAssertNotNil(grove.childNode(withName: "//grovePondBank"))
