@@ -1259,6 +1259,7 @@ import LearningCore
         case .tenFrame(let model): (mechanic as? TenFrameGateMechanic)?.render(model, allowPreview: engaged && state.previewVisible)
         case .missingBridge(let model): (mechanic as? MissingNumberBridgeMechanic)?.render(model)
         case .placeValueFactory(let model): (mechanic as? PlaceValueFactoryMechanic)?.render(model)
+        case .patternLoom(let model): (mechanic as? PatternLoomMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1361,6 +1362,10 @@ import LearningCore
         case "placeTensMinus": manipulate { self.state.adjustPlaceValue(tensDelta: -1) }
         case "placeOnesPlus": manipulate { self.state.adjustPlaceValue(onesDelta: 1) }
         case "placeOnesMinus": manipulate { self.state.adjustPlaceValue(onesDelta: -1) }
+        case "loomSymbol1": manipulate { self.state.choosePatternSymbol(1) }
+        case "loomSymbol2": manipulate { self.state.choosePatternSymbol(2) }
+        case "loomSymbol3": manipulate { self.state.choosePatternSymbol(3) }
+        case "loomUndo": manipulate { self.state.undoPatternSymbol() }
         case "scaleLeft", "placeLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight", "placeRight": manipulate { self.state.chooseComparison(.right) }
         case "scaleEqual", "placeEqual": manipulate { self.state.chooseComparison(.equal) }
@@ -1402,7 +1407,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1460,6 +1465,10 @@ import LearningCore
             } else {
                 change = "\(model.selectedTens) tens and \(model.selectedOnes) ones make \(model.builtNumber)."
             }
+        case .patternLoom(let model):
+            change = model.isCreation
+                ? "\(model.selectedSymbols.count) of \(model.slotCount) pattern shapes placed."
+                : "A shape fills the pattern gap."
         }
         // Describe only the child's visible edit; the lever still checks the answer.
         instruction.text = change + " Pull Pip's lever when you're ready."
