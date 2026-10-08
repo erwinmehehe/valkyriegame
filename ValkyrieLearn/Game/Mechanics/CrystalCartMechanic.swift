@@ -2226,20 +2226,38 @@ import LearningCore
             for index in 0..<cells {
                 let x = CGFloat(index) * space - CGFloat(cells - 1) * space / 2
                 let selected = activity.fractionalCells.contains(index)
-                let piece = ArtSystem.panel(
-                    CGSize(width: space - 9, height: 96),
-                    fill: selected
-                        ? UIColor(red: 0.30, green: 0.78, blue: 0.69, alpha: 1)
-                        : UIColor(red: 0.12, green: 0.28, blue: 0.35, alpha: 1),
-                    stroke: UIColor(red: 1, green: 0.86, blue: 0.55, alpha: 1),
-                    radius: 4,
-                    lineWidth: 3,
-                    shadowAlpha: 0.03
-                )
-                piece.position = CGPoint(x: x, y: 10)
-                piece.name = "gardenPart\(index)"
-                items.addChild(piece)
-                text(selected ? "✓" : "\(index + 1)", x: x, y: 9, size: 24)
+                let fill = selected
+                    ? UIColor(red: 0.30, green: 0.78, blue: 0.69, alpha: 1)
+                    : UIColor(red: 0.12, green: 0.28, blue: 0.35, alpha: 1)
+                if model.encounter.context.hasSuffix(".circle") {
+                    let radius: CGFloat = 75
+                    let start = CGFloat(index) * 2 * .pi / CGFloat(cells) - .pi / 2
+                    let finish = CGFloat(index + 1) * 2 * .pi / CGFloat(cells) - .pi / 2
+                    let wedge = CGMutablePath()
+                    wedge.move(to: CGPoint(x: 0, y: 8))
+                    wedge.addArc(center: CGPoint(x: 0, y: 8), radius: radius,
+                                 startAngle: start, endAngle: finish, clockwise: false)
+                    wedge.closeSubpath()
+                    let piece = SKShapeNode(path: wedge)
+                    piece.fillColor = fill
+                    piece.strokeColor = UIColor(red: 1, green: 0.86, blue: 0.55, alpha: 1)
+                    piece.lineWidth = 3
+                    piece.name = "gardenPart\(index)"
+                    items.addChild(piece)
+                } else {
+                    let piece = ArtSystem.panel(
+                        CGSize(width: space - 9, height: 96),
+                        fill: fill,
+                        stroke: UIColor(red: 1, green: 0.86, blue: 0.55, alpha: 1),
+                        radius: 4,
+                        lineWidth: 3,
+                        shadowAlpha: 0.03
+                    )
+                    piece.position = CGPoint(x: x, y: 10)
+                    piece.name = "gardenPart\(index)"
+                    items.addChild(piece)
+                    text(selected ? "✓" : "\(index + 1)", x: x, y: 9, size: 24)
+                }
                 control("◼", at: CGPoint(x: x, y: -120), name: "gardenPart\(index)")
             }
             text(cells == 2 ? "1 / 2" : "1 / 4", x: 0, y: 74, size: 24)
