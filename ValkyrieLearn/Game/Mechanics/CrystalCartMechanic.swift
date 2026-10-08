@@ -1832,6 +1832,16 @@ import LearningCore
                 name = ["CIRCLES", "SQUARES", "TRIANGLES"][category - 1]
             }
             text(name, at: CGPoint(x: x, y: 5), size: 13)
+            // Pre-readers should identify the correct bin from its icon,
+            // not from English labels alone. Colors are distinct in color
+            // mode; silhouettes are distinct in shape mode.
+            let marker = shapeToken(
+                shape: model.sortingAttribute == .color ? 1 : category,
+                color: model.sortingAttribute == .color ? category : 1,
+                radius: 11, name: MathMechanicID.dataBoard
+            )
+            marker.position = CGPoint(x: x, y: -15)
+            activity.addChild(marker)
             for (index, bin) in model.sortedBins.enumerated() where bin == category {
                 let slot = model.sortedBins.prefix(index + 1).filter { $0 == category }.count - 1
                 let tok = tokens[index]
