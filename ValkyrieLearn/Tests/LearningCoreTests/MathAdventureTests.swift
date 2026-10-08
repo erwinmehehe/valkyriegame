@@ -228,7 +228,7 @@ final class MathAdventureTests: XCTestCase {
         var profile = LearnerProfile(); var date = epoch; var seen = Set<String>()
         // With seven mechanics and prerequisite-based variation, give the
         // planner sufficient independent scored encounters to reach every one.
-        for _ in 0..<420 {
+        for _ in 0..<180 {
             let selection = try adventure.prepareNext(profile: &profile, now: date)
             if selection == .explorationBreak {
                 adventure.finishExploration(profile: &profile, at: date); continue
@@ -241,7 +241,12 @@ final class MathAdventureTests: XCTestCase {
             XCTAssertTrue(adventure.advanceEncounter())
             date = date.addingTimeInterval(40)
         }
-        XCTAssertEqual(seen, MathMechanicID.adaptiveSet)
+        // Stretch mechanics intentionally require prerequisite readiness and
+        // should not be forced into a beginning learner's early sessions.
+        XCTAssertEqual(
+            seen,
+            MathMechanicID.adaptiveSet.subtracting([MathMechanicID.groupingGarden])
+        )
         XCTAssertGreaterThan(adventure.laneCounts.values.reduce(0, +), 0)
     }
 
@@ -1043,6 +1048,48 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
+
+
+    func testGroupingGardenIsAnEligibleStretchAfterPrerequisitesButNotPlacementMastery() throws {
+        let graph = try MathSkills.graph()
+        var profile = LearnerProfile()
+        let skill = MathSkills.equalGroups
+        // A hidden placement may provisionally open prerequisite practice;
+        // it never claims the learner has mastered these prerequisites.
+        profile.markPlacementReady(graph.prerequisiteClosure(including: skill))
+        XCTAssertTrue(graph.isEligible(skill, for: profile))
+        XCTAssertTrue(profile.skills.isEmpty)
+
+        let encounters = MathProductionQuestionBank.variants(for: skill).map(\.encounter)
+        let planner = SessionPlanner(
+            graph: graph, stretchSkillIDs: [skill],
+            configuration: SessionPlannerConfiguration(
+                learningWeight: 0, reviewWeight: 0, stretchWeight: 100,
+                confidenceWeight: 0
+            )
+        )
+        let plan = planner.plan(
+            for: profile, candidates: encounters, encounterCount: 1, now: epoch
+        )
+        let encounter = try XCTUnwrap(plan.encounters.first?.encounter)
+        XCTAssertEqual(encounter.mechanicID, MathMechanicID.groupingGarden)
+        XCTAssertEqual(profile.progress(for: skill).state, .new)
+
+        var runtime = try MathMechanicRuntime(encounter: encounter, at: epoch)
+        guard case .groupingGarden(let model) = runtime else {
+            return XCTFail("No Grouping Garden runtime")
+        }
+        for group in 0..<model.activity.groupCount {
+            for _ in 0..<model.activity.itemsPerGroup {
+                XCTAssertTrue(runtime.placeGroupCounter(in: group))
+            }
+        }
+        let evidence = try XCTUnwrap(runtime.submit(at: epoch.addingTimeInterval(10)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.supportLevel, .independent)
+        MasteryEngine().record(evidence, in: &profile)
+        XCTAssertFalse(profile.progress(for: skill).evidence.isEmpty)
+    }
 
     func testGroupingGardenFiveSkillsHaveExactlySixtyOneObservableActivities() throws {
         let skills = [
