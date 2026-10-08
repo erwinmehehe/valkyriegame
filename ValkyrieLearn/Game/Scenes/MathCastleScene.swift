@@ -1913,7 +1913,7 @@ import LearningCore
                 if let guess = model.lockedEstimate {
                     change = "Estimate \(guess) locked after the brief flash."
                 } else if model.flashObserved {
-                    change = "Flash hidden. Estimate dial is on \(model.dialValue)."
+                    change = "Fireflies flashed. Estimate dial is on \(model.dialValue)."
                 } else {
                     change = "Watch the brief firefly flash before you guess."
                 }
