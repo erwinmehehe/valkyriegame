@@ -131,6 +131,32 @@ final class MathAdventureTests: XCTestCase {
                     XCTAssertTrue(adventure.placeGardenCut())
                 }
             }
+        case .differenceDock(let model):
+            for _ in 0..<model.constructionRequired {
+                XCTAssertTrue(adventure.addDockCounter())
+            }
+            for _ in 0..<model.correctResponse {
+                XCTAssertTrue(adventure.adjustDockAnswer(1))
+            }
+        case .mapQuest(let model):
+            if model.isPosition {
+                XCTAssertTrue(adventure.selectMapPosition(model.destination))
+            } else {
+                var x = model.startCell % 3
+                var y = model.startCell / 3
+                let targetX = model.destination % 3
+                let targetY = model.destination / 3
+                while y != targetY {
+                    let step = targetY > y ? 1 : -1
+                    XCTAssertTrue(adventure.stepMap(dx: 0, dy: step))
+                    y += step
+                }
+                while x != targetX {
+                    let step = targetX > x ? 1 : -1
+                    XCTAssertTrue(adventure.stepMap(dx: step, dy: 0))
+                    x += step
+                }
+            }
         case .numberTrail(let model):
             if model.isEstimate {
                 XCTAssertTrue(adventure.revealTrailCollection(at: date))
@@ -221,7 +247,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(profile.progress(for: MathSkills.compare).evidence.count, attempts)
         XCTAssertTrue(adventure.advanceEncounter())
     }
-    func testAllFourteenRuntimesAndSessionStateRoundTrip() throws {
+    func testAllSixteenRuntimesAndSessionStateRoundTrip() throws {
         let placeValue = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
         )
@@ -236,6 +262,8 @@ final class MathAdventureTests: XCTestCase {
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter),
+            try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter),
             try XCTUnwrap(MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter)]
         for encounter in examples {
             var adventure = MathAdventure(); var profile = LearnerProfile()
@@ -508,9 +536,9 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionBankIncludesPlaceValueFactoryExpansion() throws {
-        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2405)
-        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2405)
-        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2454)
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 2567)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 2567)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 2616)
 
         XCTAssertEqual(
             Set(MathProductionQuestionBank.encounters.map(\.id)).count,
@@ -535,7 +563,7 @@ final class MathAdventureTests: XCTestCase {
     }
 
     func testProductionQuestionMetadataIsCompleteAndReviewable() {
-        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 72)
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 76)
 
         for variant in MathProductionQuestionBank.variants {
             let alignment = MathCurriculumMatrix.alignment(for: variant.encounter.skillID)
@@ -1437,24 +1465,119 @@ final class MathAdventureTests: XCTestCase {
         )
     }
 
+    func testAllFourRemainingSkillGapsHaveObservableNativeVariants() throws {
+        let expected: [(SkillID, Int, String)] = [
+            (MathSkills.findDifference10, 45, MathMechanicID.differenceDock),
+            (MathSkills.inverseFacts10, 45, MathMechanicID.differenceDock),
+            (MathSkills.positionalLanguage, 24, MathMechanicID.mapQuest),
+            (MathSkills.mapRoute, 48, MathMechanicID.mapQuest)
+        ]
+        for (skill, quantity, mechanic) in expected {
+            let variants = MathProductionQuestionBank.variants(for: skill)
+            XCTAssertEqual(variants.count, quantity)
+            XCTAssertTrue(variants.allSatisfy {
+                $0.encounter.mechanicID == mechanic
+                    && MathManipulativeSupport.supports($0.encounter)
+            })
+            for variant in variants {
+                var runtime = try MathMechanicRuntime(encounter: variant.encounter, at: epoch)
+                XCTAssertNil(runtime.submit(at: epoch), "Untouched work cannot score.")
+            }
+        }
+    }
+
+    func testDifferenceDockRequiresPairingOrInverseBuildThenCorrectsMistakes() throws {
+        for skill in [MathSkills.findDifference10, MathSkills.inverseFacts10] {
+            let encounter = try XCTUnwrap(
+                MathProductionQuestionBank.variants(for: skill).first?.encounter
+            )
+            var model = try DifferenceDockModel(encounter: encounter, at: epoch)
+            XCTAssertNil(model.submit(at: epoch))
+            for _ in 0..<(model.constructionRequired - 1) {
+                XCTAssertTrue(model.placeCounter())
+            }
+            XCTAssertTrue(model.adjustResponse(1))
+            XCTAssertNil(model.submit(at: epoch), "Incomplete construction cannot score")
+            XCTAssertTrue(model.placeCounter())
+            let target = model.correctResponse
+            if target == 1 {
+                XCTAssertTrue(model.adjustResponse(1))
+            }
+            XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+            while model.response > target {
+                XCTAssertTrue(model.adjustResponse(-1))
+            }
+            while model.response < target {
+                XCTAssertTrue(model.adjustResponse(1))
+            }
+            let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(6)))
+            XCTAssertEqual(evidence.outcome, .correct)
+            XCTAssertEqual(evidence.attempts, 2)
+            XCTAssertFalse(model.placeCounter())
+            XCTAssertFalse(model.adjustResponse(1))
+            XCTAssertEqual(
+                try JSONDecoder().decode(DifferenceDockModel.self,
+                                         from: JSONEncoder().encode(model)),
+                model
+            )
+        }
+    }
+
+    func testMapQuestRequiresRealPositionsAndOrthogonalMoves() throws {
+        let position = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage)
+                .first?.encounter
+        )
+        var placed = try MapQuestModel(encounter: position, at: epoch)
+        XCTAssertNil(placed.submit(at: epoch))
+        XCTAssertFalse(placed.chooseCell(4))
+        XCTAssertTrue(placed.chooseCell(8))
+        XCTAssertEqual(placed.submit(at: epoch.addingTimeInterval(2))?.outcome, .incorrect)
+        XCTAssertTrue(placed.chooseCell(placed.destination))
+        XCTAssertEqual(placed.submit(at: epoch.addingTimeInterval(5))?.outcome, .correct)
+
+        let route = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.mapRoute).first?.encounter
+        )
+        var model = try MapQuestModel(encounter: route, at: epoch)
+        XCTAssertEqual(model.minimumRouteMoves, 2)
+        XCTAssertFalse(model.move(dx: 2, dy: 0), "No teleporting across two cells")
+        XCTAssertFalse(model.move(dx: 1, dy: 1), "No diagonal hops")
+        XCTAssertNil(model.submit(at: epoch), "A start location alone cannot score")
+        XCTAssertTrue(model.move(dx: 0, dy: 1))
+        XCTAssertNil(model.submit(at: epoch), "One move is not a complete route")
+        XCTAssertTrue(model.move(dx: 0, dy: 1))
+        XCTAssertEqual(model.submit(at: epoch.addingTimeInterval(4))?.outcome, .incorrect)
+        XCTAssertTrue(model.undoMove())
+        XCTAssertTrue(model.undoMove())
+        XCTAssertTrue(model.move(dx: 1, dy: 0))
+        XCTAssertTrue(model.move(dx: 1, dy: 0))
+        let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(8)))
+        XCTAssertEqual(evidence.outcome, .correct)
+        XCTAssertEqual(evidence.attempts, 2)
+        XCTAssertFalse(model.undoMove())
+        XCTAssertEqual(
+            try JSONDecoder().decode(MapQuestModel.self,
+                                     from: JSONEncoder().encode(model)),
+            model
+        )
+    }
+
     func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
-        let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
+        let newlyAssessed: [SkillID] = [
             MathSkills.findDifference10,
             MathSkills.inverseFacts10,
             MathSkills.positionalLanguage,
-            MathSkills.mapRoute,
+            MathSkills.mapRoute
         ]
-
-        for skillID in unsupportedUntilDedicatedMechanicsExist {
-            XCTAssertNotNil(
-                MathCurriculumMatrix.alignment(for: skillID),
-                "Unsupported skills must stay visible in the curriculum matrix."
-            )
-            XCTAssertFalse(
+        for skillID in newlyAssessed {
+            XCTAssertNotNil(MathCurriculumMatrix.alignment(for: skillID))
+            XCTAssertTrue(
                 MathProductionQuestionBank.hasNativeAssessment(for: skillID),
-                "Do not award mastery for \(skillID.rawValue) until a mechanic can observe the required act."
+                "Assess \(skillID.rawValue) only through the observable native actions."
             )
         }
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 76)
     }
 
 
