@@ -1476,6 +1476,213 @@ import LearningCore
     }
 }
 
+
+@MainActor final class MeasurementWorkshopMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("MEASUREMENT WORKSHOP", size: 17)
+    private let instruction = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.measurementWorkshop
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.name = MathMechanicID.measurementWorkshop
+        tray.position.y = -14
+        tray.zPosition = -5
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 300, height: 47),
+            fill: UIColor(red: 0.09, green: 0.16, blue: 0.25, alpha: 0.97),
+            stroke: UIColor(red: 0.96, green: 0.75, blue: 0.38, alpha: 0.87),
+            radius: 15
+        )
+        plaque.name = MathMechanicID.measurementWorkshop
+        plaque.position.y = 127
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.measurementWorkshop
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.95, green: 0.86, blue: 0.59, alpha: 1)
+        instruction.position.y = 92
+        instruction.name = MathMechanicID.measurementWorkshop
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func title(_ message: String, x: CGFloat, y: CGFloat, size: CGFloat = 16) {
+        let label = ArtSystem.label(message, size: size)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.position = CGPoint(x: x, y: y)
+        label.name = MathMechanicID.measurementWorkshop
+        activity.addChild(label)
+    }
+
+    private func box(_ width: CGFloat, _ height: CGFloat, x: CGFloat, y: CGFloat,
+                     color: UIColor, outline: UIColor, name: String) -> SKShapeNode {
+        let panel = SKShapeNode(
+            rectOf: CGSize(width: width, height: height),
+            cornerRadius: 7
+        )
+        panel.position = CGPoint(x: x, y: y)
+        panel.fillColor = color
+        panel.strokeColor = outline
+        panel.lineWidth = 2
+        panel.name = name
+        activity.addChild(panel)
+        return panel
+    }
+
+    private func button(_ symbol: String, name: String, x: CGFloat) {
+        let gear = ArtSystem.gear(radius: 34, symbol: symbol)
+        gear.position = CGPoint(x: x, y: -120)
+        gear.zPosition = 50
+        gear.name = name
+        activity.addChild(gear)
+
+        // Named 72pt circular hit region is shared with geometric scene
+        // routing, so a decorative child cannot steal a measurement tap.
+        let hit = SKShapeNode(circleOfRadius: 36)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.position = CGPoint(x: x, y: -120)
+        hit.zPosition = 70
+        hit.name = name
+        activity.addChild(hit)
+    }
+
+    func render(_ model: MeasurementWorkshopModel) {
+        activity.removeAllChildren()
+        if model.isUnitMeasurement {
+            instruction.text = "PLACE EQUAL UNITS • NO GAPS"
+            let n = model.targetUnitCount
+            let unitWidth: CGFloat = 32
+            let baseX = -CGFloat(n) * unitWidth / 2
+            _ = box(
+                CGFloat(n) * unitWidth + 6, 42, x: 0, y: 5,
+                color: UIColor(red: 0.13, green: 0.25, blue: 0.30, alpha: 1),
+                outline: UIColor(red: 0.98, green: 0.82, blue: 0.45, alpha: 1),
+                name: MathMechanicID.measurementWorkshop
+            )
+            for i in 0..<n {
+                _ = box(
+                    1, 40,
+                    x: baseX + CGFloat(i) * unitWidth,
+                    y: 5,
+                    color: UIColor(red: 0.79, green: 0.86, blue: 0.90, alpha: 0.35),
+                    outline: .clear,
+                    name: MathMechanicID.measurementWorkshop
+                )
+            }
+            for i in 0..<model.placedUnits {
+                let x = baseX + (CGFloat(i) + 0.5) * unitWidth
+                let isOver = i >= n
+                _ = box(
+                    model.unitStyle == "tiles" ? 30 : 28,
+                    model.unitStyle == "tiles" ? 28 : 32,
+                    x: x, y: 5,
+                    color: isOver
+                        ? UIColor(red: 0.91, green: 0.37, blue: 0.32, alpha: 1)
+                        : UIColor(red: 0.29, green: 0.73, blue: 0.80, alpha: 1),
+                    outline: .white,
+                    name: MathMechanicID.measurementWorkshop
+                )
+            }
+            title("\(model.placedUnits) UNITS PLACED", x: 0, y: -57)
+            button("−", name: "measureRemove", x: -94)
+            button("+", name: "measureAdd", x: 94)
+        } else {
+            switch model.task {
+            case .length: instruction.text = "COMPARE THE RIBBONS"
+            case .weight: instruction.text = "COMPARE THE STONE TRAYS"
+            case .capacity: instruction.text = "COMPARE CAPACITY IN CUPS"
+            case .units: break
+            }
+
+            for (side, value) in [(0, model.leftValue), (1, model.rightValue)] {
+                let x: CGFloat = side == 0 ? -123 : 123
+                let which = side == 0 ? "LEFT" : "RIGHT"
+                _ = box(
+                    212, 142, x: x, y: -4,
+                    color: UIColor(red: 0.10, green: 0.21, blue: 0.29, alpha: 1),
+                    outline: UIColor(red: 0.66, green: 0.84, blue: 0.91, alpha: 0.8),
+                    name: MathMechanicID.measurementWorkshop
+                )
+                title(which, x: x, y: 51, size: 14)
+                switch model.task {
+                case .length:
+                    // Every 18pt segment represents exactly one equal-length unit.
+                    for i in 0..<value {
+                        _ = box(
+                            16, 27,
+                            x: x - CGFloat(value - 1) * 9 + CGFloat(i) * 18,
+                            y: 4,
+                            color: UIColor(red: 0.29, green: 0.74, blue: 0.84, alpha: 1),
+                            outline: .white,
+                            name: MathMechanicID.measurementWorkshop
+                        )
+                    }
+                    title("RIBBON", x: x, y: -49, size: 12)
+                case .weight:
+                    // Equal-weight stones make the mass comparison tangible.
+                    for i in 0..<value {
+                        let stone = SKShapeNode(circleOfRadius: 10)
+                        stone.position = CGPoint(
+                            x: x + CGFloat(i % 4) * 27 - 40,
+                            y: CGFloat(i / 4) * 27 - 5
+                        )
+                        stone.fillColor = UIColor(red: 0.58, green: 0.73, blue: 0.90, alpha: 1)
+                        stone.strokeColor = .white
+                        stone.lineWidth = 1
+                        stone.name = MathMechanicID.measurementWorkshop
+                        activity.addChild(stone)
+                    }
+                    title("EQUAL STONES", x: x, y: -49, size: 12)
+                case .capacity:
+                    // Both vessels share identical dimensions; each visible
+                    // band represents one equal-size measuring cup of capacity.
+                    _ = box(
+                        88, 88, x: x, y: -5, color: .clear,
+                        outline: UIColor(red: 0.75, green: 0.93, blue: 0.99, alpha: 1),
+                        name: MathMechanicID.measurementWorkshop
+                    )
+                    for i in 0..<value {
+                        _ = box(
+                            78, 9, x: x, y: -43 + CGFloat(i) * 11,
+                            color: UIColor(red: 0.27, green: 0.66, blue: 0.93, alpha: 0.95),
+                            outline: .clear,
+                            name: MathMechanicID.measurementWorkshop
+                        )
+                    }
+                    title("EQUAL CUPS", x: x, y: -62, size: 12)
+                case .units:
+                    break
+                }
+            }
+            button("◀", name: "measureLeft", x: -155)
+            button("=", name: "measureEqual", x: 0)
+            button("▶", name: "measureRight", x: 155)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.88, blue: 0.47, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1.0, duration: 0.17)
+        ]), withKey: "measurementSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -1493,6 +1700,8 @@ import LearningCore
             return PatternLoomMechanic()
         case MathMechanicID.shapeForge:
             return ShapeForgeMechanic()
+        case MathMechanicID.measurementWorkshop:
+            return MeasurementWorkshopMechanic()
         default:
             return nil
         }
