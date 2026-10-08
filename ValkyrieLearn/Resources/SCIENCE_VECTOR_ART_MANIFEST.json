@@ -19,5 +19,9 @@
       "asset": "ScienceCreatureGrovePaintedHD",
       "blobSHA": "9435708cf024428501b503f4a64b1fae030e0854"
     }
-  }
+  },
+  "status": "review_only",
+  "defaultRenderer": "approved_painterly_atlas",
+  "candidateActivation": "ScienceLabScene.useCandidateVectorArtwork / CreatureGroveScene.useCandidateVectorArtwork; test-only opt-in",
+  "visualApproval": "pending: new vector backgrounds are less detailed than the previously approved illustrated environments"
 }
