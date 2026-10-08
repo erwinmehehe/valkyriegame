@@ -1088,6 +1088,65 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Pattern Loom: actual sequence continuation, internal gap solving, and
+        // six-tile independent construction of repeating units.
+        for family in PatternLoomFamily.allCases {
+            let extensionSkill: SkillID
+            switch family {
+            case .ab: extensionSkill = MathSkills.patternAB
+            case .aab: extensionSkill = MathSkills.patternAAB
+            case .abc: extensionSkill = MathSkills.patternABC
+            }
+
+            for shift in 0...2 {
+                for prefixLength in 3...7 {
+                    add(
+                        "prod-loom-extend-\(family.rawValue)-\(shift)-\(prefixLength)",
+                        skill: extensionSkill,
+                        mechanic: MathMechanicID.patternLoom,
+                        representation: .pictorial,
+                        operation: .pattern,
+                        initial: shift,
+                        target: prefixLength,
+                        prompt: "Continue the \(family.rawValue.uppercased()) pattern. Which shape comes next?",
+                        context: "loom.extend.\(family.rawValue)",
+                        difficulty: family == .ab ? 1 : 2,
+                        purpose: .practice
+                    )
+                }
+                for gapIndex in 2...5 {
+                    add(
+                        "prod-loom-missing-\(family.rawValue)-\(shift)-\(gapIndex)",
+                        skill: MathSkills.patternMissing,
+                        mechanic: MathMechanicID.patternLoom,
+                        representation: .pictorial,
+                        operation: .pattern,
+                        initial: shift,
+                        target: gapIndex,
+                        prompt: "One shape is missing from this repeating pattern. Repair the gap.",
+                        context: "loom.missing.\(family.rawValue)",
+                        difficulty: family == .ab ? 2 : 3,
+                        purpose: .representationTransfer
+                    )
+                }
+            }
+
+            add(
+                "prod-loom-create-\(family.rawValue)",
+                skill: MathSkills.patternCreate,
+                mechanic: MathMechanicID.patternLoom,
+                representation: .concrete,
+                operation: .pattern,
+                initial: 0,
+                target: 6,
+                prompt: "Make your own \(family.rawValue.uppercased()) pattern using six shapes.",
+                context: "loom.create.\(family.rawValue)",
+                difficulty: family == .ab ? 2 : 3,
+                purpose: .reasoning
+            )
+        }
+
         return result
     }()
 
