@@ -256,6 +256,36 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoPicture() ?? false
     }
 
+    @discardableResult public mutating func adjustClockHour(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustClockHour(delta) ?? false
+    }
+
+    @discardableResult public mutating func adjustClockMinute(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustClockMinute(delta) ?? false
+    }
+
+    @discardableResult public mutating func placeDailyRoutine(_ daypart: ClockMarketDaypart) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.placeDailyRoutine(daypart) ?? false
+    }
+
+    @discardableResult public mutating func undoDailyRoutine() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoDailyRoutine() ?? false
+    }
+
+    @discardableResult public mutating func addPesoCoin(_ value: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.addPesoCoin(value) ?? false
+    }
+
+    @discardableResult public mutating func undoPesoCoin() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoPesoCoin() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -387,6 +417,44 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 if demonstration {
                     _ = runtime?.choosePatternSymbol(model.correctSymbol)
                     cue = "Watch Pip place one repeating shape. Now try the lever."
+                }
+            }
+        case .clockMarket(let model):
+            switch model.task {
+            case .hour, .halfHour, .fiveMinutes:
+                cue = "The short clock hand shows the hour. The long hand counts minutes around the circle."
+                if model.task == .halfHour {
+                    cue = "The long hand at 12 means o'clock; at 6 it means half past."
+                } else if model.task == .fiveMinutes {
+                    cue = "Each numeral on the big hand is another five minutes. Move the hour hand too."
+                }
+                if demonstration {
+                    if model.hour != model.targetHour {
+                        _ = runtime?.adjustClockHour(1)
+                        cue = "Pip moved the short hand one hour. Set both hands to the target."
+                    } else if model.task != .hour, model.minute != model.targetMinute {
+                        _ = runtime?.adjustClockMinute(1)
+                        cue = "Pip moved the long hand one step. Finish setting the time."
+                    } else {
+                        demonstration = false
+                    }
+                }
+            case .routines:
+                cue = "What happens in the morning, afternoon, evening and at night? Sort each picture."
+                if demonstration, let routine = model.nextRoutine {
+                    _ = runtime?.placeDailyRoutine(routine.daypart)
+                    cue = "Pip sorted one event as an example. Sort the remaining picture cards."
+                }
+            case .money:
+                cue = "Look at the peso amount on each teaching coin. Combine the coins to match the price."
+                if demonstration {
+                    let remaining = model.targetPesos - model.totalPesos
+                    if let denomination = model.allowedCoins.reversed().first(where: { $0 <= remaining }) {
+                        _ = runtime?.addPesoCoin(denomination)
+                        cue = "Pip added one peso coin. Choose coins to finish paying exactly."
+                    } else {
+                        demonstration = false
+                    }
                 }
             }
         case .dataBoard(let model):
