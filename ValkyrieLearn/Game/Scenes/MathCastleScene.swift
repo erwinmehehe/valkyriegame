@@ -1264,6 +1264,7 @@ import LearningCore
         case .measurementWorkshop(let model): (mechanic as? MeasurementWorkshopMechanic)?.render(model)
         case .dataBoard(let model): (mechanic as? DataBoardMechanic)?.render(model)
         case .clockMarket(let model): (mechanic as? ClockMarketMechanic)?.render(model)
+        case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1342,7 +1343,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1443,6 +1444,33 @@ import LearningCore
                     let x = CGFloat(index) * spacing - CGFloat(count - 1) * spacing / 2
                     if hypot(local.x - x, local.y + 65) <= 38 {
                         manipulate { self.state.addPesoCoin(coin) }
+                        return true
+                    }
+                }
+            }
+        case .groupingGarden(let model):
+            if model.activity.targetCells == 0 {
+                if hypot(local.x - 229, local.y - 68) <= 39 {
+                    manipulate { self.state.undoGroupCounter() }
+                    return true
+                }
+                let count = model.activity.groupCount
+                let spacing: CGFloat = count == 5 ? 104 : 124
+                for group in 0..<count {
+                    let x = CGFloat(group) * spacing - CGFloat(count - 1) * spacing / 2
+                    if hypot(local.x - x, local.y + 120) <= 39 {
+                        manipulate { self.state.placeGroupCounter(in: group) }
+                        return true
+                    }
+                }
+            } else {
+                let count = model.activity.targetCells
+                let spacing: CGFloat = count == 2 ? 142 : 112
+                for part in 0..<count {
+                    let x = CGFloat(part) * spacing - CGFloat(count - 1) * spacing / 2
+                    if hypot(local.x - x, local.y + 120) <= 39 ||
+                        (abs(local.x - x) <= (spacing - 9) / 2 && abs(local.y - 10) <= 48) {
+                        manipulate { self.state.chooseGardenFraction(part) }
                         return true
                     }
                 }
@@ -1589,6 +1617,16 @@ import LearningCore
         case "marketCoin10": manipulate { self.state.addPesoCoin(10) }
         case "marketCoin20": manipulate { self.state.addPesoCoin(20) }
         case "marketCoinUndo": manipulate { self.state.undoPesoCoin() }
+        case "gardenGroup0": manipulate { self.state.placeGroupCounter(in: 0) }
+        case "gardenGroup1": manipulate { self.state.placeGroupCounter(in: 1) }
+        case "gardenGroup2": manipulate { self.state.placeGroupCounter(in: 2) }
+        case "gardenGroup3": manipulate { self.state.placeGroupCounter(in: 3) }
+        case "gardenGroup4": manipulate { self.state.placeGroupCounter(in: 4) }
+        case "gardenPart0": manipulate { self.state.chooseGardenFraction(0) }
+        case "gardenPart1": manipulate { self.state.chooseGardenFraction(1) }
+        case "gardenPart2": manipulate { self.state.chooseGardenFraction(2) }
+        case "gardenPart3": manipulate { self.state.chooseGardenFraction(3) }
+        case "gardenUndo": manipulate { self.state.undoGroupCounter() }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1636,7 +1674,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1735,6 +1773,13 @@ import LearningCore
                 change = "\(model.routineBins.count) of 4 daily events sorted."
             } else {
                 change = "₱\(model.totalPesos) in selected teaching coins."
+            }
+        case .groupingGarden(let model):
+            if model.activity.targetCells > 0 {
+                change = "One of \(model.activity.targetCells) equal parts selected."
+            } else {
+                let n = model.activity.placements.count
+                change = "\(n) of \(model.activity.totalItems) berries placed in groups."
             }
         }
         // Describe only the child's visible edit; the lever still checks the answer.
