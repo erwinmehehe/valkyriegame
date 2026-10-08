@@ -2558,6 +2558,220 @@ import LearningCore
     }
 }
 
+
+@MainActor final class NumberTrailMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("NUMBER TRAIL", size: 19)
+    private let instruction = ArtSystem.label("", size: 15)
+    private var didRender = false
+    private var lastObservedFlash = false
+
+    override init() {
+        super.init()
+        name = MathMechanicID.numberTrail
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.numberTrail
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 277, height: 47),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.29, alpha: 0.97),
+            stroke: UIColor(red: 0.98, green: 0.80, blue: 0.43, alpha: 0.91),
+            radius: 15
+        )
+        plaque.position.y = 128
+        plaque.name = MathMechanicID.numberTrail
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.numberTrail
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.97, green: 0.84, blue: 0.53, alpha: 1)
+        instruction.position.y = 95
+        instruction.name = MathMechanicID.numberTrail
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Programmatic mechanics only") }
+
+    private func text(_ message: String, x: CGFloat, y: CGFloat, size: CGFloat = 16) {
+        let label = ArtSystem.label(message, size: size)
+        label.position = CGPoint(x: x, y: y)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.name = MathMechanicID.numberTrail
+        activity.addChild(label)
+    }
+
+    private func button(_ message: String, name: String, x: CGFloat, y: CGFloat = -122,
+                        radius: CGFloat = 33) {
+        let surface = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.14, green: 0.30, blue: 0.43, alpha: 1),
+            stroke: UIColor(red: 0.95, green: 0.81, blue: 0.46, alpha: 0.96),
+            glow: 0
+        )
+        surface.position = CGPoint(x: x, y: y)
+        surface.name = name
+        surface.zPosition = 60
+        activity.addChild(surface)
+        let label = ArtSystem.label(message, size: message.count > 3 ? 13 : 23)
+        label.fontName = "AvenirNext-Heavy"
+        label.fontColor = .white
+        label.name = name
+        surface.addChild(label)
+        let tapTarget = SKShapeNode(circleOfRadius: radius + 3)
+        tapTarget.position = CGPoint(x: x, y: y)
+        tapTarget.fillColor = .clear
+        tapTarget.strokeColor = .clear
+        tapTarget.name = name
+        tapTarget.zPosition = 75
+        activity.addChild(tapTarget)
+    }
+
+    func render(_ model: NumberTrailModel) {
+        let animateFlash = didRender && model.isEstimate
+            && model.flashObserved && !lastObservedFlash
+        didRender = true
+        lastObservedFlash = model.flashObserved
+        activity.removeAllChildren()
+
+        if model.isEstimate {
+            renderEstimate(model, animateFlash: animateFlash)
+        } else {
+            renderCountOn(model)
+        }
+    }
+
+    private func renderEstimate(_ model: NumberTrailModel, animateFlash: Bool) {
+        instruction.text = "ABOUT HOW MANY FIREFLIES?"
+        let flashPanel = ArtSystem.panel(
+            CGSize(width: 248, height: 164),
+            fill: UIColor(red: 0.08, green: 0.21, blue: 0.28, alpha: 0.98),
+            stroke: UIColor(red: 0.57, green: 0.83, blue: 0.91, alpha: 0.90),
+            radius: 15, lineWidth: 2, shadowAlpha: 0.06
+        )
+        flashPanel.position = CGPoint(x: -131, y: 0)
+        flashPanel.name = MathMechanicID.numberTrail
+        activity.addChild(flashPanel)
+
+        if !model.flashObserved {
+            text("TAP FLASH TO LOOK", x: -131, y: 2, size: 15)
+        } else if animateFlash {
+            let sparkleLayer = SKNode()
+            sparkleLayer.name = MathMechanicID.numberTrail
+            activity.addChild(sparkleLayer)
+            // Distinct six arrangements; positions never encode quantities
+            // using labels or counts that remain visible after the flash.
+            for i in 0..<model.collectionSize {
+                let cell = (i * 7 + model.arrangementSeed * 5) % 12
+                let firefly = SKShapeNode(circleOfRadius: 11)
+                firefly.position = CGPoint(
+                    x: -218 + CGFloat(cell % 4) * 58,
+                    y: 52 - CGFloat(cell / 4) * 49
+                )
+                firefly.fillColor = UIColor(red: 1, green: 0.86, blue: 0.36, alpha: 1)
+                firefly.strokeColor = UIColor(red: 0.97, green: 0.97, blue: 0.72, alpha: 1)
+                firefly.lineWidth = 2
+                firefly.glowWidth = 3
+                firefly.name = MathMechanicID.numberTrail
+                sparkleLayer.addChild(firefly)
+            }
+            // A brief stimulus disappears before children can slowly count
+            // all dots. This presentation action never changes score state.
+            sparkleLayer.run(.sequence([.wait(forDuration: 0.85), .hide()]))
+        } else {
+            text("FIREFLIES HIDDEN", x: -131, y: 2, size: 15)
+        }
+        text("YOUR ESTIMATE", x: 119, y: 57, size: 15)
+        text("\(model.dialValue)", x: 119, y: 4, size: 45)
+        if let locked = model.lockedEstimate {
+            text("LOCKED: \(locked)", x: 119, y: -56, size: 15)
+        } else {
+            text("SET A GUESS", x: 119, y: -56, size: 13)
+        }
+
+        button("FLASH", name: "trailFlash", x: -157, radius: 36)
+        button("−", name: "trailEstimateMinus", x: 17, radius: 33)
+        button("+", name: "trailEstimatePlus", x: 108, radius: 33)
+        button("SET", name: "trailEstimateLock", x: 207, radius: 33)
+    }
+
+    private func renderCountOn(_ model: NumberTrailModel) {
+        instruction.text = "COUNT ON \(model.requiredJumps) ONE-STEP JUMPS"
+        text("START: \(model.startNumber)", x: -137, y: 62, size: 17)
+        text("JUMPS: \(model.jumps)", x: 118, y: 62, size: 17)
+
+        let baseY: CGFloat = -10
+        let baseX: CGFloat = -218
+        let stepWidth: CGFloat = 43
+        let segmentPath = CGMutablePath()
+        segmentPath.move(to: CGPoint(x: baseX, y: baseY))
+        segmentPath.addLine(to: CGPoint(x: baseX + stepWidth * 10, y: baseY))
+        let baseline = SKShapeNode(path: segmentPath)
+        baseline.strokeColor = UIColor(red: 0.84, green: 0.91, blue: 0.94, alpha: 1)
+        baseline.lineWidth = 3
+        baseline.name = MathMechanicID.numberTrail
+        activity.addChild(baseline)
+
+        for value in 0...10 {
+            let x = baseX + CGFloat(value) * stepWidth
+            let mark = SKShapeNode(circleOfRadius: 5)
+            mark.fillColor = value <= model.markerNumber
+                ? UIColor(red: 0.95, green: 0.75, blue: 0.38, alpha: 1)
+                : UIColor(red: 0.56, green: 0.75, blue: 0.85, alpha: 1)
+            mark.strokeColor = .white
+            mark.lineWidth = 1
+            mark.position = CGPoint(x: x, y: baseY)
+            mark.name = MathMechanicID.numberTrail
+            activity.addChild(mark)
+            text("\(value)", x: x, y: -41, size: 13)
+        }
+        for step in 0..<model.jumps {
+            let marker = SKShapeNode(circleOfRadius: 6)
+            marker.fillColor = UIColor(red: 0.39, green: 0.84, blue: 0.64, alpha: 1)
+            marker.strokeColor = .white
+            marker.lineWidth = 1.5
+            marker.position = CGPoint(
+                x: baseX + CGFloat(model.startNumber + step + 1) * stepWidth,
+                y: baseY + 20
+            )
+            marker.name = MathMechanicID.numberTrail
+            activity.addChild(marker)
+        }
+        let glider = SKShapeNode(circleOfRadius: 13)
+        glider.fillColor = UIColor(red: 0.25, green: 0.78, blue: 0.89, alpha: 1)
+        glider.strokeColor = .white
+        glider.lineWidth = 3
+        glider.position = CGPoint(
+            x: baseX + CGFloat(model.markerNumber) * stepWidth,
+            y: baseY + 27
+        )
+        glider.name = MathMechanicID.numberTrail
+        activity.addChild(glider)
+        text("AT \(model.markerNumber)", x: 0, y: -82, size: 20)
+
+        button("↶", name: "trailUndoJump", x: -102, radius: 36)
+        button("+1", name: "trailAddJump", x: 102, radius: 36)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.89, blue: 0.50, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1, duration: 0.17)
+        ]), withKey: "trailSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -2585,6 +2799,8 @@ import LearningCore
             return GroupingGardenMechanic()
         case MathMechanicID.reasoningStudio:
             return ReasoningStudioMechanic()
+        case MathMechanicID.numberTrail:
+            return NumberTrailMechanic()
         default:
             return nil
         }
