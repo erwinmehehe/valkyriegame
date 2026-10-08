@@ -1878,7 +1878,7 @@ import LearningCore
             switch model.task {
             case .strategy:
                 if let strategy = model.chosenStrategy {
-                    change = "\(model.strategySteps) steps using \(strategy == .countOn ? "counting on" : "counter tiles")."
+                    change = "\(model.strategySteps) \(model.strategySteps == 1 ? "step" : "steps") using \(strategy == .countOn ? "counting on" : "counter tiles")."
                 } else {
                     change = "Choose a strategy and show the steps."
                 }
