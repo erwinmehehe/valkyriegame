@@ -479,7 +479,12 @@ final class CrystalCartTests: XCTestCase {
             seenMechanics.insert(encounter.mechanicID)
             now = now.addingTimeInterval(31)
         }
-        XCTAssertEqual(seenMechanics, MathMechanicID.adaptiveSet)
+        // Prerequisite-gated stretch activities are covered by the dedicated
+        // eligible-stretch test; this fresh learner loop checks core access.
+        XCTAssertEqual(
+            seenMechanics,
+            MathMechanicID.adaptiveSet.subtracting([MathMechanicID.groupingGarden])
+        )
         XCTAssertGreaterThanOrEqual(profile.progress(for: MathSkills.bonds10).state.readiness,
                                     SkillState.developing.readiness)
         XCTAssertTrue(graph.isEligible(MathSkills.missing, for: profile))
