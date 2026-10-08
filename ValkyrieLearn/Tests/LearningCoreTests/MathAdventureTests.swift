@@ -119,6 +119,11 @@ final class MathAdventureTests: XCTestCase {
                         XCTAssertTrue(adventure.placeGroupCounter(in: group))
                     }
                 }
+                if model.task == .repeatedAddition {
+                    for _ in 0..<model.activity.totalItems {
+                        XCTAssertTrue(adventure.adjustGardenSum(1))
+                    }
+                }
             }
         }
         return try XCTUnwrap(adventure.submit(profile: &profile, at: after))
