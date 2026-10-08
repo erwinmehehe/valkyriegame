@@ -840,14 +840,24 @@ import LearningCore
 
     private func buildIllustratedPalaceRoom() {
         guard let texture = ArtSystem.texture(illustratedRoomAsset) else { return }
-        let painting = SKSpriteNode(texture: texture, size: designCanvasSize)
+        // The 4:3 iPad has a taller scene than the 16:9 design canvas.
+        // Aspect-fill the illustration into the extended viewport rather than
+        // leaving black letterbox bands above and below a beautiful room.
+        // Keep native challenge objects at their authored, unchanged positions.
+        let paintingHeight = max(designCanvasSize.height, size.height)
+        let paintingWidth = paintingHeight * designCanvasSize.width / designCanvasSize.height
+        let painting = SKSpriteNode(
+            texture: texture,
+            size: CGSize(width: paintingWidth, height: paintingHeight)
+        )
         painting.position = CGPoint(x: 640, y: 360)
         painting.zPosition = -250
         painting.name = "puzzleIllustratedBackdrop"
         painting.isUserInteractionEnabled = false
         painting.userData = NSMutableDictionary(dictionary: [
             "sourceAsset": illustratedRoomAsset,
-            "sourcePixels": ArtSystem.pixelSize(illustratedRoomAsset)?.width ?? 0
+            "sourcePixels": ArtSystem.pixelSize(illustratedRoomAsset)?.width ?? 0,
+            "aspectFilledForIPad": true
         ])
         addChild(painting)
 
@@ -1301,7 +1311,7 @@ import LearningCore
 
     private func buildMemoryBridgeWorld() {
         let chasm = SKShapeNode(ellipseOf: CGSize(width: 735, height: 210))
-        chasm.fillColor = UIColor(red: 0.025, green: 0.018, blue: 0.070, alpha: 0.52)
+        chasm.fillColor = UIColor(red: 0.025, green: 0.018, blue: 0.070, alpha: 0.16)
         chasm.strokeColor = UIColor(red: 0.40, green: 0.31, blue: 0.62, alpha: 0.50)
         chasm.lineWidth = 5
         chasm.position = CGPoint(x: 760, y: 405)
@@ -1310,7 +1320,7 @@ import LearningCore
         addChild(chasm)
 
         let innerVoid = SKShapeNode(ellipseOf: CGSize(width: 610, height: 150))
-        innerVoid.fillColor = UIColor(red: 0.01, green: 0.008, blue: 0.04, alpha: 0.72)
+        innerVoid.fillColor = UIColor(red: 0.01, green: 0.008, blue: 0.04, alpha: 0.18)
         innerVoid.strokeColor = .clear
         innerVoid.position = CGPoint(x: 760, y: 405)
         innerVoid.zPosition = 112
@@ -2105,7 +2115,7 @@ import LearningCore
 
     private func buildSortingWorld() {
         let floor = SKShapeNode(ellipseOf: CGSize(width: 790, height: 230))
-        floor.fillColor = UIColor(red: 0.07, green: 0.055, blue: 0.16, alpha: 0.48)
+        floor.fillColor = UIColor(red: 0.07, green: 0.055, blue: 0.16, alpha: 0.16)
         floor.strokeColor = UIColor(red: 0.52, green: 0.42, blue: 0.78, alpha: 0.50)
         floor.lineWidth = 4
         floor.position = CGPoint(x: 750, y: 365)
@@ -2534,7 +2544,7 @@ import LearningCore
 
     private func buildResortWorld() {
         let vault = SKShapeNode(rectOf: CGSize(width: 830, height: 285), cornerRadius: 58)
-        vault.fillColor = UIColor(red: 0.09, green: 0.07, blue: 0.17, alpha: 0.78)
+        vault.fillColor = UIColor(red: 0.09, green: 0.07, blue: 0.17, alpha: 0.18)
         vault.strokeColor = UIColor(red: 0.50, green: 0.41, blue: 0.76, alpha: 0.78)
         vault.lineWidth = 6
         vault.position = CGPoint(x: 755, y: 395)
@@ -2567,7 +2577,7 @@ import LearningCore
         addChild(passLabel)
 
         let door = SKShapeNode(rectOf: CGSize(width: 105, height: 245), cornerRadius: 34)
-        door.fillColor = UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.94)
+        door.fillColor = UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.42)
         door.strokeColor = UIColor(red: 0.56, green: 0.46, blue: 0.82, alpha: 0.90)
         door.lineWidth = 7
         door.position = CGPoint(x: 1135, y: 415)
@@ -3641,7 +3651,7 @@ import LearningCore
             rectOf: CGSize(width: 430, height: 300),
             cornerRadius: 32
         )
-        daisShadow.fillColor = UIColor.black.withAlphaComponent(0.24)
+        daisShadow.fillColor = UIColor.black.withAlphaComponent(0.10)
         daisShadow.strokeColor = .clear
         daisShadow.position = CGPoint(x: 766, y: 392)
         daisShadow.zPosition = 96
@@ -3651,7 +3661,7 @@ import LearningCore
             rectOf: CGSize(width: 410, height: 282),
             cornerRadius: 26
         )
-        chamber.fillColor = UIColor(red: 0.12, green: 0.16, blue: 0.24, alpha: 0.82)
+        chamber.fillColor = UIColor(red: 0.12, green: 0.16, blue: 0.24, alpha: 0.26)
         chamber.strokeColor = UIColor(red: 0.56, green: 0.76, blue: 0.82, alpha: 0.72)
         chamber.lineWidth = 3
         chamber.position = CGPoint(x: 760, y: 402)

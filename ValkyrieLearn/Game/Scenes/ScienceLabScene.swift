@@ -188,6 +188,8 @@ import LearningCore
         ground.position = CGPoint(x: 640, y: 120)
         ground.zPosition = -120
         ground.name = "scienceGround"
+        // Preserve the painted garden floor instead of laying a flat green slab over it.
+        ground.alpha = 0.16
         addChild(ground)
 
         if let waterBed = ArtSystem.sprite(
@@ -205,6 +207,9 @@ import LearningCore
         house.position = CGPoint(x: 720, y: 390)
         house.zPosition = -80
         house.name = "scienceGreenhouseFrame"
+        // The illustration already contains the greenhouse's visual depth. Keep
+        // just a quiet architectural frame, not an engineering grid over the art.
+        house.alpha = 0.001
 
         let glass = ArtSystem.box(
             CGSize(width: 860, height: 430),
@@ -214,6 +219,7 @@ import LearningCore
         glass.strokeColor = UIColor(red: 0.82, green: 0.96, blue: 0.91, alpha: 0.68)
         glass.lineWidth = 3
         glass.name = "scienceGreenhouseGlass"
+        glass.fillColor = UIColor(red: 0.79, green: 0.94, blue: 0.88, alpha: 0.015)
         house.addChild(glass)
 
         // Use fewer, slimmer mullions so the painted garden remains the dominant
@@ -408,6 +414,8 @@ import LearningCore
         )
         path.position = CGPoint(x: 640, y: 184)
         path.zPosition = 20
+        // Retain the walking route without obscuring the actual stone path.
+        path.alpha = 0.16
         addChild(path)
 
         let bench = ArtSystem.box(
@@ -1135,23 +1143,23 @@ import LearningCore
         case .arrive:
             groups = [
                 (["scienceSeedBench"], 1.0),
-                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.42),
-                (["scienceSunPrism", "sciencePrismBeam"], 0.30),
-                (["scienceWeatherGate"], 0.34)
+                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.008),
+                (["scienceSunPrism", "sciencePrismBeam"], 0.001),
+                (["scienceWeatherGate"], 0.001)
             ]
         case .inspected:
             groups = [
                 (["scienceSeedBench"], 0.72),
                 (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 1.0),
-                (["scienceSunPrism", "sciencePrismBeam"], 0.34),
-                (["scienceWeatherGate"], 0.34)
+                (["scienceSunPrism", "sciencePrismBeam"], 0.001),
+                (["scienceWeatherGate"], 0.001)
             ]
         case .watered:
             groups = [
                 (["scienceSeedBench"], 0.72),
                 (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.72),
                 (["scienceSunPrism", "sciencePrismBeam"], 1.0),
-                (["scienceWeatherGate"], 0.36)
+                (["scienceWeatherGate"], 0.001)
             ]
         case .lit:
             if greenhouseComplete {
@@ -1166,7 +1174,7 @@ import LearningCore
                     (["scienceSeedBench"], 1.0),
                     (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 1.0),
                     (["scienceSunPrism", "sciencePrismBeam"], 1.0),
-                    (["scienceWeatherGate"], 0.34)
+                    (["scienceWeatherGate"], 0.001)
                 ]
             }
         }

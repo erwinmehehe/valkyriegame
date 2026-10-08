@@ -258,6 +258,8 @@ import LearningCore
             canopy.addChild(vine)
         }
 
+        // Painted trees carry the silhouette; native twigs supply subtle depth.
+        canopy.alpha = 0.22
         addChild(canopy)
 
         let groveWash = ArtSystem.box(
@@ -268,6 +270,7 @@ import LearningCore
         groveWash.strokeColor = .clear
         groveWash.position = CGPoint(x: 640, y: 130)
         groveWash.zPosition = -145
+        groveWash.alpha = 0.18
         addChild(groveWash)
 
         let path = ArtSystem.panel(
@@ -282,6 +285,8 @@ import LearningCore
         path.position = CGPoint(x: 640, y: 185)
         path.zPosition = 25
         path.name = "grovePath"
+        // Avoid a giant translucent dashboard bar through the habitat.
+        path.alpha = 0.18
         addChild(path)
 
         for x in stride(from: CGFloat(160), through: CGFloat(1110), by: CGFloat(135)) {
@@ -559,18 +564,21 @@ import LearningCore
     private func renderPond() {
         pondNode.removeFromParent()
         pondNode = SKNode()
-        pondNode.position = CGPoint(x: 690, y: 400)
+        // Sit the water feature against the scenery's lower stone terrace.
+        // Gameplay targets remain separate, full-sized nodes in front.
+        pondNode.position = CGPoint(x: 765, y: 248)
+        pondNode.setScale(0.66)
         pondNode.zPosition = 120
 
         let bank = SKShapeNode(ellipseOf: CGSize(width: 575, height: 168))
-        bank.fillColor = UIColor(red: 0.20, green: 0.24, blue: 0.14, alpha: 0.64)
+        bank.fillColor = UIColor(red: 0.20, green: 0.24, blue: 0.14, alpha: 0.20)
         bank.strokeColor = UIColor(red: 0.44, green: 0.52, blue: 0.27, alpha: 0.62)
         bank.lineWidth = 3
         bank.name = "grovePondBank"
         pondNode.addChild(bank)
 
         let shoreline = SKShapeNode(ellipseOf: CGSize(width: 552, height: 150))
-        shoreline.fillColor = UIColor(red: 0.36, green: 0.43, blue: 0.22, alpha: 0.20)
+        shoreline.fillColor = UIColor(red: 0.36, green: 0.43, blue: 0.22, alpha: 0.08)
         shoreline.strokeColor = UIColor(red: 0.58, green: 0.66, blue: 0.34, alpha: 0.38)
         shoreline.lineWidth = 2
         shoreline.name = "grovePondShoreline"
@@ -578,8 +586,8 @@ import LearningCore
 
         let water = SKShapeNode(ellipseOf: CGSize(width: 520, height: 130))
         water.fillColor = groveRestored
-            ? UIColor(red: 0.16, green: 0.58, blue: 0.64, alpha: 0.90)
-            : UIColor(red: 0.16, green: 0.37, blue: 0.42, alpha: 0.72)
+            ? UIColor(red: 0.16, green: 0.58, blue: 0.64, alpha: 0.64)
+            : UIColor(red: 0.16, green: 0.37, blue: 0.42, alpha: 0.32)
         water.strokeColor = groveRestored
             ? UIColor(red: 0.62, green: 0.91, blue: 0.82, alpha: 0.94)
             : UIColor(red: 0.42, green: 0.65, blue: 0.61, alpha: 0.72)
