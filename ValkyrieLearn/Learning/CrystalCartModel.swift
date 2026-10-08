@@ -400,6 +400,7 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
     public let shape: ForgeShape?
     public private(set) var selectedOption: Int?
     public private(set) var currentOrientation: Int
+    public private(set) var hasRotated: Bool
     public private(set) var attempts: Int
     public private(set) var support: SupportLevel
     public private(set) var completed: Bool
@@ -483,6 +484,7 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
         self.shape = task == .rotate ? nil : ForgeShape(rawValue: encounter.targetQuantity)
         selectedOption = nil
         currentOrientation = task == .rotate ? encounter.initialQuantity : 0
+        hasRotated = false
         attempts = 0
         support = .independent
         completed = false
@@ -499,6 +501,7 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
     @discardableResult public mutating func turn(_ delta: Int) -> Bool {
         guard !completed, isRotation, delta == -1 || delta == 1 else { return false }
         currentOrientation = (currentOrientation + delta + 4) % 4
+        hasRotated = true
         return true
     }
 
@@ -509,6 +512,7 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
         guard !completed else { return nil }
         if !isRotation && selectedOption == nil { return nil }
+        if isRotation && !hasRotated { return nil }
         attempts += 1
         let correct = isRotation
             ? currentOrientation == targetOrientation
