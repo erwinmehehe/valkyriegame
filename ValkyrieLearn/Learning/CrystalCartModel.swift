@@ -1874,7 +1874,8 @@ public struct DifferencePairsModel: Codable, Equatable, Sendable {
             blueCount += delta
         }
         // Removing a stone also unlinks any pair that no longer has both ends.
-        pairedColumns.removeAll { $0 >= matchingCount }
+        let limit = matchingCount
+        pairedColumns.removeAll { $0 >= limit }
         return true
     }
 
