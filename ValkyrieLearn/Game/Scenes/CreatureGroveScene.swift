@@ -566,8 +566,8 @@ import LearningCore
         pondNode = SKNode()
         // Sit the water feature against the scenery's lower stone terrace.
         // Gameplay targets remain separate, full-sized nodes in front.
-        pondNode.position = CGPoint(x: 705, y: 314)
-        pondNode.setScale(0.82)
+        pondNode.position = CGPoint(x: 765, y: 248)
+        pondNode.setScale(0.66)
         pondNode.zPosition = 120
 
         let bank = SKShapeNode(ellipseOf: CGSize(width: 575, height: 168))
