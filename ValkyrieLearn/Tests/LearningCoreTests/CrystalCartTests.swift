@@ -511,6 +511,16 @@ final class CrystalCartTests: XCTestCase {
                     }
                     XCTAssertTrue(runtime.confirmReasoningStage())
                 }
+            case .differencePairs(let model):
+                for _ in 0..<model.goldTarget {
+                    XCTAssertTrue(runtime.adjustDifferenceRow(.gold, by: 1))
+                }
+                for _ in 0..<model.blueTarget {
+                    XCTAssertTrue(runtime.adjustDifferenceRow(.blue, by: 1))
+                }
+                for column in 0..<min(model.goldTarget, model.blueTarget) {
+                    XCTAssertTrue(runtime.pairDifferenceColumn(column))
+                }
             case .numberTrail(let model):
                 if model.isEstimate {
                     XCTAssertTrue(runtime.revealTrailCollection(at: now.addingTimeInterval(-2)))
