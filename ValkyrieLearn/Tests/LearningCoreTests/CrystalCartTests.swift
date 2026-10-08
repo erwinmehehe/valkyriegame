@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 2135)
+        XCTAssertEqual(encounters.count, 2370)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -332,13 +332,13 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllTwelveMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllThirteenMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
         var seenMechanics = Set<String>()
         // Replan after each real response; never seed skill readiness by hand.
-        for _ in 0..<180 {
+        for _ in 0..<260 {
             let plan = try MathCastleEncounterCatalog.sessionPlan(for: profile,
                 encounterCount: 1, now: now)
             guard let item = plan.encounters.first else { break }
@@ -482,6 +482,34 @@ final class CrystalCartTests: XCTestCase {
                         }
                         XCTAssertTrue(runtime.placeGardenCut())
                     }
+                }
+            case .reasoningStudio(let model):
+                switch model.task {
+                case .strategy:
+                    XCTAssertTrue(runtime.chooseReasoningStrategy(.countOn))
+                    for _ in 0..<model.addend {
+                        XCTAssertTrue(runtime.addReasoningStep())
+                    }
+                case .differentWays:
+                    for (left, right) in [(1, model.startingValue - 1),
+                                           (2, model.startingValue - 2)] {
+                        for _ in 0..<left {
+                            XCTAssertTrue(runtime.adjustReasoningPair(left: true, delta: 1))
+                        }
+                        for _ in 0..<right {
+                            XCTAssertTrue(runtime.adjustReasoningPair(left: false, delta: 1))
+                        }
+                        XCTAssertTrue(runtime.saveReasoningPair())
+                    }
+                case .multiStep:
+                    for _ in 0..<model.firstChange {
+                        XCTAssertTrue(runtime.moveReasoningCounter(1))
+                    }
+                    XCTAssertTrue(runtime.confirmReasoningStage())
+                    for _ in 0..<model.secondChange {
+                        XCTAssertTrue(runtime.moveReasoningCounter(model.subtractSecond ? -1 : 1))
+                    }
+                    XCTAssertTrue(runtime.confirmReasoningStage())
                 }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))
