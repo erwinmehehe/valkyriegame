@@ -293,8 +293,14 @@ final class CrystalCartTests: XCTestCase {
                 at: now.addingTimeInterval(-30))
             switch runtime {
             case .crystalCart:
-                for _ in encounter.initialQuantity..<encounter.targetQuantity {
-                    XCTAssertTrue(runtime.increment())
+                if encounter.operation == .subtraction {
+                    for _ in encounter.targetQuantity..<encounter.initialQuantity {
+                        XCTAssertTrue(runtime.decrement())
+                    }
+                } else {
+                    for _ in encounter.initialQuantity..<encounter.targetQuantity {
+                        XCTAssertTrue(runtime.increment())
+                    }
                 }
             case .balanceScale(let model): runtime.chooseComparison(model.correctChoice)
             case .numberBond(let model): runtime.setValue(model.correctMissingPart)
