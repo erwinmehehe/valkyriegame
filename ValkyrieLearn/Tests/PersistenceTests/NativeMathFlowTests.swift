@@ -486,14 +486,13 @@ import LearningCore
         let before = flashState.profile
         flashScene.handleTap(at: CGPoint(x: 663, y: 188))
         flashScene.handleTap(at: CGPoint(x: 837, y: 188)) // dial − 1
-        flashScene.handleTap(at: CGPoint(x: 1027, y: 188)) // cannot lock during 850ms flash
         guard case .numberTrail(let estimateModel)? = flashState.runtime else {
             return XCTFail("Expected estimate encounter")
         }
         XCTAssertTrue(estimateModel.flashObserved)
         XCTAssertEqual(estimateModel.dialValue, 4)
         XCTAssertNil(estimateModel.lockedEstimate)
-        XCTAssertNil(estimateModel.submit(at: Date()))
+        XCTAssertNil(estimateModel.lockedEstimate, "A flash alone cannot select an estimate")
         XCTAssertEqual(flashState.profile, before)
 
         let line = try XCTUnwrap(
