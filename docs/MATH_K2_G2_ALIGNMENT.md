@@ -60,10 +60,10 @@ explicitly non-grade-level.
 
 ## Production question bank
 
-The native Math Castle now has a parameterized production bank of 1,280 variants.
+The native Math Castle now has a parameterized production bank of 1,316 variants.
 
 Together with the 49 existing normal adaptive encounters, the normal adaptive
-candidate pool is 1,329 encounters.
+candidate pool is 1,365 encounters.
 
 Hidden placement and Challenge Gate content remain separate so diagnostic evidence
 and optional challenge evidence do not masquerade as ordinary practice.
@@ -83,7 +83,7 @@ math that has merely been reworded.
 
 ## Native-assessment safety
 
-Only skills that the current seven native manipulatives can genuinely observe are
+Only skills that the current eight native manipulatives can genuinely observe are
 placed in the production mastery bank.
 
 Current manipulatives:
@@ -95,11 +95,17 @@ Current manipulatives:
 - Missing-Number Bridge
 - Place Value Factory
 - Pattern Loom
+- Shape Forge
 
-The production bank currently covers 46 of the 73 skill nodes.
+The production bank currently covers 49 of the 73 skill nodes.
 
 The remaining skills stay in the curriculum graph and alignment matrix, but the app
 does not award mastery for them yet. This is intentional.
+
+Shape Forge v1 measures recognition of triangles, circles, squares and
+rectangles; corner counts; and actual quarter-turns of an asymmetric triangle
+against a target orientation. It does not award composition or symmetry
+mastery until those physical tasks are implemented.
 
 Pattern Loom adds native evidence for extending AB, AAB and ABC patterns,
 filling interior gaps and constructing six-tile repeating patterns. Creation
@@ -115,7 +121,7 @@ Examples that still require dedicated observable mechanics include:
 - estimation
 - count-on strategy evidence
 - difference/inverse-fact reasoning
-- shape attributes, composition, rotation and symmetry
+- shape composition and symmetry
 - route/position reasoning
 - length, weight, capacity and nonstandard measurement
 - picture graphs and classification
@@ -144,12 +150,12 @@ Placement readiness must never be reported to parents as observed mastery.
 ## Next curriculum-engineering milestone
 
 The next major implementation milestone is not "more questions." It is adding the
-missing manipulatives so coverage can grow from 46/73 skills toward the full K2-G2
+missing manipulatives so coverage can grow from 49/73 skills toward the full K2-G2
 matrix without weakening evidence quality.
 
-Place Value Factory and Pattern Loom are now implemented. Recommended next order:
+Place Value Factory, Pattern Loom and Shape Forge v1 are now implemented. Recommended next order:
 
-1. Shape Forge — attributes, composition, rotation, symmetry
+1. Shape Forge v2 — actual shape composition and mirror symmetry
 2. Measurement Workshop — length, weight, capacity, repeated units
 3. Data Board — sorting/classification and picture graphs
 4. Clock & Market — time/dayparts and Philippine money
