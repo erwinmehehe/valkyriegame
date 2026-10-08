@@ -374,6 +374,14 @@ import LearningCore
         _ = adventure.adjustPlaceValue(tensDelta: tensDelta, onesDelta: onesDelta)
         persist()
     }
+    func choosePatternSymbol(_ symbol: Int) {
+        beginInteraction()
+        if adventure.choosePatternSymbol(symbol) { persist() }
+    }
+    func undoPatternSymbol() {
+        beginInteraction()
+        if adventure.undoPatternSymbol() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
