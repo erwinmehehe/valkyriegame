@@ -1337,9 +1337,17 @@ import LearningCore
         guard let active = state.runtime,
               case .placeValueFactory(let model) = active,
               !model.isComparison,
-              let mechanic,
-              canManipulate() else { return false }
+              let mechanic else { return false }
         let local = mechanic.convert(point, from: self)
+        // Engage from the physical panel, even when decorative children hide
+        // the generic hit-node name. Then resolve actual knob coordinates.
+        if !canManipulate() {
+            if CGRect(x: -260, y: -155, width: 520, height: 310).contains(local) {
+                engageMachine()
+                return true
+            }
+            return false
+        }
         let controls: [(CGPoint, Int, Int)] = [
             (CGPoint(x: -178, y: -118), 1, 0),
             (CGPoint(x: -78, y: -118), -1, 0),
