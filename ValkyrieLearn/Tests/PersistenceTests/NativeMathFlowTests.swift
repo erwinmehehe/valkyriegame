@@ -419,7 +419,7 @@ import LearningCore
         XCTAssertEqual(state.profile, profile)
         XCTAssertEqual(
             scene.instruction.text,
-            "1 steps using counting on. Pull Pip's lever when you're ready."
+            "1 step using counting on. Pull Pip's lever when you're ready."
         )
     }
 
