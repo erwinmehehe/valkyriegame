@@ -280,6 +280,12 @@ import LearningCore
         let shape = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter
         )
+        let sorting = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter
+        )
+        let pictureGraph = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
             MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph]
