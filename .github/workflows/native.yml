@@ -29,6 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Protect original Valkyrie character
+        env:
+          VALKYRIE_PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/check_character_lock.py
       - run: python3 scripts/validate_native.py
 
   ipad-build-and-tests:
