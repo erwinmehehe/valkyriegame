@@ -307,6 +307,9 @@ import LearningCore
         // The full-size translucent tower used to cover the illustrated skyline.
         tower.position = CGPoint(x: 750, y: 320)
         tower.setScale(0.47)
+        // The painted observatory already has a tower: never place a ghost
+        // vector duplicate over it. Retain the native node for older tests.
+        tower.alpha = 0.001
         tower.zPosition = -30
         tower.name = "weatherTowerStructure"
 
@@ -919,23 +922,23 @@ import LearningCore
         case .arrive:
             groups = [
                 (["scienceMorningWeather"], 1.0),
-                (["scienceAfternoonWeather"], 0.42),
-                (["scienceForecastBase"], 0.30),
-                (["scienceCreatureGate"], 0.34)
+                (["scienceAfternoonWeather"], 0.001),
+                (["scienceForecastBase"], 0.001),
+                (["scienceCreatureGate"], 0.001)
             ]
         case .morningObserved:
             groups = [
                 (["scienceMorningWeather"], 0.72),
                 (["scienceAfternoonWeather"], 1.0),
-                (["scienceForecastBase"], 0.34),
-                (["scienceCreatureGate"], 0.34)
+                (["scienceForecastBase"], 0.001),
+                (["scienceCreatureGate"], 0.001)
             ]
         case .afternoonObserved:
             groups = [
                 (["scienceMorningWeather"], 0.72),
                 (["scienceAfternoonWeather"], 0.72),
                 (["scienceForecastBase"], 1.0),
-                (["scienceCreatureGate"], 0.36)
+                (["scienceCreatureGate"], 0.001)
             ]
         case .complete:
             if creatureRouteOpen {
@@ -950,7 +953,7 @@ import LearningCore
                     (["scienceMorningWeather"], 1.0),
                     (["scienceAfternoonWeather"], 1.0),
                     (["scienceForecastBase"], 1.0),
-                    (["scienceCreatureGate"], 0.34)
+                    (["scienceCreatureGate"], 0.001)
                 ]
             }
         }
