@@ -1021,7 +1021,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertTrue(model.undoCoin())
         XCTAssertTrue(model.addCoin(10))
         XCTAssertTrue(model.addCoin(5))
-        model.apply(Scaffold(cue: "Use matching coins", support: .strongHint))
+        model.apply(Scaffold(support: .strongHint, cue: "Use matching coins", demonstratesStep: false))
         let evidence = try XCTUnwrap(model.submit(at: epoch.addingTimeInterval(7)))
         XCTAssertEqual(evidence.outcome, .correct)
         XCTAssertEqual(evidence.attempts, 2)
