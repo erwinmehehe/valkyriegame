@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 1000)
+        XCTAssertEqual(encounters.count, 2661)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -213,6 +213,57 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(bridge.submit()?.outcome, .correct)
     }
 
+
+    func testPlaceValueFactoryBuildAndCompareModelsProduceObservableEvidence() throws {
+        let build = LearningEncounter(
+            id: "place-build-42",
+            skillID: MathSkills.buildTwoDigit,
+            mechanicID: MathMechanicID.placeValueFactory,
+            representation: .concrete,
+            operation: .quantityMatching,
+            initialQuantity: 0,
+            targetQuantity: 42,
+            prompt: "Build 42."
+        )
+        var buildModel = try PlaceValueFactoryModel(encounter: build)
+        XCTAssertEqual(buildModel.expectedTens, 4)
+        XCTAssertEqual(buildModel.expectedOnes, 2)
+        for _ in 0..<4 { XCTAssertTrue(buildModel.addTen()) }
+        for _ in 0..<2 { XCTAssertTrue(buildModel.addOne()) }
+        XCTAssertEqual(buildModel.builtNumber, 42)
+        XCTAssertEqual(try XCTUnwrap(buildModel.submit()).outcome, .correct)
+
+        let compare = LearningEncounter(
+            id: "place-compare-47-39",
+            skillID: MathSkills.compareTwoDigit,
+            mechanicID: MathMechanicID.placeValueFactory,
+            representation: .reasoning,
+            operation: .comparison,
+            initialQuantity: 47,
+            targetQuantity: 39,
+            prompt: "Which is greater?"
+        )
+        var compareModel = try PlaceValueFactoryModel(encounter: compare)
+        XCTAssertEqual(compareModel.correctChoice, .left)
+        compareModel.choose(.left)
+        XCTAssertEqual(try XCTUnwrap(compareModel.submit()).outcome, .correct)
+
+        let order = LearningEncounter(
+            id: "place-order-47-39",
+            skillID: MathSkills.orderTwoDigit,
+            mechanicID: MathMechanicID.placeValueFactory,
+            representation: .reasoning,
+            operation: .comparison,
+            initialQuantity: 47,
+            targetQuantity: 39,
+            prompt: "Which comes first?"
+        )
+        var orderModel = try PlaceValueFactoryModel(encounter: order)
+        XCTAssertEqual(orderModel.correctChoice, .right)
+        orderModel.choose(.right)
+        XCTAssertEqual(try XCTUnwrap(orderModel.submit()).outcome, .correct)
+    }
+
     func testUnifiedRuntimeRejectsUnknownMechanic() {
         let encounter = LearningEncounter(
             id: "unknown-runtime",
@@ -281,13 +332,13 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllFiveMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllSixteenMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
         var seenMechanics = Set<String>()
         // Replan after each real response; never seed skill readiness by hand.
-        for _ in 0..<180 {
+        for _ in 0..<480 {
             let plan = try MathCastleEncounterCatalog.sessionPlan(for: profile,
                 encounterCount: 1, now: now)
             guard let item = plan.encounters.first else { break }
@@ -321,6 +372,199 @@ final class CrystalCartTests: XCTestCase {
                     XCTAssertTrue(runtime.increment())
                 }
             case .missingBridge(let model): runtime.setValue(model.correctNumber)
+            case .placeValueFactory(let model):
+                if model.isComparison {
+                    runtime.chooseComparison(model.correctChoice)
+                } else {
+                    XCTAssertTrue(runtime.adjustPlaceValue(
+                        tensDelta: model.expectedTens,
+                        onesDelta: model.expectedOnes
+                    ))
+                }
+            case .patternLoom(let model):
+                if model.isCreation {
+                    let unit: [Int]
+                    switch model.family {
+                    case .ab: unit = [1, 2]
+                    case .aab: unit = [1, 1, 2]
+                    case .abc: unit = [1, 2, 3]
+                    }
+                    for index in 0..<model.slotCount {
+                        XCTAssertTrue(runtime.choosePatternSymbol(unit[index % unit.count]))
+                    }
+                } else {
+                    XCTAssertTrue(runtime.choosePatternSymbol(model.correctSymbol))
+                }
+            case .shapeForge(let model):
+                switch model.task {
+                case .rotate:
+                    let forward = (model.targetOrientation - model.currentOrientation + 4) % 4
+                    for _ in 0..<forward {
+                        XCTAssertTrue(runtime.rotateShape(1))
+                    }
+                case .compose:
+                    for turns in model.requiredHalfTurns {
+                        XCTAssertTrue(runtime.placeShapeHalf(turns))
+                    }
+                case .symmetry:
+                    for (row, shape) in model.symmetryReference.enumerated() {
+                        for _ in 0..<shape.rawValue {
+                            XCTAssertTrue(runtime.cycleMirrorCell(row))
+                        }
+                    }
+                case .recognize, .attributes:
+                    XCTAssertTrue(runtime.chooseShapeOption(try XCTUnwrap(model.correctOption)))
+                }
+            case .measurementWorkshop(let model):
+                if model.isUnitMeasurement {
+                    for _ in 0..<model.targetUnitCount {
+                        XCTAssertTrue(runtime.placeMeasureUnit())
+                    }
+                } else {
+                    runtime.chooseComparison(model.correctChoice)
+                }
+            case .dataBoard(let model):
+                if model.isSorting {
+                    let attribute = try XCTUnwrap(model.sortingAttribute)
+                    for token in model.sortingTokens {
+                        XCTAssertTrue(runtime.sortDataObject(into: token.category(for: attribute)))
+                    }
+                } else {
+                    for (index, count) in model.graphSourceCounts.enumerated() {
+                        for _ in 0..<count {
+                            XCTAssertTrue(runtime.addPicture(to: index + 1))
+                        }
+                    }
+                }
+            case .clockMarket(let model):
+                if model.isClock {
+                    let hourMoves = model.targetHour == 12 ? 12 : model.targetHour
+                    for _ in 0..<hourMoves {
+                        XCTAssertTrue(runtime.adjustClockHour(1))
+                    }
+                    if model.task != .hour {
+                        let step = model.task == .halfHour ? 30 : 5
+                        for _ in 0..<(model.targetMinute / step) {
+                            XCTAssertTrue(runtime.adjustClockMinute(1))
+                        }
+                    }
+                } else if model.isRoutines {
+                    for card in model.routineCards {
+                        XCTAssertTrue(runtime.placeDailyRoutine(card.daypart))
+                    }
+                } else {
+                    var remaining = model.targetPesos
+                    for coin in model.allowedCoins.reversed() {
+                        while remaining >= coin {
+                            XCTAssertTrue(runtime.addPesoCoin(coin))
+                            remaining -= coin
+                        }
+                    }
+                    XCTAssertEqual(remaining, 0)
+                }
+            case .groupingGarden(let model):
+                if model.isGroupPlacement {
+                    for basket in 1...model.groupCount {
+                        for _ in 0..<model.groupSize {
+                            XCTAssertTrue(runtime.placeGardenSeed(in: basket))
+                        }
+                    }
+                } else if model.isRepeatedAddition {
+                    for _ in 0..<model.groupCount {
+                        XCTAssertTrue(runtime.addGardenJump())
+                    }
+                } else {
+                    var cursor = model.selectedBoundary
+                    for boundary in model.requiredCuts {
+                        while cursor < boundary {
+                            XCTAssertTrue(runtime.moveGardenCut(1))
+                            cursor += 1
+                        }
+                        XCTAssertTrue(runtime.placeGardenCut())
+                    }
+                }
+            case .reasoningStudio(let model):
+                switch model.task {
+                case .strategy:
+                    XCTAssertTrue(runtime.chooseReasoningStrategy(.countOn))
+                    for _ in 0..<model.addend {
+                        XCTAssertTrue(runtime.addReasoningStep())
+                    }
+                case .differentWays:
+                    for (left, right) in [(1, model.startingValue - 1),
+                                           (2, model.startingValue - 2)] {
+                        for _ in 0..<left {
+                            XCTAssertTrue(runtime.adjustReasoningPair(left: true, delta: 1))
+                        }
+                        for _ in 0..<right {
+                            XCTAssertTrue(runtime.adjustReasoningPair(left: false, delta: 1))
+                        }
+                        XCTAssertTrue(runtime.saveReasoningPair())
+                    }
+                case .multiStep:
+                    for _ in 0..<model.firstChange {
+                        XCTAssertTrue(runtime.moveReasoningCounter(1))
+                    }
+                    XCTAssertTrue(runtime.confirmReasoningStage())
+                    for _ in 0..<model.secondChange {
+                        XCTAssertTrue(runtime.moveReasoningCounter(model.subtractSecond ? -1 : 1))
+                    }
+                    XCTAssertTrue(runtime.confirmReasoningStage())
+                }
+            case .differenceBridge(let model):
+                if model.isDifference {
+                    for _ in 0..<model.pairGoal {
+                        XCTAssertTrue(runtime.matchDifferencePair())
+                    }
+                    for _ in 0..<model.leftoverGoal {
+                        XCTAssertTrue(runtime.collectDifference())
+                    }
+                } else {
+                    for _ in 0..<model.missingPart {
+                        XCTAssertTrue(runtime.addInverseCounter())
+                    }
+                    for _ in 0..<model.missingPart {
+                        XCTAssertTrue(runtime.reverseInverseCounter())
+                    }
+                }
+            case .routeExplorer(let model):
+                var cell = model.startCell
+                for _ in 0..<12 where cell != model.destination {
+                    let row = cell / 3
+                    let column = cell % 3
+                    let destinationRow = model.destination / 3
+                    let destinationColumn = model.destination % 3
+                    let options: [(MapMove, Int, Bool)] = [
+                        (.north, cell - 3, row > 0 && row > destinationRow),
+                        (.south, cell + 3, row < 2 && row < destinationRow),
+                        (.west, cell - 1, column > 0 && column > destinationColumn),
+                        (.east, cell + 1, column < 2 && column < destinationColumn)
+                    ]
+                    var advanced = false
+                    for (direction, nextCell, valid) in options
+                        where valid && nextCell != model.blockedCell {
+                        XCTAssertTrue(runtime.moveOnMap(direction))
+                        cell = nextCell
+                        advanced = true
+                        break
+                    }
+                    XCTAssertTrue(advanced, "Map must admit a path around its rock")
+                    if !advanced { break }
+                }
+                XCTAssertEqual(cell, model.destination)
+            case .numberTrail(let model):
+                if model.isEstimate {
+                    XCTAssertTrue(runtime.revealTrailCollection(at: now.addingTimeInterval(-2)))
+                    let direction = model.collectionSize > 5 ? 1 : -1
+                    for _ in 0..<abs(model.collectionSize - 5) {
+                        XCTAssertTrue(runtime.adjustTrailEstimate(direction))
+                    }
+                    XCTAssertTrue(runtime.lockTrailEstimate(at: now))
+                } else {
+                    for _ in 0..<model.requiredJumps {
+                        XCTAssertTrue(runtime.addTrailJump())
+                    }
+                }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))
             XCTAssertEqual(evidence.outcome, .correct)

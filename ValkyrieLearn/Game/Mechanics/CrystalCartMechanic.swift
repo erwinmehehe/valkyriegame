@@ -756,6 +756,2309 @@ import LearningCore
 
 }
 
+
+@MainActor final class PlaceValueFactoryMechanic: SKNode, MathCastleReactiveMechanic {
+    private let buildGroup = SKNode()
+    private let comparisonGroup = SKNode()
+    private let tensContents = SKNode()
+    private let onesContents = SKNode()
+    private let targetLabel = ArtSystem.label("", size: 34)
+    private let builtLabel = ArtSystem.label("", size: 26)
+    private let leftLabel = ArtSystem.label("", size: 31)
+    private let rightLabel = ArtSystem.label("", size: 31)
+    private let relationLabel = ArtSystem.label("", size: 15)
+    private var latestModel: PlaceValueFactoryModel?
+
+    override init() {
+        super.init()
+        name = MathMechanicID.placeValueFactory
+        zPosition = 750
+
+        let base = ArtSystem.supplyTray(CGSize(width: 520, height: 278))
+        base.name = MathMechanicID.placeValueFactory
+        base.position = CGPoint(x: 0, y: -15)
+        base.zPosition = -5
+        addChild(base)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 292, height: 46),
+            fill: UIColor(red: 0.08, green: 0.12, blue: 0.18, alpha: 0.94),
+            stroke: UIColor(red: 0.93, green: 0.70, blue: 0.30, alpha: 0.74),
+            radius: 15
+        )
+        header.position = CGPoint(x: 0, y: 126)
+        header.name = MathMechanicID.placeValueFactory
+        addChild(header)
+
+        let title = ArtSystem.label("PLACE VALUE FACTORY", size: 16)
+        title.fontName = "AvenirNext-Heavy"
+        title.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.64, alpha: 1)
+        title.name = MathMechanicID.placeValueFactory
+        header.addChild(title)
+
+        buildGroup.name = "placeValueBuildGroup"
+        comparisonGroup.name = "placeValueCompareGroup"
+        addChild(buildGroup)
+        addChild(comparisonGroup)
+
+        let targetPlaque = ArtSystem.plaque(
+            CGSize(width: 126, height: 64),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.23, alpha: 0.94),
+            stroke: UIColor(red: 0.51, green: 0.88, blue: 0.95, alpha: 0.76),
+            radius: 15
+        )
+        targetPlaque.position = CGPoint(x: 0, y: 66)
+        targetPlaque.name = MathMechanicID.placeValueFactory
+        buildGroup.addChild(targetPlaque)
+        targetLabel.fontName = "AvenirNext-Heavy"
+        targetLabel.fontColor = .white
+        targetLabel.name = MathMechanicID.placeValueFactory
+        targetPlaque.addChild(targetLabel)
+
+        for (title, x) in [("TENS", CGFloat(-128)), ("ONES", CGFloat(128))] {
+            let label = ArtSystem.label(title, size: 15)
+            label.fontName = "AvenirNext-Bold"
+            label.fontColor = UIColor(red: 0.94, green: 0.83, blue: 0.52, alpha: 1)
+            label.position = CGPoint(x: x, y: 45)
+            label.name = MathMechanicID.placeValueFactory
+            buildGroup.addChild(label)
+
+            let tray = ArtSystem.panel(
+                CGSize(width: 184, height: 138),
+                fill: UIColor(red: 0.06, green: 0.13, blue: 0.19, alpha: 0.86),
+                stroke: UIColor(red: 0.52, green: 0.70, blue: 0.76, alpha: 0.62),
+                radius: 18,
+                lineWidth: 2,
+                shadowAlpha: 0.10,
+                innerHighlight: UIColor(red: 0.70, green: 0.92, blue: 0.96, alpha: 0.06)
+            )
+            tray.position = CGPoint(x: x, y: -35)
+            tray.name = MathMechanicID.placeValueFactory
+            buildGroup.addChild(tray)
+        }
+
+        buildGroup.addChild(tensContents)
+        buildGroup.addChild(onesContents)
+
+        for (symbol, name, x, y) in [
+            ("+", "placeTensPlus", CGFloat(-178), CGFloat(-118)),
+            ("−", "placeTensMinus", CGFloat(-78), CGFloat(-118)),
+            ("+", "placeOnesPlus", CGFloat(78), CGFloat(-118)),
+            ("−", "placeOnesMinus", CGFloat(178), CGFloat(-118))
+        ] {
+            let gear = ArtSystem.gear(radius: 31, symbol: symbol)
+            gear.position = CGPoint(x: x, y: y)
+            gear.name = name
+            buildGroup.addChild(gear)
+
+            // Give each visible control a stable 68pt named hit target above
+            // decorative gear children. SpriteKit nodes(at:) ordering is not
+            // deterministic, so relying on the artwork node alone can lose taps.
+            let hit = SKShapeNode(circleOfRadius: 34)
+            hit.position = CGPoint(x: x, y: y)
+            hit.fillColor = .clear
+            hit.strokeColor = .clear
+            hit.zPosition = 20
+            hit.name = name
+            buildGroup.addChild(hit)
+        }
+
+        builtLabel.fontName = "AvenirNext-Bold"
+        builtLabel.fontColor = UIColor(red: 0.90, green: 0.98, blue: 1.0, alpha: 1)
+        builtLabel.position = CGPoint(x: 0, y: -127)
+        builtLabel.name = MathMechanicID.placeValueFactory
+        buildGroup.addChild(builtLabel)
+
+        let leftCard = comparisonCard(x: -145, name: "placeLeft")
+        comparisonGroup.addChild(leftCard)
+        let rightCard = comparisonCard(x: 145, name: "placeRight")
+        comparisonGroup.addChild(rightCard)
+
+        leftLabel.fontName = "AvenirNext-Heavy"
+        leftLabel.fontColor = .white
+        leftLabel.position = CGPoint(x: -145, y: 45)
+        leftLabel.name = "placeLeft"
+        comparisonGroup.addChild(leftLabel)
+
+        rightLabel.fontName = "AvenirNext-Heavy"
+        rightLabel.fontColor = .white
+        rightLabel.position = CGPoint(x: 145, y: 45)
+        rightLabel.name = "placeRight"
+        comparisonGroup.addChild(rightLabel)
+
+        for (symbol, name, x) in [
+            ("◀", "placeLeft", CGFloat(-145)),
+            ("=", "placeEqual", CGFloat(0)),
+            ("▶", "placeRight", CGFloat(145))
+        ] {
+            let gear = ArtSystem.gear(radius: 34, symbol: symbol)
+            gear.position = CGPoint(x: x, y: -118)
+            gear.name = name
+            comparisonGroup.addChild(gear)
+        }
+
+        relationLabel.fontName = "AvenirNext-Bold"
+        relationLabel.fontColor = UIColor(red: 0.94, green: 0.83, blue: 0.52, alpha: 1)
+        relationLabel.position = CGPoint(x: 0, y: 92)
+        relationLabel.name = MathMechanicID.placeValueFactory
+        comparisonGroup.addChild(relationLabel)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func comparisonCard(x: CGFloat, name: String) -> SKNode {
+        let card = ArtSystem.panel(
+            CGSize(width: 210, height: 150),
+            fill: UIColor(red: 0.06, green: 0.15, blue: 0.22, alpha: 0.91),
+            stroke: UIColor(red: 0.55, green: 0.82, blue: 0.90, alpha: 0.70),
+            radius: 20,
+            lineWidth: 3,
+            shadowAlpha: 0.12,
+            innerHighlight: UIColor(red: 0.72, green: 0.93, blue: 0.97, alpha: 0.06)
+        )
+        card.position = CGPoint(x: x, y: 0)
+        card.name = name
+        return card
+    }
+
+    func render(_ model: PlaceValueFactoryModel) {
+        latestModel = model
+        buildGroup.isHidden = model.isComparison
+        comparisonGroup.isHidden = !model.isComparison
+
+        if model.isComparison {
+            leftLabel.text = "\(model.leftNumber)"
+            rightLabel.text = "\(model.rightNumber)"
+            let ordering = model.encounter.skillID == MathSkills.numberOrder20
+                || model.encounter.skillID == MathSkills.orderTwoDigit
+            relationLabel.text = ordering ? "WHICH COMES FIRST?" : "WHICH IS GREATER?"
+            renderComparisonBlocks(number: model.leftNumber, centerX: -145, prefix: "placeLeft")
+            renderComparisonBlocks(number: model.rightNumber, centerX: 145, prefix: "placeRight")
+            return
+        }
+
+        targetLabel.text = "\(model.targetNumber)"
+        builtLabel.text = "\(model.selectedTens) tens + \(model.selectedOnes) ones = \(model.builtNumber)"
+        renderBuildBlocks(model)
+    }
+
+    private func renderBuildBlocks(_ model: PlaceValueFactoryModel) {
+        tensContents.removeAllChildren()
+        onesContents.removeAllChildren()
+
+        for index in 0..<model.selectedTens {
+            let rod = Self.tenRod()
+            rod.position = CGPoint(
+                x: -176 + CGFloat(index % 5) * 24,
+                y: 1 - CGFloat(index / 5) * 65
+            )
+            rod.name = "placeTensBuilt"
+            tensContents.addChild(rod)
+        }
+
+        for index in 0..<model.selectedOnes {
+            let cube = Self.oneCube()
+            cube.position = CGPoint(
+                x: 88 + CGFloat(index % 5) * 25,
+                y: 5 - CGFloat(index / 5) * 27
+            )
+            cube.name = "placeOnesBuilt"
+            onesContents.addChild(cube)
+        }
+    }
+
+    private func renderComparisonBlocks(number: Int, centerX: CGFloat, prefix: String) {
+        let existing = comparisonGroup.children.filter { $0.name?.hasPrefix(prefix + "Block") == true }
+        existing.forEach { $0.removeFromParent() }
+
+        let tens = number / 10
+        let ones = number % 10
+
+        for index in 0..<tens {
+            let rod = Self.tenRod(scale: 0.72)
+            rod.position = CGPoint(
+                x: centerX - 68 + CGFloat(index % 5) * 28,
+                y: 7 - CGFloat(index / 5) * 50
+            )
+            rod.name = prefix + "BlockTen"
+            comparisonGroup.addChild(rod)
+        }
+
+        for index in 0..<ones {
+            let cube = Self.oneCube(scale: 0.78)
+            cube.position = CGPoint(
+                x: centerX - 50 + CGFloat(index % 5) * 24,
+                y: -48 - CGFloat(index / 5) * 24
+            )
+            cube.name = prefix + "BlockOne"
+            comparisonGroup.addChild(cube)
+        }
+    }
+
+    private static func tenRod(scale: CGFloat = 1) -> SKShapeNode {
+        let rod = ArtSystem.box(
+            CGSize(width: 20 * scale, height: 92 * scale),
+            color: UIColor(red: 0.28, green: 0.74, blue: 0.87, alpha: 1),
+            radius: 5 * scale
+        )
+        rod.strokeColor = UIColor(red: 0.86, green: 0.98, blue: 1, alpha: 0.92)
+        rod.lineWidth = max(1, 2 * scale)
+
+        for index in 1..<10 {
+            let mark = SKShapeNode(rectOf: CGSize(width: 14 * scale, height: 1.2 * scale))
+            mark.fillColor = UIColor.white.withAlphaComponent(0.44)
+            mark.strokeColor = .clear
+            mark.position.y = (-46 + CGFloat(index) * 9.2) * scale
+            rod.addChild(mark)
+        }
+        return rod
+    }
+
+    private static func oneCube(scale: CGFloat = 1) -> SKShapeNode {
+        let cube = ArtSystem.box(
+            CGSize(width: 20 * scale, height: 20 * scale),
+            color: UIColor(red: 0.63, green: 0.46, blue: 0.91, alpha: 1),
+            radius: 4 * scale
+        )
+        cube.strokeColor = UIColor(red: 0.94, green: 0.90, blue: 1, alpha: 0.92)
+        cube.lineWidth = max(1, 1.5 * scale)
+        return cube
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        targetLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        leftLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        rightLabel.fontColor = UIColor(red: 1, green: 0.88, blue: 0.42, alpha: 1)
+        guard !reducedMotion else { return }
+
+        run(.sequence([
+            .scale(to: 1.035, duration: 0.12),
+            .scale(to: 1, duration: 0.18)
+        ]), withKey: "successPulse")
+    }
+}
+
+
+@MainActor final class PatternLoomMechanic: SKNode, MathCastleReactiveMechanic {
+    private let sequenceGroup = SKNode()
+    private let activityLabel = ArtSystem.label("", size: 17)
+    private let progressLabel = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.patternLoom
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.name = MathMechanicID.patternLoom
+        tray.position.y = -15
+        tray.zPosition = -5
+        addChild(tray)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 275, height: 45),
+            fill: UIColor(red: 0.09, green: 0.11, blue: 0.21, alpha: 0.93),
+            stroke: UIColor(red: 0.94, green: 0.72, blue: 0.32, alpha: 0.82),
+            radius: 15
+        )
+        header.position = CGPoint(x: 0, y: 126)
+        header.name = MathMechanicID.patternLoom
+        addChild(header)
+
+        let heading = ArtSystem.label("PATTERN LOOM", size: 18)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.patternLoom
+        header.addChild(heading)
+
+        activityLabel.fontName = "AvenirNext-DemiBold"
+        activityLabel.fontColor = UIColor(red: 0.95, green: 0.86, blue: 0.60, alpha: 1)
+        activityLabel.position = CGPoint(x: 0, y: 80)
+        activityLabel.name = MathMechanicID.patternLoom
+        addChild(activityLabel)
+
+        progressLabel.fontName = "AvenirNext-DemiBold"
+        progressLabel.fontColor = UIColor(red: 0.82, green: 0.95, blue: 0.99, alpha: 1)
+        progressLabel.position = CGPoint(x: 0, y: -63)
+        progressLabel.name = MathMechanicID.patternLoom
+        addChild(progressLabel)
+
+        addChild(sequenceGroup)
+
+        for (symbol, label, number, x) in [
+            ("●", "Circle", 1, CGFloat(-160)),
+            ("◆", "Diamond", 2, CGFloat(-10)),
+            ("▲", "Triangle", 3, CGFloat(140))
+        ] {
+            let button = ArtSystem.medallion(
+                radius: 30,
+                fill: UIColor(red: 0.10, green: 0.24, blue: 0.35, alpha: 1),
+                stroke: UIColor(red: 0.96, green: 0.77, blue: 0.38, alpha: 0.92),
+                glow: 0
+            )
+            button.position = CGPoint(x: x, y: -122)
+            button.name = "loomSymbol\(number)"
+            button.zPosition = 50
+
+            let mark = ArtSystem.label(symbol, size: 28)
+            mark.fontColor = .white
+            mark.name = button.name
+            button.addChild(mark)
+
+            // Explicit 68pt target above decorative children and behind no overlays.
+            let hit = SKShapeNode(circleOfRadius: 34)
+            hit.fillColor = .clear
+            hit.strokeColor = .clear
+            hit.name = button.name
+            hit.zPosition = 40
+            button.addChild(hit)
+            button.accessibilityLabel = label
+            addChild(button)
+        }
+
+        let undo = ArtSystem.medallion(
+            radius: 25,
+            fill: UIColor(red: 0.18, green: 0.12, blue: 0.19, alpha: 1),
+            stroke: UIColor(red: 0.76, green: 0.75, blue: 0.88, alpha: 0.86),
+            glow: 0
+        )
+        undo.position = CGPoint(x: 229, y: -122)
+        undo.name = "loomUndo"
+        undo.zPosition = 50
+        let undoMark = ArtSystem.label("↶", size: 30)
+        undoMark.name = "loomUndo"
+        undo.addChild(undoMark)
+        addChild(undo)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    func render(_ model: PatternLoomModel) {
+        sequenceGroup.removeAllChildren()
+        activityLabel.text = model.isCreation
+            ? "CREATE A \(model.family.rawValue.uppercased()) PATTERN"
+            : (model.isMissing ? "FILL THE MISSING SHAPE" : "CONTINUE THE PATTERN")
+        progressLabel.text = model.isCreation
+            ? "\(model.selectedSymbols.count) OF \(model.slotCount) SHAPES PLACED"
+            : "TAP A SHAPE TO FILL THE ?"
+
+        let slots = model.visibleSlots
+        let step = min(CGFloat(61), CGFloat(476) / CGFloat(max(1, slots.count)))
+        let startX = -step * CGFloat(slots.count - 1) / 2
+        for (index, symbol) in slots.enumerated() {
+            let isGap = !model.isCreation && index == model.gapIndex
+            let frame = ArtSystem.panel(
+                CGSize(width: step - 5, height: 64),
+                fill: isGap
+                    ? UIColor(red: 0.29, green: 0.20, blue: 0.14, alpha: 0.98)
+                    : UIColor(red: 0.09, green: 0.18, blue: 0.24, alpha: 0.94),
+                stroke: isGap
+                    ? UIColor(red: 0.99, green: 0.79, blue: 0.40, alpha: 1)
+                    : UIColor(red: 0.58, green: 0.82, blue: 0.90, alpha: 0.68),
+                radius: 12,
+                lineWidth: 2,
+                shadowAlpha: 0.08
+            )
+            frame.position = CGPoint(x: startX + CGFloat(index) * step, y: 5)
+            frame.name = MathMechanicID.patternLoom
+            sequenceGroup.addChild(frame)
+
+            let glyph: String
+            switch symbol {
+            case 1: glyph = "●"
+            case 2: glyph = "◆"
+            case 3: glyph = "▲"
+            default: glyph = isGap ? "?" : "·"
+            }
+            let mark = ArtSystem.label(glyph, size: 30)
+            mark.fontName = "AvenirNext-Heavy"
+            mark.fontColor = symbol == nil
+                ? UIColor(red: 1, green: 0.88, blue: 0.53, alpha: 1)
+                : .white
+            mark.name = MathMechanicID.patternLoom
+            frame.addChild(mark)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        activityLabel.fontColor = UIColor(red: 1.0, green: 0.89, blue: 0.47, alpha: 1)
+        guard !reducedMotion else { return }
+        sequenceGroup.run(.sequence([
+            .scale(to: 1.035, duration: 0.13),
+            .scale(to: 1.0, duration: 0.18)
+        ]), withKey: "successPulse")
+    }
+}
+
+
+@MainActor final class ShapeForgeMechanic: SKNode, MathCastleReactiveMechanic {
+    private let display = SKNode()
+    private let title = ArtSystem.label("SHAPE FORGE", size: 18)
+    private let instructionLabel = ArtSystem.label("", size: 17)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.shapeForge
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 284))
+        tray.name = MathMechanicID.shapeForge
+        tray.position.y = -15
+        tray.zPosition = -5
+        addChild(tray)
+
+        let heading = ArtSystem.plaque(
+            CGSize(width: 282, height: 47),
+            fill: UIColor(red: 0.07, green: 0.13, blue: 0.22, alpha: 0.95),
+            stroke: UIColor(red: 0.95, green: 0.76, blue: 0.38, alpha: 0.84),
+            radius: 15
+        )
+        heading.position.y = 126
+        heading.name = MathMechanicID.shapeForge
+        addChild(heading)
+        title.fontName = "AvenirNext-Heavy"
+        title.fontColor = .white
+        title.name = MathMechanicID.shapeForge
+        heading.addChild(title)
+
+        instructionLabel.fontName = "AvenirNext-DemiBold"
+        instructionLabel.fontColor = UIColor(red: 0.96, green: 0.84, blue: 0.57, alpha: 1)
+        instructionLabel.position.y = 82
+        instructionLabel.name = MathMechanicID.shapeForge
+        addChild(instructionLabel)
+        addChild(display)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private static func shapeNode(_ shape: ForgeShape, size: CGFloat) -> SKShapeNode {
+        let node: SKShapeNode
+        switch shape {
+        case .circle:
+            node = SKShapeNode(circleOfRadius: size * 0.48)
+        case .square:
+            node = SKShapeNode(rectOf: CGSize(width: size, height: size))
+        case .rectangle:
+            node = SKShapeNode(rectOf: CGSize(width: size * 1.17, height: size * 0.73))
+        case .triangle:
+            let p = CGMutablePath()
+            p.move(to: CGPoint(x: 0, y: size * 0.59))
+            p.addLine(to: CGPoint(x: -size * 0.54, y: -size * 0.41))
+            p.addLine(to: CGPoint(x: size * 0.54, y: -size * 0.41))
+            p.closeSubpath()
+            node = SKShapeNode(path: p)
+        }
+        node.fillColor = UIColor(red: 0.22, green: 0.67, blue: 0.77, alpha: 1)
+        node.strokeColor = UIColor(red: 0.94, green: 0.93, blue: 0.72, alpha: 1)
+        node.lineWidth = 3
+        node.glowWidth = 1
+        return node
+    }
+
+    private static func angledTriangle(size: CGFloat) -> SKShapeNode {
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: -size * 0.5, y: -size * 0.5))
+        p.addLine(to: CGPoint(x: size * 0.5, y: -size * 0.5))
+        p.addLine(to: CGPoint(x: -size * 0.5, y: size * 0.5))
+        p.closeSubpath()
+        return SKShapeNode(path: p)
+    }
+
+    private func choiceFrame(name: String, at x: CGFloat, y: CGFloat) -> SKNode {
+        let plate = ArtSystem.panel(
+            CGSize(width: 108, height: 104),
+            fill: UIColor(red: 0.07, green: 0.20, blue: 0.27, alpha: 0.96),
+            stroke: UIColor(red: 0.57, green: 0.87, blue: 0.92, alpha: 0.81),
+            radius: 17,
+            lineWidth: 2,
+            shadowAlpha: 0.08
+        )
+        plate.position = CGPoint(x: x, y: y)
+        plate.name = name
+        plate.zPosition = 10
+        display.addChild(plate)
+        return plate
+    }
+
+    func render(_ model: ShapeForgeModel) {
+        display.removeAllChildren()
+        switch model.task {
+        case .recognize:
+            instructionLabel.text = "FIND THE \(model.shape?.name.uppercased() ?? "SHAPE")"
+            for (index, shape) in model.shapeChoices.enumerated() {
+                let x = CGFloat(index - 1) * 158
+                let frame = choiceFrame(name: "forgeChoice\(index + 1)", at: x, y: -20)
+                let artwork = Self.shapeNode(shape, size: 62)
+                artwork.name = frame.name
+                frame.addChild(artwork)
+                let number = ArtSystem.label("\(index + 1)", size: 14)
+                number.name = frame.name
+                number.position.y = -65
+                frame.addChild(number)
+            }
+        case .attributes:
+            instructionLabel.text = "COUNT THE CORNERS"
+            if let shape = model.shape {
+                let shapeNode = Self.shapeNode(shape, size: 83)
+                shapeNode.position.y = 28
+                shapeNode.name = MathMechanicID.shapeForge
+                display.addChild(shapeNode)
+            }
+            for (index, corners) in model.cornerChoices.enumerated() {
+                let frame = choiceFrame(name: "forgeChoice\(index + 1)", at: CGFloat(index - 1) * 153, y: -104)
+                let label = ArtSystem.label("\(corners)", size: 31)
+                label.fontName = "AvenirNext-Heavy"
+                label.fontColor = .white
+                label.name = frame.name
+                frame.addChild(label)
+            }
+        case .compose:
+            instructionLabel.text = "FILL THE SQUARE • \(model.placedHalfTurns.count) / 2 PIECES"
+
+            // The gold pieces show two complementary right-triangle halves;
+            // cyan triangles show the child's actual placement.
+            for (index, turns) in model.requiredHalfTurns.enumerated() {
+                let target = Self.angledTriangle(size: 120)
+                target.position = CGPoint(x: 0, y: -8)
+                target.zRotation = CGFloat(turns) * .pi / 2
+                target.fillColor = UIColor(
+                    red: index == 0 ? 0.96 : 0.80, green: 0.75, blue: 0.39, alpha: 0.10
+                )
+                target.strokeColor = UIColor(red: 0.98, green: 0.81, blue: 0.47, alpha: 0.83)
+                target.lineWidth = 2
+                target.name = MathMechanicID.shapeForge
+                display.addChild(target)
+            }
+
+            for (index, turns) in model.placedHalfTurns.enumerated() {
+                let piece = Self.angledTriangle(size: 120)
+                piece.position = CGPoint(x: 0, y: -8)
+                piece.zRotation = CGFloat(turns) * .pi / 2
+                piece.fillColor = UIColor(
+                    red: index == 0 ? 0.24 : 0.28,
+                    green: index == 0 ? 0.75 : 0.61,
+                    blue: 0.91, alpha: 0.88
+                )
+                piece.strokeColor = .white
+                piece.lineWidth = 2
+                piece.name = MathMechanicID.shapeForge
+                display.addChild(piece)
+            }
+
+            let squareOutline = SKShapeNode(rectOf: CGSize(width: 122, height: 122))
+            squareOutline.position = CGPoint(x: 0, y: -8)
+            squareOutline.fillColor = .clear
+            squareOutline.strokeColor = UIColor(red: 0.99, green: 0.86, blue: 0.53, alpha: 1)
+            squareOutline.lineWidth = 3
+            squareOutline.name = MathMechanicID.shapeForge
+            display.addChild(squareOutline)
+
+            for orientation in 0...3 {
+                let name = "forgeHalf\(orientation)"
+                let x = CGFloat(orientation) * 110 - 165
+                let button = ArtSystem.medallion(
+                    radius: 29,
+                    fill: UIColor(red: 0.12, green: 0.26, blue: 0.36, alpha: 1),
+                    stroke: UIColor(red: 0.86, green: 0.82, blue: 0.57, alpha: 0.96),
+                    glow: 0
+                )
+                button.position = CGPoint(x: x, y: -122)
+                button.name = name
+                display.addChild(button)
+                let piece = Self.angledTriangle(size: 32)
+                piece.zRotation = CGFloat(orientation) * .pi / 2
+                piece.fillColor = UIColor(red: 0.33, green: 0.75, blue: 0.92, alpha: 1)
+                piece.strokeColor = .white
+                piece.name = name
+                button.addChild(piece)
+            }
+
+            let undo = ArtSystem.label("UNDO", size: 15)
+            undo.position = CGPoint(x: 213, y: 24)
+            undo.fontColor = UIColor(red: 1, green: 0.87, blue: 0.55, alpha: 1)
+            undo.name = "forgeUndoHalf"
+            display.addChild(undo)
+        case .symmetry:
+            instructionLabel.text = "MIRROR THE LEFT-HAND SHAPES"
+            let axisPath = CGMutablePath()
+            axisPath.move(to: CGPoint(x: 0, y: 58))
+            axisPath.addLine(to: CGPoint(x: 0, y: -103))
+            let axis = SKShapeNode(path: axisPath)
+            axis.strokeColor = UIColor(red: 0.99, green: 0.83, blue: 0.46, alpha: 0.94)
+            axis.lineWidth = 3
+            axis.name = MathMechanicID.shapeForge
+            display.addChild(axis)
+
+            for row in 0..<3 {
+                let y = CGFloat(33 - row * 54)
+                for column in 0..<2 {
+                    let rightSide = column == 1
+                    let panel = ArtSystem.panel(
+                        CGSize(width: 87, height: 47),
+                        fill: UIColor(red: 0.08, green: 0.20, blue: 0.29, alpha: 0.96),
+                        stroke: rightSide
+                            ? UIColor(red: 0.99, green: 0.78, blue: 0.42, alpha: 0.94)
+                            : UIColor(red: 0.52, green: 0.82, blue: 0.91, alpha: 0.74),
+                        radius: 12,
+                        lineWidth: 2,
+                        shadowAlpha: 0.06
+                    )
+                    panel.position = CGPoint(x: rightSide ? 103 : -103, y: y)
+                    let name = rightSide ? "forgeMirror\(row)" : MathMechanicID.shapeForge
+                    panel.name = name
+                    display.addChild(panel)
+                    let shape: ForgeShape?
+                    if rightSide {
+                        shape = model.mirrorCells[row].flatMap { ForgeShape(rawValue: $0) }
+                    } else {
+                        shape = model.symmetryReference[row]
+                    }
+                    if let shape {
+                        let drawn = Self.shapeNode(shape, size: 27)
+                        drawn.name = name
+                        panel.addChild(drawn)
+                    } else {
+                        let marker = ArtSystem.label("?", size: 28)
+                        marker.name = name
+                        marker.fontColor = UIColor(red: 0.99, green: 0.84, blue: 0.55, alpha: 1)
+                        panel.addChild(marker)
+                    }
+                }
+            }
+        case .rotate:
+            instructionLabel.text = "MATCH THE GOLD OUTLINE"
+            let target = Self.angledTriangle(size: 87)
+            target.position = CGPoint(x: -121, y: -6)
+            target.zRotation = CGFloat(model.targetOrientation) * .pi / 2
+            target.fillColor = UIColor(red: 0.96, green: 0.79, blue: 0.40, alpha: 0.11)
+            target.strokeColor = UIColor(red: 0.99, green: 0.85, blue: 0.43, alpha: 1)
+            target.lineWidth = 4
+            target.name = MathMechanicID.shapeForge
+            display.addChild(target)
+
+            let selected = Self.angledTriangle(size: 87)
+            selected.position = CGPoint(x: 121, y: -6)
+            selected.zRotation = CGFloat(model.currentOrientation) * .pi / 2
+            selected.fillColor = UIColor(red: 0.25, green: 0.74, blue: 0.88, alpha: 1)
+            selected.strokeColor = .white
+            selected.lineWidth = 3
+            selected.name = MathMechanicID.shapeForge
+            display.addChild(selected)
+
+            for (name, symbol, x) in [
+                ("forgeTurnLeft", "↺", CGFloat(-104)),
+                ("forgeTurnRight", "↻", CGFloat(104))
+            ] {
+                let button = ArtSystem.medallion(
+                    radius: 35,
+                    fill: UIColor(red: 0.11, green: 0.26, blue: 0.37, alpha: 1),
+                    stroke: UIColor(red: 0.97, green: 0.79, blue: 0.40, alpha: 0.96),
+                    glow: 0
+                )
+                button.position = CGPoint(x: x, y: -118)
+                button.name = name
+                display.addChild(button)
+                let mark = ArtSystem.label(symbol, size: 32)
+                mark.fontColor = .white
+                mark.name = name
+                button.addChild(mark)
+            }
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        title.fontColor = UIColor(red: 1, green: 0.90, blue: 0.53, alpha: 1)
+        guard !reducedMotion else { return }
+        display.run(.sequence([
+            .scale(to: 1.03, duration: 0.12),
+            .scale(to: 1, duration: 0.16)
+        ]), withKey: "shapeSuccessPulse")
+    }
+}
+
+
+@MainActor final class MeasurementWorkshopMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("MEASUREMENT WORKSHOP", size: 17)
+    private let instruction = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.measurementWorkshop
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.name = MathMechanicID.measurementWorkshop
+        tray.position.y = -14
+        tray.zPosition = -5
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 300, height: 47),
+            fill: UIColor(red: 0.09, green: 0.16, blue: 0.25, alpha: 0.97),
+            stroke: UIColor(red: 0.96, green: 0.75, blue: 0.38, alpha: 0.87),
+            radius: 15
+        )
+        plaque.name = MathMechanicID.measurementWorkshop
+        plaque.position.y = 127
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.measurementWorkshop
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.95, green: 0.86, blue: 0.59, alpha: 1)
+        instruction.position.y = 92
+        instruction.name = MathMechanicID.measurementWorkshop
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func title(_ message: String, x: CGFloat, y: CGFloat, size: CGFloat = 16) {
+        let label = ArtSystem.label(message, size: size)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.position = CGPoint(x: x, y: y)
+        label.name = MathMechanicID.measurementWorkshop
+        activity.addChild(label)
+    }
+
+    private func box(_ width: CGFloat, _ height: CGFloat, x: CGFloat, y: CGFloat,
+                     color: UIColor, outline: UIColor, name: String) -> SKShapeNode {
+        let panel = SKShapeNode(
+            rectOf: CGSize(width: width, height: height),
+            cornerRadius: 7
+        )
+        panel.position = CGPoint(x: x, y: y)
+        panel.fillColor = color
+        panel.strokeColor = outline
+        panel.lineWidth = 2
+        panel.name = name
+        activity.addChild(panel)
+        return panel
+    }
+
+    private func button(_ symbol: String, name: String, x: CGFloat) {
+        let gear = ArtSystem.gear(radius: 34, symbol: symbol)
+        gear.position = CGPoint(x: x, y: -120)
+        gear.zPosition = 50
+        gear.name = name
+        activity.addChild(gear)
+
+        // Named 72pt circular hit region is shared with geometric scene
+        // routing, so a decorative child cannot steal a measurement tap.
+        let hit = SKShapeNode(circleOfRadius: 36)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.position = CGPoint(x: x, y: -120)
+        hit.zPosition = 70
+        hit.name = name
+        activity.addChild(hit)
+    }
+
+    func render(_ model: MeasurementWorkshopModel) {
+        activity.removeAllChildren()
+        if model.isUnitMeasurement {
+            instruction.text = "PLACE EQUAL UNITS • NO GAPS"
+            let n = model.targetUnitCount
+            let unitWidth: CGFloat = 32
+            let baseX = -CGFloat(n) * unitWidth / 2
+            _ = box(
+                CGFloat(n) * unitWidth + 6, 42, x: 0, y: 5,
+                color: UIColor(red: 0.13, green: 0.25, blue: 0.30, alpha: 1),
+                outline: UIColor(red: 0.98, green: 0.82, blue: 0.45, alpha: 1),
+                name: MathMechanicID.measurementWorkshop
+            )
+            for i in 0..<n {
+                _ = box(
+                    1, 40,
+                    x: baseX + CGFloat(i) * unitWidth,
+                    y: 5,
+                    color: UIColor(red: 0.79, green: 0.86, blue: 0.90, alpha: 0.35),
+                    outline: .clear,
+                    name: MathMechanicID.measurementWorkshop
+                )
+            }
+            for i in 0..<model.placedUnits {
+                let x = baseX + (CGFloat(i) + 0.5) * unitWidth
+                let isOver = i >= n
+                _ = box(
+                    model.unitStyle == "tiles" ? 30 : 28,
+                    model.unitStyle == "tiles" ? 28 : 32,
+                    x: x, y: 5,
+                    color: isOver
+                        ? UIColor(red: 0.91, green: 0.37, blue: 0.32, alpha: 1)
+                        : UIColor(red: 0.29, green: 0.73, blue: 0.80, alpha: 1),
+                    outline: .white,
+                    name: MathMechanicID.measurementWorkshop
+                )
+            }
+            title("\(model.placedUnits) UNITS PLACED", x: 0, y: -57)
+            button("−", name: "measureRemove", x: -94)
+            button("+", name: "measureAdd", x: 94)
+        } else {
+            switch model.task {
+            case .length: instruction.text = "COMPARE THE RIBBONS"
+            case .weight: instruction.text = "COMPARE THE STONE TRAYS"
+            case .capacity: instruction.text = "COMPARE CAPACITY IN CUPS"
+            case .units: break
+            }
+
+            for (side, value) in [(0, model.leftValue), (1, model.rightValue)] {
+                let x: CGFloat = side == 0 ? -123 : 123
+                let which = side == 0 ? "LEFT" : "RIGHT"
+                _ = box(
+                    212, 142, x: x, y: -4,
+                    color: UIColor(red: 0.10, green: 0.21, blue: 0.29, alpha: 1),
+                    outline: UIColor(red: 0.66, green: 0.84, blue: 0.91, alpha: 0.8),
+                    name: MathMechanicID.measurementWorkshop
+                )
+                title(which, x: x, y: 51, size: 14)
+                switch model.task {
+                case .length:
+                    // Every 18pt segment represents exactly one equal-length unit.
+                    for i in 0..<value {
+                        _ = box(
+                            16, 27,
+                            x: x - CGFloat(value - 1) * 9 + CGFloat(i) * 18,
+                            y: 4,
+                            color: UIColor(red: 0.29, green: 0.74, blue: 0.84, alpha: 1),
+                            outline: .white,
+                            name: MathMechanicID.measurementWorkshop
+                        )
+                    }
+                    title("RIBBON", x: x, y: -49, size: 12)
+                case .weight:
+                    // Equal-weight stones make the mass comparison tangible.
+                    for i in 0..<value {
+                        let stone = SKShapeNode(circleOfRadius: 10)
+                        stone.position = CGPoint(
+                            x: x + CGFloat(i % 4) * 27 - 40,
+                            y: CGFloat(i / 4) * 27 - 5
+                        )
+                        stone.fillColor = UIColor(red: 0.58, green: 0.73, blue: 0.90, alpha: 1)
+                        stone.strokeColor = .white
+                        stone.lineWidth = 1
+                        stone.name = MathMechanicID.measurementWorkshop
+                        activity.addChild(stone)
+                    }
+                    title("EQUAL STONES", x: x, y: -49, size: 12)
+                case .capacity:
+                    // All cups share a fixed-width base and each band is an
+                    // equal-size scoop. Vessel HEIGHT changes with capacity,
+                    // so the child compares what can fit, not water level in two
+                    // equal-capacity containers.
+                    let vesselHeight = CGFloat(value) * 11 + 4
+                    _ = box(
+                        88, vesselHeight, x: x, y: -45 + vesselHeight / 2, color: .clear,
+                        outline: UIColor(red: 0.75, green: 0.93, blue: 0.99, alpha: 1),
+                        name: MathMechanicID.measurementWorkshop
+                    )
+                    for i in 0..<value {
+                        _ = box(
+                            78, 9, x: x, y: -43 + CGFloat(i) * 11,
+                            color: UIColor(red: 0.27, green: 0.66, blue: 0.93, alpha: 0.95),
+                            outline: .clear,
+                            name: MathMechanicID.measurementWorkshop
+                        )
+                    }
+                    title("EQUAL CUPS", x: x, y: -62, size: 12)
+                case .units:
+                    break
+                }
+            }
+            button("◀", name: "measureLeft", x: -155)
+            button("=", name: "measureEqual", x: 0)
+            button("▶", name: "measureRight", x: 155)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.88, blue: 0.47, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1.0, duration: 0.17)
+        ]), withKey: "measurementSuccess")
+    }
+}
+
+
+@MainActor final class DataBoardMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("DATA BOARD", size: 19)
+    private let instruction = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.dataBoard
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.name = MathMechanicID.dataBoard
+        tray.position.y = -14
+        tray.zPosition = -5
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 276, height: 46),
+            fill: UIColor(red: 0.09, green: 0.16, blue: 0.27, alpha: 0.97),
+            stroke: UIColor(red: 0.97, green: 0.81, blue: 0.48, alpha: 0.9),
+            radius: 15
+        )
+        plaque.position.y = 127
+        plaque.name = MathMechanicID.dataBoard
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.dataBoard
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.99, green: 0.87, blue: 0.61, alpha: 1)
+        instruction.position.y = 99
+        instruction.name = MathMechanicID.dataBoard
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func tokenColor(_ code: Int) -> UIColor {
+        switch code {
+        case 1: return UIColor(red: 0.29, green: 0.73, blue: 0.98, alpha: 1)
+        case 2: return UIColor(red: 1.00, green: 0.78, blue: 0.32, alpha: 1)
+        default: return UIColor(red: 0.99, green: 0.49, blue: 0.72, alpha: 1)
+        }
+    }
+
+    private func shapeToken(
+        shape: Int, color: Int, radius: CGFloat, name: String
+    ) -> SKShapeNode {
+        let node: SKShapeNode
+        switch shape {
+        case 1: node = SKShapeNode(circleOfRadius: radius)
+        case 2:
+            node = SKShapeNode(rectOf: CGSize(width: radius * 1.8, height: radius * 1.8),
+                               cornerRadius: 3)
+        default:
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: radius))
+            path.addLine(to: CGPoint(x: -radius, y: -radius * 0.8))
+            path.addLine(to: CGPoint(x: radius, y: -radius * 0.8))
+            path.closeSubpath()
+            node = SKShapeNode(path: path)
+        }
+        node.name = name
+        node.fillColor = tokenColor(color)
+        node.strokeColor = .white
+        node.lineWidth = 2
+        return node
+    }
+
+    private func text(_ title: String, at position: CGPoint, size: CGFloat = 14,
+                      name: String = MathMechanicID.dataBoard) {
+        let label = ArtSystem.label(title, size: size)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.position = position
+        label.name = name
+        activity.addChild(label)
+    }
+
+    private func panel(_ width: CGFloat, _ height: CGFloat, at point: CGPoint,
+                       name: String = MathMechanicID.dataBoard) {
+        let node = ArtSystem.panel(
+            CGSize(width: width, height: height),
+            fill: UIColor(red: 0.08, green: 0.23, blue: 0.30, alpha: 0.98),
+            stroke: UIColor(red: 0.56, green: 0.85, blue: 0.94, alpha: 0.80),
+            radius: 13,
+            lineWidth: 2,
+            shadowAlpha: 0.07
+        )
+        node.position = point
+        node.name = name
+        activity.addChild(node)
+    }
+
+    private func button(_ mark: String, name: String, x: CGFloat, y: CGFloat = -121) {
+        let gear = ArtSystem.gear(radius: 34, symbol: mark)
+        gear.position = CGPoint(x: x, y: y)
+        gear.zPosition = 50
+        gear.name = name
+        activity.addChild(gear)
+        let hit = SKShapeNode(circleOfRadius: 37)
+        hit.position = CGPoint(x: x, y: y)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 70
+        hit.name = name
+        activity.addChild(hit)
+    }
+
+    func render(_ model: DataBoardModel) {
+        activity.removeAllChildren()
+        if model.isSorting {
+            renderSorting(model)
+        } else {
+            renderGraph(model)
+        }
+    }
+
+    private func renderSorting(_ model: DataBoardModel) {
+        instruction.text = model.sortingAttribute == .color
+            ? "SORT EACH OBJECT BY COLOR"
+            : "SORT EACH OBJECT BY SHAPE"
+        let tokens = model.sortingTokens
+        if let current = model.nextSortingToken {
+            let node = shapeToken(shape: current.shape, color: current.color,
+                                  radius: 25, name: MathMechanicID.dataBoard)
+            node.position = CGPoint(x: 0, y: 50)
+            activity.addChild(node)
+        } else {
+            text("ALL SORTED — CHECK WITH PIP", at: CGPoint(x: 0, y: 48), size: 15)
+        }
+
+        for category in 1...3 {
+            let x = CGFloat(category - 2) * 158
+            panel(144, 66, at: CGPoint(x: x, y: -36))
+            let name: String
+            if model.sortingAttribute == .color {
+                name = ["BLUE", "GOLD", "PINK"][category - 1]
+            } else {
+                name = ["CIRCLES", "SQUARES", "TRIANGLES"][category - 1]
+            }
+            text(name, at: CGPoint(x: x, y: 5), size: 13)
+            // Pre-readers should identify the correct bin from its icon,
+            // not from English labels alone. Colors are distinct in color
+            // mode; silhouettes are distinct in shape mode.
+            let marker = shapeToken(
+                shape: model.sortingAttribute == .color ? 1 : category,
+                color: model.sortingAttribute == .color ? category : 1,
+                radius: 11, name: MathMechanicID.dataBoard
+            )
+            marker.position = CGPoint(x: x, y: -15)
+            activity.addChild(marker)
+            for (index, bin) in model.sortedBins.enumerated() where bin == category {
+                let slot = model.sortedBins.prefix(index + 1).filter { $0 == category }.count - 1
+                let tok = tokens[index]
+                let drawn = shapeToken(shape: tok.shape, color: tok.color,
+                                       radius: 10, name: MathMechanicID.dataBoard)
+                drawn.position = CGPoint(x: x - 40 + CGFloat(slot) * 20, y: -39)
+                activity.addChild(drawn)
+            }
+            let symbol = model.sortingAttribute == .color
+                ? ["●", "●", "●"][category - 1] : ["●", "■", "▲"][category - 1]
+            button(symbol, name: "dataBin\(category)", x: x)
+        }
+
+        button("↶", name: "dataUndo", x: 230, y: 53)
+        text("\(model.sortedBins.count) OF 5 OBJECTS SORTED",
+             at: CGPoint(x: 0, y: -81), size: 13)
+    }
+
+    private func renderGraph(_ model: DataBoardModel) {
+        instruction.text = "ONE PICTURE = ONE OBJECT"
+        let counts = model.graphSourceCounts
+        for column in 1...3 {
+            let x = CGFloat(column - 2) * 158
+            text(["CIRCLES", "SQUARES", "TRIANGLES"][column - 1],
+                 at: CGPoint(x: x, y: 79), size: 12)
+            let sourceCount = counts[column - 1]
+            for index in 0..<sourceCount {
+                let shape = shapeToken(
+                    shape: column, color: column, radius: 9, name: MathMechanicID.dataBoard
+                )
+                shape.position = CGPoint(
+                    x: x - CGFloat(sourceCount - 1) * 14 + CGFloat(index) * 28,
+                    y: 55
+                )
+                activity.addChild(shape)
+            }
+
+            panel(116, 110, at: CGPoint(x: x, y: -37))
+            for index in 0..<model.graphTiles[column - 1] {
+                let tile = shapeToken(shape: column, color: column, radius: 10,
+                                      name: MathMechanicID.dataBoard)
+                tile.position = CGPoint(x: x, y: -78 + CGFloat(index) * 18)
+                activity.addChild(tile)
+            }
+            button("+", name: "dataGraph\(column)", x: x)
+        }
+        button("↶", name: "dataUndo", x: 230, y: 51)
+        text("\(model.placedGraphTotal) PICTURES PLACED",
+             at: CGPoint(x: 0, y: 23), size: 13)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.91, blue: 0.55, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.13),
+            .scale(to: 1.0, duration: 0.16)
+        ]), withKey: "dataBoardSuccess")
+    }
+}
+
+
+@MainActor final class ClockMarketMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("CLOCK & MARKET", size: 19)
+    private let instructions = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.clockMarket
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.clockMarket
+        addChild(tray)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 300, height: 47),
+            fill: UIColor(red: 0.07, green: 0.15, blue: 0.26, alpha: 0.96),
+            stroke: UIColor(red: 0.96, green: 0.78, blue: 0.38, alpha: 0.91),
+            radius: 15
+        )
+        header.position.y = 128
+        header.name = MathMechanicID.clockMarket
+        addChild(header)
+        heading.fontColor = .white
+        heading.fontName = "AvenirNext-Heavy"
+        heading.name = MathMechanicID.clockMarket
+        header.addChild(heading)
+
+        instructions.position.y = 96
+        instructions.fontName = "AvenirNext-DemiBold"
+        instructions.fontColor = UIColor(red: 1, green: 0.86, blue: 0.54, alpha: 1)
+        instructions.name = MathMechanicID.clockMarket
+        addChild(instructions)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func text(_ value: String, x: CGFloat, y: CGFloat, size: CGFloat = 16,
+                      color: UIColor = .white) {
+        let label = ArtSystem.label(value, size: size)
+        label.position = CGPoint(x: x, y: y)
+        label.fontColor = color
+        label.fontName = "AvenirNext-DemiBold"
+        label.name = MathMechanicID.clockMarket
+        activity.addChild(label)
+    }
+
+    private func control(_ mark: String, name: String, x: CGFloat, y: CGFloat,
+                         radius: CGFloat = 34) {
+        let coin = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.12, green: 0.27, blue: 0.39, alpha: 1),
+            stroke: UIColor(red: 1, green: 0.80, blue: 0.46, alpha: 0.95),
+            glow: 0
+        )
+        coin.position = CGPoint(x: x, y: y)
+        coin.zPosition = 50
+        coin.name = name
+        activity.addChild(coin)
+        let label = ArtSystem.label(mark, size: mark.count > 3 ? 13 : 20)
+        label.fontName = "AvenirNext-Heavy"
+        label.fontColor = .white
+        label.name = name
+        coin.addChild(label)
+
+        let touch = SKShapeNode(circleOfRadius: radius + 3)
+        touch.position = CGPoint(x: x, y: y)
+        touch.fillColor = .clear
+        touch.strokeColor = .clear
+        touch.zPosition = 71
+        touch.name = name
+        activity.addChild(touch)
+    }
+
+    func render(_ model: ClockMarketModel) {
+        activity.removeAllChildren()
+        switch model.task {
+        case .hour, .halfHour, .fiveMinutes:
+            renderClock(model)
+        case .routines:
+            renderRoutines(model)
+        case .money:
+            renderMoney(model)
+        }
+    }
+
+    private func renderClock(_ model: ClockMarketModel) {
+        instructions.text = model.task == .hour
+            ? "TURN THE HOUR HAND"
+            : (model.task == .halfHour ? "TURN TO O'CLOCK OR HALF PAST" : "TIME TO FIVE MINUTES")
+        let center = CGPoint(x: -113, y: -12)
+        let face = SKShapeNode(circleOfRadius: 91)
+        face.position = center
+        face.fillColor = UIColor(red: 0.99, green: 0.95, blue: 0.82, alpha: 1)
+        face.strokeColor = UIColor(red: 0.96, green: 0.77, blue: 0.33, alpha: 1)
+        face.lineWidth = 4
+        face.name = MathMechanicID.clockMarket
+        activity.addChild(face)
+
+        for tick in 0..<12 {
+            let angle = CGFloat(tick) * .pi / 6
+            let dot = SKShapeNode(circleOfRadius: 3)
+            dot.fillColor = UIColor(red: 0.09, green: 0.17, blue: 0.27, alpha: 1)
+            dot.strokeColor = .clear
+            dot.position = CGPoint(
+                x: center.x + sin(angle) * 77,
+                y: center.y + cos(angle) * 77
+            )
+            dot.name = MathMechanicID.clockMarket
+            activity.addChild(dot)
+        }
+
+        let hourAngle = (CGFloat(model.hour % 12) + CGFloat(model.minute) / 60) * .pi / 6
+        let minuteAngle = CGFloat(model.minute) * .pi / 30
+        for (angle, length, width) in [
+            (hourAngle, CGFloat(47), CGFloat(6)),
+            (minuteAngle, CGFloat(69), CGFloat(3))
+        ] {
+            let path = CGMutablePath()
+            path.move(to: .zero)
+            path.addLine(to: CGPoint(x: sin(angle) * length, y: cos(angle) * length))
+            let hand = SKShapeNode(path: path)
+            hand.position = center
+            hand.strokeColor = UIColor(red: 0.08, green: 0.19, blue: 0.29, alpha: 1)
+            hand.lineWidth = width
+            hand.lineCap = .round
+            hand.name = MathMechanicID.clockMarket
+            activity.addChild(hand)
+        }
+        let minute = model.targetMinute < 10
+            ? "0\(model.targetMinute)" : "\(model.targetMinute)"
+        let yours = model.minute < 10 ? "0\(model.minute)" : "\(model.minute)"
+        text("TARGET  \(model.targetHour):\(minute)", x: 109, y: 62, size: 20)
+        text("YOURS  \(model.hour):\(yours)", x: 109, y: 28, size: 16)
+        text("HOUR", x: 109, y: 1, size: 12)
+        control("−", name: "clockHourMinus", x: 58, y: -46, radius: 34)
+        control("+", name: "clockHourPlus", x: 161, y: -46, radius: 34)
+        if model.task != .hour {
+            text(model.task == .halfHour ? "HALF-HOUR" : "5 MINUTES",
+                 x: 109, y: -85, size: 12)
+            control("−", name: "clockMinuteMinus", x: 58, y: -125, radius: 33)
+            control("+", name: "clockMinutePlus", x: 161, y: -125, radius: 33)
+        }
+    }
+
+    private func renderRoutines(_ model: ClockMarketModel) {
+        instructions.text = "WHICH PART OF THE DAY?"
+        let event = model.nextRoutine
+        let symbol: String
+        switch event {
+        case .wakeUp: symbol = "☀"
+        case .lunch: symbol = "◉"
+        case .dinner: symbol = "☽"
+        case .sleep: symbol = "★"
+        case nil: symbol = "✓"
+        }
+        text(symbol, x: 0, y: 51, size: 34,
+             color: UIColor(red: 1, green: 0.83, blue: 0.46, alpha: 1))
+        text(event?.title ?? "ALL FOUR SORTED", x: 0, y: 10, size: 18)
+        for (index, part) in ClockMarketDaypart.allCases.enumerated() {
+            let x = CGFloat(index) * 117 - 175.5
+            let icon = ["☀", "◒", "☽", "★"][index]
+            text(icon, x: x, y: -51, size: 24)
+            control(icon, name: "routine\(part.rawValue)", x: x, y: -118,
+                    radius: 33)
+        }
+        text("\(model.routineBins.count) OF 4 EVENTS", x: 0, y: -73, size: 13)
+        control("↶", name: "routineUndo", x: 225, y: 51, radius: 29)
+    }
+
+    private func renderMoney(_ model: ClockMarketModel) {
+        instructions.text = "PHILIPPINE PESO TEACHING COINS"
+        text("PRICE: ₱\(model.targetPesos)", x: 0, y: 67, size: 24)
+        text("COINS SELECTED: ₱\(model.totalPesos)", x: 0, y: 30, size: 18)
+        let count = model.allowedCoins.count
+        let spacing: CGFloat = count == 2 ? 148 : 104
+        for (index, denomination) in model.allowedCoins.enumerated() {
+            let x = CGFloat(index) * spacing - CGFloat(count - 1) * spacing / 2
+            control("₱\(denomination)", name: "marketCoin\(denomination)",
+                    x: x, y: -65, radius: 34)
+        }
+        text("\(model.coins.count) COINS ADDED", x: 0, y: -117, size: 13)
+        control("↶", name: "marketCoinUndo", x: 222, y: 60, radius: 29)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.89, blue: 0.51, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1.0, duration: 0.16)
+        ]), withKey: "clockMarketPulse")
+    }
+}
+
+
+@MainActor final class GroupingGardenMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("GROUPING GARDEN", size: 19)
+    private let instruction = ArtSystem.label("", size: 14)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.groupingGarden
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.groupingGarden
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 302, height: 47),
+            fill: UIColor(red: 0.08, green: 0.23, blue: 0.21, alpha: 0.97),
+            stroke: UIColor(red: 0.95, green: 0.83, blue: 0.43, alpha: 1),
+            radius: 16
+        )
+        plaque.position.y = 128
+        plaque.name = MathMechanicID.groupingGarden
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.groupingGarden
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.95, green: 0.86, blue: 0.62, alpha: 1)
+        instruction.position.y = 98
+        instruction.name = MathMechanicID.groupingGarden
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func text(_ string: String, x: CGFloat, y: CGFloat, size: CGFloat = 15) {
+        let label = ArtSystem.label(string, size: size)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.position = CGPoint(x: x, y: y)
+        label.name = MathMechanicID.groupingGarden
+        activity.addChild(label)
+    }
+
+    private func control(_ title: String, name: String, x: CGFloat, y: CGFloat,
+                         radius: CGFloat = 33) {
+        let medallion = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.10, green: 0.31, blue: 0.30, alpha: 1),
+            stroke: UIColor(red: 0.93, green: 0.84, blue: 0.48, alpha: 1),
+            glow: 0
+        )
+        medallion.name = name
+        medallion.position = CGPoint(x: x, y: y)
+        medallion.zPosition = 50
+        activity.addChild(medallion)
+
+        let label = ArtSystem.label(title, size: title.count > 3 ? 14 : 20)
+        label.fontName = "AvenirNext-Heavy"
+        label.fontColor = .white
+        label.name = name
+        medallion.addChild(label)
+
+        let hit = SKShapeNode(circleOfRadius: radius + 5)
+        hit.position = CGPoint(x: x, y: y)
+        hit.name = name
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 70
+        activity.addChild(hit)
+    }
+
+    private func seed(x: CGFloat, y: CGFloat, radius: CGFloat = 8) {
+        let pip = SKShapeNode(circleOfRadius: radius)
+        pip.position = CGPoint(x: x, y: y)
+        pip.fillColor = UIColor(red: 0.46, green: 0.89, blue: 0.59, alpha: 1)
+        pip.strokeColor = UIColor(red: 0.97, green: 0.92, blue: 0.61, alpha: 1)
+        pip.lineWidth = 1.5
+        pip.name = MathMechanicID.groupingGarden
+        activity.addChild(pip)
+    }
+
+    func render(_ model: GroupingGardenModel) {
+        activity.removeAllChildren()
+        switch model.task {
+        case .equalGroups, .equalSharing:
+            renderGroupBaskets(model)
+        case .repeatedAddition:
+            renderRepeatedJumps(model)
+        case .halves, .quarters:
+            renderFractionCuts(model)
+        }
+    }
+
+    private func renderGroupBaskets(_ model: GroupingGardenModel) {
+        instruction.text = model.task == .equalGroups
+            ? "PLACE \(model.groupSize) SEEDS IN EACH BASKET"
+            : "SHARE \(model.targetTotal) SEEDS EQUALLY"
+        let n = model.groupCount
+        let spacing: CGFloat = n == 2 ? 160 : (n == 3 ? 137 : 102)
+        for index in 0..<n {
+            let x = (CGFloat(index) - CGFloat(n - 1) / 2) * spacing
+            let card = ArtSystem.panel(
+                CGSize(width: n == 5 ? 94 : 117, height: 115),
+                fill: UIColor(red: 0.12, green: 0.25, blue: 0.21, alpha: 0.96),
+                stroke: UIColor(red: 0.81, green: 0.77, blue: 0.45, alpha: 0.88),
+                radius: 12, lineWidth: 2, shadowAlpha: 0.08
+            )
+            card.position = CGPoint(x: x, y: 0)
+            card.name = MathMechanicID.groupingGarden
+            activity.addChild(card)
+            text("BASKET \(index + 1)", x: x, y: 39, size: n == 5 ? 11 : 13)
+
+            let count = model.groups[index]
+            for piece in 0..<min(count, 12) {
+                let dx = CGFloat(piece % 4) * 19 - 28.5
+                let dy = CGFloat(piece / 4) * 21 - 33
+                seed(x: x + dx, y: dy, radius: 7)
+            }
+            if count > 12 {
+                text("+\(count - 12)", x: x, y: -42, size: 12)
+            }
+            control("＋", name: "gardenBasket\(index + 1)", x: x, y: -121,
+                    radius: 32)
+        }
+        control("↶", name: "gardenUndoSeed", x: 229, y: 62, radius: 28)
+        text("\(model.unitsPlaced) OF \(model.targetTotal) SEEDS PLACED",
+             x: 0, y: -73, size: 13)
+    }
+
+    private func renderRepeatedJumps(_ model: GroupingGardenModel) {
+        instruction.text = "COUNT BY \(model.groupSize) WITH \(model.groupCount) JUMPS"
+        let n = model.groupCount
+        let spacing: CGFloat = n == 2 ? 155 : (n == 3 ? 145 : 108)
+        for i in 0..<n {
+            let x = (CGFloat(i) - CGFloat(n - 1) / 2) * spacing
+            let bg = ArtSystem.panel(
+                CGSize(width: 98, height: 63),
+                fill: UIColor(red: 0.13, green: 0.28, blue: 0.24, alpha: 1),
+                stroke: UIColor(red: 0.74, green: 0.84, blue: 0.50, alpha: 0.78),
+                radius: 9, lineWidth: 1.5, shadowAlpha: 0.04
+            )
+            bg.position = CGPoint(x: x, y: 38)
+            bg.name = MathMechanicID.groupingGarden
+            activity.addChild(bg)
+            for j in 0..<model.groupSize {
+                seed(x: x - CGFloat(model.groupSize - 1) * 8.5 + CGFloat(j) * 17,
+                     y: 38, radius: 5.4)
+            }
+        }
+
+        let originX: CGFloat = -198
+        let stepX: CGFloat = 57
+        for index in 0...min(model.jumps + 1, model.groupCount + 2) {
+            let x = originX + CGFloat(index) * stepX
+            if index <= model.jumps {
+                let dot = SKShapeNode(circleOfRadius: 8)
+                dot.position = CGPoint(x: x, y: -32)
+                dot.fillColor = UIColor(red: 0.95, green: 0.81, blue: 0.36, alpha: 1)
+                dot.strokeColor = .white
+                dot.name = MathMechanicID.groupingGarden
+                activity.addChild(dot)
+                text("\(index * model.groupSize)", x: x, y: -57, size: 11)
+            }
+            if index > 0, index <= model.jumps {
+                let line = SKShapeNode(
+                    rectOf: CGSize(width: stepX - 14, height: 4)
+                )
+                line.fillColor = UIColor(red: 0.91, green: 0.77, blue: 0.36, alpha: 1)
+                line.strokeColor = .clear
+                line.position = CGPoint(x: x - stepX / 2, y: -32)
+                line.name = MathMechanicID.groupingGarden
+                activity.addChild(line)
+            }
+        }
+        text("\(model.jumps) JUMPS  =  \(model.currentJumpTotal)",
+             x: 85, y: -82, size: 15)
+        control("＋", name: "gardenJumpAdd", x: -90, y: -122)
+        control("↶", name: "gardenJumpUndo", x: 90, y: -122)
+    }
+
+    private func renderFractionCuts(_ model: GroupingGardenModel) {
+        let parts = model.groupCount
+        let horizontal = model.orientation == .row
+        instruction.text = parts == 2
+            ? "MOVE THE CUT TO MAKE 2 EQUAL PARTS"
+            : "PLACE 3 CUTS TO MAKE 4 EQUAL PARTS"
+
+        let count = model.unitCells
+        let segmentSize: CGFloat = horizontal ? min(38, 348 / CGFloat(count))
+            : min(25, 156 / CGFloat(count))
+        let centerY: CGFloat = -4
+        for cell in 0..<count {
+            let part = SKShapeNode(
+                rectOf: horizontal
+                    ? CGSize(width: segmentSize - 1.5, height: 54)
+                    : CGSize(width: 100, height: segmentSize - 1)
+            )
+            let offset = (CGFloat(cell) + 0.5 - CGFloat(count) / 2) * segmentSize
+            part.position = horizontal
+                ? CGPoint(x: offset, y: centerY)
+                : CGPoint(x: 0, y: centerY + offset)
+            part.fillColor = UIColor(red: 0.27, green: 0.62, blue: 0.37, alpha: 1)
+            part.strokeColor = UIColor(red: 0.79, green: 0.87, blue: 0.63, alpha: 0.9)
+            part.lineWidth = 1
+            part.name = MathMechanicID.groupingGarden
+            activity.addChild(part)
+        }
+        for cut in model.cuts {
+            let position = (CGFloat(cut) - CGFloat(count) / 2) * segmentSize
+            let section = SKShapeNode(
+                rectOf: horizontal
+                    ? CGSize(width: 4, height: 72)
+                    : CGSize(width: 118, height: 4)
+            )
+            section.position = horizontal
+                ? CGPoint(x: position, y: centerY)
+                : CGPoint(x: 0, y: centerY + position)
+            section.fillColor = UIColor(red: 1, green: 0.87, blue: 0.41, alpha: 1)
+            section.strokeColor = .clear
+            section.name = MathMechanicID.groupingGarden
+            activity.addChild(section)
+        }
+
+        let cursor = (CGFloat(model.selectedBoundary) - CGFloat(count) / 2) * segmentSize
+        let marker = SKShapeNode(
+            rectOf: horizontal
+                ? CGSize(width: 3, height: 85)
+                : CGSize(width: 132, height: 3)
+        )
+        marker.fillColor = UIColor(red: 0.32, green: 0.87, blue: 0.96, alpha: 1)
+        marker.strokeColor = .white
+        marker.lineWidth = 1
+        marker.position = horizontal
+            ? CGPoint(x: cursor, y: centerY)
+            : CGPoint(x: 0, y: centerY + cursor)
+        marker.name = MathMechanicID.groupingGarden
+        activity.addChild(marker)
+
+        text("\(model.cuts.count) OF \(parts - 1) CUTS - DIVIDER \(model.selectedBoundary)",
+             x: 0, y: -90, size: 13)
+        control("◀", name: "gardenCutLeft", x: -159, y: -122)
+        control("▶", name: "gardenCutRight", x: -53, y: -122)
+        control("CUT", name: "gardenCutPlace", x: 53, y: -122)
+        control("↶", name: "gardenCutUndo", x: 159, y: -122)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 0.99, green: 0.94, blue: 0.59, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.02, duration: 0.13),
+            .scale(to: 1.0, duration: 0.18)
+        ]), withKey: "gardenCompletion")
+    }
+}
+
+
+@MainActor final class ReasoningStudioMechanic: SKNode, MathCastleReactiveMechanic {
+    private let canvas = SKNode()
+    private let heading = ArtSystem.label("REASONING STUDIO", size: 18)
+    private let subtitle = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.reasoningStudio
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.reasoningStudio
+        addChild(tray)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 305, height: 47),
+            fill: UIColor(red: 0.09, green: 0.18, blue: 0.29, alpha: 0.98),
+            stroke: UIColor(red: 0.96, green: 0.79, blue: 0.41, alpha: 0.92),
+            radius: 15
+        )
+        header.position.y = 128
+        header.name = MathMechanicID.reasoningStudio
+        addChild(header)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.reasoningStudio
+        header.addChild(heading)
+
+        subtitle.fontName = "AvenirNext-DemiBold"
+        subtitle.fontColor = UIColor(red: 0.99, green: 0.86, blue: 0.59, alpha: 1)
+        subtitle.position.y = 98
+        subtitle.name = MathMechanicID.reasoningStudio
+        addChild(subtitle)
+        addChild(canvas)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 16) {
+        let item = ArtSystem.label(text, size: size)
+        item.fontColor = .white
+        item.fontName = "AvenirNext-DemiBold"
+        item.position = CGPoint(x: x, y: y)
+        item.name = MathMechanicID.reasoningStudio
+        canvas.addChild(item)
+    }
+
+    private func button(_ text: String, name: String, x: CGFloat, y: CGFloat,
+                        radius: CGFloat = 34) {
+        let plate = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.11, green: 0.27, blue: 0.39, alpha: 1),
+            stroke: UIColor(red: 0.98, green: 0.79, blue: 0.43, alpha: 1),
+            glow: 0
+        )
+        plate.position = CGPoint(x: x, y: y)
+        plate.name = name
+        plate.zPosition = 50
+        canvas.addChild(plate)
+        let caption = ArtSystem.label(text, size: text.count > 5 ? 11 : 15)
+        caption.fontColor = .white
+        caption.fontName = "AvenirNext-Heavy"
+        caption.name = name
+        plate.addChild(caption)
+        // Direct geometric hit testing also covers all decorative children.
+        let hit = SKShapeNode(circleOfRadius: radius + 3)
+        hit.position = CGPoint(x: x, y: y)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 70
+        hit.name = name
+        canvas.addChild(hit)
+    }
+
+    private func counter(x: CGFloat, y: CGFloat, filled: Bool = true) {
+        let stone = SKShapeNode(circleOfRadius: 11)
+        stone.position = CGPoint(x: x, y: y)
+        stone.fillColor = filled
+            ? UIColor(red: 0.34, green: 0.81, blue: 0.89, alpha: 1)
+            : UIColor(red: 0.20, green: 0.30, blue: 0.34, alpha: 0.45)
+        stone.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.57, alpha: 1)
+        stone.lineWidth = filled ? 2 : 1
+        stone.name = MathMechanicID.reasoningStudio
+        canvas.addChild(stone)
+    }
+
+    func render(_ model: ReasoningStudioModel) {
+        canvas.removeAllChildren()
+        switch model.task {
+        case .strategy: renderStrategy(model)
+        case .differentWays: renderDifferentWays(model)
+        case .multiStep: renderMultiStep(model)
+        }
+    }
+
+    private func renderStrategy(_ model: ReasoningStudioModel) {
+        subtitle.text = "CHOOSE A WAY — SHOW EVERY STEP"
+        label("\(model.startingValue) + \(model.addend) = ?", x: 0, y: 61, size: 24)
+        button("COUNT", name: "reasonCountOn", x: -120, y: 9)
+        button("BUILD", name: "reasonBuild", x: 120, y: 9)
+        let selected: String
+        switch model.chosenStrategy {
+        case .countOn: selected = "COUNT ON — NUMBER LINE"
+        case .buildCounters: selected = "BUILD — COUNTER TILES"
+        case nil: selected = "PICK COUNT OR BUILD"
+        }
+        label(selected, x: 0, y: -38, size: 14)
+        for index in 0..<model.addend {
+            let x = (CGFloat(index) - CGFloat(model.addend - 1) / 2) * 42
+            if model.chosenStrategy == .countOn {
+                label(index < model.strategySteps ? "→" : "·",
+                      x: x, y: -75, size: 26)
+            } else {
+                counter(x: x, y: -72, filled: index < model.strategySteps)
+            }
+        }
+        button("+1", name: "reasonStepAdd", x: -92, y: -123)
+        button("UNDO", name: "reasonStepUndo", x: 92, y: -123)
+    }
+
+    private func renderDifferentWays(_ model: ReasoningStudioModel) {
+        subtitle.text = "MAKE TWO DIFFERENT NUMBER PAIRS"
+        label("TWO WAYS TO MAKE \(model.startingValue)", x: 0, y: 70, size: 19)
+        for slot in 0..<2 {
+            let y: CGFloat = slot == 0 ? 35 : 0
+            let line: String
+            if slot < model.solutions.count {
+                let pair = model.solutions[slot]
+                line = "\(slot + 1).  \(pair.left) + \(pair.right) = \(pair.left + pair.right)"
+            } else {
+                line = "\(slot + 1).  ? + ? = \(model.startingValue)"
+            }
+            label(line, x: 0, y: y, size: 18)
+        }
+        label("YOUR PILES:  \(model.draftLeft) + \(model.draftRight)",
+              x: 0, y: -45, size: 17)
+        button("L+", name: "reasonPairLeftUp", x: -192, y: -122, radius: 32)
+        button("L−", name: "reasonPairLeftDown", x: -110, y: -122, radius: 32)
+        button("SAVE", name: "reasonPairSave", x: 0, y: -122, radius: 34)
+        button("R+", name: "reasonPairRightUp", x: 110, y: -122, radius: 32)
+        button("R−", name: "reasonPairRightDown", x: 192, y: -122, radius: 32)
+        button("UNDO", name: "reasonPairUndo", x: 226, y: 51, radius: 30)
+    }
+
+    private func renderMultiStep(_ model: ReasoningStudioModel) {
+        subtitle.text = "SHOW BOTH CHANGES — NOT JUST THE END"
+        let firstText = "+\(model.firstChange)"
+        let secondText = "\(model.subtractSecond ? "−" : "+")\(model.secondChange)"
+        label("START \(model.startingValue)   \(firstText)   THEN \(secondText)",
+              x: 0, y: 69, size: 18)
+        let stage: String
+        if model.observedFinal != nil {
+            stage = "BOTH STEPS LOCKED — PULL PIP'S LEVER"
+        } else if model.isStageOne {
+            stage = "STEP ONE: ADD \(model.firstChange)"
+        } else {
+            stage = "STEP TWO: \(model.subtractSecond ? "TAKE" : "ADD") \(model.secondChange)"
+        }
+        label(stage, x: 0, y: 37, size: 14)
+        label("YOUR NUMBER: \(model.workingValue)",
+              x: 0, y: 4, size: 21)
+        for tick in 0...20 {
+            let x = CGFloat(tick - 10) * 21
+            let mark = SKShapeNode(circleOfRadius: tick == model.workingValue ? 6 : 2.5)
+            mark.position = CGPoint(x: x, y: -39)
+            mark.fillColor = tick == model.workingValue
+                ? UIColor(red: 1, green: 0.86, blue: 0.47, alpha: 1)
+                : UIColor(red: 0.46, green: 0.78, blue: 0.85, alpha: 0.9)
+            mark.strokeColor = .clear
+            mark.name = MathMechanicID.reasoningStudio
+            canvas.addChild(mark)
+        }
+        label("STEP 1: \(model.observedIntermediate.map(String.init) ?? "?")    STEP 2: \(model.observedFinal.map(String.init) ?? "?")",
+              x: 0, y: -75, size: 14)
+        button("−1", name: "reasonCounterMinus", x: -124, y: -122)
+        button("CHECK", name: "reasonConfirm", x: 0, y: -122)
+        button("+1", name: "reasonCounterPlus", x: 124, y: -122)
+        button("RESET", name: "reasonReset", x: 224, y: 54, radius: 30)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.91, blue: 0.56, alpha: 1)
+        guard !reducedMotion else { return }
+        canvas.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1.0, duration: 0.17)
+        ]), withKey: "reasoningSuccess")
+    }
+}
+
+
+@MainActor final class NumberTrailMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("NUMBER TRAIL", size: 19)
+    private let instruction = ArtSystem.label("", size: 15)
+    private var didRender = false
+    private var lastObservedFlash = false
+
+    override init() {
+        super.init()
+        name = MathMechanicID.numberTrail
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.numberTrail
+        addChild(tray)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 277, height: 47),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.29, alpha: 0.97),
+            stroke: UIColor(red: 0.98, green: 0.80, blue: 0.43, alpha: 0.91),
+            radius: 15
+        )
+        plaque.position.y = 128
+        plaque.name = MathMechanicID.numberTrail
+        addChild(plaque)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.numberTrail
+        plaque.addChild(heading)
+
+        instruction.fontName = "AvenirNext-DemiBold"
+        instruction.fontColor = UIColor(red: 0.97, green: 0.84, blue: 0.53, alpha: 1)
+        instruction.position.y = 95
+        instruction.name = MathMechanicID.numberTrail
+        addChild(instruction)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Programmatic mechanics only") }
+
+    private func text(_ message: String, x: CGFloat, y: CGFloat, size: CGFloat = 16) {
+        let label = ArtSystem.label(message, size: size)
+        label.position = CGPoint(x: x, y: y)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontColor = .white
+        label.name = MathMechanicID.numberTrail
+        activity.addChild(label)
+    }
+
+    private func button(_ message: String, name: String, x: CGFloat, y: CGFloat = -122,
+                        radius: CGFloat = 33) {
+        let surface = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.14, green: 0.30, blue: 0.43, alpha: 1),
+            stroke: UIColor(red: 0.95, green: 0.81, blue: 0.46, alpha: 0.96),
+            glow: 0
+        )
+        surface.position = CGPoint(x: x, y: y)
+        surface.name = name
+        surface.zPosition = 60
+        activity.addChild(surface)
+        let label = ArtSystem.label(message, size: message.count > 3 ? 13 : 23)
+        label.fontName = "AvenirNext-Heavy"
+        label.fontColor = .white
+        label.name = name
+        surface.addChild(label)
+        let tapTarget = SKShapeNode(circleOfRadius: radius + 3)
+        tapTarget.position = CGPoint(x: x, y: y)
+        tapTarget.fillColor = .clear
+        tapTarget.strokeColor = .clear
+        tapTarget.name = name
+        tapTarget.zPosition = 75
+        activity.addChild(tapTarget)
+    }
+
+    func render(_ model: NumberTrailModel) {
+        let animateFlash = didRender && model.isEstimate
+            && model.flashObserved && !lastObservedFlash
+        didRender = true
+        lastObservedFlash = model.flashObserved
+        activity.removeAllChildren()
+
+        if model.isEstimate {
+            renderEstimate(model, animateFlash: animateFlash)
+        } else {
+            renderCountOn(model)
+        }
+    }
+
+    private func renderEstimate(_ model: NumberTrailModel, animateFlash: Bool) {
+        instruction.text = "ABOUT HOW MANY FIREFLIES?"
+        let flashPanel = ArtSystem.panel(
+            CGSize(width: 248, height: 164),
+            fill: UIColor(red: 0.08, green: 0.21, blue: 0.28, alpha: 0.98),
+            stroke: UIColor(red: 0.57, green: 0.83, blue: 0.91, alpha: 0.90),
+            radius: 15, lineWidth: 2, shadowAlpha: 0.06
+        )
+        flashPanel.position = CGPoint(x: -131, y: 0)
+        flashPanel.name = MathMechanicID.numberTrail
+        activity.addChild(flashPanel)
+
+        if !model.flashObserved {
+            text("TAP FLASH TO LOOK", x: -131, y: 2, size: 15)
+        } else if animateFlash {
+            let sparkleLayer = SKNode()
+            sparkleLayer.name = MathMechanicID.numberTrail
+            activity.addChild(sparkleLayer)
+            // Distinct six arrangements; positions never encode quantities
+            // using labels or counts that remain visible after the flash.
+            for i in 0..<model.collectionSize {
+                let cell = (i * 7 + model.arrangementSeed * 5) % 12
+                let firefly = SKShapeNode(circleOfRadius: 11)
+                firefly.position = CGPoint(
+                    x: -218 + CGFloat(cell % 4) * 58,
+                    y: 52 - CGFloat(cell / 4) * 49
+                )
+                firefly.fillColor = UIColor(red: 1, green: 0.86, blue: 0.36, alpha: 1)
+                firefly.strokeColor = UIColor(red: 0.97, green: 0.97, blue: 0.72, alpha: 1)
+                firefly.lineWidth = 2
+                firefly.glowWidth = 3
+                firefly.name = MathMechanicID.numberTrail
+                sparkleLayer.addChild(firefly)
+            }
+            // A brief stimulus disappears before children can slowly count
+            // all dots. This presentation action never changes score state.
+            sparkleLayer.run(.sequence([.wait(forDuration: 0.85), .hide()]))
+        } else {
+            text("FIREFLIES HIDDEN", x: -131, y: 2, size: 15)
+        }
+        text("YOUR ESTIMATE", x: 119, y: 57, size: 15)
+        text("\(model.dialValue)", x: 119, y: 4, size: 45)
+        if let locked = model.lockedEstimate {
+            text("LOCKED: \(locked)", x: 119, y: -56, size: 15)
+        } else {
+            text("SET A GUESS", x: 119, y: -56, size: 13)
+        }
+
+        button("FLASH", name: "trailFlash", x: -157, radius: 36)
+        button("−", name: "trailEstimateMinus", x: 17, radius: 33)
+        button("+", name: "trailEstimatePlus", x: 108, radius: 33)
+        button("SET", name: "trailEstimateLock", x: 207, radius: 33)
+    }
+
+    private func renderCountOn(_ model: NumberTrailModel) {
+        instruction.text = "COUNT ON \(model.requiredJumps) ONE-STEP JUMPS"
+        text("START: \(model.startNumber)", x: -137, y: 62, size: 17)
+        text("JUMPS: \(model.jumps)", x: 118, y: 62, size: 17)
+
+        let baseY: CGFloat = -10
+        let baseX: CGFloat = -218
+        let stepWidth: CGFloat = 43
+        let segmentPath = CGMutablePath()
+        segmentPath.move(to: CGPoint(x: baseX, y: baseY))
+        segmentPath.addLine(to: CGPoint(x: baseX + stepWidth * 10, y: baseY))
+        let baseline = SKShapeNode(path: segmentPath)
+        baseline.strokeColor = UIColor(red: 0.84, green: 0.91, blue: 0.94, alpha: 1)
+        baseline.lineWidth = 3
+        baseline.name = MathMechanicID.numberTrail
+        activity.addChild(baseline)
+
+        for value in 0...10 {
+            let x = baseX + CGFloat(value) * stepWidth
+            let mark = SKShapeNode(circleOfRadius: 5)
+            mark.fillColor = value <= model.markerNumber
+                ? UIColor(red: 0.95, green: 0.75, blue: 0.38, alpha: 1)
+                : UIColor(red: 0.56, green: 0.75, blue: 0.85, alpha: 1)
+            mark.strokeColor = .white
+            mark.lineWidth = 1
+            mark.position = CGPoint(x: x, y: baseY)
+            mark.name = MathMechanicID.numberTrail
+            activity.addChild(mark)
+            text("\(value)", x: x, y: -41, size: 13)
+        }
+        for step in 0..<model.jumps {
+            let marker = SKShapeNode(circleOfRadius: 6)
+            marker.fillColor = UIColor(red: 0.39, green: 0.84, blue: 0.64, alpha: 1)
+            marker.strokeColor = .white
+            marker.lineWidth = 1.5
+            marker.position = CGPoint(
+                x: baseX + CGFloat(model.startNumber + step + 1) * stepWidth,
+                y: baseY + 20
+            )
+            marker.name = MathMechanicID.numberTrail
+            activity.addChild(marker)
+        }
+        let glider = SKShapeNode(circleOfRadius: 13)
+        glider.fillColor = UIColor(red: 0.25, green: 0.78, blue: 0.89, alpha: 1)
+        glider.strokeColor = .white
+        glider.lineWidth = 3
+        glider.position = CGPoint(
+            x: baseX + CGFloat(model.markerNumber) * stepWidth,
+            y: baseY + 27
+        )
+        glider.name = MathMechanicID.numberTrail
+        activity.addChild(glider)
+        text("AT \(model.markerNumber)", x: 0, y: -82, size: 20)
+
+        button("↶", name: "trailUndoJump", x: -102, radius: 36)
+        button("+1", name: "trailAddJump", x: 102, radius: 36)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.89, blue: 0.50, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1, duration: 0.17)
+        ]), withKey: "trailSuccess")
+    }
+}
+
+
+@MainActor final class DifferenceBridgeMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("DIFFERENCE BRIDGE", size: 18)
+    private let instructions = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.differenceBridge
+        zPosition = 750
+        let board = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        board.position.y = -14
+        board.zPosition = -5
+        board.name = MathMechanicID.differenceBridge
+        addChild(board)
+        let title = ArtSystem.plaque(
+            CGSize(width: 295, height: 46),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.27, alpha: 0.97),
+            stroke: UIColor(red: 1, green: 0.82, blue: 0.45, alpha: 0.94),
+            radius: 15
+        )
+        title.position.y = 128
+        title.name = MathMechanicID.differenceBridge
+        addChild(title)
+        heading.fontColor = .white
+        heading.fontName = "AvenirNext-Heavy"
+        heading.name = MathMechanicID.differenceBridge
+        title.addChild(heading)
+        instructions.position.y = 96
+        instructions.fontColor = UIColor(red: 1, green: 0.88, blue: 0.64, alpha: 1)
+        instructions.fontName = "AvenirNext-DemiBold"
+        instructions.name = MathMechanicID.differenceBridge
+        addChild(instructions)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func caption(_ value: String, x: CGFloat, y: CGFloat, size: CGFloat = 15) {
+        let text = ArtSystem.label(value, size: size)
+        text.position = CGPoint(x: x, y: y)
+        text.fontColor = .white
+        text.fontName = "AvenirNext-DemiBold"
+        text.name = MathMechanicID.differenceBridge
+        activity.addChild(text)
+    }
+
+    private func counter(x: CGFloat, y: CGFloat, color: UIColor,
+                         matched: Bool = false) {
+        let circle = SKShapeNode(circleOfRadius: 10)
+        circle.position = CGPoint(x: x, y: y)
+        circle.fillColor = color.withAlphaComponent(matched ? 0.26 : 1)
+        circle.strokeColor = .white.withAlphaComponent(matched ? 0.25 : 0.95)
+        circle.lineWidth = 1.5
+        circle.name = MathMechanicID.differenceBridge
+        activity.addChild(circle)
+    }
+
+    private func button(_ label: String, name: String, x: CGFloat) {
+        let surface = ArtSystem.medallion(
+            radius: 34,
+            fill: UIColor(red: 0.12, green: 0.28, blue: 0.40, alpha: 1),
+            stroke: UIColor(red: 0.98, green: 0.79, blue: 0.43, alpha: 1),
+            glow: 0
+        )
+        surface.name = name
+        surface.position = CGPoint(x: x, y: -120)
+        surface.zPosition = 40
+        activity.addChild(surface)
+        let text = ArtSystem.label(label, size: 11)
+        text.fontName = "AvenirNext-Heavy"
+        text.fontColor = .white
+        text.name = name
+        surface.addChild(text)
+
+        let hit = SKShapeNode(circleOfRadius: 38)
+        hit.position = CGPoint(x: x, y: -120)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 60
+        hit.name = name
+        activity.addChild(hit)
+    }
+
+    func render(_ model: DifferenceBridgeModel) {
+        activity.removeAllChildren()
+        if model.isDifference {
+            instructions.text = "MATCH EACH PAIR • COUNT LEFTOVERS"
+            caption("\(model.firstQuantity) BLUE", x: -115, y: 66, size: 16)
+            caption("\(model.secondQuantity) GOLD", x: 115, y: 66, size: 16)
+            for i in 0..<model.firstQuantity {
+                counter(
+                    x: -184 + CGFloat(i % 5) * 34,
+                    y: 31 - CGFloat(i / 5) * 32,
+                    color: UIColor(red: 0.31, green: 0.76, blue: 0.98, alpha: 1),
+                    matched: i < model.matchedPairs
+                )
+            }
+            for i in 0..<model.secondQuantity {
+                counter(
+                    x: 49 + CGFloat(i % 5) * 34,
+                    y: 31 - CGFloat(i / 5) * 32,
+                    color: UIColor(red: 1, green: 0.77, blue: 0.31, alpha: 1),
+                    matched: i < model.matchedPairs
+                )
+            }
+            caption("\(model.matchedPairs) PAIRS", x: -108, y: -53, size: 13)
+            caption("\(model.collectedLeftovers) LEFT OVER", x: 111, y: -53, size: 13)
+            button("PAIR", name: "diffMatch", x: -184)
+            button("BACK", name: "diffUndoMatch", x: -60)
+            button("KEEP", name: "diffCollect", x: 60)
+            button("UNDO", name: "diffUndoCollect", x: 184)
+        } else {
+            instructions.text = "BUILD THE TOTAL • REVERSE THE FACT"
+            caption("START \(model.firstQuantity)", x: -115, y: 62, size: 17)
+            caption("TOTAL \(model.secondQuantity)", x: 115, y: 62, size: 17)
+            for i in 0..<model.firstQuantity {
+                counter(
+                    x: -178 + CGFloat(i % 5) * 26,
+                    y: 30 - CGFloat(i / 5) * 27,
+                    color: UIColor(red: 0.30, green: 0.79, blue: 0.92, alpha: 1)
+                )
+            }
+            for i in 0..<model.joinedCounters {
+                counter(
+                    x: 56 + CGFloat(i % 5) * 26,
+                    y: 30 - CGFloat(i / 5) * 27,
+                    color: UIColor(red: 1, green: 0.76, blue: 0.35, alpha: 1),
+                    matched: i < model.returnedCounters
+                )
+            }
+            caption("ADDED \(model.joinedCounters)", x: -114, y: -56, size: 14)
+            caption("TAKEN BACK \(model.returnedCounters)", x: 118, y: -56, size: 13)
+            button("ADD", name: "inverseAdd", x: -184)
+            button("UNDO", name: "inverseUndoAdd", x: -60)
+            button("TAKE", name: "inverseTake", x: 60)
+            button("BACK", name: "inverseUndoTake", x: 184)
+        }
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.90, blue: 0.49, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.025, duration: 0.13),
+            .scale(to: 1, duration: 0.17)
+        ]), withKey: "differenceSuccess")
+    }
+}
+
+@MainActor final class RouteExplorerMechanic: SKNode, MathCastleReactiveMechanic {
+    private let activity = SKNode()
+    private let heading = ArtSystem.label("ROUTE EXPLORER", size: 19)
+    private let instructions = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.routeExplorer
+        zPosition = 750
+        let board = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        board.position.y = -14
+        board.zPosition = -5
+        board.name = MathMechanicID.routeExplorer
+        addChild(board)
+
+        let plaque = ArtSystem.plaque(
+            CGSize(width: 285, height: 46),
+            fill: UIColor(red: 0.08, green: 0.17, blue: 0.27, alpha: 0.97),
+            stroke: UIColor(red: 0.97, green: 0.81, blue: 0.46, alpha: 1),
+            radius: 15
+        )
+        plaque.position.y = 128
+        plaque.name = MathMechanicID.routeExplorer
+        addChild(plaque)
+        heading.fontColor = .white
+        heading.fontName = "AvenirNext-Heavy"
+        heading.name = MathMechanicID.routeExplorer
+        plaque.addChild(heading)
+
+        instructions.position.y = 97
+        instructions.fontColor = UIColor(red: 1, green: 0.85, blue: 0.56, alpha: 1)
+        instructions.fontName = "AvenirNext-DemiBold"
+        instructions.name = MathMechanicID.routeExplorer
+        addChild(instructions)
+        addChild(activity)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func label(_ value: String, x: CGFloat, y: CGFloat, size: CGFloat = 15,
+                       color: UIColor = .white) {
+        let text = ArtSystem.label(value, size: size)
+        text.fontColor = color
+        text.fontName = "AvenirNext-DemiBold"
+        text.position = CGPoint(x: x, y: y)
+        text.name = MathMechanicID.routeExplorer
+        activity.addChild(text)
+    }
+
+    private func arrow(_ symbol: String, name: String, x: CGFloat) {
+        let surface = ArtSystem.medallion(
+            radius: 32,
+            fill: UIColor(red: 0.12, green: 0.27, blue: 0.40, alpha: 1),
+            stroke: UIColor(red: 0.98, green: 0.82, blue: 0.47, alpha: 1),
+            glow: 0
+        )
+        surface.position = CGPoint(x: x, y: -120)
+        surface.name = name
+        surface.zPosition = 50
+        activity.addChild(surface)
+        let mark = ArtSystem.label(symbol, size: 24)
+        mark.fontName = "AvenirNext-Heavy"
+        mark.fontColor = .white
+        mark.name = name
+        surface.addChild(mark)
+
+        let hit = SKShapeNode(circleOfRadius: 36)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.position = CGPoint(x: x, y: -120)
+        hit.name = name
+        hit.zPosition = 70
+        activity.addChild(hit)
+    }
+
+    func render(_ model: RouteExplorerModel) {
+        activity.removeAllChildren()
+        instructions.text = model.isRoute
+            ? "FOLLOW THE MAP • AVOID THE ROCK"
+            : "MOVE ONE SQUARE IN THE RIGHT DIRECTION"
+        for cell in 0..<9 {
+            let column = cell % 3
+            let row = cell / 3
+            let x = CGFloat(column - 1) * 69
+            let y = CGFloat(1 - row) * 57 + 14
+            let blocked = model.blockedCell == cell
+            let reached = model.visitedCells.contains(cell)
+            let tile = ArtSystem.panel(
+                CGSize(width: 61, height: 50),
+                fill: blocked
+                    ? UIColor(red: 0.37, green: 0.36, blue: 0.42, alpha: 1)
+                    : UIColor(red: 0.07, green: 0.23, blue: 0.32, alpha: 0.96),
+                stroke: reached
+                    ? UIColor(red: 0.40, green: 0.87, blue: 0.93, alpha: 1)
+                    : UIColor(red: 0.63, green: 0.78, blue: 0.85, alpha: 0.7),
+                radius: 11,
+                lineWidth: 2,
+                shadowAlpha: 0.06
+            )
+            tile.position = CGPoint(x: x, y: y)
+            tile.name = MathMechanicID.routeExplorer
+            activity.addChild(tile)
+            if blocked {
+                label("✕", x: x, y: y, size: 26)
+            } else if cell == model.currentCell {
+                label("◆", x: x, y: y, size: 25,
+                      color: UIColor(red: 0.32, green: 0.91, blue: 0.95, alpha: 1))
+            } else if cell == model.destination {
+                label("★", x: x, y: y, size: 25,
+                      color: UIColor(red: 1, green: 0.82, blue: 0.35, alpha: 1))
+            } else if reached {
+                label("•", x: x, y: y, size: 24,
+                      color: UIColor(red: 0.50, green: 0.85, blue: 0.86, alpha: 1))
+            }
+        }
+        label("◆  ROVER", x: -177, y: 67, size: 13)
+        label("★  GOAL", x: 172, y: 67, size: 13)
+        label("\(model.movesTaken) MOVES", x: 175, y: 13, size: 14)
+        label(model.isRoute ? "PLAN A PATH" : "ONE-STEP MOVE",
+              x: 173, y: -27, size: 12)
+        arrow("↑", name: "mapNorth", x: -196)
+        arrow("↓", name: "mapSouth", x: -98)
+        arrow("←", name: "mapWest", x: 0)
+        arrow("→", name: "mapEast", x: 98)
+        arrow("↶", name: "mapUndo", x: 196)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.90, blue: 0.48, alpha: 1)
+        guard !reducedMotion else { return }
+        activity.run(.sequence([
+            .scale(to: 1.03, duration: 0.13),
+            .scale(to: 1, duration: 0.17)
+        ]), withKey: "routeSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -767,6 +3070,28 @@ import LearningCore
             return TenFrameGateMechanic()
         case MathMechanicID.missingNumberBridge:
             return MissingNumberBridgeMechanic()
+        case MathMechanicID.placeValueFactory:
+            return PlaceValueFactoryMechanic()
+        case MathMechanicID.patternLoom:
+            return PatternLoomMechanic()
+        case MathMechanicID.shapeForge:
+            return ShapeForgeMechanic()
+        case MathMechanicID.measurementWorkshop:
+            return MeasurementWorkshopMechanic()
+        case MathMechanicID.dataBoard:
+            return DataBoardMechanic()
+        case MathMechanicID.clockMarket:
+            return ClockMarketMechanic()
+        case MathMechanicID.groupingGarden:
+            return GroupingGardenMechanic()
+        case MathMechanicID.reasoningStudio:
+            return ReasoningStudioMechanic()
+        case MathMechanicID.numberTrail:
+            return NumberTrailMechanic()
+        case MathMechanicID.differenceBridge:
+            return DifferenceBridgeMechanic()
+        case MathMechanicID.routeExplorer:
+            return RouteExplorerMechanic()
         default:
             return nil
         }

@@ -6,12 +6,76 @@ import LearningCore
 
 @MainActor final class NativeMathFlowTests: XCTestCase {
     func testEveryMachineAcknowledgesTheVisibleEditWithoutCheckingTheAnswer() throws {
+        let placeValue = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
+        )
+        let pattern = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter
+        )
+        let shape = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter
+        )
+        let comparison = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.compareLength).first?.encounter
+        )
+        let units = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter
+        )
+        let sorting = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter
+        )
+        let pictureGraph = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
+        )
+        let clock = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter
+        )
+        let routines = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.timeDayparts).first?.encounter
+        )
+        let pesos = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
+        )
+        let grouping = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
+        )
+        let reasoning = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
+        )
+        let estimate = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter
+        )
+        let countOn = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
+        )
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter
+        )
+        let rover = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
             (MathCastleEncounterCatalog.numberBondMachine[0], CGPoint(x: 925, y: 280), CGPoint(x: 555, y: 280), "1 crystal in the open part."),
             (MathCastleEncounterCatalog.tenFrameGate[0], CGPoint(x: 820, y: 344), CGPoint(x: 550, y: 310), "1 light placed."),
-            (MathCastleEncounterCatalog.missingNumberBridge[0], CGPoint(x: 965, y: 330), CGPoint(x: 550, y: 335), "1 plank added.")
+            (MathCastleEncounterCatalog.missingNumberBridge[0], CGPoint(x: 965, y: 330), CGPoint(x: 550, y: 335), "1 plank added."),
+            (placeValue, CGPoint(x: 820, y: 310), CGPoint(x: 642, y: 192), "1 tens and 0 ones make 10."),
+            (pattern, CGPoint(x: 820, y: 310), CGPoint(x: 660, y: 188), "A shape fills the pattern gap."),
+            (shape, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 290), "Shape option 1 selected."),
+            (comparison, CGPoint(x: 820, y: 310), CGPoint(x: 665, y: 190), "Left measurement selected."),
+            (units, CGPoint(x: 820, y: 310), CGPoint(x: 914, y: 190), "1 equal-size measurement units placed."),
+            (sorting, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 of 5 objects sorted."),
+            (pictureGraph, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 189), "1 picture tile placed in the graph."),
+            (clock, CGPoint(x: 820, y: 310), CGPoint(x: 981, y: 264), "Clock hands now show 1:00."),
+            (routines, CGPoint(x: 820, y: 310), CGPoint(x: 645, y: 192), "1 of 4 daily events sorted."),
+            (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins."),
+            (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed."),
+            (reasoning, CGPoint(x: 820, y: 310), CGPoint(x: 700, y: 319), "0 steps using counting on."),
+            (estimate, CGPoint(x: 820, y: 310), CGPoint(x: 663, y: 188), "Fireflies flashed. Estimate dial is on 5."),
+            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2."),
+            (difference, CGPoint(x: 820, y: 310), CGPoint(x: 636, y: 190), "1 pair matched. 0 leftovers collected."),
+            (rover, CGPoint(x: 820, y: 310), CGPoint(x: 918, y: 190), "Rover moved 1 step on the grid.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -31,6 +95,496 @@ import LearningCore
             XCTAssertEqual(state.profile, profile, "Acknowledging an edit must not award learning evidence.")
             scene.willLeave()
         }
+    }
+
+
+    func testShapeForgeCompositionUsesTwoRealNativeTrianglePlacements() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.composeShapes).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profileBefore = state.profile
+
+        scene.handleTap(at: CGPoint(x: 655, y: 188)) // first half: orientation 0
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 2 triangle halves placed. Pull Pip's lever when you're ready."
+        )
+        scene.handleTap(at: CGPoint(x: 875, y: 188)) // second half: orientation 2
+        XCTAssertEqual(
+            scene.instruction.text,
+            "2 of 2 triangle halves placed. Pull Pip's lever when you're ready."
+        )
+        guard case .shapeForge(let model)? = state.runtime else {
+            return XCTFail("Shape Forge runtime disappeared")
+        }
+        XCTAssertEqual(model.placedHalfTurns, [0, 2])
+        XCTAssertFalse(model.completed, "Placement alone must not submit or award mastery")
+        XCTAssertEqual(state.profile, profileBefore)
+    }
+
+    func testShapeForgeMirroringRequiresThreeNativeCells() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.symmetry).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profileBefore = state.profile
+
+        scene.handleTap(at: CGPoint(x: 923, y: 343)) // row 0 -> circle
+        scene.handleTap(at: CGPoint(x: 923, y: 289)) // row 1 -> circle
+        scene.handleTap(at: CGPoint(x: 923, y: 235)) // row 2 -> circle
+        scene.handleTap(at: CGPoint(x: 923, y: 235)) // row 2 -> square
+        XCTAssertEqual(
+            scene.instruction.text,
+            "3 of 3 mirror cells filled. Pull Pip's lever when you're ready."
+        )
+        guard case .shapeForge(let model)? = state.runtime else {
+            return XCTFail("Mirror runtime disappeared")
+        }
+        XCTAssertEqual(model.mirrorCells, [1, 1, 2])
+        XCTAssertEqual(model.symmetryReference.map(\.rawValue), [1, 1, 2])
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profileBefore)
+    }
+
+
+    func testMeasurementWorkshopNativeUnitPlacementPersistsAndDoesNotAutoScore() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure)
+                .first(where: { $0.encounter.targetQuantity == 4 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+
+        scene.handleTap(at: CGPoint(x: 914, y: 190))
+        scene.handleTap(at: CGPoint(x: 914, y: 190))
+        scene.handleTap(at: CGPoint(x: 914, y: 190))
+        scene.handleTap(at: CGPoint(x: 726, y: 190)) // undo
+        guard case .measurementWorkshop(let model)? = state.runtime else {
+            return XCTFail("Measurement model not active")
+        }
+        XCTAssertEqual(model.placedUnits, 2)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "2 equal-size measurement units placed. Pull Pip's lever when you're ready."
+        )
+    }
+
+
+    func testDataBoardNativeSortingAndUndoAreIndependentUnscoredActions() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+
+        scene.handleTap(at: CGPoint(x: 662, y: 189))
+        scene.handleTap(at: CGPoint(x: 820, y: 189))
+        scene.handleTap(at: CGPoint(x: 1050, y: 363))
+        guard case .dataBoard(let model)? = state.runtime else {
+            return XCTFail("Expected native Data Board sorting runtime")
+        }
+        XCTAssertEqual(model.sortedBins, [1])
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 5 objects sorted. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testDataBoardNativePictureGraphUsesThreeColumnTouchControls() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+
+        scene.handleTap(at: CGPoint(x: 662, y: 189))
+        scene.handleTap(at: CGPoint(x: 820, y: 189))
+        scene.handleTap(at: CGPoint(x: 978, y: 189))
+        scene.handleTap(at: CGPoint(x: 1050, y: 361))
+        guard case .dataBoard(let model)? = state.runtime else {
+            return XCTFail("Expected native picture graph runtime")
+        }
+        XCTAssertEqual(model.graphTiles, [1, 1, 0])
+        XCTAssertEqual(model.graphPlacementHistory, [1, 2])
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "2 picture tiles placed in the graph. Pull Pip's lever when you're ready."
+        )
+    }
+
+
+    func testClockMarketNativeHourMinuteButtonsAndMoneyUndoWithoutPrematureScoring() throws {
+        let clock = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockFiveMinutes)
+                .first(where: { $0.encounter.initialQuantity == 3
+                    && $0.encounter.targetQuantity == 35 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(clock))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+        scene.handleTap(at: CGPoint(x: 981, y: 264))  // hour + 1
+        scene.handleTap(at: CGPoint(x: 981, y: 185))  // minute + 5
+        guard case .clockMarket(let clockModel)? = state.runtime else {
+            return XCTFail("Missing Clock Market hands")
+        }
+        XCTAssertEqual(clockModel.hour, 1)
+        XCTAssertEqual(clockModel.minute, 5)
+        XCTAssertEqual(clockModel.handMoves, 2)
+        XCTAssertFalse(clockModel.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "Clock hands now show 1:05. Pull Pip's lever when you're ready."
+        )
+
+        let market = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.coinValues)
+                .first(where: { $0.encounter.context == "market.money.grade2"
+                    && $0.encounter.targetQuantity == 21 })?.encounter
+        )
+        let marketState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(marketState.startWorkshop(market))
+        let marketScene = MathCastleScene(state: marketState)
+        marketScene.reducedMotion = true
+        marketScene.didMove(to: SKView())
+        defer { marketScene.willLeave() }
+        marketScene.valkyrie.position = CGPoint(x: 490, y: 175)
+        marketScene.handleTap(at: CGPoint(x: 820, y: 310))
+        let marketBefore = marketState.profile
+        marketScene.handleTap(at: CGPoint(x: 985, y: 245)) // ₱20
+        marketScene.handleTap(at: CGPoint(x: 768, y: 245)) // ₱5
+        marketScene.handleTap(at: CGPoint(x: 1042, y: 370)) // undo
+        guard case .clockMarket(let moneyModel)? = marketState.runtime else {
+            return XCTFail("Missing Philippine peso runtime")
+        }
+        XCTAssertEqual(moneyModel.coins, [20])
+        XCTAssertEqual(moneyModel.totalPesos, 20)
+        XCTAssertFalse(moneyModel.completed)
+        XCTAssertEqual(marketState.profile, marketBefore)
+    }
+
+
+    func testGroupingGardenNativeBasketsAndUndoPreserveUnscoredWork() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalSharing)
+                .first(where: { $0.encounter.initialQuantity == 2
+                    && $0.encounter.targetQuantity == 2 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 740, y: 189)) // basket one
+        scene.handleTap(at: CGPoint(x: 900, y: 189)) // basket two
+        scene.handleTap(at: CGPoint(x: 1049, y: 372)) // undo last seed
+        guard case .groupingGarden(let model)? = state.runtime else {
+            return XCTFail("Grouping Garden runtime not active")
+        }
+        XCTAssertEqual(model.groups, [1, 0])
+        XCTAssertEqual(model.unitsPlaced, 1)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 4 garden seeds placed. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testGroupingGardenNativeFractionCutRequiresActualDividerMove() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.halves)
+                .first(where: { $0.encounter.initialQuantity == 4
+                    && $0.encounter.context == "garden.halves.row" })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 767, y: 188)) // move to boundary two
+        scene.handleTap(at: CGPoint(x: 873, y: 188)) // place divider
+        guard case .groupingGarden(let model)? = state.runtime else {
+            return XCTFail("Fraction cuts not active")
+        }
+        XCTAssertEqual(model.selectedBoundary, 2)
+        XCTAssertEqual(model.cuts, [2])
+        XCTAssertFalse(model.completed, "Cut placement alone cannot score")
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 1 fraction cuts placed. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testGroupingGardenNativeRepeatedAdditionMovesRealJumps() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.repeatedAddition)
+                .first(where: { $0.encounter.initialQuantity == 3
+                    && $0.encounter.targetQuantity == 4 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 730, y: 188))
+        scene.handleTap(at: CGPoint(x: 730, y: 188))
+        scene.handleTap(at: CGPoint(x: 910, y: 188))
+        guard case .groupingGarden(let model)? = state.runtime else {
+            return XCTFail("Grouping jumps not active")
+        }
+        XCTAssertEqual(model.jumps, 1)
+        XCTAssertEqual(model.currentJumpTotal, 4)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 jump makes a total of 4. Pull Pip's lever when you're ready."
+        )
+    }
+
+
+    func testReasoningStudioNativeStrategyTapsRequireVisibleSteps() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 700, y: 319)) // choose count-on
+        scene.handleTap(at: CGPoint(x: 728, y: 187)) // add visible jump
+        guard case .reasoningStudio(let model)? = state.runtime else {
+            return XCTFail("Reasoning Studio runtime not active")
+        }
+        XCTAssertEqual(model.chosenStrategy, .countOn)
+        XCTAssertEqual(model.strategySteps, 1)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 step using counting on. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testReasoningStudioNativeTwoStepConfirmAndResetDoNotScore() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.multiStep)
+                .first(where: { $0.encounter.initialQuantity == 5
+                    && $0.encounter.targetQuantity == 22
+                    && $0.encounter.context == "studio.steps.addSubtract" })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 944, y: 188)) // +1
+        scene.handleTap(at: CGPoint(x: 820, y: 188)) // check first step
+        scene.handleTap(at: CGPoint(x: 696, y: 188)) // -1
+        scene.handleTap(at: CGPoint(x: 820, y: 188)) // check second step
+        guard case .reasoningStudio(let built)? = state.runtime else {
+            return XCTFail("Reasoning Studio disappeared")
+        }
+        XCTAssertEqual(built.observedIntermediate, 6)
+        XCTAssertEqual(built.observedFinal, 5)
+        XCTAssertFalse(built.completed)
+        XCTAssertEqual(state.profile, profile)
+
+        scene.handleTap(at: CGPoint(x: 1044, y: 364)) // reset both stages
+        guard case .reasoningStudio(let cleared)? = state.runtime else {
+            return XCTFail("Reasoning Studio reset failed")
+        }
+        XCTAssertNil(cleared.observedIntermediate)
+        XCTAssertNil(cleared.observedFinal)
+        XCTAssertEqual(cleared.workingValue, 5)
+        XCTAssertEqual(state.profile, profile)
+    }
+
+
+    func testNumberTrailNativeFlashRequiresObservationAndCountOnUsesRealUndo() throws {
+        let flash = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter
+        )
+        let flashState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(flashState.startWorkshop(flash))
+        let flashScene = MathCastleScene(state: flashState)
+        flashScene.reducedMotion = true
+        flashScene.didMove(to: SKView())
+        defer { flashScene.willLeave() }
+        flashScene.valkyrie.position = CGPoint(x: 490, y: 175)
+        flashScene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = flashState.profile
+        flashScene.handleTap(at: CGPoint(x: 663, y: 188))
+        flashScene.handleTap(at: CGPoint(x: 837, y: 188)) // dial − 1
+        guard case .numberTrail(let estimateModel)? = flashState.runtime else {
+            return XCTFail("Expected estimate encounter")
+        }
+        XCTAssertTrue(estimateModel.flashObserved)
+        XCTAssertEqual(estimateModel.dialValue, 4)
+        XCTAssertNil(estimateModel.lockedEstimate)
+        XCTAssertNil(estimateModel.lockedEstimate, "A flash alone cannot select an estimate")
+        XCTAssertEqual(flashState.profile, before)
+
+        let line = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.countOn10)
+                .first(where: { $0.encounter.initialQuantity == 4
+                    && $0.encounter.targetQuantity == 3 })?.encounter
+        )
+        let lineState = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(lineState.startWorkshop(line))
+        let scene = MathCastleScene(state: lineState)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profileBefore = lineState.profile
+        scene.handleTap(at: CGPoint(x: 922, y: 188))
+        scene.handleTap(at: CGPoint(x: 922, y: 188))
+        scene.handleTap(at: CGPoint(x: 718, y: 188))
+        guard case .numberTrail(let countModel)? = lineState.runtime else {
+            return XCTFail("Expected count-on runtime")
+        }
+        XCTAssertEqual(countModel.jumps, 1)
+        XCTAssertEqual(countModel.markerNumber, 5)
+        XCTAssertFalse(countModel.completed)
+        XCTAssertEqual(lineState.profile, profileBefore)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 of 3 jumps placed. Marker at 5. Pull Pip's lever when you're ready."
+        )
+    }
+
+
+    func testDifferenceBridgeAndMapRoverRequireNativeTouchBeforeScoring() throws {
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10)
+                .first(where: { $0.encounter.initialQuantity == 7
+                    && $0.encounter.targetQuantity == 3 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(difference))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+        scene.handleTap(at: CGPoint(x: 636, y: 190)) // first matching pair
+        scene.handleTap(at: CGPoint(x: 636, y: 190)) // second
+        scene.handleTap(at: CGPoint(x: 760, y: 190)) // undo pair
+        guard case .differenceBridge(let result)? = state.runtime else {
+            return XCTFail("Difference Bridge not active")
+        }
+        XCTAssertEqual(result.matchedPairs, 1)
+        XCTAssertEqual(result.collectedLeftovers, 0)
+        XCTAssertFalse(result.completed)
+        XCTAssertEqual(state.profile, before)
+
+        let position = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage)
+                .first(where: { $0.encounter.initialQuantity == 0
+                    && $0.encounter.targetQuantity == 1 })?.encounter
+        )
+        let roverState = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        XCTAssertTrue(roverState.startWorkshop(position))
+        let roverScene = MathCastleScene(state: roverState)
+        roverScene.reducedMotion = true
+        roverScene.didMove(to: SKView())
+        defer { roverScene.willLeave() }
+        roverScene.valkyrie.position = CGPoint(x: 490, y: 175)
+        roverScene.handleTap(at: CGPoint(x: 820, y: 310))
+        let roverBefore = roverState.profile
+        roverScene.handleTap(at: CGPoint(x: 918, y: 190)) // right
+        roverScene.handleTap(at: CGPoint(x: 1016, y: 190)) // undo
+        guard case .routeExplorer(let route)? = roverState.runtime else {
+            return XCTFail("Route Explorer not active")
+        }
+        XCTAssertEqual(route.visitedCells, [0])
+        XCTAssertEqual(route.movesTaken, 0)
+        XCTAssertFalse(route.completed)
+        XCTAssertEqual(roverState.profile, roverBefore)
     }
 
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
@@ -86,9 +640,51 @@ import LearningCore
     }
 
     func testEveryMechanicRestoresWithSupportAndWorldAcrossContexts() async throws {
+        let placeValue = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.placeValue).first?.encounter
+        )
+        let pattern = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.patternAB).first?.encounter
+        )
+        let shape = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter
+        )
+        let sorting = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.classifyObjects).first?.encounter
+        )
+        let pictureGraph = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.pictureGraph).first?.encounter
+        )
+        let clock = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.clockHour).first?.encounter
+        )
+        let routines = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.timeDayparts).first?.encounter
+        )
+        let pesos = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.coinValues).first?.encounter
+        )
+        let grouping = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
+        )
+        let reasoning = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
+        )
+        let estimate = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.estimate10).first?.encounter
+        )
+        let countOn = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.countOn10).first?.encounter
+        )
+        let difference = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.findDifference10).first?.encounter
+        )
+        let rover = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.positionalLanguage).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0]]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning, estimate, countOn, difference, rover]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))

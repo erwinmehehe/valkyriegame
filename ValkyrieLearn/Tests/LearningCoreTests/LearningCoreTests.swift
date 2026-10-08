@@ -774,7 +774,14 @@ final class LearningCoreTests: XCTestCase {
     }
 
 
-    func testPlayablePlacementReachesReasoningWithoutFakingPlaceValue() {
+    func testPlayablePlacementReachesPlaceValueAndReasoningWithRealNativeMechanics() {
+        let placeValue = MathAdventure.playableProbes.first {
+            $0.skillID == MathSkills.placeValue
+        }
+        XCTAssertEqual(placeValue?.band, 8)
+        XCTAssertEqual(placeValue?.encounter.mechanicID, MathMechanicID.placeValueFactory)
+        XCTAssertNotNil(placeValue.flatMap { try? MathMechanicRuntime(encounter: $0.encounter) })
+
         let reasoning = MathAdventure.playableProbes.first {
             $0.skillID == MathSkills.reasoning
         }
@@ -782,11 +789,6 @@ final class LearningCoreTests: XCTestCase {
         XCTAssertEqual(reasoning?.encounter.mechanicID, MathMechanicID.numberBondMachine)
         XCTAssertEqual(reasoning?.encounter.representation, .reasoning)
         XCTAssertEqual(reasoning?.encounter.challengeDepth, 2)
-
-        XCTAssertFalse(
-            MathAdventure.playableProbes.contains { $0.skillID == MathSkills.placeValue },
-            "Do not claim a place-value diagnostic until the native place-value manipulative exists."
-        )
     }
 
 }

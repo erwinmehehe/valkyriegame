@@ -56,13 +56,6 @@ import LearningCore
     )
     private let questionHeading = ArtSystem.label("PIP'S WORK ORDER", size: 13)
     private let questionLabel = ArtSystem.label("", size: 23)
-    private let workshopGroups: [[LearningEncounter]] = [
-        MathFoundation.workshopExamples,
-        MathCastleEncounterCatalog.balanceScale,
-        MathCastleEncounterCatalog.numberBondMachine,
-        MathCastleEncounterCatalog.tenFrameGate,
-        MathCastleEncounterCatalog.missingNumberBridge
-    ]
     private var workshopIndices = [0, 0, 0, 0, 0]
 
     override func didMove(to view: SKView) {
@@ -290,7 +283,7 @@ import LearningCore
                 symbol,
                 name: "workshop\(index)",
                 at: CGPoint(x: 140 + index * 80, y: 548),
-                accessibilityLabel: "Workshop station \(index + 1)"
+                accessibilityLabel: "Pip's workshop: \(MathWorkshopCatalog.stationNames[index])"
             )
         }
         addCompactWorkshopGear(
@@ -1258,6 +1251,17 @@ import LearningCore
         case .numberBond(let model): (mechanic as? NumberBondMachineMechanic)?.render(model)
         case .tenFrame(let model): (mechanic as? TenFrameGateMechanic)?.render(model, allowPreview: engaged && state.previewVisible)
         case .missingBridge(let model): (mechanic as? MissingNumberBridgeMechanic)?.render(model)
+        case .placeValueFactory(let model): (mechanic as? PlaceValueFactoryMechanic)?.render(model)
+        case .patternLoom(let model): (mechanic as? PatternLoomMechanic)?.render(model)
+        case .shapeForge(let model): (mechanic as? ShapeForgeMechanic)?.render(model)
+        case .measurementWorkshop(let model): (mechanic as? MeasurementWorkshopMechanic)?.render(model)
+        case .dataBoard(let model): (mechanic as? DataBoardMechanic)?.render(model)
+        case .clockMarket(let model): (mechanic as? ClockMarketMechanic)?.render(model)
+        case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
+        case .reasoningStudio(let model): (mechanic as? ReasoningStudioMechanic)?.render(model)
+        case .numberTrail(let model): (mechanic as? NumberTrailMechanic)?.render(model)
+        case .differenceBridge(let model): (mechanic as? DifferenceBridgeMechanic)?.render(model)
+        case .routeExplorer(let model): (mechanic as? RouteExplorerMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1329,8 +1333,351 @@ import LearningCore
         handleTap(at: point)
     }
 
+    // Explicitly test knob centers in mechanic-local coordinates before generic
+    // SpriteKit hit ancestry: illustrated trays can overlap visible controls.
+    private func handleMechanicDirectControl(at point: CGPoint) -> Bool {
+        guard let active = state.runtime, let mechanic else { return false }
+        let local = mechanic.convert(point, from: self)
+        if !canManipulate() {
+            if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differenceBridge, MathMechanicID.routeExplorer]
+                   .contains(active.encounter.mechanicID) {
+                engageMachine()
+                return true
+            }
+            return false
+        }
+        switch active {
+        case .placeValueFactory(let model) where !model.isComparison:
+            let controls: [(CGPoint, Int, Int)] = [
+                (CGPoint(x: -178, y: -118), 1, 0),
+                (CGPoint(x: -78, y: -118), -1, 0),
+                (CGPoint(x: 78, y: -118), 0, 1),
+                (CGPoint(x: 178, y: -118), 0, -1)
+            ]
+            for (center, tens, ones) in controls {
+                if hypot(local.x - center.x, local.y - center.y) <= 36 {
+                    manipulate { self.state.adjustPlaceValue(tensDelta: tens, onesDelta: ones) }
+                    return true
+                }
+            }
+        case .shapeForge(let model):
+            switch model.task {
+            case .rotate:
+                for (x, delta) in [(CGFloat(-104), -1), (CGFloat(104), 1)] {
+                    if hypot(local.x - x, local.y + 118) <= 40 {
+                        manipulate { self.state.rotateShape(delta) }
+                        return true
+                    }
+                }
+            case .recognize, .attributes:
+                let centerY: CGFloat = model.task == .attributes ? -104 : -20
+                let spacing: CGFloat = model.task == .attributes ? 153 : 158
+                for option in 1...3 {
+                    let x = CGFloat(option - 2) * spacing
+                    if hypot(local.x - x, local.y - centerY) <= 55 {
+                        manipulate { self.state.chooseShapeOption(option) }
+                        return true
+                    }
+                }
+            case .compose:
+                if hypot(local.x - 213, local.y - 24) <= 45 {
+                    manipulate { self.state.undoShapeHalf() }
+                    return true
+                }
+                for turns in 0...3 {
+                    if hypot(local.x - (CGFloat(turns) * 110 - 165), local.y + 122) <= 37 {
+                        manipulate { self.state.placeShapeHalf(turns) }
+                        return true
+                    }
+                }
+            case .symmetry:
+                for row in 0..<3 {
+                    let y = CGFloat(33 - row * 54)
+                    if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
+                        manipulate { self.state.cycleMirrorCell(row) }
+                        return true
+                    }
+                }
+            }
+        case .differenceBridge(let model):
+            let positions: [CGFloat] = [-184, -60, 60, 184]
+            for (index, x) in positions.enumerated() where
+                hypot(local.x - x, local.y + 120) <= 39 {
+                if model.isDifference {
+                    switch index {
+                    case 0: manipulate { self.state.matchDifferencePair() }
+                    case 1: manipulate { self.state.undoDifferencePair() }
+                    case 2: manipulate { self.state.collectDifference() }
+                    default: manipulate { self.state.undoDifferenceCollection() }
+                    }
+                } else {
+                    switch index {
+                    case 0: manipulate { self.state.addInverseCounter() }
+                    case 1: manipulate { self.state.undoInverseCounter() }
+                    case 2: manipulate { self.state.reverseInverseCounter() }
+                    default: manipulate { self.state.undoInverseReverse() }
+                    }
+                }
+                return true
+            }
+        case .routeExplorer:
+            for (index, x) in [CGFloat(-196), -98, 0, 98, 196].enumerated()
+                where hypot(local.x - x, local.y + 120) <= 37 {
+                switch index {
+                case 0: manipulate { self.state.moveOnMap(.north) }
+                case 1: manipulate { self.state.moveOnMap(.south) }
+                case 2: manipulate { self.state.moveOnMap(.west) }
+                case 3: manipulate { self.state.moveOnMap(.east) }
+                default: manipulate { self.state.undoMapMove() }
+                }
+                return true
+            }
+        case .numberTrail(let model):
+            if model.isEstimate {
+                for (x, operation) in [
+                    (CGFloat(-157), 0),
+                    (CGFloat(17), -1),
+                    (CGFloat(108), 1),
+                    (CGFloat(207), 2)
+                ] {
+                    if hypot(local.x - x, local.y + 122) <= 41 {
+                        switch operation {
+                        case 0: manipulate { self.state.revealTrailCollection() }
+                        case -1, 1: manipulate { self.state.adjustTrailEstimate(operation) }
+                        default: manipulate { self.state.lockTrailEstimate() }
+                        }
+                        return true
+                    }
+                }
+            } else {
+                if hypot(local.x + 102, local.y + 122) <= 40 {
+                    manipulate { self.state.undoTrailJump() }
+                    return true
+                }
+                if hypot(local.x - 102, local.y + 122) <= 40 {
+                    manipulate { self.state.addTrailJump() }
+                    return true
+                }
+            }
+        case .reasoningStudio(let model):
+            switch model.task {
+            case .strategy:
+                for (x, choice) in [
+                    (CGFloat(-120), ReasoningStudioStrategy.countOn),
+                    (CGFloat(120), ReasoningStudioStrategy.buildCounters)
+                ] {
+                    if hypot(local.x - x, local.y - 9) <= 39 {
+                        manipulate { self.state.chooseReasoningStrategy(choice) }
+                        return true
+                    }
+                }
+                if hypot(local.x + 92, local.y + 123) <= 39 {
+                    manipulate { self.state.addReasoningStep() }
+                    return true
+                }
+                if hypot(local.x - 92, local.y + 123) <= 39 {
+                    manipulate { self.state.undoReasoningStep() }
+                    return true
+                }
+            case .differentWays:
+                if hypot(local.x - 226, local.y - 51) <= 37 {
+                    manipulate { self.state.undoReasoningPair() }
+                    return true
+                }
+                for (x, left, delta) in [
+                    (CGFloat(-192), true, 1), (CGFloat(-110), true, -1),
+                    (CGFloat(110), false, 1), (CGFloat(192), false, -1)
+                ] {
+                    if hypot(local.x - x, local.y + 122) <= 36 {
+                        manipulate { self.state.adjustReasoningPair(left: left, delta: delta) }
+                        return true
+                    }
+                }
+                if hypot(local.x, local.y + 122) <= 39 {
+                    manipulate { self.state.saveReasoningPair() }
+                    return true
+                }
+            case .multiStep:
+                if hypot(local.x - 224, local.y - 54) <= 37 {
+                    manipulate { self.state.resetReasoningStages() }
+                    return true
+                }
+                if hypot(local.x + 124, local.y + 122) <= 40 {
+                    manipulate { self.state.moveReasoningCounter(-1) }
+                    return true
+                }
+                if hypot(local.x - 124, local.y + 122) <= 40 {
+                    manipulate { self.state.moveReasoningCounter(1) }
+                    return true
+                }
+                if hypot(local.x, local.y + 122) <= 40 {
+                    manipulate { self.state.confirmReasoningStage() }
+                    return true
+                }
+            }
+        case .groupingGarden(let model):
+            if model.isGroupPlacement {
+                if hypot(local.x - 229, local.y - 62) <= 38 {
+                    manipulate { self.state.undoGardenSeed() }
+                    return true
+                }
+                let spacing: CGFloat = model.groupCount == 2 ? 160
+                    : (model.groupCount == 3 ? 137 : 102)
+                for index in 0..<model.groupCount {
+                    let x = (CGFloat(index) - CGFloat(model.groupCount - 1) / 2) * spacing
+                    if hypot(local.x - x, local.y + 121) <= 39 {
+                        manipulate { self.state.placeGardenSeed(in: index + 1) }
+                        return true
+                    }
+                }
+            } else if model.isRepeatedAddition {
+                if hypot(local.x + 90, local.y + 122) <= 40 {
+                    manipulate { self.state.addGardenJump() }
+                    return true
+                }
+                if hypot(local.x - 90, local.y + 122) <= 40 {
+                    manipulate { self.state.undoGardenJump() }
+                    return true
+                }
+            } else if model.isFractions {
+                for (x, action) in [
+                    (CGFloat(-159), "left"),
+                    (CGFloat(-53), "right"),
+                    (CGFloat(53), "place"),
+                    (CGFloat(159), "undo")
+                ] {
+                    if hypot(local.x - x, local.y + 122) <= 39 {
+                        switch action {
+                        case "left":
+                            manipulate { self.state.moveGardenCut(-1) }
+                        case "right":
+                            manipulate { self.state.moveGardenCut(1) }
+                        case "place":
+                            manipulate { self.state.placeGardenCut() }
+                        default:
+                            manipulate { self.state.undoGardenCut() }
+                        }
+                        return true
+                    }
+                }
+            }
+        case .clockMarket(let model):
+            if model.isClock {
+                for (x, y, hourDelta, minuteDelta) in [
+                    (CGFloat(58), CGFloat(-46), -1, 0),
+                    (CGFloat(161), CGFloat(-46), 1, 0),
+                    (CGFloat(58), CGFloat(-125), 0, -1),
+                    (CGFloat(161), CGFloat(-125), 0, 1)
+                ] {
+                    if hourDelta == 0 && model.task == .hour { continue }
+                    if hypot(local.x - x, local.y - y) <= 38 {
+                        if hourDelta != 0 {
+                            manipulate { self.state.adjustClockHour(hourDelta) }
+                        } else {
+                            manipulate { self.state.adjustClockMinute(minuteDelta) }
+                        }
+                        return true
+                    }
+                }
+            } else if model.isRoutines {
+                if hypot(local.x - 225, local.y - 51) <= 37 {
+                    manipulate { self.state.undoDailyRoutine() }
+                    return true
+                }
+                for (index, daypart) in ClockMarketDaypart.allCases.enumerated() {
+                    let x = CGFloat(index) * 117 - 175.5
+                    if hypot(local.x - x, local.y + 118) <= 37 {
+                        manipulate { self.state.placeDailyRoutine(daypart) }
+                        return true
+                    }
+                }
+            } else if model.isMoney {
+                if hypot(local.x - 222, local.y - 60) <= 37 {
+                    manipulate { self.state.undoPesoCoin() }
+                    return true
+                }
+                let count = model.allowedCoins.count
+                let spacing: CGFloat = count == 2 ? 148 : 104
+                for (index, coin) in model.allowedCoins.enumerated() {
+                    let x = CGFloat(index) * spacing - CGFloat(count - 1) * spacing / 2
+                    if hypot(local.x - x, local.y + 65) <= 38 {
+                        manipulate { self.state.addPesoCoin(coin) }
+                        return true
+                    }
+                }
+            }
+        case .dataBoard(let model):
+            if hypot(local.x - 230, local.y - (model.isSorting ? 53 : 51)) <= 41 {
+                if model.isSorting {
+                    manipulate { self.state.undoDataSort() }
+                } else {
+                    manipulate { self.state.undoPicture() }
+                }
+                return true
+            }
+            if abs(local.y + 121) <= 43 {
+                for category in 1...3 {
+                    let x = CGFloat(category - 2) * 158
+                    if abs(local.x - x) <= 41 {
+                        if model.isSorting {
+                            manipulate { self.state.sortDataObject(into: category) }
+                        } else {
+                            manipulate { self.state.addPicture(to: category) }
+                        }
+                        return true
+                    }
+                }
+            }
+        case .measurementWorkshop(let model):
+            guard abs(local.y + 120) <= 41 else { break }
+            if model.isUnitMeasurement {
+                if abs(local.x + 94) <= 41 {
+                    manipulate { self.state.removeMeasureUnit() }
+                    return true
+                }
+                if abs(local.x - 94) <= 41 {
+                    manipulate { self.state.placeMeasureUnit() }
+                    return true
+                }
+            } else {
+                for (x, choice) in [
+                    (CGFloat(-155), ComparisonChoice.left),
+                    (CGFloat(0), ComparisonChoice.equal),
+                    (CGFloat(155), ComparisonChoice.right)
+                ] {
+                    if abs(local.x - x) <= 40 {
+                        manipulate { self.state.chooseComparison(choice) }
+                        return true
+                    }
+                }
+            }
+        case .patternLoom:
+            let controls: [(CGPoint, Int)] = [
+                (CGPoint(x: -160, y: -122), 1),
+                (CGPoint(x: -10, y: -122), 2),
+                (CGPoint(x: 140, y: -122), 3),
+                (CGPoint(x: 229, y: -122), 0)
+            ]
+            for (center, symbol) in controls {
+                if hypot(local.x - center.x, local.y - center.y) <= 36 {
+                    if symbol == 0 {
+                        manipulate { self.state.undoPatternSymbol() }
+                    } else {
+                        manipulate { self.state.choosePatternSymbol(symbol) }
+                    }
+                    return true
+                }
+            }
+        default:
+            break
+        }
+        return false
+    }
+
     // Shared by native touches and hosted interaction tests.
     func handleTap(at point: CGPoint) {
+        if handleMechanicDirectControl(at: point) { return }
         let target = targetName(at: point)
         if crossingBridge {
             if target == "home" {
@@ -1356,9 +1703,106 @@ import LearningCore
             manipulate { self.state.addCrystal() }
         case "cartCrystal", "bondToken", "tenFrameFilled", "missingMinus", "missingPlank":
             manipulate { self.state.removeCrystal() }
-        case "scaleLeft": manipulate { self.state.chooseComparison(.left) }
-        case "scaleRight": manipulate { self.state.chooseComparison(.right) }
-        case "scaleEqual": manipulate { self.state.chooseComparison(.equal) }
+        case "placeTensPlus": manipulate { self.state.adjustPlaceValue(tensDelta: 1) }
+        case "placeTensMinus": manipulate { self.state.adjustPlaceValue(tensDelta: -1) }
+        case "placeOnesPlus": manipulate { self.state.adjustPlaceValue(onesDelta: 1) }
+        case "placeOnesMinus": manipulate { self.state.adjustPlaceValue(onesDelta: -1) }
+        case "loomSymbol1": manipulate { self.state.choosePatternSymbol(1) }
+        case "loomSymbol2": manipulate { self.state.choosePatternSymbol(2) }
+        case "loomSymbol3": manipulate { self.state.choosePatternSymbol(3) }
+        case "loomUndo": manipulate { self.state.undoPatternSymbol() }
+        case "forgeChoice1": manipulate { self.state.chooseShapeOption(1) }
+        case "forgeChoice2": manipulate { self.state.chooseShapeOption(2) }
+        case "forgeChoice3": manipulate { self.state.chooseShapeOption(3) }
+        case "forgeTurnLeft": manipulate { self.state.rotateShape(-1) }
+        case "forgeTurnRight": manipulate { self.state.rotateShape(1) }
+        case "forgeHalf0": manipulate { self.state.placeShapeHalf(0) }
+        case "forgeHalf1": manipulate { self.state.placeShapeHalf(1) }
+        case "forgeHalf2": manipulate { self.state.placeShapeHalf(2) }
+        case "forgeHalf3": manipulate { self.state.placeShapeHalf(3) }
+        case "forgeUndoHalf": manipulate { self.state.undoShapeHalf() }
+        case "forgeMirror0": manipulate { self.state.cycleMirrorCell(0) }
+        case "forgeMirror1": manipulate { self.state.cycleMirrorCell(1) }
+        case "forgeMirror2": manipulate { self.state.cycleMirrorCell(2) }
+        case "measureAdd": manipulate { self.state.placeMeasureUnit() }
+        case "measureRemove": manipulate { self.state.removeMeasureUnit() }
+        case "measureLeft": manipulate { self.state.chooseComparison(.left) }
+        case "measureEqual": manipulate { self.state.chooseComparison(.equal) }
+        case "measureRight": manipulate { self.state.chooseComparison(.right) }
+        case "dataBin1": manipulate { self.state.sortDataObject(into: 1) }
+        case "dataBin2": manipulate { self.state.sortDataObject(into: 2) }
+        case "dataBin3": manipulate { self.state.sortDataObject(into: 3) }
+        case "dataGraph1": manipulate { self.state.addPicture(to: 1) }
+        case "dataGraph2": manipulate { self.state.addPicture(to: 2) }
+        case "dataGraph3": manipulate { self.state.addPicture(to: 3) }
+        case "clockHourMinus": manipulate { self.state.adjustClockHour(-1) }
+        case "clockHourPlus": manipulate { self.state.adjustClockHour(1) }
+        case "clockMinuteMinus": manipulate { self.state.adjustClockMinute(-1) }
+        case "clockMinutePlus": manipulate { self.state.adjustClockMinute(1) }
+        case "routinemorning": manipulate { self.state.placeDailyRoutine(.morning) }
+        case "routineafternoon": manipulate { self.state.placeDailyRoutine(.afternoon) }
+        case "routineevening": manipulate { self.state.placeDailyRoutine(.evening) }
+        case "routinenight": manipulate { self.state.placeDailyRoutine(.night) }
+        case "routineUndo": manipulate { self.state.undoDailyRoutine() }
+        case "marketCoin1": manipulate { self.state.addPesoCoin(1) }
+        case "marketCoin5": manipulate { self.state.addPesoCoin(5) }
+        case "marketCoin10": manipulate { self.state.addPesoCoin(10) }
+        case "marketCoin20": manipulate { self.state.addPesoCoin(20) }
+        case "marketCoinUndo": manipulate { self.state.undoPesoCoin() }
+        case "gardenBasket1": manipulate { self.state.placeGardenSeed(in: 1) }
+        case "gardenBasket2": manipulate { self.state.placeGardenSeed(in: 2) }
+        case "gardenBasket3": manipulate { self.state.placeGardenSeed(in: 3) }
+        case "gardenBasket4": manipulate { self.state.placeGardenSeed(in: 4) }
+        case "gardenBasket5": manipulate { self.state.placeGardenSeed(in: 5) }
+        case "gardenUndoSeed": manipulate { self.state.undoGardenSeed() }
+        case "gardenJumpAdd": manipulate { self.state.addGardenJump() }
+        case "gardenJumpUndo": manipulate { self.state.undoGardenJump() }
+        case "gardenCutLeft": manipulate { self.state.moveGardenCut(-1) }
+        case "gardenCutRight": manipulate { self.state.moveGardenCut(1) }
+        case "gardenCutPlace": manipulate { self.state.placeGardenCut() }
+        case "gardenCutUndo": manipulate { self.state.undoGardenCut() }
+        case "reasonCountOn": manipulate { self.state.chooseReasoningStrategy(.countOn) }
+        case "reasonBuild": manipulate { self.state.chooseReasoningStrategy(.buildCounters) }
+        case "reasonStepAdd": manipulate { self.state.addReasoningStep() }
+        case "reasonStepUndo": manipulate { self.state.undoReasoningStep() }
+        case "reasonPairLeftUp": manipulate { self.state.adjustReasoningPair(left: true, delta: 1) }
+        case "reasonPairLeftDown": manipulate { self.state.adjustReasoningPair(left: true, delta: -1) }
+        case "reasonPairRightUp": manipulate { self.state.adjustReasoningPair(left: false, delta: 1) }
+        case "reasonPairRightDown": manipulate { self.state.adjustReasoningPair(left: false, delta: -1) }
+        case "reasonPairSave": manipulate { self.state.saveReasoningPair() }
+        case "reasonPairUndo": manipulate { self.state.undoReasoningPair() }
+        case "reasonCounterMinus": manipulate { self.state.moveReasoningCounter(-1) }
+        case "reasonCounterPlus": manipulate { self.state.moveReasoningCounter(1) }
+        case "reasonConfirm": manipulate { self.state.confirmReasoningStage() }
+        case "reasonReset": manipulate { self.state.resetReasoningStages() }
+        case "trailFlash": manipulate { self.state.revealTrailCollection() }
+        case "trailEstimateMinus": manipulate { self.state.adjustTrailEstimate(-1) }
+        case "trailEstimatePlus": manipulate { self.state.adjustTrailEstimate(1) }
+        case "trailEstimateLock": manipulate { self.state.lockTrailEstimate() }
+        case "trailUndoJump": manipulate { self.state.undoTrailJump() }
+        case "trailAddJump": manipulate { self.state.addTrailJump() }
+        case "diffMatch": manipulate { self.state.matchDifferencePair() }
+        case "diffUndoMatch": manipulate { self.state.undoDifferencePair() }
+        case "diffCollect": manipulate { self.state.collectDifference() }
+        case "diffUndoCollect": manipulate { self.state.undoDifferenceCollection() }
+        case "inverseAdd": manipulate { self.state.addInverseCounter() }
+        case "inverseUndoAdd": manipulate { self.state.undoInverseCounter() }
+        case "inverseTake": manipulate { self.state.reverseInverseCounter() }
+        case "inverseUndoTake": manipulate { self.state.undoInverseReverse() }
+        case "mapNorth": manipulate { self.state.moveOnMap(.north) }
+        case "mapSouth": manipulate { self.state.moveOnMap(.south) }
+        case "mapWest": manipulate { self.state.moveOnMap(.west) }
+        case "mapEast": manipulate { self.state.moveOnMap(.east) }
+        case "mapUndo": manipulate { self.state.undoMapMove() }
+        case "dataUndo":
+            if case .dataBoard(let model)? = state.runtime, model.isSorting {
+                manipulate { self.state.undoDataSort() }
+            } else {
+                manipulate { self.state.undoPicture() }
+            }
+        case "scaleLeft", "placeLeft": manipulate { self.state.chooseComparison(.left) }
+        case "scaleRight", "placeRight": manipulate { self.state.chooseComparison(.right) }
+        case "scaleEqual", "placeEqual": manipulate { self.state.chooseComparison(.equal) }
         case "submit": submit()
         case "help":
             if canManipulate() { showScaffold() } else { engageMachine() }
@@ -1396,7 +1840,8 @@ import LearningCore
         case "challengeGate":
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge:
+             "placeTensBuilt", "placeOnesBuilt",
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differenceBridge, MathMechanicID.routeExplorer:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1443,6 +1888,107 @@ import LearningCore
             case .equal: change = "Equal gear selected."
             case nil: return
             }
+        case .placeValueFactory(let model):
+            if model.isComparison {
+                switch model.selectedComparison {
+                case .left: change = "Left number selected."
+                case .right: change = "Right number selected."
+                case .equal: change = "Equal selected."
+                case nil: return
+                }
+            } else {
+                change = "\(model.selectedTens) tens and \(model.selectedOnes) ones make \(model.builtNumber)."
+            }
+        case .patternLoom(let model):
+            change = model.isCreation
+                ? "\(model.selectedSymbols.count) of \(model.slotCount) pattern shapes placed."
+                : "A shape fills the pattern gap."
+        case .shapeForge(let model):
+            switch model.task {
+            case .rotate:
+                change = "The triangle turned one quarter-turn."
+            case .compose:
+                change = "\(model.placedHalfTurns.count) of 2 triangle halves placed."
+            case .symmetry:
+                change = "\(model.mirrorCells.compactMap { $0 }.count) of 3 mirror cells filled."
+            case .recognize, .attributes:
+                change = "Shape option \(model.selectedOption ?? 0) selected."
+            }
+        case .measurementWorkshop(let model):
+            if model.isUnitMeasurement {
+                change = "\(model.placedUnits) equal-size measurement units placed."
+            } else {
+                switch model.selectedComparison {
+                case .left: change = "Left measurement selected."
+                case .right: change = "Right measurement selected."
+                case .equal: change = "Equal measurements selected."
+                case nil: return
+                }
+            }
+        case .dataBoard(let model):
+            if model.isSorting {
+                change = "\(model.sortedBins.count) of 5 objects sorted."
+            } else {
+                let count = model.placedGraphTotal
+                change = "\(count) \(count == 1 ? "picture tile" : "picture tiles") placed in the graph."
+            }
+        case .clockMarket(let model):
+            if model.isClock {
+                let minuteText = model.minute < 10 ? "0\(model.minute)" : "\(model.minute)"
+                change = "Clock hands now show \(model.hour):\(minuteText)."
+            } else if model.isRoutines {
+                change = "\(model.routineBins.count) of 4 daily events sorted."
+            } else {
+                change = "₱\(model.totalPesos) in selected teaching coins."
+            }
+        case .groupingGarden(let model):
+            if model.isGroupPlacement {
+                change = "\(model.unitsPlaced) of \(model.targetTotal) garden seeds placed."
+            } else if model.isRepeatedAddition {
+                change = "\(model.jumps) \(model.jumps == 1 ? "jump" : "jumps") \(model.jumps == 1 ? "makes" : "make") a total of \(model.currentJumpTotal)."
+            } else {
+                change = "\(model.cuts.count) of \(model.groupCount - 1) fraction cuts placed."
+            }
+        case .numberTrail(let model):
+            if model.isEstimate {
+                if let guess = model.lockedEstimate {
+                    change = "Estimate \(guess) locked after the brief flash."
+                } else if model.flashObserved {
+                    change = "Fireflies flashed. Estimate dial is on \(model.dialValue)."
+                } else {
+                    change = "Watch the brief firefly flash before you guess."
+                }
+            } else {
+                change = "\(model.jumps) of \(model.requiredJumps) jumps placed. Marker at \(model.markerNumber)."
+            }
+        case .reasoningStudio(let model):
+            switch model.task {
+            case .strategy:
+                if let strategy = model.chosenStrategy {
+                    change = "\(model.strategySteps) \(model.strategySteps == 1 ? "step" : "steps") using \(strategy == .countOn ? "counting on" : "counter tiles")."
+                } else {
+                    change = "Choose a strategy and show the steps."
+                }
+            case .differentWays:
+                change = "\(model.solutions.count) of 2 pairs saved. Draft: \(model.draftLeft) + \(model.draftRight)."
+            case .multiStep:
+                if let result = model.observedFinal {
+                    change = "Both changes checked. Final number \(result)."
+                } else if let first = model.observedIntermediate {
+                    change = "First step checked at \(first). Number marker \(model.workingValue)."
+                } else {
+                    change = "Number marker now \(model.workingValue)."
+                }
+            }
+        case .differenceBridge(let model):
+            if model.isDifference {
+                let pairWord = model.matchedPairs == 1 ? "pair" : "pairs"
+                change = "\(model.matchedPairs) \(pairWord) matched. \(model.collectedLeftovers) leftovers collected."
+            } else {
+                change = "\(model.joinedCounters) counters added, then \(model.returnedCounters) taken back."
+            }
+        case .routeExplorer(let model):
+            change = "Rover moved \(model.movesTaken) \(model.movesTaken == 1 ? "step" : "steps") on the grid."
         }
         // Describe only the child's visible edit; the lever still checks the answer.
         instruction.text = change + " Pull Pip's lever when you're ready."
@@ -1546,7 +2092,15 @@ import LearningCore
         if let runtime = state.runtime, !runtime.completed, !state.workshop {
             instruction.text = "Finish Pip's work order before opening his workshop."; return
         }
-        let examples = workshopGroups[index]
+        let examples = MathWorkshopCatalog.choices(
+            at: index,
+            profile: state.profile,
+            graph: state.graph
+        )
+        guard !examples.isEmpty else {
+            instruction.text = "Pip has no new ready challenge at this station. Try another machine."
+            return
+        }
         // Try the next unused authored example; the learning layer owns repetition policy.
         for offset in 0..<examples.count {
             let next = (workshopIndices[index] + offset) % examples.count

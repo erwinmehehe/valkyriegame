@@ -284,10 +284,10 @@ public struct MathQuestionVariant: Equatable, Sendable {
 /// Parameterized production bank for the native manipulatives that can currently
 /// observe a child's mathematical action.
 ///
-/// This expands variety without pretending unsupported skills are assessed. Skills
-/// such as place value, patterns, geometry, measurement, strategy choice, equal
-/// groups and fractions stay visible in MathCurriculumMatrix but do not receive
-/// mastery evidence until a native mechanic can actually observe the required act.
+/// This expands variety without pretending unsupported skills are assessed. Place
+/// value is now observed by its dedicated factory; patterns, geometry, measurement,
+/// strategy choice, equal groups and fractions stay visible in MathCurriculumMatrix
+/// but do not receive mastery evidence until a native mechanic can observe the act.
 public enum MathProductionQuestionBank {
     public static let variants: [MathQuestionVariant] = {
         var result: [MathQuestionVariant] = []
@@ -865,6 +865,855 @@ public enum MathProductionQuestionBank {
                 )
                 comparisonReasoningCount += 1
                 if comparisonReasoningCount == 30 { break outer }
+            }
+        }
+
+        // Place Value Factory opens the prerequisite-safe bridge from teen numbers
+        // into two-digit place value without pretending unsupported geometry or
+        // measurement skills are assessed.
+        for target in 11...20 {
+            add(
+                "prod-count20-\(target)",
+                skill: MathSkills.countTo20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: 0,
+                target: target,
+                prompt: "Build \(target) with tens and ones.",
+                context: "prod.countTo20",
+                difficulty: 2,
+                purpose: .practice
+            )
+        }
+
+        for smaller in 10...19 {
+            let larger = smaller + 1
+            add(
+                "prod-order20-left-\(smaller)-\(larger)",
+                skill: MathSkills.numberOrder20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .pictorial,
+                operation: .comparison,
+                initial: smaller,
+                target: larger,
+                prompt: "Which number comes first from least to greatest: \(smaller) or \(larger)?",
+                context: "prod.numberOrder20",
+                difficulty: 2,
+                purpose: .representationTransfer
+            )
+            add(
+                "prod-order20-right-\(larger)-\(smaller)",
+                skill: MathSkills.numberOrder20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .pictorial,
+                operation: .comparison,
+                initial: larger,
+                target: smaller,
+                prompt: "Which number comes first from least to greatest: \(larger) or \(smaller)?",
+                context: "prod.numberOrder20",
+                difficulty: 2,
+                purpose: .review
+            )
+        }
+
+        for base in 10...19 {
+            add(
+                "prod-one-more-\(base)",
+                skill: MathSkills.oneMoreLess20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: base,
+                target: base + 1,
+                prompt: "Build one more than \(base).",
+                context: "prod.oneMore20",
+                difficulty: 2,
+                purpose: .practice
+            )
+        }
+        for base in 11...20 {
+            add(
+                "prod-one-less-\(base)",
+                skill: MathSkills.oneMoreLess20,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: base,
+                target: base - 1,
+                prompt: "Build one less than \(base).",
+                context: "prod.oneLess20",
+                difficulty: 2,
+                purpose: .review
+            )
+        }
+
+        for tens in 1...9 {
+            let target = tens * 10
+            add(
+                "prod-group-ten-\(target)",
+                skill: MathSkills.groupTen,
+                mechanic: MathMechanicID.placeValueFactory,
+                representation: .concrete,
+                operation: .quantityMatching,
+                initial: 0,
+                target: target,
+                prompt: "Trade the ones for tens. Build \(target) as groups of ten.",
+                context: "prod.groupTen",
+                difficulty: tens <= 3 ? 2 : 3,
+                purpose: .instruction
+            )
+        }
+
+        for tens in 1...9 {
+            for ones in [0, 2, 4, 6, 8] {
+                let number = tens * 10 + ones
+                add(
+                    "prod-place-value-\(number)",
+                    skill: MathSkills.placeValue,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .concrete,
+                    operation: .quantityMatching,
+                    initial: 0,
+                    target: number,
+                    prompt: "Build \(number) using the correct tens and ones.",
+                    context: "prod.placeValue",
+                    difficulty: number < 50 ? 2 : 3,
+                    purpose: .instruction
+                )
+            }
+        }
+
+        for tens in 1...9 {
+            for ones in [1, 3, 5, 7, 9] {
+                let number = tens * 10 + ones
+                add(
+                    "prod-build-two-digit-\(number)",
+                    skill: MathSkills.buildTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .concrete,
+                    operation: .quantityMatching,
+                    initial: 0,
+                    target: number,
+                    prompt: "Make \(number) with tens rods and ones cubes.",
+                    context: "prod.buildTwoDigit",
+                    difficulty: number < 50 ? 2 : 3,
+                    purpose: .practice
+                )
+            }
+        }
+
+        func numberWords(_ number: Int) -> String {
+            let ones = [
+                0: "zero", 1: "one", 2: "two", 3: "three", 4: "four",
+                5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine",
+                10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen",
+                14: "fourteen", 15: "fifteen", 16: "sixteen",
+                17: "seventeen", 18: "eighteen", 19: "nineteen"
+            ]
+            if let word = ones[number] { return word }
+            let tensWords = [
+                2: "twenty", 3: "thirty", 4: "forty", 5: "fifty",
+                6: "sixty", 7: "seventy", 8: "eighty", 9: "ninety"
+            ]
+            let tens = number / 10
+            let remainder = number % 10
+            guard let tensWord = tensWords[tens] else { return "\(number)" }
+            guard remainder > 0, let onesWord = ones[remainder] else { return tensWord }
+            return "\(tensWord)-\(onesWord)"
+        }
+
+        for tens in 1...9 {
+            for ones in [0, 4, 7, 9] {
+                let number = tens * 10 + ones
+                add(
+                    "prod-read-two-digit-\(number)",
+                    skill: MathSkills.readTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .symbolic,
+                    operation: .quantityMatching,
+                    initial: 0,
+                    target: number,
+                    prompt: "Build the number named \(numberWords(number)).",
+                    context: "prod.readTwoDigit",
+                    difficulty: number < 50 ? 3 : 4,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        for tens in 2...9 {
+            for ones in [1, 4, 7, 9] {
+                let a = tens * 10 + ones
+                let b = (tens - 1) * 10 + (9 - ones)
+                let left = tens.isMultiple(of: 2) ? a : b
+                let right = tens.isMultiple(of: 2) ? b : a
+                add(
+                    "prod-compare-two-digit-\(left)-\(right)",
+                    skill: MathSkills.compareTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .reasoning,
+                    operation: .comparison,
+                    initial: left,
+                    target: right,
+                    prompt: "Compare \(left) and \(right). Which number is greater?",
+                    context: "prod.compareTwoDigit",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 1
+                )
+            }
+        }
+
+        for tens in 2...8 {
+            for ones in [2, 5, 8, 9] {
+                let a = tens * 10 + ones
+                let b = (tens + 1) * 10 + max(0, 9 - ones)
+                let left = ones.isMultiple(of: 2) ? a : b
+                let right = ones.isMultiple(of: 2) ? b : a
+                add(
+                    "prod-order-two-digit-\(left)-\(right)",
+                    skill: MathSkills.orderTwoDigit,
+                    mechanic: MathMechanicID.placeValueFactory,
+                    representation: .reasoning,
+                    operation: .comparison,
+                    initial: left,
+                    target: right,
+                    prompt: "Put these in least-to-greatest order. Which comes first: \(left) or \(right)?",
+                    context: "prod.orderTwoDigit",
+                    difficulty: 4,
+                    purpose: .reasoning,
+                    challengeDepth: 1
+                )
+            }
+        }
+
+
+        // Pattern Loom: actual sequence continuation, internal gap solving, and
+        // six-tile independent construction of repeating units.
+        for family in PatternLoomFamily.allCases {
+            let extensionSkill: SkillID
+            switch family {
+            case .ab: extensionSkill = MathSkills.patternAB
+            case .aab: extensionSkill = MathSkills.patternAAB
+            case .abc: extensionSkill = MathSkills.patternABC
+            }
+
+            for shift in 0...2 {
+                for prefixLength in 3...7 {
+                    add(
+                        "prod-loom-extend-\(family.rawValue)-\(shift)-\(prefixLength)",
+                        skill: extensionSkill,
+                        mechanic: MathMechanicID.patternLoom,
+                        representation: .pictorial,
+                        operation: .pattern,
+                        initial: shift,
+                        target: prefixLength,
+                        prompt: "Continue the \(family.rawValue.uppercased()) pattern. Which shape comes next?",
+                        context: "loom.extend.\(family.rawValue)",
+                        difficulty: family == .ab ? 1 : 2,
+                        purpose: .practice
+                    )
+                }
+                for gapIndex in 2...5 {
+                    add(
+                        "prod-loom-missing-\(family.rawValue)-\(shift)-\(gapIndex)",
+                        skill: MathSkills.patternMissing,
+                        mechanic: MathMechanicID.patternLoom,
+                        representation: .pictorial,
+                        operation: .pattern,
+                        initial: shift,
+                        target: gapIndex,
+                        prompt: "One shape is missing from this repeating pattern. Repair the gap.",
+                        context: "loom.missing.\(family.rawValue)",
+                        difficulty: family == .ab ? 2 : 3,
+                        purpose: .representationTransfer
+                    )
+                }
+            }
+
+            add(
+                "prod-loom-create-\(family.rawValue)",
+                skill: MathSkills.patternCreate,
+                mechanic: MathMechanicID.patternLoom,
+                representation: .concrete,
+                operation: .pattern,
+                initial: 0,
+                target: 6,
+                prompt: "Make your own \(family.rawValue.uppercased()) pattern using six shapes.",
+                context: "loom.create.\(family.rawValue)",
+                difficulty: family == .ab ? 2 : 3,
+                purpose: .reasoning
+            )
+        }
+
+
+        // Shape Forge measures actual shape choices, turns, piece placement,
+        // and mirror reconstruction. Each task has its own observable action contract.
+        for shape in ForgeShape.allCases {
+            for shift in 0...2 {
+                add(
+                    "prod-forge-recognize-\(shape.name)-\(shift)",
+                    skill: MathSkills.recognizeShapes,
+                    mechanic: MathMechanicID.shapeForge,
+                    representation: .pictorial,
+                    operation: .shape,
+                    initial: shift,
+                    target: shape.rawValue,
+                    prompt: "Look at the three shapes. Find the \(shape.name).",
+                    context: "forge.recognize",
+                    difficulty: 1,
+                    purpose: .practice
+                )
+                add(
+                    "prod-forge-attributes-\(shape.name)-\(shift)",
+                    skill: MathSkills.shapeAttributes,
+                    mechanic: MathMechanicID.shapeForge,
+                    representation: .pictorial,
+                    operation: .shape,
+                    initial: shift,
+                    target: shape.rawValue,
+                    prompt: "Count the corners of the \(shape.name). How many?",
+                    context: "forge.attributes",
+                    difficulty: 2,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        for initial in 0...3 {
+            for target in 0...3 where initial != target {
+                add(
+                    "prod-forge-rotate-\(initial)-\(target)",
+                    skill: MathSkills.rotateShapes,
+                    mechanic: MathMechanicID.shapeForge,
+                    representation: .reasoning,
+                    operation: .shape,
+                    initial: initial,
+                    target: target,
+                    prompt: "Turn the angled triangle until it matches the glowing outline.",
+                    context: "forge.rotate",
+                    difficulty: target == ((initial + 1) % 4) ? 2 : 3,
+                    purpose: .reasoning
+                )
+            }
+        }
+
+
+        // Two complementary right triangles must physically fill the square,
+        // with the seam orientation visible. Neither a single piece nor a
+        // multiple-choice answer earns composition evidence.
+        for quarterTurn in 0...3 {
+            add(
+                "prod-forge-compose-square-\(quarterTurn)",
+                skill: MathSkills.composeShapes,
+                mechanic: MathMechanicID.shapeForge,
+                representation: .concrete,
+                operation: .shape,
+                initial: 0,
+                target: quarterTurn,
+                prompt: "Place two right triangles so they fill the square along its gold seam.",
+                context: "forge.compose",
+                difficulty: 3,
+                purpose: .practice
+            )
+        }
+
+        // Twelve distinct three-cell mirror layouts. The left-hand pattern
+        // comes from the seed; the child must complete every reflected cell.
+        for seed in 0...11 {
+            add(
+                "prod-forge-symmetry-\(seed)",
+                skill: MathSkills.symmetry,
+                mechanic: MathMechanicID.shapeForge,
+                representation: .pictorial,
+                operation: .shape,
+                initial: seed,
+                target: 3,
+                prompt: "Complete the right side so it mirrors all three shapes on the left.",
+                context: "forge.symmetry",
+                difficulty: 3,
+                purpose: .representationTransfer
+            )
+        }
+
+
+        // Measurement Workshop: children make an explicit, observable decision
+        // after comparing drawn lengths, equal-size mass units, or equal-size
+        // capacity scoops. Every pair includes both directions and equality.
+        for task in [MeasurementWorkshopTask.length, .weight, .capacity] {
+            let skill: SkillID
+            let prompt: String
+            switch task {
+            case .length:
+                skill = MathSkills.compareLength
+                prompt = "Which ribbon is longer, or are both the same length?"
+            case .weight:
+                skill = MathSkills.compareWeight
+                prompt = "Which tray needs more equal-weight stones, or do they balance?"
+            case .capacity:
+                skill = MathSkills.compareCapacity
+                prompt = "Which container holds more equal-size cups, or are they equal?"
+            case .units:
+                continue
+            }
+
+            for left in 1...8 {
+                for right in 1...8 {
+                    add(
+                        "prod-measure-\(task.rawValue)-\(left)-\(right)",
+                        skill: skill,
+                        mechanic: MathMechanicID.measurementWorkshop,
+                        representation: .pictorial,
+                        operation: .measurement,
+                        initial: left,
+                        target: right,
+                        prompt: prompt,
+                        context: "measure.\(task.rawValue)",
+                        difficulty: max(left, right) <= 4 ? 1 : 2,
+                        purpose: .practice
+                    )
+                }
+            }
+        }
+
+        // Nonstandard measurement: place truly equal-sized units end-to-end.
+        // The strip must be completely filled, not merely matched to a number.
+        // Blocks and tiles are different visible concrete representations.
+        for style in ["blocks", "tiles"] {
+            for length in 2...10 {
+                add(
+                    "prod-measure-units-\(style)-\(length)",
+                    skill: MathSkills.nonstandardMeasure,
+                    mechanic: MathMechanicID.measurementWorkshop,
+                    representation: .concrete,
+                    operation: .measurement,
+                    initial: 0,
+                    target: length,
+                    prompt: "Measure the bridge using equal \(style). Place them end-to-end with no gaps.",
+                    context: "measure.units.\(style)",
+                    difficulty: length <= 5 ? 2 : 3,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+
+        // Data Board sorting: 96 authentic five-object placements, using
+        // visible color or shape attributes rather than answer-option labels.
+        for attribute in DataSortAttribute.allCases {
+            for seed in 1...48 {
+                add(
+                    "prod-data-sort-\(attribute.rawValue)-\(seed)",
+                    skill: MathSkills.classifyObjects,
+                    mechanic: MathMechanicID.dataBoard,
+                    representation: .concrete,
+                    operation: .data,
+                    initial: seed,
+                    target: 5,
+                    prompt: attribute == .color
+                        ? "Sort five magical objects by their COLORS. Put each in the matching bin."
+                        : "Sort five magical objects by their SHAPES. Put each in the matching bin.",
+                    context: "data.sort.\(attribute.rawValue)",
+                    difficulty: attribute == .color ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Data Board graphs: all 64 unique 1...4 count triples, with three
+        // visible source groups; children physically build one picture per
+        // source object into the corresponding graph column.
+        for seed in 0...63 {
+            add(
+                "prod-data-graph-\(seed)",
+                skill: MathSkills.pictureGraph,
+                mechanic: MathMechanicID.dataBoard,
+                representation: .pictorial,
+                operation: .data,
+                initial: seed,
+                target: 3,
+                prompt: "Count the objects in each group. Build a three-column picture graph. One picture means one object.",
+                context: "data.graph.pictures",
+                difficulty: seed < 16 ? 2 : 3,
+                purpose: .representationTransfer
+            )
+        }
+
+
+        // Clock & Market: five distinct concepts, including three newly
+        // declared clock-reading skills (NOT aliases for daypart sequencing).
+        // Each clock challenge requires an actual hand adjustment.
+        for hour in 1...12 {
+            add(
+                "prod-clock-hour-\(hour)",
+                skill: MathSkills.clockHour,
+                mechanic: MathMechanicID.clockMarket,
+                representation: .concrete,
+                operation: .clockMarket,
+                initial: hour,
+                target: 0,
+                prompt: "Turn the clock hands to \(hour) o'clock.",
+                context: "clock.hour",
+                difficulty: 1,
+                purpose: .practice
+            )
+            for minute in [0, 30] {
+                add(
+                    "prod-clock-half-\(hour)-\(minute)",
+                    skill: MathSkills.clockHalfHour,
+                    mechanic: MathMechanicID.clockMarket,
+                    representation: .pictorial,
+                    operation: .clockMarket,
+                    initial: hour,
+                    target: minute,
+                    prompt: "Set the hour and minute hands to \(hour):\(minute == 0 ? "00" : "30").",
+                    context: "clock.halfHour",
+                    difficulty: 2,
+                    purpose: .representationTransfer
+                )
+            }
+            for five in 0..<12 {
+                let minute = five * 5
+                let minuteText = minute < 10 ? "0\(minute)" : "\(minute)"
+                add(
+                    "prod-clock-five-\(hour)-\(minute)",
+                    skill: MathSkills.clockFiveMinutes,
+                    mechanic: MathMechanicID.clockMarket,
+                    representation: .pictorial,
+                    operation: .clockMarket,
+                    initial: hour,
+                    target: minute,
+                    prompt: "Move both hands to \(hour):\(minuteText).",
+                    context: "clock.fiveMinutes",
+                    difficulty: 3,
+                    purpose: .reasoning
+                )
+            }
+        }
+
+        // Four pictured daily events need four deliberate daypart assignments.
+        // Every one of the 24 card orders is observably different.
+        for permutation in 0..<24 {
+            add(
+                "prod-clock-dayparts-\(permutation)",
+                skill: MathSkills.timeDayparts,
+                mechanic: MathMechanicID.clockMarket,
+                representation: .story,
+                operation: .clockMarket,
+                initial: permutation,
+                target: 4,
+                prompt: "Sort wake-up, lunch, dinner and bedtime into the right part of the day.",
+                context: "market.routines",
+                difficulty: 1,
+                purpose: .practice
+            )
+        }
+
+        // Philippine peso teaching tokens: ₱1, ₱5, ₱10 and ₱20. Coin
+        // illustrations are denomination markers, not official NGC replicas.
+        // Each grade stage has a distinct response context and allowed coins.
+        for (stage, maximum) in [
+            (ClockMarketStage.k2, 10),
+            (.grade1, 30),
+            (.grade2, 60)
+        ] {
+            for pesos in 1...maximum {
+                add(
+                    "prod-market-\(stage.rawValue)-\(pesos)",
+                    skill: MathSkills.coinValues,
+                    mechanic: MathMechanicID.clockMarket,
+                    representation: .concrete,
+                    operation: .clockMarket,
+                    initial: 0,
+                    target: pesos,
+                    prompt: "Choose real peso denominations to pay exactly ₱\(pesos).",
+                    context: "market.money.\(stage.rawValue)",
+                    difficulty: stage == .k2 ? 1 : (stage == .grade1 ? 2 : 3),
+                    purpose: .practice
+                )
+            }
+        }
+
+
+        // Grouping Garden: physical seeds must populate each recipient group.
+        // One unique objective for each count-of-groups x size-of-group pair.
+        for groups in 2...5 {
+            for size in 1...6 {
+                add(
+                    "prod-garden-groups-\(groups)-\(size)",
+                    skill: MathSkills.equalGroups,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: groups == 2 ? .story : .concrete,
+                    operation: .grouping,
+                    initial: groups,
+                    target: size,
+                    prompt: "Pip has \(groups) little garden beds. Grow \(size) seeds in each bed so every friend has an equal garden.",
+                    context: "garden.equalGroups",
+                    difficulty: size <= 3 ? 2 : 3,
+                    purpose: groups == 2 ? .storyTransfer : .practice
+                )
+            }
+            for size in 2...6 {
+                add(
+                    "prod-garden-jumps-\(groups)-\(size)",
+                    skill: MathSkills.repeatedAddition,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .pictorial,
+                    operation: .grouping,
+                    initial: groups,
+                    target: size,
+                    prompt: "Make \(groups) jumps of \(size) on the number line. Find the total.",
+                    context: "garden.repeatedAddition",
+                    difficulty: groups <= 3 ? 3 : 4,
+                    purpose: .representationTransfer
+                )
+            }
+            for size in 1...5 {
+                add(
+                    "prod-garden-sharing-\(groups)-\(size)",
+                    skill: MathSkills.equalSharing,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .story,
+                    operation: .grouping,
+                    initial: groups,
+                    target: size,
+                    prompt: "\(groups) friends found \(groups * size) magic seeds. Plant them so every friend takes home an equal share.",
+                    context: "garden.equalSharing",
+                    difficulty: groups * size <= 10 ? 2 : 3,
+                    purpose: .storyTransfer
+                )
+            }
+        }
+
+        // Fractions: children move a dividing line to actual cell boundaries.
+        // Placing a label, watching the drawing or choosing a number does not
+        // count as physically making equal halves or quarters.
+        for direction in [GroupingGardenOrientation.row, .column] {
+            for unitCells in [4, 6, 8, 10, 12] {
+                add(
+                    "prod-garden-halves-\(direction.rawValue)-\(unitCells)",
+                    skill: MathSkills.halves,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .concrete,
+                    operation: .grouping,
+                    initial: unitCells,
+                    target: 2,
+                    prompt: "Cut the full shape into two equal parts.",
+                    context: "garden.halves.\(direction.rawValue)",
+                    difficulty: unitCells <= 6 ? 2 : 3,
+                    purpose: .representationTransfer
+                )
+            }
+            for unitCells in [4, 8, 12] {
+                add(
+                    "prod-garden-quarters-\(direction.rawValue)-\(unitCells)",
+                    skill: MathSkills.quarters,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .concrete,
+                    operation: .grouping,
+                    initial: unitCells,
+                    target: 4,
+                    prompt: "Use three cuts to make four equal parts.",
+                    context: "garden.quarters.\(direction.rawValue)",
+                    difficulty: unitCells == 4 ? 3 : 4,
+                    purpose: .reasoning
+                )
+            }
+        }
+
+
+        // Reasoning Studio: strategy selection is followed by independently
+        // placed count-on jumps or counters, never just a correct button.
+        for start in 2...8 {
+            for addend in 2...6 {
+                add(
+                    "prod-studio-strategy-\(start)-\(addend)",
+                    skill: MathSkills.chooseStrategy,
+                    mechanic: MathMechanicID.reasoningStudio,
+                    representation: .concrete,
+                    operation: .reasoningStudio,
+                    initial: start,
+                    target: addend,
+                    prompt: "Start at \(start). Add \(addend) more. Choose counting on or building counters, then show every step.",
+                    context: "studio.strategy",
+                    difficulty: start + addend <= 10 ? 2 : 3,
+                    purpose: .reasoning
+                )
+            }
+        }
+
+        // Two child-constructed number bonds must sum to the same target and
+        // use genuinely different unordered pairs (a swapped pair is not new).
+        for total in 5...12 {
+            add(
+                "prod-studio-two-ways-\(total)",
+                skill: MathSkills.multipleSolutions,
+                mechanic: MathMechanicID.reasoningStudio,
+                representation: .concrete,
+                operation: .reasoningStudio,
+                initial: total,
+                target: 2,
+                prompt: "Build TWO different pairs of positive number piles that each make \(total).",
+                context: "studio.ways",
+                difficulty: total <= 8 ? 2 : 3,
+                purpose: .reasoning
+            )
+        }
+
+        // Two independently checked changes. Matching a final total alone
+        // is insufficient: a wrong first step must remain incorrect.
+        for start in 3...8 {
+            for added in 1...4 {
+                for changed in 1...4 {
+                    for operation in ["addSubtract", "addAdd"] {
+                        let finalNumber = start + added + (operation == "addSubtract" ? -changed : changed)
+                        add(
+                            "prod-studio-steps-\(operation)-\(start)-\(added)-\(changed)",
+                            skill: MathSkills.multiStep,
+                            mechanic: MathMechanicID.reasoningStudio,
+                            representation: .story,
+                            operation: .reasoningStudio,
+                            initial: start,
+                            target: added * 10 + changed,
+                            prompt: "You have \(start) crystals. Find \(added) more, then \(operation == "addSubtract" ? "give away" : "find") \(changed). Show the number after EACH change.",
+                            context: "studio.steps.\(operation)",
+                            difficulty: finalNumber <= 10 ? 3 : 4,
+                            purpose: .storyTransfer
+                        )
+                    }
+                }
+            }
+        }
+
+
+        // Number Trail: a brief collection flash prevents the learner from
+        // slowly counting a permanently displayed pile during estimation.
+        for arrangement in 0...5 {
+            for total in 2...10 {
+                add(
+                    "prod-trail-estimate-\(arrangement)-\(total)",
+                    skill: MathSkills.estimate10,
+                    mechanic: MathMechanicID.numberTrail,
+                    representation: .pictorial,
+                    operation: .numberTrail,
+                    initial: arrangement,
+                    target: total,
+                    prompt: "Look quickly at the fireflies. About how many did you see?",
+                    context: "trail.estimate",
+                    difficulty: total <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Counting-on: child-controlled one-unit number-line jumps from a
+        // nonzero start. No passive strategy button is allowed to earn this
+        // prerequisite, which unlocks later add-within-20 practice.
+        for start in 1...9 {
+            for jumps in 1...min(4, 10 - start) {
+                add(
+                    "prod-trail-count-on-\(start)-\(jumps)",
+                    skill: MathSkills.countOn10,
+                    mechanic: MathMechanicID.numberTrail,
+                    representation: .concrete,
+                    operation: .numberTrail,
+                    initial: start,
+                    target: jumps,
+                    prompt: "Start at \(start). Count ON \(jumps) more using one jump at a time.",
+                    context: "trail.countOn",
+                    difficulty: start + jumps <= 6 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+
+        // Difference Bridge: each left/right display must be matched into
+        // physical pairs before the child collects the unmatched quantity.
+        // 90 ordered comparison pairs (1...10 except equal quantities).
+        for left in 1...10 {
+            for right in 1...10 where left != right {
+                add(
+                    "prod-difference-match-\(left)-\(right)",
+                    skill: MathSkills.findDifference10,
+                    mechanic: MathMechanicID.differenceBridge,
+                    representation: .concrete,
+                    operation: .differenceBridge,
+                    initial: left,
+                    target: right,
+                    prompt: "Match \(left) and \(right) objects in pairs. Count how many are left over.",
+                    context: "difference.match",
+                    difficulty: max(left, right) <= 5 ? 1 : 2,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Inverse facts: the child physically adds the missing part to a
+        // starting set, then removes that SAME number to reverse the fact.
+        // 45 authentic part/total combinations up to 10.
+        for start in 1...9 {
+            for total in (start + 1)...10 {
+                add(
+                    "prod-difference-inverse-\(start)-\(total)",
+                    skill: MathSkills.inverseFacts10,
+                    mechanic: MathMechanicID.differenceBridge,
+                    representation: .concrete,
+                    operation: .differenceBridge,
+                    initial: start,
+                    target: total,
+                    prompt: "Start with \(start) counters. Make \(total), then take away the added counters to return to \(start).",
+                    context: "difference.inverse",
+                    difficulty: total <= 5 ? 2 : 3,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
+        // Position vocabulary: every ordered pair of neighbouring cells in
+        // the 3x3 map requires a deliberate rover move. There are 24.
+        for start in 0..<9 {
+            for finish in 0..<9 where RouteExplorerModel.distance(start, finish) == 1 {
+                let cue: String
+                if finish == start - 3 { cue = "north (up)" }
+                else if finish == start + 3 { cue = "south (down)" }
+                else if finish == start - 1 { cue = "west (left)" }
+                else { cue = "east (right)" }
+                add(
+                    "prod-route-position-\(start)-\(finish)",
+                    skill: MathSkills.positionalLanguage,
+                    mechanic: MathMechanicID.routeExplorer,
+                    representation: .pictorial,
+                    operation: .routeExplorer,
+                    initial: start,
+                    target: finish,
+                    prompt: "Move the rover one square \(cue) to the star.",
+                    context: "route.position",
+                    difficulty: 1,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Map routes: at least two physical adjacent moves, around a blocked
+        // tile, to reach the star. Every start/finish with Manhattan distance
+        // >= 2 is a unique route problem (48 directed pairs on a 3x3 map).
+        for start in 0..<9 {
+            for finish in 0..<9 where RouteExplorerModel.distance(start, finish) >= 2 {
+                add(
+                    "prod-route-map-\(start)-\(finish)",
+                    skill: MathSkills.mapRoute,
+                    mechanic: MathMechanicID.routeExplorer,
+                    representation: .concrete,
+                    operation: .routeExplorer,
+                    initial: start,
+                    target: finish,
+                    prompt: "Guide Pip from the rover to the golden star. Move one square at a time and avoid the rock.",
+                    context: "route.map",
+                    difficulty: RouteExplorerModel.distance(start, finish) >= 3 ? 3 : 2,
+                    purpose: .reasoning
+                )
             }
         }
 

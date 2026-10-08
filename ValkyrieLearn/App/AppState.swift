@@ -369,6 +369,212 @@ import LearningCore
     func addCrystal() { beginInteraction(); _ = adventure.increment(at: Date()); persist() }
     func removeCrystal() { beginInteraction(); _ = adventure.decrement(at: Date()); persist() }
     func chooseComparison(_ choice: ComparisonChoice) { beginInteraction(); adventure.chooseComparison(choice); persist() }
+    func adjustPlaceValue(tensDelta: Int = 0, onesDelta: Int = 0) {
+        beginInteraction()
+        _ = adventure.adjustPlaceValue(tensDelta: tensDelta, onesDelta: onesDelta)
+        persist()
+    }
+    func choosePatternSymbol(_ symbol: Int) {
+        beginInteraction()
+        if adventure.choosePatternSymbol(symbol) { persist() }
+    }
+    func undoPatternSymbol() {
+        beginInteraction()
+        if adventure.undoPatternSymbol() { persist() }
+    }
+    func chooseShapeOption(_ option: Int) {
+        beginInteraction()
+        if adventure.chooseShapeOption(option) { persist() }
+    }
+    func rotateShape(_ delta: Int) {
+        beginInteraction()
+        if adventure.rotateShape(delta) { persist() }
+    }
+    func placeShapeHalf(_ quarterTurns: Int) {
+        beginInteraction()
+        if adventure.placeShapeHalf(quarterTurns) { persist() }
+    }
+    func undoShapeHalf() {
+        beginInteraction()
+        if adventure.undoShapeHalf() { persist() }
+    }
+    func cycleMirrorCell(_ row: Int) {
+        beginInteraction()
+        if adventure.cycleMirrorCell(row) { persist() }
+    }
+    func placeMeasureUnit() {
+        beginInteraction()
+        if adventure.placeMeasureUnit() { persist() }
+    }
+    func removeMeasureUnit() {
+        beginInteraction()
+        if adventure.removeMeasureUnit() { persist() }
+    }
+    func sortDataObject(into bin: Int) {
+        beginInteraction()
+        if adventure.sortDataObject(into: bin) { persist() }
+    }
+    func undoDataSort() {
+        beginInteraction()
+        if adventure.undoDataSort() { persist() }
+    }
+    func addPicture(to column: Int) {
+        beginInteraction()
+        if adventure.addPicture(to: column) { persist() }
+    }
+    func undoPicture() {
+        beginInteraction()
+        if adventure.undoPicture() { persist() }
+    }
+    func adjustClockHour(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustClockHour(delta) { persist() }
+    }
+    func adjustClockMinute(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustClockMinute(delta) { persist() }
+    }
+    func placeDailyRoutine(_ daypart: ClockMarketDaypart) {
+        beginInteraction()
+        if adventure.placeDailyRoutine(daypart) { persist() }
+    }
+    func undoDailyRoutine() {
+        beginInteraction()
+        if adventure.undoDailyRoutine() { persist() }
+    }
+    func addPesoCoin(_ pesos: Int) {
+        beginInteraction()
+        if adventure.addPesoCoin(pesos) { persist() }
+    }
+    func undoPesoCoin() {
+        beginInteraction()
+        if adventure.undoPesoCoin() { persist() }
+    }
+    func placeGardenSeed(in basket: Int) {
+        beginInteraction()
+        if adventure.placeGardenSeed(in: basket) { persist() }
+    }
+    func undoGardenSeed() {
+        beginInteraction()
+        if adventure.undoGardenSeed() { persist() }
+    }
+    func addGardenJump() {
+        beginInteraction()
+        if adventure.addGardenJump() { persist() }
+    }
+    func undoGardenJump() {
+        beginInteraction()
+        if adventure.undoGardenJump() { persist() }
+    }
+    func moveGardenCut(_ delta: Int) {
+        beginInteraction()
+        if adventure.moveGardenCut(delta) { persist() }
+    }
+    func placeGardenCut() {
+        beginInteraction()
+        if adventure.placeGardenCut() { persist() }
+    }
+    func undoGardenCut() {
+        beginInteraction()
+        if adventure.undoGardenCut() { persist() }
+    }
+    func chooseReasoningStrategy(_ choice: ReasoningStudioStrategy) {
+        beginInteraction()
+        if adventure.chooseReasoningStrategy(choice) { persist() }
+    }
+    func addReasoningStep() {
+        beginInteraction()
+        if adventure.addReasoningStep() { persist() }
+    }
+    func undoReasoningStep() {
+        beginInteraction()
+        if adventure.undoReasoningStep() { persist() }
+    }
+    func adjustReasoningPair(left: Bool, delta: Int) {
+        beginInteraction()
+        if adventure.adjustReasoningPair(left: left, delta: delta) { persist() }
+    }
+    func saveReasoningPair() {
+        beginInteraction()
+        if adventure.saveReasoningPair() { persist() }
+    }
+    func undoReasoningPair() {
+        beginInteraction()
+        if adventure.undoReasoningPair() { persist() }
+    }
+    func moveReasoningCounter(_ delta: Int) {
+        beginInteraction()
+        if adventure.moveReasoningCounter(delta) { persist() }
+    }
+    func confirmReasoningStage() {
+        beginInteraction()
+        if adventure.confirmReasoningStage() { persist() }
+    }
+    func resetReasoningStages() {
+        beginInteraction()
+        if adventure.resetReasoningStages() { persist() }
+    }
+    func revealTrailCollection() {
+        beginInteraction()
+        if adventure.revealTrailCollection() { persist() }
+    }
+    func adjustTrailEstimate(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustTrailEstimate(delta) { persist() }
+    }
+    func lockTrailEstimate() {
+        beginInteraction()
+        if adventure.lockTrailEstimate() { persist() }
+    }
+    func addTrailJump() {
+        beginInteraction()
+        if adventure.addTrailJump() { persist() }
+    }
+    func undoTrailJump() {
+        beginInteraction()
+        if adventure.undoTrailJump() { persist() }
+    }
+
+    func matchDifferencePair() {
+        beginInteraction()
+        if adventure.matchDifferencePair() { persist() }
+    }
+    func undoDifferencePair() {
+        beginInteraction()
+        if adventure.undoDifferencePair() { persist() }
+    }
+    func collectDifference() {
+        beginInteraction()
+        if adventure.collectDifference() { persist() }
+    }
+    func undoDifferenceCollection() {
+        beginInteraction()
+        if adventure.undoDifferenceCollection() { persist() }
+    }
+    func addInverseCounter() {
+        beginInteraction()
+        if adventure.addInverseCounter() { persist() }
+    }
+    func undoInverseCounter() {
+        beginInteraction()
+        if adventure.undoInverseCounter() { persist() }
+    }
+    func reverseInverseCounter() {
+        beginInteraction()
+        if adventure.reverseInverseCounter() { persist() }
+    }
+    func undoInverseReverse() {
+        beginInteraction()
+        if adventure.undoInverseReverse() { persist() }
+    }
+    func moveOnMap(_ direction: MapMove) {
+        beginInteraction()
+        if adventure.moveOnMap(direction) { persist() }
+    }
+    func undoMapMove() {
+        beginInteraction()
+        if adventure.undoMapMove() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
