@@ -1435,6 +1435,93 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Grouping Garden: physical seeds must populate each recipient group.
+        // One unique objective for each count-of-groups x size-of-group pair.
+        for groups in 2...5 {
+            for size in 1...6 {
+                add(
+                    "prod-garden-groups-\(groups)-\(size)",
+                    skill: MathSkills.equalGroups,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .concrete,
+                    operation: .grouping,
+                    initial: groups,
+                    target: size,
+                    prompt: "Grow \(groups) groups of \(size) seeds. Place every seed in a basket.",
+                    context: "garden.equalGroups",
+                    difficulty: size <= 3 ? 2 : 3,
+                    purpose: .practice
+                )
+            }
+            for size in 2...6 {
+                add(
+                    "prod-garden-jumps-\(groups)-\(size)",
+                    skill: MathSkills.repeatedAddition,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .pictorial,
+                    operation: .grouping,
+                    initial: groups,
+                    target: size,
+                    prompt: "Make \(groups) jumps of \(size) on the number line. Find the total.",
+                    context: "garden.repeatedAddition",
+                    difficulty: groups <= 3 ? 3 : 4,
+                    purpose: .representationTransfer
+                )
+            }
+            for size in 1...5 {
+                add(
+                    "prod-garden-sharing-\(groups)-\(size)",
+                    skill: MathSkills.equalSharing,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .concrete,
+                    operation: .grouping,
+                    initial: groups,
+                    target: size,
+                    prompt: "Share \(groups * size) seeds equally between \(groups) friends.",
+                    context: "garden.equalSharing",
+                    difficulty: groups * size <= 10 ? 2 : 3,
+                    purpose: .practice
+                )
+            }
+        }
+
+        // Fractions: children move a dividing line to actual cell boundaries.
+        // Placing a label, watching the drawing or choosing a number does not
+        // count as physically making equal halves or quarters.
+        for direction in [GroupingGardenOrientation.row, .column] {
+            for unitCells in [4, 6, 8, 10, 12] {
+                add(
+                    "prod-garden-halves-\(direction.rawValue)-\(unitCells)",
+                    skill: MathSkills.halves,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .concrete,
+                    operation: .grouping,
+                    initial: unitCells,
+                    target: 2,
+                    prompt: "Cut the full shape into two equal parts.",
+                    context: "garden.halves.\(direction.rawValue)",
+                    difficulty: unitCells <= 6 ? 2 : 3,
+                    purpose: .representationTransfer
+                )
+            }
+            for unitCells in [4, 8, 12] {
+                add(
+                    "prod-garden-quarters-\(direction.rawValue)-\(unitCells)",
+                    skill: MathSkills.quarters,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .concrete,
+                    operation: .grouping,
+                    initial: unitCells,
+                    target: 4,
+                    prompt: "Use three cuts to make four equal parts.",
+                    context: "garden.quarters.\(direction.rawValue)",
+                    difficulty: unitCells == 4 ? 3 : 4,
+                    purpose: .reasoning
+                )
+            }
+        }
+
         return result
     }()
 
