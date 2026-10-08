@@ -1260,6 +1260,8 @@ import LearningCore
         case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
         case .reasoningStudio(let model): (mechanic as? ReasoningStudioMechanic)?.render(model)
         case .numberTrail(let model): (mechanic as? NumberTrailMechanic)?.render(model)
+        case .differenceDock(let model): (mechanic as? DifferenceDockMechanic)?.render(model)
+        case .mapQuest(let model): (mechanic as? MapQuestMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1338,7 +1340,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differenceDock, MathMechanicID.mapQuest]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1394,6 +1396,48 @@ import LearningCore
                     let y = CGFloat(33 - row * 54)
                     if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
                         manipulate { self.state.cycleMirrorCell(row) }
+                        return true
+                    }
+                }
+            }
+        case .differenceDock:
+            for (x, action) in [
+                (CGFloat(-183), 0), (CGFloat(-61), 1),
+                (CGFloat(61), 2), (CGFloat(183), 3)
+            ] {
+                if hypot(local.x - x, local.y + 121) <= 38 {
+                    switch action {
+                    case 0: manipulate { self.state.addDockCounter() }
+                    case 1: manipulate { self.state.undoDockCounter() }
+                    case 2: manipulate { self.state.adjustDockAnswer(1) }
+                    default: manipulate { self.state.adjustDockAnswer(-1) }
+                    }
+                    return true
+                }
+            }
+        case .mapQuest(let model):
+            if model.isPosition {
+                for cell in 0...8 where cell != 4 {
+                    let x = CGFloat(cell % 3 - 1) * 154
+                    let y = CGFloat(1 - cell / 3) * 53
+                    if abs(local.x - x) <= 54 && abs(local.y - y) <= 24 {
+                        manipulate { self.state.selectMapPosition(cell) }
+                        return true
+                    }
+                }
+            } else {
+                if hypot(local.x - 230, local.y - 75) <= 35 {
+                    manipulate { self.state.undoMapStep() }
+                    return true
+                }
+                for (x, dx, dy) in [
+                    (CGFloat(-174), -1, 0),
+                    (CGFloat(-58), 0, -1),
+                    (CGFloat(58), 0, 1),
+                    (CGFloat(174), 1, 0)
+                ] {
+                    if hypot(local.x - x, local.y + 120) <= 39 {
+                        manipulate { self.state.stepMap(dx: dx, dy: dy) }
                         return true
                     }
                 }
@@ -1746,6 +1790,19 @@ import LearningCore
         case "trailEstimateLock": manipulate { self.state.lockTrailEstimate() }
         case "trailUndoJump": manipulate { self.state.undoTrailJump() }
         case "trailAddJump": manipulate { self.state.addTrailJump() }
+        case "dockBuild": manipulate { self.state.addDockCounter() }
+        case "dockUnbuild": manipulate { self.state.undoDockCounter() }
+        case "dockAnswerPlus": manipulate { self.state.adjustDockAnswer(1) }
+        case "dockAnswerMinus": manipulate { self.state.adjustDockAnswer(-1) }
+        case "mapLeft": manipulate { self.state.stepMap(dx: -1, dy: 0) }
+        case "mapUp": manipulate { self.state.stepMap(dx: 0, dy: -1) }
+        case "mapDown": manipulate { self.state.stepMap(dx: 0, dy: 1) }
+        case "mapRight": manipulate { self.state.stepMap(dx: 1, dy: 0) }
+        case "mapUndo": manipulate { self.state.undoMapStep() }
+        case let tileName where tileName.hasPrefix("mapCell"):
+            if let cell = Int(tileName.dropFirst("mapCell".count)) {
+                manipulate { self.state.selectMapPosition(cell) }
+            }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1793,7 +1850,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differenceDock, MathMechanicID.mapQuest:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1901,6 +1958,14 @@ import LearningCore
             } else {
                 change = "\(model.cuts.count) of \(model.groupCount - 1) fraction cuts placed."
             }
+        case .differenceDock(let model):
+            change = model.isDifference
+                ? "\(model.constructed) of \(model.smaller) pairs matched; \(model.response) extras counted."
+                : "\(model.constructed) of \(model.larger) counters built; \(model.response) taken away."
+        case .mapQuest(let model):
+            change = model.isPosition
+                ? "Pip was placed \(model.selectedCell == nil ? "nowhere" : "on map tile \(model.currentCell + 1)")."
+                : "Pip moved \(model.routeMoves) \(model.routeMoves == 1 ? "step" : "steps") to tile \(model.currentCell + 1)."
         case .numberTrail(let model):
             if model.isEstimate {
                 if let guess = model.lockedEstimate {
