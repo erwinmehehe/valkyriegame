@@ -65,19 +65,147 @@ public struct CrystalCartModel: Codable, Equatable, Sendable {
 }
 
 
+public struct PlaceValueFactoryModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidQuantities
+    }
+
+    public let encounter: LearningEncounter
+    public private(set) var selectedTens: Int
+    public private(set) var selectedOnes: Int
+    public private(set) var selectedComparison: ComparisonChoice?
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isComparison: Bool { encounter.operation == .comparison }
+    public var targetNumber: Int { encounter.targetQuantity }
+    public var builtNumber: Int { selectedTens * 10 + selectedOnes }
+    public var expectedTens: Int { targetNumber / 10 }
+    public var expectedOnes: Int { targetNumber % 10 }
+    public var leftNumber: Int { encounter.initialQuantity }
+    public var rightNumber: Int { encounter.targetQuantity }
+
+    public var correctChoice: ComparisonChoice {
+        let asksForAscendingFirst =
+            encounter.skillID == MathSkills.numberOrder20
+            || encounter.skillID == MathSkills.orderTwoDigit
+
+        if leftNumber == rightNumber { return .equal }
+
+        if asksForAscendingFirst {
+            return leftNumber < rightNumber ? .left : .right
+        }
+
+        return leftNumber > rightNumber ? .left : .right
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.placeValueFactory else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard [.quantityMatching, .comparison].contains(encounter.operation) else {
+            throw ModelError.unsupportedOperation
+        }
+        guard (0...99).contains(encounter.initialQuantity),
+              (1...99).contains(encounter.targetQuantity) else {
+            throw ModelError.invalidQuantities
+        }
+
+        self.encounter = encounter
+        selectedTens = 0
+        selectedOnes = 0
+        selectedComparison = nil
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func addTen() -> Bool {
+        guard !isComparison, !completed, selectedTens < 9 else { return false }
+        selectedTens += 1
+        return true
+    }
+
+    @discardableResult public mutating func removeTen() -> Bool {
+        guard !isComparison, !completed, selectedTens > 0 else { return false }
+        selectedTens -= 1
+        return true
+    }
+
+    @discardableResult public mutating func addOne() -> Bool {
+        guard !isComparison, !completed, selectedOnes < 9 else { return false }
+        selectedOnes += 1
+        return true
+    }
+
+    @discardableResult public mutating func removeOne() -> Bool {
+        guard !isComparison, !completed, selectedOnes > 0 else { return false }
+        selectedOnes -= 1
+        return true
+    }
+
+    public mutating func choose(_ choice: ComparisonChoice) {
+        guard isComparison, !completed else { return }
+        selectedComparison = choice
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed else { return nil }
+
+        if isComparison {
+            guard let selectedComparison else { return nil }
+            attempts += 1
+            let correct = selectedComparison == correctChoice
+            completed = correct
+            return ManipulativeEvidence.make(
+                encounter: encounter,
+                outcome: correct ? .correct : .incorrect,
+                support: support,
+                attempts: attempts,
+                startedAt: startedAt,
+                at: date
+            )
+        }
+
+        attempts += 1
+        let correct = selectedTens == expectedTens && selectedOnes == expectedOnes
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
     public static let numberBondMachine = "numberBondMachine"
     public static let tenFrameGate = "tenFrameGate"
     public static let missingNumberBridge = "missingNumberBridge"
+    public static let placeValueFactory = "placeValueFactory"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
         balanceScale,
         numberBondMachine,
         tenFrameGate,
-        missingNumberBridge
+        missingNumberBridge,
+        placeValueFactory
     ]
 }
 
@@ -432,6 +560,10 @@ public enum MathManipulativeSupport {
             return [.counting, .quantityMatching, .addition, .missingAddend].contains(encounter.operation)
         case MathMechanicID.missingNumberBridge:
             return encounter.operation == .missingAddend
+        case MathMechanicID.placeValueFactory:
+            return [.quantityMatching, .comparison].contains(encounter.operation)
+                && (1...99).contains(encounter.targetQuantity)
+                && (0...99).contains(encounter.initialQuantity)
         default:
             return false
         }
@@ -452,6 +584,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case numberBond(NumberBondMachineModel)
     case tenFrame(TenFrameModel)
     case missingBridge(MissingNumberBridgeModel)
+    case placeValueFactory(PlaceValueFactoryModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -465,6 +598,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .tenFrame(try TenFrameModel(encounter: encounter, at: date))
         case MathMechanicID.missingNumberBridge:
             self = .missingBridge(try MissingNumberBridgeModel(encounter: encounter, at: date))
+        case MathMechanicID.placeValueFactory:
+            self = .placeValueFactory(try PlaceValueFactoryModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -477,6 +612,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberBond(let model): return model.encounter
         case .tenFrame(let model): return model.encounter
         case .missingBridge(let model): return model.encounter
+        case .placeValueFactory(let model): return model.encounter
         }
     }
 
@@ -487,6 +623,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberBond(let model): return model.completed
         case .tenFrame(let model): return model.completed
         case .missingBridge(let model): return model.completed
+        case .placeValueFactory(let model): return model.completed
         }
     }
 
@@ -497,6 +634,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .numberBond(let model): return model.support
         case .tenFrame(let model): return model.support
         case .missingBridge(let model): return model.support
+        case .placeValueFactory(let model): return model.support
         }
     }
 
@@ -518,7 +656,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale:
+        case .balanceScale, .placeValueFactory:
             return false
         }
     }
@@ -541,7 +679,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale:
+        case .balanceScale, .placeValueFactory:
             return false
         }
     }
@@ -560,9 +698,37 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     }
 
     public mutating func chooseComparison(_ choice: ComparisonChoice) {
-        guard case .balanceScale(var model) = self else { return }
-        model.choose(choice)
-        self = .balanceScale(model)
+        switch self {
+        case .balanceScale(var model):
+            model.choose(choice)
+            self = .balanceScale(model)
+        case .placeValueFactory(var model):
+            model.choose(choice)
+            self = .placeValueFactory(model)
+        default:
+            break
+        }
+    }
+
+    @discardableResult
+    public mutating func adjustPlaceValue(tensDelta: Int = 0, onesDelta: Int = 0) -> Bool {
+        guard case .placeValueFactory(var model) = self else { return false }
+        var changed = false
+
+        if tensDelta > 0 {
+            for _ in 0..<tensDelta { changed = model.addTen() || changed }
+        } else if tensDelta < 0 {
+            for _ in 0..<(-tensDelta) { changed = model.removeTen() || changed }
+        }
+
+        if onesDelta > 0 {
+            for _ in 0..<onesDelta { changed = model.addOne() || changed }
+        } else if onesDelta < 0 {
+            for _ in 0..<(-onesDelta) { changed = model.removeOne() || changed }
+        }
+
+        self = .placeValueFactory(model)
+        return changed
     }
 
     public mutating func apply(_ scaffold: Scaffold) {
@@ -582,6 +748,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .missingBridge(var model):
             model.apply(scaffold)
             self = .missingBridge(model)
+        case .placeValueFactory(var model):
+            model.apply(scaffold)
+            self = .placeValueFactory(model)
         }
     }
 
@@ -606,6 +775,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .missingBridge(var model):
             let evidence = model.submit(at: date)
             self = .missingBridge(model)
+            return evidence
+        case .placeValueFactory(var model):
+            let evidence = model.submit(at: date)
+            self = .placeValueFactory(model)
             return evidence
         }
     }
