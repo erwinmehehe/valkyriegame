@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 1245)
+        XCTAssertEqual(encounters.count, 1329)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -332,7 +332,7 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllSixMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllSevenMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
@@ -380,6 +380,20 @@ final class CrystalCartTests: XCTestCase {
                         tensDelta: model.expectedTens,
                         onesDelta: model.expectedOnes
                     ))
+                }
+            case .patternLoom(let model):
+                if model.isCreation {
+                    let unit: [Int]
+                    switch model.family {
+                    case .ab: unit = [1, 2]
+                    case .aab: unit = [1, 1, 2]
+                    case .abc: unit = [1, 2, 3]
+                    }
+                    for index in 0..<model.slotCount {
+                        XCTAssertTrue(runtime.choosePatternSymbol(unit[index % unit.count]))
+                    }
+                } else {
+                    XCTAssertTrue(runtime.choosePatternSymbol(model.correctSymbol))
                 }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))
