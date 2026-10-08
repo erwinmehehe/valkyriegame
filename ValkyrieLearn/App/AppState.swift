@@ -534,6 +534,47 @@ import LearningCore
         beginInteraction()
         if adventure.undoTrailJump() { persist() }
     }
+
+    func matchDifferencePair() {
+        beginInteraction()
+        if adventure.matchDifferencePair() { persist() }
+    }
+    func undoDifferencePair() {
+        beginInteraction()
+        if adventure.undoDifferencePair() { persist() }
+    }
+    func collectDifference() {
+        beginInteraction()
+        if adventure.collectDifference() { persist() }
+    }
+    func undoDifferenceCollection() {
+        beginInteraction()
+        if adventure.undoDifferenceCollection() { persist() }
+    }
+    func addInverseCounter() {
+        beginInteraction()
+        if adventure.addInverseCounter() { persist() }
+    }
+    func undoInverseCounter() {
+        beginInteraction()
+        if adventure.undoInverseCounter() { persist() }
+    }
+    func reverseInverseCounter() {
+        beginInteraction()
+        if adventure.reverseInverseCounter() { persist() }
+    }
+    func undoInverseReverse() {
+        beginInteraction()
+        if adventure.undoInverseReverse() { persist() }
+    }
+    func moveOnMap(_ direction: MapMove) {
+        beginInteraction()
+        if adventure.moveOnMap(direction) { persist() }
+    }
+    func undoMapMove() {
+        beginInteraction()
+        if adventure.undoMapMove() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
