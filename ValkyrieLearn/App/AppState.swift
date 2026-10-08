@@ -478,6 +478,42 @@ import LearningCore
         beginInteraction()
         if adventure.undoGardenCut() { persist() }
     }
+    func chooseReasoningStrategy(_ choice: ReasoningStudioStrategy) {
+        beginInteraction()
+        if adventure.chooseReasoningStrategy(choice) { persist() }
+    }
+    func addReasoningStep() {
+        beginInteraction()
+        if adventure.addReasoningStep() { persist() }
+    }
+    func undoReasoningStep() {
+        beginInteraction()
+        if adventure.undoReasoningStep() { persist() }
+    }
+    func adjustReasoningPair(left: Bool, delta: Int) {
+        beginInteraction()
+        if adventure.adjustReasoningPair(left: left, delta: delta) { persist() }
+    }
+    func saveReasoningPair() {
+        beginInteraction()
+        if adventure.saveReasoningPair() { persist() }
+    }
+    func undoReasoningPair() {
+        beginInteraction()
+        if adventure.undoReasoningPair() { persist() }
+    }
+    func moveReasoningCounter(_ delta: Int) {
+        beginInteraction()
+        if adventure.moveReasoningCounter(delta) { persist() }
+    }
+    func confirmReasoningStage() {
+        beginInteraction()
+        if adventure.confirmReasoningStage() { persist() }
+    }
+    func resetReasoningStages() {
+        beginInteraction()
+        if adventure.resetReasoningStages() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
