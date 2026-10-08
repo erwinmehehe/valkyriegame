@@ -1331,8 +1331,51 @@ import LearningCore
         handleTap(at: point)
     }
 
+    // Explicitly test knob centers in mechanic-local coordinates before generic
+    // SpriteKit hit ancestry: illustrated trays can overlap visible controls.
+    private func handleMechanicDirectControl(at point: CGPoint) -> Bool {
+        guard let active = state.runtime, let mechanic, canManipulate() else { return false }
+        let local = mechanic.convert(point, from: self)
+        switch active {
+        case .placeValueFactory(let model) where !model.isComparison:
+            let controls: [(CGPoint, Int, Int)] = [
+                (CGPoint(x: -178, y: -118), 1, 0),
+                (CGPoint(x: -78, y: -118), -1, 0),
+                (CGPoint(x: 78, y: -118), 0, 1),
+                (CGPoint(x: 178, y: -118), 0, -1)
+            ]
+            for (center, tens, ones) in controls {
+                if hypot(local.x - center.x, local.y - center.y) <= 36 {
+                    manipulate { self.state.adjustPlaceValue(tensDelta: tens, onesDelta: ones) }
+                    return true
+                }
+            }
+        case .patternLoom:
+            let controls: [(CGPoint, Int)] = [
+                (CGPoint(x: -160, y: -122), 1),
+                (CGPoint(x: -10, y: -122), 2),
+                (CGPoint(x: 140, y: -122), 3),
+                (CGPoint(x: 229, y: -122), 0)
+            ]
+            for (center, symbol) in controls {
+                if hypot(local.x - center.x, local.y - center.y) <= 36 {
+                    if symbol == 0 {
+                        manipulate { self.state.undoPatternSymbol() }
+                    } else {
+                        manipulate { self.state.choosePatternSymbol(symbol) }
+                    }
+                    return true
+                }
+            }
+        default:
+            break
+        }
+        return false
+    }
+
     // Shared by native touches and hosted interaction tests.
     func handleTap(at point: CGPoint) {
+        if handleMechanicDirectControl(at: point) { return }
         let target = targetName(at: point)
         if crossingBridge {
             if target == "home" {
