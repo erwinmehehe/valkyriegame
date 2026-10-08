@@ -1660,6 +1660,145 @@ public struct ReasoningStudioModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum NumberTrailTask: String, Codable, Sendable {
+    case estimate
+    case countOn
+}
+
+/// Estimation requires briefly observing an *unlabeled* collection before a
+/// chosen approximate quantity can be submitted. Counting-on requires actual
+/// unit-by-unit jumps from a nonzero starting point on a number line.
+public struct NumberTrailModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: NumberTrailTask
+    public private(set) var flashObserved: Bool
+    public private(set) var dialValue: Int
+    public private(set) var lockedEstimate: Int?
+    public private(set) var jumps: Int
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isEstimate: Bool { task == .estimate }
+    public var collectionSize: Int { encounter.targetQuantity }
+    public var arrangementSeed: Int { encounter.initialQuantity }
+    public var startNumber: Int { encounter.initialQuantity }
+    public var requiredJumps: Int { encounter.targetQuantity }
+    public var markerNumber: Int { startNumber + jumps }
+    public var hasCompleteResponse: Bool {
+        isEstimate ? (flashObserved && lockedEstimate != nil) : jumps > 0
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.numberTrail else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .numberTrail else {
+            throw ModelError.unsupportedOperation
+        }
+        let kind: NumberTrailTask
+        switch encounter.context {
+        case "trail.estimate":
+            kind = .estimate
+            guard encounter.skillID == MathSkills.estimate10,
+                  (0...5).contains(encounter.initialQuantity),
+                  (2...10).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+        case "trail.countOn":
+            kind = .countOn
+            guard encounter.skillID == MathSkills.countOn10,
+                  (1...9).contains(encounter.initialQuantity),
+                  (1...4).contains(encounter.targetQuantity),
+                  encounter.initialQuantity + encounter.targetQuantity <= 10 else {
+                throw ModelError.invalidConfiguration
+            }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+
+        self.encounter = encounter
+        task = kind
+        flashObserved = false
+        dialValue = 5
+        lockedEstimate = nil
+        jumps = 0
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func revealCollection() -> Bool {
+        guard !completed, isEstimate, !flashObserved else { return false }
+        flashObserved = true
+        return true
+    }
+
+    @discardableResult public mutating func turnDial(_ delta: Int) -> Bool {
+        guard !completed, isEstimate, flashObserved,
+              delta == -1 || delta == 1,
+              (1...10).contains(dialValue + delta) else { return false }
+        dialValue += delta
+        lockedEstimate = nil
+        return true
+    }
+
+    @discardableResult public mutating func lockEstimate() -> Bool {
+        guard !completed, isEstimate, flashObserved,
+              lockedEstimate != dialValue else { return false }
+        lockedEstimate = dialValue
+        return true
+    }
+
+    @discardableResult public mutating func jumpOne() -> Bool {
+        guard !completed, task == .countOn,
+              markerNumber < 10 else { return false }
+        jumps += 1
+        return true
+    }
+
+    @discardableResult public mutating func undoJump() -> Bool {
+        guard !completed, task == .countOn, jumps > 0 else { return false }
+        jumps -= 1
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        let correct: Bool
+        if isEstimate {
+            guard let lockedEstimate else { return nil }
+            // Approximate collections are not exact-count recall.
+            correct = abs(lockedEstimate - collectionSize) <= 1
+        } else {
+            correct = jumps == requiredJumps
+        }
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -1674,6 +1813,7 @@ public enum MathMechanicID {
     public static let clockMarket = "clockMarket"
     public static let groupingGarden = "groupingGarden"
     public static let reasoningStudio = "reasoningStudio"
+    public static let numberTrail = "numberTrail"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -1688,7 +1828,8 @@ public enum MathMechanicID {
         dataBoard,
         clockMarket,
         groupingGarden,
-        reasoningStudio
+        reasoningStudio,
+        numberTrail
     ]
 }
 
@@ -2057,6 +2198,8 @@ public enum MathManipulativeSupport {
             return (try? GroupingGardenModel(encounter: encounter)) != nil
         case MathMechanicID.reasoningStudio:
             return (try? ReasoningStudioModel(encounter: encounter)) != nil
+        case MathMechanicID.numberTrail:
+            return (try? NumberTrailModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -2089,6 +2232,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case clockMarket(ClockMarketModel)
     case groupingGarden(GroupingGardenModel)
     case reasoningStudio(ReasoningStudioModel)
+    case numberTrail(NumberTrailModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -2118,6 +2262,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .groupingGarden(try GroupingGardenModel(encounter: encounter, at: date))
         case MathMechanicID.reasoningStudio:
             self = .reasoningStudio(try ReasoningStudioModel(encounter: encounter, at: date))
+        case MathMechanicID.numberTrail:
+            self = .numberTrail(try NumberTrailModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -2138,6 +2284,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .clockMarket(let model): return model.encounter
         case .groupingGarden(let model): return model.encounter
         case .reasoningStudio(let model): return model.encounter
+        case .numberTrail(let model): return model.encounter
         }
     }
 
@@ -2156,6 +2303,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .clockMarket(let model): return model.completed
         case .groupingGarden(let model): return model.completed
         case .reasoningStudio(let model): return model.completed
+        case .numberTrail(let model): return model.completed
         }
     }
 
@@ -2174,6 +2322,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .clockMarket(let model): return model.support
         case .groupingGarden(let model): return model.support
         case .reasoningStudio(let model): return model.support
+        case .numberTrail(let model): return model.support
         }
     }
 
@@ -2195,7 +2344,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
             return false
         }
     }
@@ -2218,7 +2367,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio, .numberTrail:
             return false
         }
     }
@@ -2525,6 +2674,42 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func revealTrailCollection() -> Bool {
+        guard case .numberTrail(var model) = self else { return false }
+        let changed = model.revealCollection()
+        self = .numberTrail(model)
+        return changed
+    }
+
+    @discardableResult public mutating func adjustTrailEstimate(_ delta: Int) -> Bool {
+        guard case .numberTrail(var model) = self else { return false }
+        let changed = model.turnDial(delta)
+        self = .numberTrail(model)
+        return changed
+    }
+
+    @discardableResult public mutating func lockTrailEstimate() -> Bool {
+        guard case .numberTrail(var model) = self else { return false }
+        let changed = model.lockEstimate()
+        self = .numberTrail(model)
+        return changed
+    }
+
+    @discardableResult public mutating func addTrailJump() -> Bool {
+        guard case .numberTrail(var model) = self else { return false }
+        let changed = model.jumpOne()
+        self = .numberTrail(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoTrailJump() -> Bool {
+        guard case .numberTrail(var model) = self else { return false }
+        let changed = model.undoJump()
+        self = .numberTrail(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -2566,6 +2751,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .reasoningStudio(var model):
             model.apply(scaffold)
             self = .reasoningStudio(model)
+        case .numberTrail(var model):
+            model.apply(scaffold)
+            self = .numberTrail(model)
         }
     }
 
@@ -2622,6 +2810,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .reasoningStudio(var model):
             let evidence = model.submit(at: date)
             self = .reasoningStudio(model)
+            return evidence
+        case .numberTrail(var model):
+            let evidence = model.submit(at: date)
+            self = .numberTrail(model)
             return evidence
         }
     }
