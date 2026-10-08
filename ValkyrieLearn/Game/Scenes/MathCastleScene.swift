@@ -1260,6 +1260,7 @@ import LearningCore
         case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
         case .reasoningStudio(let model): (mechanic as? ReasoningStudioMechanic)?.render(model)
         case .numberTrail(let model): (mechanic as? NumberTrailMechanic)?.render(model)
+        case .differencePairs(let model): (mechanic as? DifferencePairsMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1338,7 +1339,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differencePairs]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1394,6 +1395,33 @@ import LearningCore
                     let y = CGFloat(33 - row * 54)
                     if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
                         manipulate { self.state.cycleMirrorCell(row) }
+                        return true
+                    }
+                }
+            }
+        case .differencePairs(let model):
+            let buttons: [(CGFloat, DifferenceRow?, Int)] = [
+                (-196, .gold, 1),
+                (-98, .gold, -1),
+                (0, .blue, 1),
+                (98, .blue, -1),
+                (196, nil, 0)
+            ]
+            if abs(local.y + 121) <= 34 {
+                for (x, row, delta) in buttons where abs(local.x - x) <= 39 {
+                    if let row {
+                        manipulate { self.state.adjustDifferenceRow(row, by: delta) }
+                    } else {
+                        manipulate { self.state.undoDifferencePair() }
+                    }
+                    return true
+                }
+            }
+            if abs(local.y - 2) <= 52 {
+                for column in 0..<model.matchingCount {
+                    let x = CGFloat(-207 + column * 46)
+                    if abs(local.x - x) <= 22 {
+                        manipulate { self.state.pairDifferenceColumn(column) }
                         return true
                     }
                 }
@@ -1746,6 +1774,11 @@ import LearningCore
         case "trailEstimateLock": manipulate { self.state.lockTrailEstimate() }
         case "trailUndoJump": manipulate { self.state.undoTrailJump() }
         case "trailAddJump": manipulate { self.state.addTrailJump() }
+        case "diffGoldPlus": manipulate { self.state.adjustDifferenceRow(.gold, by: 1) }
+        case "diffGoldMinus": manipulate { self.state.adjustDifferenceRow(.gold, by: -1) }
+        case "diffBluePlus": manipulate { self.state.adjustDifferenceRow(.blue, by: 1) }
+        case "diffBlueMinus": manipulate { self.state.adjustDifferenceRow(.blue, by: -1) }
+        case "diffUndoPair": manipulate { self.state.undoDifferencePair() }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1793,7 +1826,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differencePairs:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1901,6 +1934,12 @@ import LearningCore
             } else {
                 change = "\(model.cuts.count) of \(model.groupCount - 1) fraction cuts placed."
             }
+        case .differencePairs(let model):
+            if let difference = model.discoveredDifference {
+                change = "\(model.pairedColumns.count) pairs linked. \(difference) unmatched crystals remain."
+            } else {
+                change = "\(model.goldCount) gold and \(model.blueCount) blue crystals built. Tap each matching pair."
+            }
         case .numberTrail(let model):
             if model.isEstimate {
                 if let guess = model.lockedEstimate {
@@ -1971,7 +2010,10 @@ import LearningCore
         guard canManipulate() else { engageMachine(); return }
         let wasChallengeGate = state.challengeGateStatus == .active
         guard let evidence = state.submit() else {
-            instruction.text = "Touch a scale pan, or the equal gear, before pulling Pip's lever."; return
+            instruction.text = state.runtime?.encounter.mechanicID == MathMechanicID.differencePairs
+                ? "Build both rows and link every matching pair before checking."
+                : "Touch a scale pan, or the equal gear, before pulling Pip's lever."
+            return
         }
         refresh()
         updateChallengeGateAppearance()
