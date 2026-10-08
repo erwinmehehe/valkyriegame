@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 2454)
+        XCTAssertEqual(encounters.count, 2616)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -332,13 +332,13 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllFourteenMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllSixteenMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
         var seenMechanics = Set<String>()
         // Replan after each real response; never seed skill readiness by hand.
-        for _ in 0..<260 {
+        for _ in 0..<500 {
             let plan = try MathCastleEncounterCatalog.sessionPlan(for: profile,
                 encounterCount: 1, now: now)
             guard let item = plan.encounters.first else { break }
@@ -510,6 +510,32 @@ final class CrystalCartTests: XCTestCase {
                         XCTAssertTrue(runtime.moveReasoningCounter(model.subtractSecond ? -1 : 1))
                     }
                     XCTAssertTrue(runtime.confirmReasoningStage())
+                }
+            case .differenceDock(let model):
+                for _ in 0..<model.constructionRequired {
+                    XCTAssertTrue(runtime.addDockCounter())
+                }
+                for _ in 0..<model.correctResponse {
+                    XCTAssertTrue(runtime.adjustDockAnswer(1))
+                }
+            case .mapQuest(let model):
+                if model.isPosition {
+                    XCTAssertTrue(runtime.selectMapPosition(model.destination))
+                } else {
+                    var x = model.startCell % 3
+                    var y = model.startCell / 3
+                    let tx = model.destination % 3
+                    let ty = model.destination / 3
+                    while y != ty {
+                        let step = ty > y ? 1 : -1
+                        XCTAssertTrue(runtime.stepMap(dx: 0, dy: step))
+                        y += step
+                    }
+                    while x != tx {
+                        let step = tx > x ? 1 : -1
+                        XCTAssertTrue(runtime.stepMap(dx: step, dy: 0))
+                        x += step
+                    }
                 }
             case .numberTrail(let model):
                 if model.isEstimate {
