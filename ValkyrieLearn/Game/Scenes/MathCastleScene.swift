@@ -283,7 +283,7 @@ import LearningCore
                 symbol,
                 name: "workshop\(index)",
                 at: CGPoint(x: 140 + index * 80, y: 548),
-                accessibilityLabel: "Workshop station \(index + 1)"
+                accessibilityLabel: "Pip\'s workshop: \(MathWorkshopCatalog.stationNames[index])"
             )
         }
         addCompactWorkshopGear(
