@@ -42,8 +42,8 @@ public struct MathAdventure: Codable, Equatable, Sendable {
             }
             if probe.band == 9 {
                 // Reuse the existing Number Bond machine as Pip's mistake machine so
-                // a strong learner can still demonstrate reasoning in Milestone A
-                // without pretending the not-yet-built place-value factory exists.
+                // a strong learner can demonstrate reasoning without requiring a
+                // separate error-analysis machine.
                 return PlacementProbe(id: probe.id, band: probe.band, encounter:
                     LearningEncounter(id: probe.encounter.id, skillID: probe.skillID,
                         mechanicID: MathMechanicID.numberBondMachine, representation: .reasoning,
