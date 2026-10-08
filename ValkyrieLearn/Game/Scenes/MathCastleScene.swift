@@ -1265,6 +1265,7 @@ import LearningCore
         case .dataBoard(let model): (mechanic as? DataBoardMechanic)?.render(model)
         case .clockMarket(let model): (mechanic as? ClockMarketMechanic)?.render(model)
         case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
+        case .reasoningStudio(let model): (mechanic as? ReasoningStudioMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1343,7 +1344,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1401,6 +1402,62 @@ import LearningCore
                         manipulate { self.state.cycleMirrorCell(row) }
                         return true
                     }
+                }
+            }
+        case .reasoningStudio(let model):
+            switch model.task {
+            case .strategy:
+                for (x, choice) in [
+                    (CGFloat(-120), ReasoningStudioStrategy.countOn),
+                    (CGFloat(120), ReasoningStudioStrategy.buildCounters)
+                ] {
+                    if hypot(local.x - x, local.y - 9) <= 39 {
+                        manipulate { self.state.chooseReasoningStrategy(choice) }
+                        return true
+                    }
+                }
+                if hypot(local.x + 92, local.y + 123) <= 39 {
+                    manipulate { self.state.addReasoningStep() }
+                    return true
+                }
+                if hypot(local.x - 92, local.y + 123) <= 39 {
+                    manipulate { self.state.undoReasoningStep() }
+                    return true
+                }
+            case .differentWays:
+                if hypot(local.x - 226, local.y - 51) <= 37 {
+                    manipulate { self.state.undoReasoningPair() }
+                    return true
+                }
+                for (x, left, delta) in [
+                    (CGFloat(-192), true, 1), (CGFloat(-110), true, -1),
+                    (CGFloat(110), false, 1), (CGFloat(192), false, -1)
+                ] {
+                    if hypot(local.x - x, local.y + 122) <= 36 {
+                        manipulate { self.state.adjustReasoningPair(left: left, delta: delta) }
+                        return true
+                    }
+                }
+                if hypot(local.x, local.y + 122) <= 39 {
+                    manipulate { self.state.saveReasoningPair() }
+                    return true
+                }
+            case .multiStep:
+                if hypot(local.x - 224, local.y - 54) <= 37 {
+                    manipulate { self.state.resetReasoningStages() }
+                    return true
+                }
+                if hypot(local.x + 124, local.y + 122) <= 40 {
+                    manipulate { self.state.moveReasoningCounter(-1) }
+                    return true
+                }
+                if hypot(local.x - 124, local.y + 122) <= 40 {
+                    manipulate { self.state.moveReasoningCounter(1) }
+                    return true
+                }
+                if hypot(local.x, local.y + 122) <= 40 {
+                    manipulate { self.state.confirmReasoningStage() }
+                    return true
                 }
             }
         case .groupingGarden(let model):
@@ -1648,6 +1705,20 @@ import LearningCore
         case "gardenCutRight": manipulate { self.state.moveGardenCut(1) }
         case "gardenCutPlace": manipulate { self.state.placeGardenCut() }
         case "gardenCutUndo": manipulate { self.state.undoGardenCut() }
+        case "reasonCountOn": manipulate { self.state.chooseReasoningStrategy(.countOn) }
+        case "reasonBuild": manipulate { self.state.chooseReasoningStrategy(.buildCounters) }
+        case "reasonStepAdd": manipulate { self.state.addReasoningStep() }
+        case "reasonStepUndo": manipulate { self.state.undoReasoningStep() }
+        case "reasonPairLeftUp": manipulate { self.state.adjustReasoningPair(left: true, delta: 1) }
+        case "reasonPairLeftDown": manipulate { self.state.adjustReasoningPair(left: true, delta: -1) }
+        case "reasonPairRightUp": manipulate { self.state.adjustReasoningPair(left: false, delta: 1) }
+        case "reasonPairRightDown": manipulate { self.state.adjustReasoningPair(left: false, delta: -1) }
+        case "reasonPairSave": manipulate { self.state.saveReasoningPair() }
+        case "reasonPairUndo": manipulate { self.state.undoReasoningPair() }
+        case "reasonCounterMinus": manipulate { self.state.moveReasoningCounter(-1) }
+        case "reasonCounterPlus": manipulate { self.state.moveReasoningCounter(1) }
+        case "reasonConfirm": manipulate { self.state.confirmReasoningStage() }
+        case "reasonReset": manipulate { self.state.resetReasoningStages() }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1695,7 +1766,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1802,6 +1873,25 @@ import LearningCore
                 change = "\(model.jumps) \(model.jumps == 1 ? "jump" : "jumps") \(model.jumps == 1 ? "makes" : "make") a total of \(model.currentJumpTotal)."
             } else {
                 change = "\(model.cuts.count) of \(model.groupCount - 1) fraction cuts placed."
+            }
+        case .reasoningStudio(let model):
+            switch model.task {
+            case .strategy:
+                if let strategy = model.chosenStrategy {
+                    change = "\(model.strategySteps) \(model.strategySteps == 1 ? "step" : "steps") using \(strategy == .countOn ? "counting on" : "counter tiles")."
+                } else {
+                    change = "Choose a strategy and show the steps."
+                }
+            case .differentWays:
+                change = "\(model.solutions.count) of 2 pairs saved. Draft: \(model.draftLeft) + \(model.draftRight)."
+            case .multiStep:
+                if let result = model.observedFinal {
+                    change = "Both changes checked. Final number \(result)."
+                } else if let first = model.observedIntermediate {
+                    change = "First step checked at \(first). Number marker \(model.workingValue)."
+                } else {
+                    change = "Number marker now \(model.workingValue)."
+                }
             }
         }
         // Describe only the child's visible edit; the lever still checks the answer.

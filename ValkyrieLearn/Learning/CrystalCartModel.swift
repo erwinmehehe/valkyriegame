@@ -1404,6 +1404,262 @@ public struct GroupingGardenModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum ReasoningStudioTask: String, Codable, Sendable {
+    case strategy
+    case differentWays
+    case multiStep
+}
+
+public enum ReasoningStudioStrategy: String, Codable, CaseIterable, Sendable {
+    case countOn
+    case buildCounters
+}
+
+public struct ReasoningStudioPair: Codable, Equatable, Sendable {
+    public let left: Int
+    public let right: Int
+}
+
+/// Each task requires a child-authored strategy, two genuinely different
+/// decompositions, or independently validated intermediate/final steps.
+/// The reasoning title alone does not award transferable mastery.
+public struct ReasoningStudioModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: ReasoningStudioTask
+    public let subtractSecond: Bool
+    public private(set) var chosenStrategy: ReasoningStudioStrategy?
+    public private(set) var strategySteps: Int
+    public private(set) var draftLeft: Int
+    public private(set) var draftRight: Int
+    public private(set) var solutions: [ReasoningStudioPair]
+    public private(set) var workingValue: Int
+    public private(set) var observedIntermediate: Int?
+    public private(set) var observedFinal: Int?
+    public private(set) var movesInStage: Int
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var startingValue: Int { encounter.initialQuantity }
+    public var addend: Int { encounter.targetQuantity }
+    public var targetTotal: Int {
+        task == .differentWays ? startingValue : startingValue + addend
+    }
+    public var firstChange: Int { encounter.targetQuantity / 10 }
+    public var secondChange: Int { encounter.targetQuantity % 10 }
+    public var expectedIntermediate: Int { startingValue + firstChange }
+    public var expectedFinal: Int {
+        expectedIntermediate + (subtractSecond ? -secondChange : secondChange)
+    }
+    public var isStageOne: Bool {
+        task == .multiStep && observedIntermediate == nil
+    }
+    public var hasCompleteResponse: Bool {
+        switch task {
+        case .strategy: return chosenStrategy != nil && strategySteps >= addend
+        case .differentWays: return solutions.count == 2
+        case .multiStep: return observedIntermediate != nil && observedFinal != nil
+        }
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.reasoningStudio else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .reasoningStudio else {
+            throw ModelError.unsupportedOperation
+        }
+        let fields = encounter.context.split(separator: ".").map(String.init)
+        let kind: ReasoningStudioTask
+        let subtractSecond: Bool
+        switch fields {
+        case ["studio", "strategy"]:
+            kind = .strategy
+            subtractSecond = false
+            guard encounter.skillID == MathSkills.chooseStrategy,
+                  (2...8).contains(encounter.initialQuantity),
+                  (2...6).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+        case ["studio", "ways"]:
+            kind = .differentWays
+            subtractSecond = false
+            guard encounter.skillID == MathSkills.multipleSolutions,
+                  (5...12).contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 2 else {
+                throw ModelError.invalidConfiguration
+            }
+        case ["studio", "steps", "addSubtract"], ["studio", "steps", "addAdd"]:
+            kind = .multiStep
+            subtractSecond = fields[2] == "addSubtract"
+            guard encounter.skillID == MathSkills.multiStep,
+                  (3...8).contains(encounter.initialQuantity),
+                  (1...4).contains(encounter.targetQuantity / 10),
+                  (1...4).contains(encounter.targetQuantity % 10),
+                  encounter.initialQuantity + encounter.targetQuantity / 10
+                    - (subtractSecond ? encounter.targetQuantity % 10 : 0) >= 0 else {
+                throw ModelError.invalidConfiguration
+            }
+        default:
+            throw ModelError.invalidConfiguration
+        }
+
+        self.encounter = encounter
+        self.task = kind
+        self.subtractSecond = subtractSecond
+        chosenStrategy = nil
+        strategySteps = 0
+        draftLeft = 0
+        draftRight = 0
+        solutions = []
+        workingValue = encounter.initialQuantity
+        observedIntermediate = nil
+        observedFinal = nil
+        movesInStage = 0
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult
+    public mutating func chooseStrategy(_ choice: ReasoningStudioStrategy) -> Bool {
+        guard !completed, task == .strategy, chosenStrategy != choice else {
+            return false
+        }
+        chosenStrategy = choice
+        strategySteps = 0
+        return true
+    }
+
+    @discardableResult
+    public mutating func addStrategyStep() -> Bool {
+        guard !completed, task == .strategy, chosenStrategy != nil,
+              strategySteps < addend + 2 else { return false }
+        strategySteps += 1
+        return true
+    }
+
+    @discardableResult
+    public mutating func undoStrategyStep() -> Bool {
+        guard !completed, task == .strategy, strategySteps > 0 else { return false }
+        strategySteps -= 1
+        return true
+    }
+
+    /// Manipulate the two visible piles independently before locking a pair.
+    @discardableResult
+    public mutating func adjustPair(left: Bool, delta: Int) -> Bool {
+        guard !completed, task == .differentWays, solutions.count < 2,
+              delta == -1 || delta == 1 else { return false }
+        let newValue = (left ? draftLeft : draftRight) + delta
+        guard (0...startingValue + 2).contains(newValue) else { return false }
+        if left { draftLeft = newValue } else { draftRight = newValue }
+        return true
+    }
+
+    @discardableResult
+    public mutating func savePair() -> Bool {
+        guard !completed, task == .differentWays, solutions.count < 2,
+              draftLeft > 0, draftRight > 0 else { return false }
+        solutions.append(ReasoningStudioPair(left: draftLeft, right: draftRight))
+        draftLeft = 0
+        draftRight = 0
+        return true
+    }
+
+    @discardableResult
+    public mutating func undoPair() -> Bool {
+        guard !completed, task == .differentWays, let pair = solutions.popLast() else {
+            return false
+        }
+        draftLeft = pair.left
+        draftRight = pair.right
+        return true
+    }
+
+    /// Move a concrete number-line marker by one unit at a time. Stage one and
+    /// stage two are confirmed independently so a correct final total cannot
+    /// disguise a wrong intermediate result.
+    @discardableResult
+    public mutating func moveCounter(_ delta: Int) -> Bool {
+        guard !completed, task == .multiStep, observedFinal == nil,
+              delta == -1 || delta == 1, (0...20).contains(workingValue + delta) else {
+            return false
+        }
+        workingValue += delta
+        movesInStage += 1
+        return true
+    }
+
+    @discardableResult
+    public mutating func confirmStage() -> Bool {
+        guard !completed, task == .multiStep, observedFinal == nil,
+              movesInStage > 0 else { return false }
+        if observedIntermediate == nil {
+            observedIntermediate = workingValue
+            movesInStage = 0
+        } else {
+            observedFinal = workingValue
+        }
+        return true
+    }
+
+    @discardableResult
+    public mutating func resetStages() -> Bool {
+        guard !completed, task == .multiStep,
+              observedIntermediate != nil || observedFinal != nil
+                || movesInStage > 0 else { return false }
+        observedIntermediate = nil
+        observedFinal = nil
+        workingValue = startingValue
+        movesInStage = 0
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed, hasCompleteResponse else { return nil }
+        let correct: Bool
+        switch task {
+        case .strategy:
+            // The learner deliberately selects and physically completes one
+            // of two contrasting strategies; no answer button alone scores.
+            correct = strategySteps == addend
+        case .differentWays:
+            let pairA = solutions[0]
+            let pairB = solutions[1]
+            correct = pairA.left + pairA.right == startingValue
+                && pairB.left + pairB.right == startingValue
+                && min(pairA.left, pairA.right) != min(pairB.left, pairB.right)
+        case .multiStep:
+            correct = observedIntermediate == expectedIntermediate
+                && observedFinal == expectedFinal
+        }
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -1417,6 +1673,7 @@ public enum MathMechanicID {
     public static let dataBoard = "dataBoard"
     public static let clockMarket = "clockMarket"
     public static let groupingGarden = "groupingGarden"
+    public static let reasoningStudio = "reasoningStudio"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -1430,7 +1687,8 @@ public enum MathMechanicID {
         measurementWorkshop,
         dataBoard,
         clockMarket,
-        groupingGarden
+        groupingGarden,
+        reasoningStudio
     ]
 }
 
@@ -1797,6 +2055,8 @@ public enum MathManipulativeSupport {
             return (try? ClockMarketModel(encounter: encounter)) != nil
         case MathMechanicID.groupingGarden:
             return (try? GroupingGardenModel(encounter: encounter)) != nil
+        case MathMechanicID.reasoningStudio:
+            return (try? ReasoningStudioModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -1828,6 +2088,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case dataBoard(DataBoardModel)
     case clockMarket(ClockMarketModel)
     case groupingGarden(GroupingGardenModel)
+    case reasoningStudio(ReasoningStudioModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -1855,6 +2116,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .clockMarket(try ClockMarketModel(encounter: encounter, at: date))
         case MathMechanicID.groupingGarden:
             self = .groupingGarden(try GroupingGardenModel(encounter: encounter, at: date))
+        case MathMechanicID.reasoningStudio:
+            self = .reasoningStudio(try ReasoningStudioModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -1874,6 +2137,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .dataBoard(let model): return model.encounter
         case .clockMarket(let model): return model.encounter
         case .groupingGarden(let model): return model.encounter
+        case .reasoningStudio(let model): return model.encounter
         }
     }
 
@@ -1891,6 +2155,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .dataBoard(let model): return model.completed
         case .clockMarket(let model): return model.completed
         case .groupingGarden(let model): return model.completed
+        case .reasoningStudio(let model): return model.completed
         }
     }
 
@@ -1908,6 +2173,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .dataBoard(let model): return model.support
         case .clockMarket(let model): return model.support
         case .groupingGarden(let model): return model.support
+        case .reasoningStudio(let model): return model.support
         }
     }
 
@@ -1929,7 +2195,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio:
             return false
         }
     }
@@ -1952,7 +2218,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop, .dataBoard, .clockMarket, .groupingGarden, .reasoningStudio:
             return false
         }
     }
@@ -2195,6 +2461,70 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func chooseReasoningStrategy(_ strategy: ReasoningStudioStrategy) -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.chooseStrategy(strategy)
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func addReasoningStep() -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.addStrategyStep()
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoReasoningStep() -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.undoStrategyStep()
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func adjustReasoningPair(left: Bool, delta: Int) -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.adjustPair(left: left, delta: delta)
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func saveReasoningPair() -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.savePair()
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoReasoningPair() -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.undoPair()
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func moveReasoningCounter(_ delta: Int) -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.moveCounter(delta)
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func confirmReasoningStage() -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.confirmStage()
+        self = .reasoningStudio(model)
+        return changed
+    }
+
+    @discardableResult public mutating func resetReasoningStages() -> Bool {
+        guard case .reasoningStudio(var model) = self else { return false }
+        let changed = model.resetStages()
+        self = .reasoningStudio(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -2233,6 +2563,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(var model):
             model.apply(scaffold)
             self = .groupingGarden(model)
+        case .reasoningStudio(var model):
+            model.apply(scaffold)
+            self = .reasoningStudio(model)
         }
     }
 
@@ -2285,6 +2618,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .groupingGarden(var model):
             let evidence = model.submit(at: date)
             self = .groupingGarden(model)
+            return evidence
+        case .reasoningStudio(var model):
+            let evidence = model.submit(at: date)
+            self = .reasoningStudio(model)
             return evidence
         }
     }

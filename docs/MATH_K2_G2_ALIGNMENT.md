@@ -60,10 +60,10 @@ explicitly non-grade-level.
 
 ## Production question bank
 
-The native Math Castle now has a parameterized production bank of 2,086 variants.
+The native Math Castle now has a parameterized production bank of 2,321 variants.
 
 Together with the 49 existing normal adaptive encounters, the normal adaptive
-candidate pool is 2,135 encounters.
+candidate pool is 2,370 encounters.
 
 Hidden placement and Challenge Gate content remain separate so diagnostic evidence
 and optional challenge evidence do not masquerade as ordinary practice.
@@ -83,7 +83,7 @@ math that has merely been reworded.
 
 ## Native-assessment safety
 
-Only skills that the current twelve native manipulatives can genuinely observe are
+Only skills that the current thirteen native manipulatives can genuinely observe are
 placed in the production mastery bank.
 
 Current manipulatives:
@@ -100,11 +100,23 @@ Current manipulatives:
 - Data Board
 - Clock & Market
 - Grouping Garden
+- Reasoning Studio
 
-The production bank currently covers 67 of the 76 skill nodes.
+The production bank currently covers 70 of the 76 skill nodes.
 
 The remaining skills stay in the curriculum graph and alignment matrix, but the app
 does not award mastery for them yet. This is intentional.
+
+Reasoning Studio adds 235 deterministic child-authored practice variants:
+35 choose-a-strategy questions (choose either counting-on jumps or physically
+built counter tiles, then complete every step); eight distinct-two-ways tasks
+(two fully built number pairs with the same sum, not a swapped duplicate); and
+192 two-stage story problems (confirm intermediate and final totals
+independently). No one-tap strategy selection, partial pair, or final-answer
+shortcut awards mastery; incorrect complete work can be revised, and adult/Pip
+help remains supported evidence rather than independent mastery. This makes
+three additional reasoning skills native-assessable; six other gaps stay
+intentionally unassessed until observable mechanics exist.
 
 Grouping Garden adds 80 deterministic native assessment variants across five
 Grade 2 stretch skills. Equal groups and equal sharing require the learner to
@@ -168,7 +180,6 @@ Examples that still require dedicated observable mechanics include:
 - count-on strategy evidence
 - difference/inverse-fact reasoning
 - route/position reasoning
-- explicit strategy choice and multiple-solution reasoning
 
 ## Adaptive progression rule
 
@@ -189,12 +200,12 @@ Placement readiness must never be reported to parents as observed mastery.
 ## Next curriculum-engineering milestone
 
 The next major implementation milestone is not "more questions." It is adding the
-missing manipulatives so coverage can grow from 67/76 skills toward the full K2-G2
+missing manipulatives so coverage can grow from 70/76 skills toward the full K2-G2
 matrix without weakening evidence quality.
 
-Place Value Factory, Pattern Loom, Shape Forge v2, Measurement Workshop, Data Board, Clock & Market, and Grouping Garden are now implemented. Recommended next order:
+Place Value Factory, Pattern Loom, Shape Forge v2, Measurement Workshop, Data Board, Clock & Market, Grouping Garden, and Reasoning Studio are now implemented. Recommended next order:
 
-1. Reasoning Studio — strategy choice, multiple solutions and multi-step problems
+1. Remaining gaps — estimation, count-on fluency, inverse/difference, position and map routes
 
 Every new mechanic should add observable-action tests before its skills become
 mastery-eligible.

@@ -321,6 +321,43 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoGardenCut() ?? false
     }
 
+    @discardableResult public mutating func chooseReasoningStrategy(_ choice: ReasoningStudioStrategy) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.chooseReasoningStrategy(choice) ?? false
+    }
+    @discardableResult public mutating func addReasoningStep() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.addReasoningStep() ?? false
+    }
+    @discardableResult public mutating func undoReasoningStep() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoReasoningStep() ?? false
+    }
+    @discardableResult public mutating func adjustReasoningPair(left: Bool, delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustReasoningPair(left: left, delta: delta) ?? false
+    }
+    @discardableResult public mutating func saveReasoningPair() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.saveReasoningPair() ?? false
+    }
+    @discardableResult public mutating func undoReasoningPair() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoReasoningPair() ?? false
+    }
+    @discardableResult public mutating func moveReasoningCounter(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.moveReasoningCounter(delta) ?? false
+    }
+    @discardableResult public mutating func confirmReasoningStage() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.confirmReasoningStage() ?? false
+    }
+    @discardableResult public mutating func resetReasoningStages() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.resetReasoningStages() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -454,6 +491,20 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                     cue = "Watch Pip place one repeating shape. Now try the lever."
                 }
             }
+        case .reasoningStudio(let model):
+            switch model.task {
+            case .strategy:
+                cue = "Choose COUNT ON to draw each one-step jump, or BUILD to add one counter at a time. Finish every step yourself."
+            case .differentWays:
+                cue = "Move counters into LEFT and RIGHT piles until they total the target. Save a pair. Then make a different pair, not just a swap."
+            case .multiStep:
+                cue = model.isStageOne
+                    ? "Show the number after the FIRST change, then tap CHECK STEP."
+                    : "Continue from that number. Show the number after the SECOND change, then tap CHECK STEP."
+            }
+            // Guided hints explain the representation; they do not silently
+            // perform a reasoning step or masquerade as independent work.
+            demonstration = false
         case .groupingGarden(let model):
             switch model.task {
             case .equalGroups:

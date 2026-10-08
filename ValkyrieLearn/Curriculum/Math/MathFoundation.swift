@@ -1522,6 +1522,70 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Reasoning Studio: strategy selection is followed by independently
+        // placed count-on jumps or counters, never just a correct button.
+        for start in 2...8 {
+            for addend in 2...6 {
+                add(
+                    "prod-studio-strategy-\(start)-\(addend)",
+                    skill: MathSkills.chooseStrategy,
+                    mechanic: MathMechanicID.reasoningStudio,
+                    representation: .concrete,
+                    operation: .reasoningStudio,
+                    initial: start,
+                    target: addend,
+                    prompt: "Start at \(start). Add \(addend) more. Choose counting on or building counters, then show every step.",
+                    context: "studio.strategy",
+                    difficulty: start + addend <= 10 ? 2 : 3,
+                    purpose: .reasoning
+                )
+            }
+        }
+
+        // Two child-constructed number bonds must sum to the same target and
+        // use genuinely different unordered pairs (a swapped pair is not new).
+        for total in 5...12 {
+            add(
+                "prod-studio-two-ways-\(total)",
+                skill: MathSkills.multipleSolutions,
+                mechanic: MathMechanicID.reasoningStudio,
+                representation: .concrete,
+                operation: .reasoningStudio,
+                initial: total,
+                target: 2,
+                prompt: "Build TWO different pairs of positive number piles that each make \(total).",
+                context: "studio.ways",
+                difficulty: total <= 8 ? 2 : 3,
+                purpose: .reasoning
+            )
+        }
+
+        // Two independently checked changes. Matching a final total alone
+        // is insufficient: a wrong first step must remain incorrect.
+        for start in 3...8 {
+            for added in 1...4 {
+                for changed in 1...4 {
+                    for operation in ["addSubtract", "addAdd"] {
+                        let finalNumber = start + added + (operation == "addSubtract" ? -changed : changed)
+                        add(
+                            "prod-studio-steps-\(operation)-\(start)-\(added)-\(changed)",
+                            skill: MathSkills.multiStep,
+                            mechanic: MathMechanicID.reasoningStudio,
+                            representation: .story,
+                            operation: .reasoningStudio,
+                            initial: start,
+                            target: added * 10 + changed,
+                            prompt: "You have \(start) crystals. Find \(added) more, then \(operation == "addSubtract" ? "give away" : "find") \(changed). Show the number after EACH change.",
+                            context: "studio.steps.\(operation)",
+                            difficulty: finalNumber <= 10 ? 3 : 4,
+                            purpose: .storyTransfer
+                        )
+                    }
+                }
+            }
+        }
+
         return result
     }()
 

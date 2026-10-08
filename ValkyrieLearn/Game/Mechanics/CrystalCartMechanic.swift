@@ -2365,6 +2365,199 @@ import LearningCore
     }
 }
 
+
+@MainActor final class ReasoningStudioMechanic: SKNode, MathCastleReactiveMechanic {
+    private let canvas = SKNode()
+    private let heading = ArtSystem.label("REASONING STUDIO", size: 18)
+    private let subtitle = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.reasoningStudio
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.reasoningStudio
+        addChild(tray)
+
+        let header = ArtSystem.plaque(
+            CGSize(width: 305, height: 47),
+            fill: UIColor(red: 0.09, green: 0.18, blue: 0.29, alpha: 0.98),
+            stroke: UIColor(red: 0.96, green: 0.79, blue: 0.41, alpha: 0.92),
+            radius: 15
+        )
+        header.position.y = 128
+        header.name = MathMechanicID.reasoningStudio
+        addChild(header)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.reasoningStudio
+        header.addChild(heading)
+
+        subtitle.fontName = "AvenirNext-DemiBold"
+        subtitle.fontColor = UIColor(red: 0.99, green: 0.86, blue: 0.59, alpha: 1)
+        subtitle.position.y = 98
+        subtitle.name = MathMechanicID.reasoningStudio
+        addChild(subtitle)
+        addChild(canvas)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 16) {
+        let item = ArtSystem.label(text, size: size)
+        item.fontColor = .white
+        item.fontName = "AvenirNext-DemiBold"
+        item.position = CGPoint(x: x, y: y)
+        item.name = MathMechanicID.reasoningStudio
+        canvas.addChild(item)
+    }
+
+    private func button(_ text: String, name: String, x: CGFloat, y: CGFloat,
+                        radius: CGFloat = 34) {
+        let plate = ArtSystem.medallion(
+            radius: radius,
+            fill: UIColor(red: 0.11, green: 0.27, blue: 0.39, alpha: 1),
+            stroke: UIColor(red: 0.98, green: 0.79, blue: 0.43, alpha: 1),
+            glow: 0
+        )
+        plate.position = CGPoint(x: x, y: y)
+        plate.name = name
+        plate.zPosition = 50
+        canvas.addChild(plate)
+        let caption = ArtSystem.label(text, size: text.count > 5 ? 11 : 15)
+        caption.fontColor = .white
+        caption.fontName = "AvenirNext-Heavy"
+        caption.name = name
+        plate.addChild(caption)
+        // Direct geometric hit testing also covers all decorative children.
+        let hit = SKShapeNode(circleOfRadius: radius + 3)
+        hit.position = CGPoint(x: x, y: y)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 70
+        hit.name = name
+        canvas.addChild(hit)
+    }
+
+    private func counter(x: CGFloat, y: CGFloat, filled: Bool = true) {
+        let stone = SKShapeNode(circleOfRadius: 11)
+        stone.position = CGPoint(x: x, y: y)
+        stone.fillColor = filled
+            ? UIColor(red: 0.34, green: 0.81, blue: 0.89, alpha: 1)
+            : UIColor(red: 0.20, green: 0.30, blue: 0.34, alpha: 0.45)
+        stone.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.57, alpha: 1)
+        stone.lineWidth = filled ? 2 : 1
+        stone.name = MathMechanicID.reasoningStudio
+        canvas.addChild(stone)
+    }
+
+    func render(_ model: ReasoningStudioModel) {
+        canvas.removeAllChildren()
+        switch model.task {
+        case .strategy: renderStrategy(model)
+        case .differentWays: renderDifferentWays(model)
+        case .multiStep: renderMultiStep(model)
+        }
+    }
+
+    private func renderStrategy(_ model: ReasoningStudioModel) {
+        subtitle.text = "CHOOSE A WAY — SHOW EVERY STEP"
+        label("\(model.startingValue) + \(model.addend) = ?", x: 0, y: 61, size: 24)
+        button("COUNT", name: "reasonCountOn", x: -120, y: 9)
+        button("BUILD", name: "reasonBuild", x: 120, y: 9)
+        let selected: String
+        switch model.chosenStrategy {
+        case .countOn: selected = "COUNT ON — NUMBER LINE"
+        case .buildCounters: selected = "BUILD — COUNTER TILES"
+        case nil: selected = "PICK COUNT OR BUILD"
+        }
+        label(selected, x: 0, y: -38, size: 14)
+        for index in 0..<model.addend {
+            let x = (CGFloat(index) - CGFloat(model.addend - 1) / 2) * 42
+            if model.chosenStrategy == .countOn {
+                label(index < model.strategySteps ? "→" : "·",
+                      x: x, y: -75, size: 26)
+            } else {
+                counter(x: x, y: -72, filled: index < model.strategySteps)
+            }
+        }
+        button("+1", name: "reasonStepAdd", x: -92, y: -123)
+        button("UNDO", name: "reasonStepUndo", x: 92, y: -123)
+    }
+
+    private func renderDifferentWays(_ model: ReasoningStudioModel) {
+        subtitle.text = "MAKE TWO DIFFERENT NUMBER PAIRS"
+        label("TWO WAYS TO MAKE \(model.startingValue)", x: 0, y: 70, size: 19)
+        for slot in 0..<2 {
+            let y: CGFloat = slot == 0 ? 35 : 0
+            let line: String
+            if slot < model.solutions.count {
+                let pair = model.solutions[slot]
+                line = "\(slot + 1).  \(pair.left) + \(pair.right) = \(pair.left + pair.right)"
+            } else {
+                line = "\(slot + 1).  ? + ? = \(model.startingValue)"
+            }
+            label(line, x: 0, y: y, size: 18)
+        }
+        label("YOUR PILES:  \(model.draftLeft) + \(model.draftRight)",
+              x: 0, y: -45, size: 17)
+        button("L+", name: "reasonPairLeftUp", x: -192, y: -122, radius: 32)
+        button("L−", name: "reasonPairLeftDown", x: -110, y: -122, radius: 32)
+        button("SAVE", name: "reasonPairSave", x: 0, y: -122, radius: 34)
+        button("R+", name: "reasonPairRightUp", x: 110, y: -122, radius: 32)
+        button("R−", name: "reasonPairRightDown", x: 192, y: -122, radius: 32)
+        button("UNDO", name: "reasonPairUndo", x: 226, y: 51, radius: 30)
+    }
+
+    private func renderMultiStep(_ model: ReasoningStudioModel) {
+        subtitle.text = "SHOW BOTH CHANGES — NOT JUST THE END"
+        let firstText = "+\(model.firstChange)"
+        let secondText = "\(model.subtractSecond ? "−" : "+")\(model.secondChange)"
+        label("START \(model.startingValue)   \(firstText)   THEN \(secondText)",
+              x: 0, y: 69, size: 18)
+        let stage: String
+        if model.observedFinal != nil {
+            stage = "BOTH STEPS LOCKED — PULL PIP'S LEVER"
+        } else if model.isStageOne {
+            stage = "STEP ONE: ADD \(model.firstChange)"
+        } else {
+            stage = "STEP TWO: \(model.subtractSecond ? "TAKE" : "ADD") \(model.secondChange)"
+        }
+        label(stage, x: 0, y: 37, size: 14)
+        label("YOUR NUMBER: \(model.workingValue)",
+              x: 0, y: 4, size: 21)
+        for tick in 0...20 {
+            let x = CGFloat(tick - 10) * 21
+            let mark = SKShapeNode(circleOfRadius: tick == model.workingValue ? 6 : 2.5)
+            mark.position = CGPoint(x: x, y: -39)
+            mark.fillColor = tick == model.workingValue
+                ? UIColor(red: 1, green: 0.86, blue: 0.47, alpha: 1)
+                : UIColor(red: 0.46, green: 0.78, blue: 0.85, alpha: 0.9)
+            mark.strokeColor = .clear
+            mark.name = MathMechanicID.reasoningStudio
+            canvas.addChild(mark)
+        }
+        label("STEP 1: \(model.observedIntermediate.map(String.init) ?? "?")    STEP 2: \(model.observedFinal.map(String.init) ?? "?")",
+              x: 0, y: -75, size: 14)
+        button("−1", name: "reasonCounterMinus", x: -124, y: -122)
+        button("CHECK", name: "reasonConfirm", x: 0, y: -122)
+        button("+1", name: "reasonCounterPlus", x: 124, y: -122)
+        button("RESET", name: "reasonReset", x: 224, y: 54, radius: 30)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        heading.fontColor = UIColor(red: 1, green: 0.91, blue: 0.56, alpha: 1)
+        guard !reducedMotion else { return }
+        canvas.run(.sequence([
+            .scale(to: 1.025, duration: 0.12),
+            .scale(to: 1.0, duration: 0.17)
+        ]), withKey: "reasoningSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -2390,6 +2583,8 @@ import LearningCore
             return ClockMarketMechanic()
         case MathMechanicID.groupingGarden:
             return GroupingGardenMechanic()
+        case MathMechanicID.reasoningStudio:
+            return ReasoningStudioMechanic()
         default:
             return nil
         }
