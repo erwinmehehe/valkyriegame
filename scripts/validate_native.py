@@ -69,6 +69,24 @@ for path, metadata in companion_hd['assets'].items():
     data = (ROOT/path).read_bytes()
     assert git_blob_sha(data) == metadata['blobSHA'], path
     assert image_dimensions(data, path) == metadata['size'], path
+# Original vector paintings are scene-only PDF assets. They render at Retina
+# resolution on device; unlike raster resampling they retain source geometry.
+science_art = json.loads((ROOT/'ValkyrieLearn/Resources/SCIENCE_VECTOR_ART_MANIFEST.json').read_text())
+assert science_art['sourceCanvas'] == [1280, 960]
+assert science_art['retinaTarget'] == [2560, 1920]
+assert len(science_art['assets']) == 2
+for path, metadata in science_art['assets'].items():
+    raw = (ROOT/path).read_bytes()
+    assert raw.startswith(b'%PDF-1.4\\n'), path
+    assert b'/MediaBox [0 0 1280 960]' in raw, path
+    assert b'/Type /Page' in raw, path
+    assert raw.rstrip().endswith(b'%%EOF'), path
+    assert git_blob_sha(raw) == metadata['blobSHA'], path
+    contents = json.loads((ROOT/path).with_name('Contents.json').read_text())
+    assert contents['properties']['preserves-vector-representation'] is True, path
+    assert contents['images'][0]['filename'] == 'art.pdf', path
+print('PASS dedicated Science world vector PDF art hashes, canvas and asset-catalog packaging.')
+
 print('PASS HD companion art hashes and dimensions.')
 
 manifest = json.loads((ROOT/'ValkyrieLearn/Resources/V331_ART_MANIFEST.json').read_text())
