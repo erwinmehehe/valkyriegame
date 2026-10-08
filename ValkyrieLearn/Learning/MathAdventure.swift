@@ -201,6 +201,16 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoPatternSymbol() ?? false
     }
 
+    @discardableResult public mutating func chooseShapeOption(_ option: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.chooseShapeOption(option) ?? false
+    }
+
+    @discardableResult public mutating func rotateShape(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.rotateShape(delta) ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -283,6 +293,32 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                 if model.selectedNumber < model.correctNumber { _ = increment(at: now) }
                 else if model.selectedNumber > model.correctNumber { _ = decrement(at: now) }
                 else { demonstration = false }
+            }
+        case .shapeForge(let model):
+            switch model.task {
+            case .recognize:
+                cue = "Look at each outline. Count corners and notice which sides are curved."
+                if demonstration, let option = model.correctOption {
+                    _ = runtime?.chooseShapeOption(option)
+                    cue = "Pip points to the matching outline. Pull the lever to check."
+                }
+            case .attributes:
+                cue = "Use your finger to count where straight sides meet."
+                if demonstration, let option = model.correctOption {
+                    _ = runtime?.chooseShapeOption(option)
+                    cue = "Pip counted the corners. Pull the lever to check."
+                }
+            case .rotate:
+                cue = "Turn the angled triangle until it points the same way as the gold outline."
+                if demonstration {
+                    let difference = (model.targetOrientation - model.currentOrientation + 4) % 4
+                    if difference != 0 {
+                        _ = runtime?.rotateShape(difference == 3 ? -1 : 1)
+                        cue = "Pip turned the triangle one quarter-turn. Finish the match."
+                    } else {
+                        demonstration = false
+                    }
+                }
             }
         case .patternLoom(let model):
             if model.isCreation {
