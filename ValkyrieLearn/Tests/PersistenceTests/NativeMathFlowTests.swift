@@ -15,6 +15,12 @@ import LearningCore
         let shape = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.recognizeShapes).first?.encounter
         )
+        let comparison = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.compareLength).first?.encounter
+        )
+        let units = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -23,7 +29,9 @@ import LearningCore
             (MathCastleEncounterCatalog.missingNumberBridge[0], CGPoint(x: 965, y: 330), CGPoint(x: 550, y: 335), "1 plank added."),
             (placeValue, CGPoint(x: 820, y: 310), CGPoint(x: 642, y: 192), "1 tens and 0 ones make 10."),
             (pattern, CGPoint(x: 820, y: 310), CGPoint(x: 660, y: 188), "A shape fills the pattern gap."),
-            (shape, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 290), "Shape option 1 selected.")
+            (shape, CGPoint(x: 820, y: 310), CGPoint(x: 662, y: 290), "Shape option 1 selected."),
+            (comparison, CGPoint(x: 820, y: 310), CGPoint(x: 665, y: 190), "Left measurement selected."),
+            (units, CGPoint(x: 820, y: 310), CGPoint(x: 914, y: 190), "1 equal-size measurement units placed.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -107,6 +115,38 @@ import LearningCore
         XCTAssertEqual(model.symmetryReference.map(\.rawValue), [1, 1, 2])
         XCTAssertFalse(model.completed)
         XCTAssertEqual(state.profile, profileBefore)
+    }
+
+
+    func testMeasurementWorkshopNativeUnitPlacementPersistsAndDoesNotAutoScore() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.nonstandardMeasure)
+                .first(where: { $0.encounter.targetQuantity == 4 })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let before = state.profile
+
+        scene.handleTap(at: CGPoint(x: 914, y: 190))
+        scene.handleTap(at: CGPoint(x: 914, y: 190))
+        scene.handleTap(at: CGPoint(x: 914, y: 190))
+        scene.handleTap(at: CGPoint(x: 726, y: 190)) // undo
+        guard case .measurementWorkshop(let model)? = state.runtime else {
+            return XCTFail("Measurement model not active")
+        }
+        XCTAssertEqual(model.placedUnits, 2)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, before)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "2 equal-size measurement units placed. Pull Pip's lever when you're ready."
+        )
     }
 
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
