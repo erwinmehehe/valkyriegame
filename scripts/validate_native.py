@@ -74,6 +74,13 @@ for path, metadata in companion_hd['assets'].items():
 science_art = json.loads((ROOT/'ValkyrieLearn/Resources/SCIENCE_VECTOR_ART_MANIFEST.json').read_text())
 assert science_art['sourceCanvas'] == [1280, 960]
 assert science_art['retinaTarget'] == [2560, 1920]
+assert science_art['status'] == 'review_only', 'Unapproved artwork must not be promoted silently.'
+assert science_art['defaultRenderer'] == 'approved_painterly_atlas'
+for scene in ['ScienceLabScene.swift', 'CreatureGroveScene.swift']:
+    scene_source = (ROOT/'ValkyrieLearn/Game/Scenes'/scene).read_text()
+    assert 'var useCandidateVectorArtwork = false' in scene_source, scene
+    assert 'if useCandidateVectorArtwork,' in scene_source, scene
+
 assert len(science_art['assets']) == 2
 for path, metadata in science_art['assets'].items():
     raw = (ROOT/path).read_bytes()
