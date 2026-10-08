@@ -1590,7 +1590,12 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(MathWorkshopCatalog.stationNames.count, 5)
         XCTAssertEqual(MathWorkshopCatalog.stationMechanics.count, 5)
         let families = Set(MathWorkshopCatalog.stationMechanics.flatMap { $0 })
-        XCTAssertTrue(MathMechanicID.adaptiveSet.isSuperset(of: families))
+        XCTAssertEqual(families, MathMechanicID.adaptiveSet,
+                       "Every supported native Math mechanic needs a workshop station.")
+        XCTAssertTrue(MathWorkshopCatalog.stationMechanics[0].contains(MathMechanicID.numberTrail))
+        XCTAssertTrue(MathWorkshopCatalog.stationMechanics[2].contains(MathMechanicID.reasoningStudio))
+        XCTAssertTrue(MathWorkshopCatalog.stationMechanics[2].contains(MathMechanicID.differenceBridge))
+        XCTAssertTrue(MathWorkshopCatalog.stationMechanics[3].contains(MathMechanicID.routeExplorer))
         for station in 0..<5 {
             let choices = MathWorkshopCatalog.choices(at: station, profile: profile, graph: graph)
             let allowed = Set(MathWorkshopCatalog.stationMechanics[station])
