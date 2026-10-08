@@ -138,7 +138,22 @@ import LearningCore
         // distant scenery. The greenhouse frame, path and teaching objects remain
         // native SpriteKit nodes in front, so this improves depth without changing
         // any interaction or learning state.
-        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
+        if let texture = ArtSystem.texture("ScienceGreenhousePaintedHD") {
+            let backdrop = SKSpriteNode(
+                texture: texture,
+                size: CGSize(width: 1280, height: 960)
+            )
+            backdrop.position = CGPoint(x: 640, y: 360)
+            backdrop.zPosition = -230
+            backdrop.name = "scienceGreenhouseBackdropHD"
+            backdrop.isUserInteractionEnabled = false
+            backdrop.userData = NSMutableDictionary(dictionary: [
+                "sourceAsset": "ScienceGreenhousePaintedHD",
+                "vectorPainted": true,
+                "designSize": "1280x960"
+            ])
+            addChild(backdrop)
+        } else if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
             let greenhouseTexture = SKTexture(
                 rect: CGRect(x: 0, y: 0.502, width: 0.499, height: 0.498),
                 in: atlas
