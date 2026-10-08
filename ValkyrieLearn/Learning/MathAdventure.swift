@@ -383,6 +383,56 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.undoTrailJump() ?? false
     }
 
+    @discardableResult public mutating func matchDifferencePair() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.matchDifferencePair() ?? false
+    }
+
+    @discardableResult public mutating func undoDifferencePair() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoDifferencePair() ?? false
+    }
+
+    @discardableResult public mutating func collectDifference() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.collectDifference() ?? false
+    }
+
+    @discardableResult public mutating func undoDifferenceCollection() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoDifferenceCollection() ?? false
+    }
+
+    @discardableResult public mutating func addInverseCounter() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.addInverseCounter() ?? false
+    }
+
+    @discardableResult public mutating func undoInverseCounter() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoInverseCounter() ?? false
+    }
+
+    @discardableResult public mutating func reverseInverseCounter() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.reverseInverseCounter() ?? false
+    }
+
+    @discardableResult public mutating func undoInverseReverse() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoInverseReverse() ?? false
+    }
+
+    @discardableResult public mutating func moveOnMap(_ direction: MapMove) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.moveOnMap(direction) ?? false
+    }
+
+    @discardableResult public mutating func undoMapMove() -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.undoMapMove() ?? false
+    }
+
     public mutating func setNumber(_ value: Int) {
         guard interactionStarted else { return }; runtime?.setValue(value)
     }
@@ -516,6 +566,21 @@ public struct MathAdventure: Codable, Equatable, Sendable {
                     cue = "Watch Pip place one repeating shape. Now try the lever."
                 }
             }
+        case .differenceBridge(let model):
+            if model.isDifference {
+                cue = "Line up the blue and gold objects, touching PAIR once for each matched pair. Then touch KEEP to count objects without partners."
+            } else {
+                cue = "To find the missing part, ADD counters to the starting amount. Then TAKE the same counters back to show addition and subtraction undo each other."
+            }
+            // No automatic solution steps for these reasoning tasks.
+            demonstration = false
+        case .routeExplorer(let model):
+            if model.isRoute {
+                cue = "Follow the grid one square at a time using the direction arrows. Plan around the rock to reach the star."
+            } else {
+                cue = "Use UP, DOWN, LEFT and RIGHT to move the rover one neighbouring square in the direction named in the question."
+            }
+            demonstration = false
         case .numberTrail(let model):
             if model.isEstimate {
                 cue = model.flashObserved
