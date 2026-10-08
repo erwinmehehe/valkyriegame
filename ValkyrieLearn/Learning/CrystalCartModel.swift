@@ -594,6 +594,145 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum MeasurementWorkshopTask: String, Codable, CaseIterable, Sendable {
+    case length
+    case weight
+    case capacity
+    case units
+}
+
+/// An early-grade measurement task must record a real comparison selection
+/// or a child-built run of equal-sized, contiguous unit tiles. Nothing is
+/// scored for merely viewing the example or requesting a hint.
+public struct MeasurementWorkshopModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: MeasurementWorkshopTask
+    public let unitStyle: String?
+    public private(set) var selectedComparison: ComparisonChoice?
+    public private(set) var placedUnits: Int
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isUnitMeasurement: Bool { task == .units }
+    public var leftValue: Int { encounter.initialQuantity }
+    public var rightValue: Int { encounter.targetQuantity }
+    public var targetUnitCount: Int { encounter.targetQuantity }
+    public var maxUnitCount: Int { min(12, targetUnitCount + 2) }
+
+    public var correctChoice: ComparisonChoice {
+        if leftValue == rightValue { return .equal }
+        return leftValue > rightValue ? .left : .right
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.measurementWorkshop else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .measurement else {
+            throw ModelError.unsupportedOperation
+        }
+        let pieces = encounter.context.split(separator: ".").map(String.init)
+        guard pieces.count >= 2, pieces[0] == "measure",
+              let task = MeasurementWorkshopTask(rawValue: pieces[1]) else {
+            throw ModelError.invalidConfiguration
+        }
+
+        switch task {
+        case .length, .weight, .capacity:
+            let skill: SkillID
+            switch task {
+            case .length: skill = MathSkills.compareLength
+            case .weight: skill = MathSkills.compareWeight
+            case .capacity: skill = MathSkills.compareCapacity
+            case .units: throw ModelError.invalidConfiguration
+            }
+            guard pieces.count == 2,
+                  encounter.skillID == skill,
+                  (1...8).contains(encounter.initialQuantity),
+                  (1...8).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+        case .units:
+            guard pieces.count == 3,
+                  ["blocks", "tiles"].contains(pieces[2]),
+                  encounter.skillID == MathSkills.nonstandardMeasure,
+                  encounter.initialQuantity == 0,
+                  (2...10).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+        }
+        self.encounter = encounter
+        self.task = task
+        unitStyle = task == .units ? pieces[2] : nil
+        selectedComparison = nil
+        placedUnits = 0
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult
+    public mutating func choose(_ choice: ComparisonChoice) -> Bool {
+        guard !completed, !isUnitMeasurement, selectedComparison != choice else {
+            return false
+        }
+        selectedComparison = choice
+        return true
+    }
+
+    @discardableResult
+    public mutating func placeEqualUnit() -> Bool {
+        guard !completed, isUnitMeasurement, placedUnits < maxUnitCount else {
+            return false
+        }
+        placedUnits += 1
+        return true
+    }
+
+    @discardableResult
+    public mutating func removeEqualUnit() -> Bool {
+        guard !completed, isUnitMeasurement, placedUnits > 0 else { return false }
+        placedUnits -= 1
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed else { return nil }
+        let correct: Bool
+        if isUnitMeasurement {
+            guard placedUnits > 0 else { return nil }
+            correct = placedUnits == targetUnitCount
+        } else {
+            guard let selectedComparison else { return nil }
+            correct = selectedComparison == correctChoice
+        }
+        attempts += 1
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -603,6 +742,7 @@ public enum MathMechanicID {
     public static let placeValueFactory = "placeValueFactory"
     public static let patternLoom = "patternLoom"
     public static let shapeForge = "shapeForge"
+    public static let measurementWorkshop = "measurementWorkshop"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -612,7 +752,8 @@ public enum MathMechanicID {
         missingNumberBridge,
         placeValueFactory,
         patternLoom,
-        shapeForge
+        shapeForge,
+        measurementWorkshop
     ]
 }
 
@@ -971,6 +1112,8 @@ public enum MathManipulativeSupport {
             return (try? PatternLoomModel(encounter: encounter)) != nil
         case MathMechanicID.shapeForge:
             return (try? ShapeForgeModel(encounter: encounter)) != nil
+        case MathMechanicID.measurementWorkshop:
+            return (try? MeasurementWorkshopModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -998,6 +1141,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case placeValueFactory(PlaceValueFactoryModel)
     case patternLoom(PatternLoomModel)
     case shapeForge(ShapeForgeModel)
+    case measurementWorkshop(MeasurementWorkshopModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -1017,6 +1161,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .patternLoom(try PatternLoomModel(encounter: encounter, at: date))
         case MathMechanicID.shapeForge:
             self = .shapeForge(try ShapeForgeModel(encounter: encounter, at: date))
+        case MathMechanicID.measurementWorkshop:
+            self = .measurementWorkshop(try MeasurementWorkshopModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -1032,6 +1178,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .placeValueFactory(let model): return model.encounter
         case .patternLoom(let model): return model.encounter
         case .shapeForge(let model): return model.encounter
+        case .measurementWorkshop(let model): return model.encounter
         }
     }
 
@@ -1045,6 +1192,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .placeValueFactory(let model): return model.completed
         case .patternLoom(let model): return model.completed
         case .shapeForge(let model): return model.completed
+        case .measurementWorkshop(let model): return model.completed
         }
     }
 
@@ -1058,6 +1206,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .placeValueFactory(let model): return model.support
         case .patternLoom(let model): return model.support
         case .shapeForge(let model): return model.support
+        case .measurementWorkshop(let model): return model.support
         }
     }
 
@@ -1079,7 +1228,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop:
             return false
         }
     }
@@ -1102,7 +1251,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge, .measurementWorkshop:
             return false
         }
     }
@@ -1128,6 +1277,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .placeValueFactory(var model):
             model.choose(choice)
             self = .placeValueFactory(model)
+        case .measurementWorkshop(var model):
+            _ = model.choose(choice)
+            self = .measurementWorkshop(model)
         default:
             break
         }
@@ -1205,6 +1357,21 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func placeMeasureUnit() -> Bool {
+        guard case .measurementWorkshop(var model) = self else { return false }
+        let changed = model.placeEqualUnit()
+        self = .measurementWorkshop(model)
+        return changed
+    }
+
+    @discardableResult public mutating func removeMeasureUnit() -> Bool {
+        guard case .measurementWorkshop(var model) = self else { return false }
+        let changed = model.removeEqualUnit()
+        self = .measurementWorkshop(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -1231,6 +1398,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .shapeForge(var model):
             model.apply(scaffold)
             self = .shapeForge(model)
+        case .measurementWorkshop(var model):
+            model.apply(scaffold)
+            self = .measurementWorkshop(model)
         }
     }
 
@@ -1267,6 +1437,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .shapeForge(var model):
             let evidence = model.submit(at: date)
             self = .shapeForge(model)
+            return evidence
+        case .measurementWorkshop(var model):
+            let evidence = model.submit(at: date)
+            self = .measurementWorkshop(model)
             return evidence
         }
     }

@@ -1261,6 +1261,7 @@ import LearningCore
         case .placeValueFactory(let model): (mechanic as? PlaceValueFactoryMechanic)?.render(model)
         case .patternLoom(let model): (mechanic as? PatternLoomMechanic)?.render(model)
         case .shapeForge(let model): (mechanic as? ShapeForgeMechanic)?.render(model)
+        case .measurementWorkshop(let model): (mechanic as? MeasurementWorkshopMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1339,7 +1340,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1395,6 +1396,29 @@ import LearningCore
                     let y = CGFloat(33 - row * 54)
                     if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
                         manipulate { self.state.cycleMirrorCell(row) }
+                        return true
+                    }
+                }
+            }
+        case .measurementWorkshop(let model):
+            guard abs(local.y + 120) <= 41 else { break }
+            if model.isUnitMeasurement {
+                if abs(local.x + 94) <= 41 {
+                    manipulate { self.state.removeMeasureUnit() }
+                    return true
+                }
+                if abs(local.x - 94) <= 41 {
+                    manipulate { self.state.placeMeasureUnit() }
+                    return true
+                }
+            } else {
+                for (x, choice) in [
+                    (CGFloat(-155), ComparisonChoice.left),
+                    (CGFloat(0), ComparisonChoice.equal),
+                    (CGFloat(155), ComparisonChoice.right)
+                ] {
+                    if abs(local.x - x) <= 40 {
+                        manipulate { self.state.chooseComparison(choice) }
                         return true
                     }
                 }
@@ -1471,6 +1495,11 @@ import LearningCore
         case "forgeMirror0": manipulate { self.state.cycleMirrorCell(0) }
         case "forgeMirror1": manipulate { self.state.cycleMirrorCell(1) }
         case "forgeMirror2": manipulate { self.state.cycleMirrorCell(2) }
+        case "measureAdd": manipulate { self.state.placeMeasureUnit() }
+        case "measureRemove": manipulate { self.state.removeMeasureUnit() }
+        case "measureLeft": manipulate { self.state.chooseComparison(.left) }
+        case "measureEqual": manipulate { self.state.chooseComparison(.equal) }
+        case "measureRight": manipulate { self.state.chooseComparison(.right) }
         case "scaleLeft", "placeLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight", "placeRight": manipulate { self.state.chooseComparison(.right) }
         case "scaleEqual", "placeEqual": manipulate { self.state.chooseComparison(.equal) }
@@ -1512,7 +1541,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1584,6 +1613,17 @@ import LearningCore
                 change = "\(model.mirrorCells.compactMap { $0 }.count) of 3 mirror cells filled."
             case .recognize, .attributes:
                 change = "Shape option \(model.selectedOption ?? 0) selected."
+            }
+        case .measurementWorkshop(let model):
+            if model.isUnitMeasurement {
+                change = "\(model.placedUnits) equal-size measurement units placed."
+            } else {
+                switch model.selectedComparison {
+                case .left: change = "Left measurement selected."
+                case .right: change = "Right measurement selected."
+                case .equal: change = "Equal measurements selected."
+                case nil: return
+                }
             }
         }
         // Describe only the child's visible edit; the lever still checks the answer.
