@@ -1450,6 +1450,16 @@ import LearningCore
             }
         case .groupingGarden(let model):
             if model.activity.targetCells == 0 {
+                if model.task == .repeatedAddition && abs(local.y - 65) <= 38 {
+                    if abs(local.x + 143) <= 38 {
+                        manipulate { self.state.adjustGardenSum(-1) }
+                        return true
+                    }
+                    if abs(local.x - 143) <= 38 {
+                        manipulate { self.state.adjustGardenSum(1) }
+                        return true
+                    }
+                }
                 if hypot(local.x - 229, local.y - 68) <= 39 {
                     manipulate { self.state.undoGroupCounter() }
                     return true
@@ -1627,6 +1637,8 @@ import LearningCore
         case "gardenPart2": manipulate { self.state.chooseGardenFraction(2) }
         case "gardenPart3": manipulate { self.state.chooseGardenFraction(3) }
         case "gardenUndo": manipulate { self.state.undoGroupCounter() }
+        case "gardenSumMinus": manipulate { self.state.adjustGardenSum(-1) }
+        case "gardenSumPlus": manipulate { self.state.adjustGardenSum(1) }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1777,6 +1789,8 @@ import LearningCore
         case .groupingGarden(let model):
             if model.activity.targetCells > 0 {
                 change = "One of \(model.activity.targetCells) equal parts selected."
+            } else if model.task == .repeatedAddition {
+                change = "\(model.activity.placements.count) berries grouped; sum set to \(model.activity.selectedSum)."
             } else {
                 let n = model.activity.placements.count
                 change = "\(n) of \(model.activity.totalItems) berries placed in groups."
