@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 1751)
+        XCTAssertEqual(encounters.count, 2055)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -332,7 +332,7 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllTenMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllElevenMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
@@ -435,6 +435,32 @@ final class CrystalCartTests: XCTestCase {
                             XCTAssertTrue(runtime.addPicture(to: index + 1))
                         }
                     }
+                }
+            case .clockMarket(let model):
+                if model.isClock {
+                    let hourMoves = model.targetHour == 12 ? 12 : model.targetHour
+                    for _ in 0..<hourMoves {
+                        XCTAssertTrue(runtime.adjustClockHour(1))
+                    }
+                    if model.task != .hour {
+                        let step = model.task == .halfHour ? 30 : 5
+                        for _ in 0..<(model.targetMinute / step) {
+                            XCTAssertTrue(runtime.adjustClockMinute(1))
+                        }
+                    }
+                } else if model.isRoutines {
+                    for card in model.routineCards {
+                        XCTAssertTrue(runtime.placeDailyRoutine(card.daypart))
+                    }
+                } else {
+                    var remaining = model.targetPesos
+                    for coin in model.allowedCoins.reversed() {
+                        while remaining >= coin {
+                            XCTAssertTrue(runtime.addPesoCoin(coin))
+                            remaining -= coin
+                        }
+                    }
+                    XCTAssertEqual(remaining, 0)
                 }
             }
             let evidence = try XCTUnwrap(runtime.submit(at: now))
