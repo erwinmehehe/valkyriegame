@@ -744,18 +744,18 @@ public struct MathAdventure: Codable, Equatable, Sendable {
 /// unscored: adaptive work orders remain the source of mastery evidence.
 public enum MathWorkshopCatalog {
     public static let stationNames = [
-        "Crystals and groups",
+        "Crystals and number trails",
         "Compare and measure",
-        "Number builders",
+        "Build numbers and explain",
         "Patterns and shapes",
         "Bridges and time"
     ]
 
     public static let stationMechanics: [[String]] = [
-        [MathMechanicID.crystalCart, MathMechanicID.groupingGarden],
-        [MathMechanicID.balanceScale, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard],
-        [MathMechanicID.numberBondMachine, MathMechanicID.placeValueFactory],
-        [MathMechanicID.tenFrameGate, MathMechanicID.patternLoom, MathMechanicID.shapeForge],
+        [MathMechanicID.crystalCart, MathMechanicID.groupingGarden, MathMechanicID.numberTrail],
+        [MathMechanicID.balanceScale, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.differenceDock],
+        [MathMechanicID.numberBondMachine, MathMechanicID.placeValueFactory, MathMechanicID.reasoningStudio],
+        [MathMechanicID.tenFrameGate, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.mapQuest],
         [MathMechanicID.missingNumberBridge, MathMechanicID.clockMarket]
     ]
 
