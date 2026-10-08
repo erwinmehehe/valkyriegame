@@ -551,6 +551,11 @@ public struct SessionPlanner: Sendable {
             case .stretch:
                 value += encounter.challengeDepth * 3
                 if stretchSkillIDs.contains(encounter.skillID) { value -= 2 }
+                // Preserve meaningful story/reasoning transfer in a 12-task
+                // session even as concrete stretch manipulatives expand.
+                // A representation label alone never supplies mastery evidence.
+                if encounter.representation == .reasoning
+                    || encounter.representation == .story { value -= 9 }
 
             case .confidence:
                 value += encounter.challengeDepth * 10
