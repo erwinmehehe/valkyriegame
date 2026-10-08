@@ -1546,7 +1546,7 @@ final class MathAdventureTests: XCTestCase {
         XCTAssertEqual(routes.count, 48)
         for variant in positions + routes {
             XCTAssertTrue(MathManipulativeSupport.supports(variant.encounter))
-            let model = try RouteExplorerModel(encounter: variant.encounter, at: epoch)
+            var model = try RouteExplorerModel(encounter: variant.encounter, at: epoch)
             XCTAssertEqual(model.visitedCells, [model.startCell])
             XCTAssertNil(model.submit(at: epoch))
             if model.isRoute {
