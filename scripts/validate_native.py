@@ -29,8 +29,52 @@ assert hashlib.sha256((ROOT/'index.html').read_bytes()).hexdigest() == '3ac15b02
 print('PASS project references, deterministic generation, landscape/iPad configuration, framework separation and unchanged prototype.')
 
 # Validate all imported image bytes and crop dimensions using only the standard library.
+def git_blob_sha(data):
+    return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+
+def image_dimensions(data, path):
+    if path.endswith('.png'):
+        assert data[:8] == b'\x89PNG\r\n\x1a\n', path
+        return list(struct.unpack('>II', data[16:24]))
+    if path.endswith('.webp'):
+        assert data[:4] == b'RIFF' and data[8:12] == b'WEBP', path
+        chunk = data[12:16]
+        if chunk == b'VP8X':
+            width = 1 + int.from_bytes(data[24:27], 'little')
+            height = 1 + int.from_bytes(data[27:30], 'little')
+            return [width, height]
+        if chunk == b'VP8 ':
+            marker = data.find(b'\x9d\x01\x2a', 20, 1024)
+            assert marker >= 0, path
+            width = int.from_bytes(data[marker+3:marker+5], 'little') & 0x3fff
+            height = int.from_bytes(data[marker+5:marker+7], 'little') & 0x3fff
+            return [width, height]
+        if chunk == b'VP8L':
+            b0,b1,b2,b3,b4 = data[20:25]
+            assert b0 == 0x2f, path
+            width = 1 + (((b2 & 0x3f) << 8) | b1)
+            height = 1 + (((b4 & 0x0f) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6))
+            return [width, height]
+        raise AssertionError(path)
+    raise AssertionError(path)
+
+companion_hd = json.loads((ROOT/'ValkyrieLearn/Resources/COMPANION_HD_ART_MANIFEST.json').read_text())
+legacy_superseded_companion_paths = {
+    'ValkyrieLearn/Resources/Milo.webp',
+    'ValkyrieLearn/Resources/Tiko.webp',
+    'ValkyrieLearn/Resources/Lumi.webp',
+}
+superseded_companion_paths = set(companion_hd['assets']) | legacy_superseded_companion_paths
+for path, metadata in companion_hd['assets'].items():
+    data = (ROOT/path).read_bytes()
+    assert git_blob_sha(data) == metadata['blobSHA'], path
+    assert image_dimensions(data, path) == metadata['size'], path
+print('PASS HD companion art hashes and dimensions.')
+
 manifest = json.loads((ROOT/'ValkyrieLearn/Resources/V331_ART_MANIFEST.json').read_text())
 for name, metadata in manifest['outputs'].items():
+    if ('ValkyrieLearn/Resources/' + name) in superseded_companion_paths:
+        continue
     data = (ROOT/'ValkyrieLearn/Resources'/name).read_bytes()
     assert hashlib.sha256(data).hexdigest() == metadata['sha256'], name
     if name.endswith('.png'):
@@ -63,10 +107,10 @@ print('PASS illustrated bridge prop hashes and crop dimensions.')
 
 # Word Garden reference assets are preserved exact v3.31 embedded-source blobs.
 word_garden_art = json.loads((ROOT/'ValkyrieLearn/Resources/WORD_GARDEN_ART_MANIFEST.json').read_text())
-def git_blob_sha(data):
-    return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
 assert git_blob_sha((ROOT/'index.html').read_bytes()) == word_garden_art['sourceBlobSHA']
 for path, metadata in word_garden_art['assets'].items():
+    if path in superseded_companion_paths:
+        continue
     data = (ROOT/path).read_bytes()
     assert git_blob_sha(data) == metadata['blobSHA'], path
 print('PASS Word Garden v3.31 source-blob provenance.')
@@ -75,6 +119,8 @@ print('PASS Word Garden v3.31 source-blob provenance.')
 puzzle_art = json.loads((ROOT/'ValkyrieLearn/Resources/PUZZLE_PALACE_ART_MANIFEST.json').read_text())
 assert git_blob_sha((ROOT/'index.html').read_bytes()) == puzzle_art['sourceBlobSHA']
 for path, metadata in puzzle_art['assets'].items():
+    if path in superseded_companion_paths:
+        continue
     data = (ROOT/path).read_bytes()
     assert git_blob_sha(data) == metadata['blobSHA'], path
 print('PASS Puzzle Palace v3.31 source-blob provenance.')

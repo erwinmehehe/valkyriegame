@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "note": "Native-safe companion replacements approved for the iPad game. Milo and Tiko are converted from their HD source art. Lumi is exported through the strongest available decoder recovery path and records that path in lumiRecoverySource. All runtime companion files are PNG.",
+  "assets": {
+    "ValkyrieLearn/Resources/Pip.atlas/idle_01.png": {
+      "blobSHA": "1875ce28db5d41d28825004f963b28de800f7f28",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    },
+    "ValkyrieLearn/Resources/Pip.atlas/walk_01.png": {
+      "blobSHA": "1875ce28db5d41d28825004f963b28de800f7f28",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    },
+    "ValkyrieLearn/Resources/Pip.atlas/interact_01.png": {
+      "blobSHA": "1875ce28db5d41d28825004f963b28de800f7f28",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    },
+    "ValkyrieLearn/Resources/Pip.atlas/celebrate_01.png": {
+      "blobSHA": "1875ce28db5d41d28825004f963b28de800f7f28",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    },
+    "ValkyrieLearn/Resources/Pip.atlas/react_01.png": {
+      "blobSHA": "1875ce28db5d41d28825004f963b28de800f7f28",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    },
+    "ValkyrieLearn/Resources/Milo.png": {
+      "blobSHA": "e21d417c913f1f67d6f3f84e272e85a55ae30856",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    },
+    "ValkyrieLearn/Resources/Tiko.png": {
+      "blobSHA": "a995ce7fa7197c65f662b258e7039f726a4c6ef9",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    },
+    "ValkyrieLearn/Resources/Lumi.png": {
+      "blobSHA": "8f6d4b4fb2c51fc549c9b0b010770bda62694ea3",
+      "size": [
+        256,
+        256
+      ],
+      "format": "png"
+    }
+  },
+  "lumiRecoverySource": "v331-source-resized"
+}
