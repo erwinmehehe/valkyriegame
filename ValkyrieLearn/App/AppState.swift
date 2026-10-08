@@ -534,6 +534,30 @@ import LearningCore
         beginInteraction()
         if adventure.undoTrailJump() { persist() }
     }
+    func addDockCounter() {
+        beginInteraction()
+        if adventure.addDockCounter() { persist() }
+    }
+    func undoDockCounter() {
+        beginInteraction()
+        if adventure.undoDockCounter() { persist() }
+    }
+    func adjustDockAnswer(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustDockAnswer(delta) { persist() }
+    }
+    func selectMapPosition(_ cell: Int) {
+        beginInteraction()
+        if adventure.selectMapPosition(cell) { persist() }
+    }
+    func stepMap(dx: Int, dy: Int) {
+        beginInteraction()
+        if adventure.stepMap(dx: dx, dy: dy) { persist() }
+    }
+    func undoMapStep() {
+        beginInteraction()
+        if adventure.undoMapStep() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
