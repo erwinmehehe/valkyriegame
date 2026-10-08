@@ -1262,6 +1262,7 @@ import LearningCore
         case .patternLoom(let model): (mechanic as? PatternLoomMechanic)?.render(model)
         case .shapeForge(let model): (mechanic as? ShapeForgeMechanic)?.render(model)
         case .measurementWorkshop(let model): (mechanic as? MeasurementWorkshopMechanic)?.render(model)
+        case .dataBoard(let model): (mechanic as? DataBoardMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1340,7 +1341,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1396,6 +1397,28 @@ import LearningCore
                     let y = CGFloat(33 - row * 54)
                     if abs(local.x - 103) <= 46 && abs(local.y - y) <= 27 {
                         manipulate { self.state.cycleMirrorCell(row) }
+                        return true
+                    }
+                }
+            }
+        case .dataBoard(let model):
+            if hypot(local.x - 230, local.y - (model.isSorting ? 53 : 51)) <= 41 {
+                if model.isSorting {
+                    manipulate { self.state.undoDataSort() }
+                } else {
+                    manipulate { self.state.undoPicture() }
+                }
+                return true
+            }
+            if abs(local.y + 121) <= 43 {
+                for category in 1...3 {
+                    let x = CGFloat(category - 2) * 158
+                    if abs(local.x - x) <= 41 {
+                        if model.isSorting {
+                            manipulate { self.state.sortDataObject(into: category) }
+                        } else {
+                            manipulate { self.state.addPicture(to: category) }
+                        }
                         return true
                     }
                 }
@@ -1500,6 +1523,18 @@ import LearningCore
         case "measureLeft": manipulate { self.state.chooseComparison(.left) }
         case "measureEqual": manipulate { self.state.chooseComparison(.equal) }
         case "measureRight": manipulate { self.state.chooseComparison(.right) }
+        case "dataBin1": manipulate { self.state.sortDataObject(into: 1) }
+        case "dataBin2": manipulate { self.state.sortDataObject(into: 2) }
+        case "dataBin3": manipulate { self.state.sortDataObject(into: 3) }
+        case "dataGraph1": manipulate { self.state.addPicture(to: 1) }
+        case "dataGraph2": manipulate { self.state.addPicture(to: 2) }
+        case "dataGraph3": manipulate { self.state.addPicture(to: 3) }
+        case "dataUndo":
+            if case .dataBoard(let model)? = state.runtime, model.isSorting {
+                manipulate { self.state.undoDataSort() }
+            } else {
+                manipulate { self.state.undoPicture() }
+            }
         case "scaleLeft", "placeLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight", "placeRight": manipulate { self.state.chooseComparison(.right) }
         case "scaleEqual", "placeEqual": manipulate { self.state.chooseComparison(.equal) }
@@ -1541,7 +1576,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1625,6 +1660,10 @@ import LearningCore
                 case nil: return
                 }
             }
+        case .dataBoard(let model):
+            change = model.isSorting
+                ? "\(model.sortedBins.count) of 5 objects sorted."
+                : "\(model.placedGraphTotal) picture tiles placed in the graph."
         }
         // Describe only the child's visible edit; the lever still checks the answer.
         instruction.text = change + " Pull Pip's lever when you're ready."
