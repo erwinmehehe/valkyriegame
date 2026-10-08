@@ -8,6 +8,11 @@ import LearningCore
     override var worldTitle: String { "Science Lab · Creature Grove" }
     override var walkable: CGRect { CGRect(x: 90, y: 135, width: 1100, height: 170) }
 
+    // Preview-only: the candidate vectors were visually rejected against the
+    // approved painterly references. Default remains the approved scenery.
+    // Tests can opt in to capture side-by-side review images before approval.
+    var useCandidateVectorArtwork = false
+
     let milo = MiloNode()
     var groveStage: GroveStage { state.scienceAdventure.groveStage }
     var selectedHabitat: HabitatChoice? { state.scienceAdventure.selectedHabitat }
@@ -135,7 +140,8 @@ import LearningCore
         ambientBase.name = "creatureGroveAmbientBase"
         addChild(ambientBase)
 
-        if let texture = ArtSystem.texture("ScienceCreatureGrovePaintedHD") {
+        if useCandidateVectorArtwork,
+           let texture = ArtSystem.texture("ScienceCreatureGrovePaintedHD") {
             let backdrop = SKSpriteNode(
                 texture: texture,
                 size: CGSize(width: 1280, height: 960)
