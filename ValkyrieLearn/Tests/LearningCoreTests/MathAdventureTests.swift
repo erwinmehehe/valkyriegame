@@ -110,7 +110,7 @@ final class MathAdventureTests: XCTestCase {
                 }
                 XCTAssertEqual(remaining, 0)
             }
-               case .groupingGarden(let model):
+        case .groupingGarden(let model):
             if model.activity.targetCells > 0 {
                 XCTAssertTrue(adventure.chooseGardenFraction(0))
             } else {
@@ -228,7 +228,7 @@ final class MathAdventureTests: XCTestCase {
         var profile = LearnerProfile(); var date = epoch; var seen = Set<String>()
         // With seven mechanics and prerequisite-based variation, give the
         // planner sufficient independent scored encounters to reach every one.
-        for _ in 0..<180 {
+        for _ in 0..<420 {
             let selection = try adventure.prepareNext(profile: &profile, now: date)
             if selection == .explorationBreak {
                 adventure.finishExploration(profile: &profile, at: date); continue
