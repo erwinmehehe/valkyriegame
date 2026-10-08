@@ -402,6 +402,14 @@ import LearningCore
         beginInteraction()
         if adventure.cycleMirrorCell(row) { persist() }
     }
+    func placeMeasureUnit() {
+        beginInteraction()
+        if adventure.placeMeasureUnit() { persist() }
+    }
+    func removeMeasureUnit() {
+        beginInteraction()
+        if adventure.removeMeasureUnit() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
