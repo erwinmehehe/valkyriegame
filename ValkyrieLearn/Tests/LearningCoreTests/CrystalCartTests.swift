@@ -121,7 +121,7 @@ final class CrystalCartTests: XCTestCase {
             + MathCastleEncounterCatalog.reasoningDepth
 
         XCTAssertLessThan(seedCatalog.count, 50)
-        XCTAssertEqual(encounters.count, 2454)
+        XCTAssertEqual(encounters.count, 2661)
         XCTAssertEqual(
             encounters.count,
             seedCatalog.count + MathProductionQuestionBank.encounters.count
@@ -332,13 +332,13 @@ final class CrystalCartTests: XCTestCase {
         XCTAssertEqual(model.submit(at: after)?.outcome, .correct)
     }
 
-    func testFreshLearnerCanReachAllFourteenMechanicsThroughRealEligibleEvidence() throws {
+    func testFreshLearnerCanReachAllSixteenMechanicsThroughRealEligibleEvidence() throws {
         let graph = try MathSkills.graph()
         var profile = LearnerProfile()
         var now = Date(timeIntervalSince1970: 1000)
         var seenMechanics = Set<String>()
         // Replan after each real response; never seed skill readiness by hand.
-        for _ in 0..<260 {
+        for _ in 0..<480 {
             let plan = try MathCastleEncounterCatalog.sessionPlan(for: profile,
                 encounterCount: 1, now: now)
             guard let item = plan.encounters.first else { break }
@@ -511,6 +511,47 @@ final class CrystalCartTests: XCTestCase {
                     }
                     XCTAssertTrue(runtime.confirmReasoningStage())
                 }
+            case .differenceBridge(let model):
+                if model.isDifference {
+                    for _ in 0..<model.pairGoal {
+                        XCTAssertTrue(runtime.matchDifferencePair())
+                    }
+                    for _ in 0..<model.leftoverGoal {
+                        XCTAssertTrue(runtime.collectDifference())
+                    }
+                } else {
+                    for _ in 0..<model.missingPart {
+                        XCTAssertTrue(runtime.addInverseCounter())
+                    }
+                    for _ in 0..<model.missingPart {
+                        XCTAssertTrue(runtime.reverseInverseCounter())
+                    }
+                }
+            case .routeExplorer(let model):
+                var cell = model.startCell
+                for _ in 0..<12 where cell != model.destination {
+                    let row = cell / 3
+                    let column = cell % 3
+                    let destinationRow = model.destination / 3
+                    let destinationColumn = model.destination % 3
+                    let options: [(MapMove, Int, Bool)] = [
+                        (.north, cell - 3, row > 0 && row > destinationRow),
+                        (.south, cell + 3, row < 2 && row < destinationRow),
+                        (.west, cell - 1, column > 0 && column > destinationColumn),
+                        (.east, cell + 1, column < 2 && column < destinationColumn)
+                    ]
+                    var advanced = false
+                    for (direction, nextCell, valid) in options
+                        where valid && nextCell != model.blockedCell {
+                        XCTAssertTrue(runtime.moveOnMap(direction))
+                        cell = nextCell
+                        advanced = true
+                        break
+                    }
+                    XCTAssertTrue(advanced, "Map must admit a path around its rock")
+                    if !advanced { break }
+                }
+                XCTAssertEqual(cell, model.destination)
             case .numberTrail(let model):
                 if model.isEstimate {
                     XCTAssertTrue(runtime.revealTrailCollection(at: now.addingTimeInterval(-2)))
