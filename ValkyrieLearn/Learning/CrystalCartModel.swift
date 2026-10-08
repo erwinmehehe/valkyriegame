@@ -2681,9 +2681,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     }
 
 
-    @discardableResult public mutating func revealTrailCollection() -> Bool {
+    @discardableResult public mutating func revealTrailCollection(at date: Date = Date()) -> Bool {
         guard case .numberTrail(var model) = self else { return false }
-        let changed = model.revealCollection()
+        let changed = model.revealCollection(at: date)
         self = .numberTrail(model)
         return changed
     }
@@ -2695,9 +2695,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
-    @discardableResult public mutating func lockTrailEstimate() -> Bool {
+    @discardableResult public mutating func lockTrailEstimate(at date: Date = Date()) -> Bool {
         guard case .numberTrail(var model) = self else { return false }
-        let changed = model.lockEstimate()
+        let changed = model.lockEstimate(at: date)
         self = .numberTrail(model)
         return changed
     }
