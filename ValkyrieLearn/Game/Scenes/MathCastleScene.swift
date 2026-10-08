@@ -1260,6 +1260,8 @@ import LearningCore
         case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
         case .reasoningStudio(let model): (mechanic as? ReasoningStudioMechanic)?.render(model)
         case .numberTrail(let model): (mechanic as? NumberTrailMechanic)?.render(model)
+        case .differenceBridge(let model): (mechanic as? DifferenceBridgeMechanic)?.render(model)
+        case .routeExplorer(let model): (mechanic as? RouteExplorerMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1338,7 +1340,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differenceBridge, MathMechanicID.routeExplorer]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1397,6 +1399,39 @@ import LearningCore
                         return true
                     }
                 }
+            }
+        case .differenceBridge(let model):
+            let positions: [CGFloat] = [-184, -60, 60, 184]
+            for (index, x) in positions.enumerated() where
+                hypot(local.x - x, local.y + 120) <= 39 {
+                if model.isDifference {
+                    switch index {
+                    case 0: manipulate { self.state.matchDifferencePair() }
+                    case 1: manipulate { self.state.undoDifferencePair() }
+                    case 2: manipulate { self.state.collectDifference() }
+                    default: manipulate { self.state.undoDifferenceCollection() }
+                    }
+                } else {
+                    switch index {
+                    case 0: manipulate { self.state.addInverseCounter() }
+                    case 1: manipulate { self.state.undoInverseCounter() }
+                    case 2: manipulate { self.state.reverseInverseCounter() }
+                    default: manipulate { self.state.undoInverseReverse() }
+                    }
+                }
+                return true
+            }
+        case .routeExplorer:
+            for (index, x) in [CGFloat(-196), -98, 0, 98, 196].enumerated()
+                where hypot(local.x - x, local.y + 120) <= 37 {
+                switch index {
+                case 0: manipulate { self.state.moveOnMap(.north) }
+                case 1: manipulate { self.state.moveOnMap(.south) }
+                case 2: manipulate { self.state.moveOnMap(.west) }
+                case 3: manipulate { self.state.moveOnMap(.east) }
+                default: manipulate { self.state.undoMapMove() }
+                }
+                return true
             }
         case .numberTrail(let model):
             if model.isEstimate {
@@ -1746,6 +1781,19 @@ import LearningCore
         case "trailEstimateLock": manipulate { self.state.lockTrailEstimate() }
         case "trailUndoJump": manipulate { self.state.undoTrailJump() }
         case "trailAddJump": manipulate { self.state.addTrailJump() }
+        case "diffMatch": manipulate { self.state.matchDifferencePair() }
+        case "diffUndoMatch": manipulate { self.state.undoDifferencePair() }
+        case "diffCollect": manipulate { self.state.collectDifference() }
+        case "diffUndoCollect": manipulate { self.state.undoDifferenceCollection() }
+        case "inverseAdd": manipulate { self.state.addInverseCounter() }
+        case "inverseUndoAdd": manipulate { self.state.undoInverseCounter() }
+        case "inverseTake": manipulate { self.state.reverseInverseCounter() }
+        case "inverseUndoTake": manipulate { self.state.undoInverseReverse() }
+        case "mapNorth": manipulate { self.state.moveOnMap(.north) }
+        case "mapSouth": manipulate { self.state.moveOnMap(.south) }
+        case "mapWest": manipulate { self.state.moveOnMap(.west) }
+        case "mapEast": manipulate { self.state.moveOnMap(.east) }
+        case "mapUndo": manipulate { self.state.undoMapMove() }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1793,7 +1841,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail, MathMechanicID.differenceBridge, MathMechanicID.routeExplorer:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1932,6 +1980,14 @@ import LearningCore
                     change = "Number marker now \(model.workingValue)."
                 }
             }
+        case .differenceBridge(let model):
+            if model.isDifference {
+                change = "\(model.matchedPairs) pairs matched. \(model.collectedLeftovers) leftovers collected."
+            } else {
+                change = "\(model.joinedCounters) counters added, then \(model.returnedCounters) taken back."
+            }
+        case .routeExplorer(let model):
+            change = "Rover moved \(model.movesTaken) \(model.movesTaken == 1 ? "step" : "steps") on the grid."
         }
         // Describe only the child's visible edit; the lever still checks the answer.
         instruction.text = change + " Pull Pip's lever when you're ready."
