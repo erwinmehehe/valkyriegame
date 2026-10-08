@@ -1266,6 +1266,7 @@ import LearningCore
         case .clockMarket(let model): (mechanic as? ClockMarketMechanic)?.render(model)
         case .groupingGarden(let model): (mechanic as? GroupingGardenMechanic)?.render(model)
         case .reasoningStudio(let model): (mechanic as? ReasoningStudioMechanic)?.render(model)
+        case .numberTrail(let model): (mechanic as? NumberTrailMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1344,7 +1345,7 @@ import LearningCore
         let local = mechanic.convert(point, from: self)
         if !canManipulate() {
             if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
-               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio]
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail]
                    .contains(active.encounter.mechanicID) {
                 engageMachine()
                 return true
@@ -1402,6 +1403,33 @@ import LearningCore
                         manipulate { self.state.cycleMirrorCell(row) }
                         return true
                     }
+                }
+            }
+        case .numberTrail(let model):
+            if model.isEstimate {
+                for (x, operation) in [
+                    (CGFloat(-157), 0),
+                    (CGFloat(17), -1),
+                    (CGFloat(108), 1),
+                    (CGFloat(207), 2)
+                ] {
+                    if hypot(local.x - x, local.y + 122) <= 41 {
+                        switch operation {
+                        case 0: manipulate { self.state.revealTrailCollection() }
+                        case -1, 1: manipulate { self.state.adjustTrailEstimate(operation) }
+                        default: manipulate { self.state.lockTrailEstimate() }
+                        }
+                        return true
+                    }
+                }
+            } else {
+                if hypot(local.x + 102, local.y + 122) <= 40 {
+                    manipulate { self.state.undoTrailJump() }
+                    return true
+                }
+                if hypot(local.x - 102, local.y + 122) <= 40 {
+                    manipulate { self.state.addTrailJump() }
+                    return true
                 }
             }
         case .reasoningStudio(let model):
@@ -1719,6 +1747,12 @@ import LearningCore
         case "reasonCounterPlus": manipulate { self.state.moveReasoningCounter(1) }
         case "reasonConfirm": manipulate { self.state.confirmReasoningStage() }
         case "reasonReset": manipulate { self.state.resetReasoningStages() }
+        case "trailFlash": manipulate { self.state.revealTrailCollection() }
+        case "trailEstimateMinus": manipulate { self.state.adjustTrailEstimate(-1) }
+        case "trailEstimatePlus": manipulate { self.state.adjustTrailEstimate(1) }
+        case "trailEstimateLock": manipulate { self.state.lockTrailEstimate() }
+        case "trailUndoJump": manipulate { self.state.undoTrailJump() }
+        case "trailAddJump": manipulate { self.state.addTrailJump() }
         case "dataUndo":
             if case .dataBoard(let model)? = state.runtime, model.isSorting {
                 manipulate { self.state.undoDataSort() }
@@ -1766,7 +1800,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge, MathMechanicID.measurementWorkshop, MathMechanicID.dataBoard, MathMechanicID.clockMarket, MathMechanicID.groupingGarden, MathMechanicID.reasoningStudio, MathMechanicID.numberTrail:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1873,6 +1907,18 @@ import LearningCore
                 change = "\(model.jumps) \(model.jumps == 1 ? "jump" : "jumps") \(model.jumps == 1 ? "makes" : "make") a total of \(model.currentJumpTotal)."
             } else {
                 change = "\(model.cuts.count) of \(model.groupCount - 1) fraction cuts placed."
+            }
+        case .numberTrail(let model):
+            if model.isEstimate {
+                if let guess = model.lockedEstimate {
+                    change = "Estimate \(guess) locked after the brief flash."
+                } else if model.flashObserved {
+                    change = "Flash hidden. Estimate dial is on \(model.dialValue)."
+                } else {
+                    change = "Watch the brief firefly flash before you guess."
+                }
+            } else {
+                change = "\(model.jumps) of \(model.requiredJumps) jumps placed. Marker at \(model.markerNumber)."
             }
         case .reasoningStudio(let model):
             switch model.task {
