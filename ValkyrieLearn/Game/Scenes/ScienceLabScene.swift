@@ -1143,7 +1143,7 @@ import LearningCore
         case .arrive:
             groups = [
                 (["scienceSeedBench"], 1.0),
-                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.012),
+                (["scienceWaterTank", "scienceWaterPipe", "scienceWaterValve"], 0.008),
                 (["scienceSunPrism", "sciencePrismBeam"], 0.001),
                 (["scienceWeatherGate"], 0.001)
             ]
