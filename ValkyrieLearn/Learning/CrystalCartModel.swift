@@ -361,6 +361,8 @@ public enum ShapeForgeTask: String, Codable, CaseIterable, Sendable {
     case recognize
     case attributes
     case rotate
+    case compose
+    case symmetry
 }
 
 public enum ForgeShape: Int, Codable, CaseIterable, Sendable {
@@ -401,6 +403,8 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
     public private(set) var selectedOption: Int?
     public private(set) var currentOrientation: Int
     public private(set) var hasRotated: Bool
+    public private(set) var placedHalfTurns: [Int]
+    public private(set) var mirrorCells: [Int?]
     public private(set) var attempts: Int
     public private(set) var support: SupportLevel
     public private(set) var completed: Bool
@@ -408,6 +412,14 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
 
     public var isRotation: Bool { task == .rotate }
     public var targetOrientation: Int { encounter.targetQuantity }
+    public var requiredHalfTurns: [Int] {
+        [targetOrientation, (targetOrientation + 2) % 4]
+    }
+    public var symmetryReference: [ForgeShape] {
+        let seed = encounter.initialQuantity
+        let indices = [seed % 4, (seed / 4) % 4, (seed + seed / 4 + 1) % 4]
+        return indices.compactMap { ForgeShape(rawValue: $0 + 1) }
+    }
 
     // Child sees three actual shape tiles. Shift changes their placement while
     // the prompt remains tied to the shape identity, not a fixed answer position.
@@ -436,7 +448,7 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
         case .attributes:
             guard let shape else { return nil }
             return cornerChoices.firstIndex(of: shape.corners).map { $0 + 1 }
-        case .rotate:
+        case .rotate, .compose, .symmetry:
             return nil
         }
     }
@@ -462,17 +474,32 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
             expectedSkill = MathSkills.shapeAttributes
         case .rotate:
             expectedSkill = MathSkills.rotateShapes
+        case .compose:
+            expectedSkill = MathSkills.composeShapes
+        case .symmetry:
+            expectedSkill = MathSkills.symmetry
         }
         guard encounter.skillID == expectedSkill else {
             throw ModelError.invalidConfiguration
         }
-        if task == .rotate {
+        switch task {
+        case .rotate:
             guard (0...3).contains(encounter.initialQuantity),
                   (0...3).contains(encounter.targetQuantity),
                   encounter.initialQuantity != encounter.targetQuantity else {
                 throw ModelError.invalidConfiguration
             }
-        } else {
+        case .compose:
+            guard encounter.initialQuantity == 0,
+                  (0...3).contains(encounter.targetQuantity) else {
+                throw ModelError.invalidConfiguration
+            }
+        case .symmetry:
+            guard (0...11).contains(encounter.initialQuantity),
+                  encounter.targetQuantity == 3 else {
+                throw ModelError.invalidConfiguration
+            }
+        case .recognize, .attributes:
             guard (0...2).contains(encounter.initialQuantity),
                   ForgeShape(rawValue: encounter.targetQuantity) != nil else {
                 throw ModelError.invalidConfiguration
@@ -481,10 +508,13 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
 
         self.encounter = encounter
         self.task = task
-        self.shape = task == .rotate ? nil : ForgeShape(rawValue: encounter.targetQuantity)
+        self.shape = task == .recognize || task == .attributes
+            ? ForgeShape(rawValue: encounter.targetQuantity) : nil
         selectedOption = nil
         currentOrientation = task == .rotate ? encounter.initialQuantity : 0
         hasRotated = false
+        placedHalfTurns = []
+        mirrorCells = task == .symmetry ? Array(repeating: nil, count: 3) : []
         attempts = 0
         support = .independent
         completed = false
@@ -492,7 +522,8 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
     }
 
     @discardableResult public mutating func chooseOption(_ option: Int) -> Bool {
-        guard !completed, !isRotation, (1...3).contains(option),
+        guard !completed, task == .recognize || task == .attributes,
+              (1...3).contains(option),
               selectedOption != option else { return false }
         selectedOption = option
         return true
@@ -505,18 +536,52 @@ public struct ShapeForgeModel: Codable, Equatable, Sendable {
         return true
     }
 
+    /// Physically place one of two complementary right-triangle halves.
+    @discardableResult public mutating func placeTriangleHalf(_ quarterTurns: Int) -> Bool {
+        guard !completed, task == .compose, (0...3).contains(quarterTurns),
+              placedHalfTurns.count < 2 else { return false }
+        placedHalfTurns.append(quarterTurns)
+        return true
+    }
+
+    @discardableResult public mutating func undoTriangleHalf() -> Bool {
+        guard !completed, task == .compose, !placedHalfTurns.isEmpty else { return false }
+        placedHalfTurns.removeLast()
+        return true
+    }
+
+    /// Each tap cycles the actual shape displayed in one mirrored cell.
+    @discardableResult public mutating func cycleMirrorCell(_ row: Int) -> Bool {
+        guard !completed, task == .symmetry, (0..<mirrorCells.count).contains(row) else {
+            return false
+        }
+        mirrorCells[row] = (mirrorCells[row] ?? 0) % ForgeShape.allCases.count + 1
+        return true
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         support = ManipulativeEvidence.stronger(support, scaffold.support)
     }
 
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
         guard !completed else { return nil }
-        if !isRotation && selectedOption == nil { return nil }
-        if isRotation && !hasRotated { return nil }
+        let correct: Bool
+        switch task {
+        case .recognize, .attributes:
+            guard selectedOption != nil else { return nil }
+            correct = selectedOption == correctOption
+        case .rotate:
+            guard hasRotated else { return nil }
+            correct = currentOrientation == targetOrientation
+        case .compose:
+            guard placedHalfTurns.count == 2 else { return nil }
+            correct = placedHalfTurns == requiredHalfTurns
+        case .symmetry:
+            guard mirrorCells.count == 3,
+                  mirrorCells.allSatisfy({ $0 != nil }) else { return nil }
+            correct = mirrorCells == symmetryReference.map { Optional($0.rawValue) }
+        }
         attempts += 1
-        let correct = isRotation
-            ? currentOrientation == targetOrientation
-            : selectedOption == correctOption
         completed = correct
         return ManipulativeEvidence.make(
             encounter: encounter,
@@ -1115,6 +1180,27 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     @discardableResult public mutating func rotateShape(_ delta: Int) -> Bool {
         guard case .shapeForge(var model) = self else { return false }
         let changed = model.turn(delta)
+        self = .shapeForge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func placeShapeHalf(_ turns: Int) -> Bool {
+        guard case .shapeForge(var model) = self else { return false }
+        let changed = model.placeTriangleHalf(turns)
+        self = .shapeForge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func undoShapeHalf() -> Bool {
+        guard case .shapeForge(var model) = self else { return false }
+        let changed = model.undoTriangleHalf()
+        self = .shapeForge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func cycleMirrorCell(_ row: Int) -> Bool {
+        guard case .shapeForge(var model) = self else { return false }
+        let changed = model.cycleMirrorCell(row)
         self = .shapeForge(model)
         return changed
     }
