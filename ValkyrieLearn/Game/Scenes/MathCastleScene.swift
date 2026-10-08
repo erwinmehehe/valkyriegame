@@ -1260,6 +1260,7 @@ import LearningCore
         case .missingBridge(let model): (mechanic as? MissingNumberBridgeMechanic)?.render(model)
         case .placeValueFactory(let model): (mechanic as? PlaceValueFactoryMechanic)?.render(model)
         case .patternLoom(let model): (mechanic as? PatternLoomMechanic)?.render(model)
+        case .shapeForge(let model): (mechanic as? ShapeForgeMechanic)?.render(model)
         }
         lastPreviewVisible = state.previewVisible
         updatePower(runtime.completed)
@@ -1334,8 +1335,17 @@ import LearningCore
     // Explicitly test knob centers in mechanic-local coordinates before generic
     // SpriteKit hit ancestry: illustrated trays can overlap visible controls.
     private func handleMechanicDirectControl(at point: CGPoint) -> Bool {
-        guard let active = state.runtime, let mechanic, canManipulate() else { return false }
+        guard let active = state.runtime, let mechanic else { return false }
         let local = mechanic.convert(point, from: self)
+        if !canManipulate() {
+            if CGRect(x: -265, y: -160, width: 530, height: 310).contains(local),
+               [MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge]
+                   .contains(active.encounter.mechanicID) {
+                engageMachine()
+                return true
+            }
+            return false
+        }
         switch active {
         case .placeValueFactory(let model) where !model.isComparison:
             let controls: [(CGPoint, Int, Int)] = [
@@ -1348,6 +1358,25 @@ import LearningCore
                 if hypot(local.x - center.x, local.y - center.y) <= 36 {
                     manipulate { self.state.adjustPlaceValue(tensDelta: tens, onesDelta: ones) }
                     return true
+                }
+            }
+        case .shapeForge(let model):
+            if model.isRotation {
+                for (x, delta) in [(CGFloat(-104), -1), (CGFloat(104), 1)] {
+                    if hypot(local.x - x, local.y + 118) <= 40 {
+                        manipulate { self.state.rotateShape(delta) }
+                        return true
+                    }
+                }
+            } else {
+                let centerY: CGFloat = model.task == .attributes ? -104 : -20
+                let spacing: CGFloat = model.task == .attributes ? 153 : 158
+                for option in 1...3 {
+                    let x = CGFloat(option - 2) * spacing
+                    if hypot(local.x - x, local.y - centerY) <= 55 {
+                        manipulate { self.state.chooseShapeOption(option) }
+                        return true
+                    }
                 }
             }
         case .patternLoom:
@@ -1409,6 +1438,11 @@ import LearningCore
         case "loomSymbol2": manipulate { self.state.choosePatternSymbol(2) }
         case "loomSymbol3": manipulate { self.state.choosePatternSymbol(3) }
         case "loomUndo": manipulate { self.state.undoPatternSymbol() }
+        case "forgeChoice1": manipulate { self.state.chooseShapeOption(1) }
+        case "forgeChoice2": manipulate { self.state.chooseShapeOption(2) }
+        case "forgeChoice3": manipulate { self.state.chooseShapeOption(3) }
+        case "forgeTurnLeft": manipulate { self.state.rotateShape(-1) }
+        case "forgeTurnRight": manipulate { self.state.rotateShape(1) }
         case "scaleLeft", "placeLeft": manipulate { self.state.chooseComparison(.left) }
         case "scaleRight", "placeRight": manipulate { self.state.chooseComparison(.right) }
         case "scaleEqual", "placeEqual": manipulate { self.state.chooseComparison(.equal) }
@@ -1450,7 +1484,7 @@ import LearningCore
             openChallengeGate()
         case "cart", "fixedCrystal", "bondMachine", "bondKnown", "bondFixed", "tenFrameFixed", "tenFramePreview", "missingBridge", "missingAnswer", "missingFixed", "scaleBeam",
              "placeTensBuilt", "placeOnesBuilt",
-             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom:
+             MathMechanicID.balanceScale, MathMechanicID.numberBondMachine, MathMechanicID.tenFrameGate, MathMechanicID.missingNumberBridge, MathMechanicID.placeValueFactory, MathMechanicID.patternLoom, MathMechanicID.shapeForge:
             engageMachine()
         default:
             if walkable.contains(point) {
@@ -1512,6 +1546,12 @@ import LearningCore
             change = model.isCreation
                 ? "\(model.selectedSymbols.count) of \(model.slotCount) pattern shapes placed."
                 : "A shape fills the pattern gap."
+        case .shapeForge(let model):
+            if model.isRotation {
+                change = "The triangle turned one quarter-turn."
+            } else {
+                change = "Shape option \(model.selectedOption ?? 0) selected."
+            }
         }
         // Describe only the child's visible edit; the lever still checks the answer.
         instruction.text = change + " Pull Pip's lever when you're ready."
