@@ -514,6 +514,26 @@ import LearningCore
         beginInteraction()
         if adventure.resetReasoningStages() { persist() }
     }
+    func revealTrailCollection() {
+        beginInteraction()
+        if adventure.revealTrailCollection() { persist() }
+    }
+    func adjustTrailEstimate(_ delta: Int) {
+        beginInteraction()
+        if adventure.adjustTrailEstimate(delta) { persist() }
+    }
+    func lockTrailEstimate() {
+        beginInteraction()
+        if adventure.lockTrailEstimate() { persist() }
+    }
+    func addTrailJump() {
+        beginInteraction()
+        if adventure.addTrailJump() { persist() }
+    }
+    func undoTrailJump() {
+        beginInteraction()
+        if adventure.undoTrailJump() { persist() }
+    }
     func setNumber(_ number: Int) { beginInteraction(); adventure.setNumber(number); persist() }
     func scaffold() -> Scaffold? {
         beginInteraction()
