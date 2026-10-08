@@ -55,7 +55,7 @@ import LearningCore
             (clock, CGPoint(x: 820, y: 310), CGPoint(x: 981, y: 264), "Clock hands now show 1:00."),
             (routines, CGPoint(x: 820, y: 310), CGPoint(x: 645, y: 192), "1 of 4 daily events sorted."),
             (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins."),
-            (equalGroups, CGPoint(x: 820, y: 310), CGPoint(x: 634, y: 190), "1 of 2 berries placed in groups.")
+            (equalGroups, CGPoint(x: 820, y: 310), CGPoint(x: 758, y: 190), "1 of 2 berries placed in groups.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
