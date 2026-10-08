@@ -314,4 +314,146 @@ final class MathAdventureTests: XCTestCase {
     }
 
 
+    func testK2ThroughGrade2CurriculumMatrixMapsEveryMathSkillExactlyOnce() {
+        let catalogIDs = Set(MathSkillCatalog.descriptors.map(\.id))
+        let alignedIDs = Set(MathCurriculumMatrix.alignments.map(\.skillID))
+
+        XCTAssertEqual(MathSkillCatalog.descriptors.count, 73)
+        XCTAssertEqual(MathCurriculumMatrix.alignments.count, 73)
+        XCTAssertEqual(MathCurriculumMatrix.mappedSkillIDs, catalogIDs)
+        XCTAssertEqual(alignedIDs, catalogIDs)
+
+        XCTAssertEqual(MathCurriculumMatrix.skills(in: .k2Readiness).count, 13)
+        XCTAssertEqual(MathCurriculumMatrix.skills(in: .kindergarten).count, 17)
+        XCTAssertEqual(MathCurriculumMatrix.skills(in: .grade1).count, 31)
+        XCTAssertEqual(MathCurriculumMatrix.skills(in: .grade2).count, 12)
+
+        XCTAssertEqual(
+            MathCurriculumMatrix.alignment(for: MathSkills.pictureGraph)?.matatagDomain,
+            .dataAndProbability
+        )
+        XCTAssertEqual(
+            MathCurriculumMatrix.alignment(for: MathSkills.placeValue)?.singaporeArea,
+            .numbersAndAlgebra
+        )
+        XCTAssertEqual(
+            MathCurriculumMatrix.alignment(for: MathSkills.multiStep)?.singaporeArea,
+            .problemSolving
+        )
+    }
+
+    func testProductionQuestionBankBuildsOneThousandNormalAdaptiveEncounters() throws {
+        XCTAssertEqual(MathProductionQuestionBank.variants.count, 951)
+        XCTAssertEqual(MathProductionQuestionBank.encounters.count, 951)
+        XCTAssertEqual(MathCastleEncounterCatalog.all.count, 1000)
+
+        XCTAssertEqual(
+            Set(MathProductionQuestionBank.encounters.map(\.id)).count,
+            MathProductionQuestionBank.encounters.count
+        )
+        XCTAssertEqual(
+            Set(MathProductionQuestionBank.encounters.map(\.fingerprint)).count,
+            MathProductionQuestionBank.encounters.count,
+            "Production variants must represent distinct observable math, not relabeled duplicates."
+        )
+
+        for encounter in MathProductionQuestionBank.encounters {
+            XCTAssertTrue(
+                MathManipulativeSupport.supports(encounter),
+                "Unsupported production encounter: \(encounter.id)"
+            )
+            XCTAssertNoThrow(
+                try MathMechanicRuntime(encounter: encounter, at: epoch),
+                "Production encounter cannot initialize native runtime: \(encounter.id)"
+            )
+        }
+    }
+
+    func testProductionQuestionMetadataIsCompleteAndReviewable() {
+        XCTAssertEqual(MathProductionQuestionBank.coveredSkillIDs.count, 32)
+
+        for variant in MathProductionQuestionBank.variants {
+            XCTAssertNotNil(MathCurriculumMatrix.alignment(for: variant.encounter.skillID))
+            XCTAssertTrue((1...5).contains(variant.difficulty))
+            XCTAssertTrue(variant.masteryEligible)
+            XCTAssertFalse(variant.placementEligible)
+            XCTAssertTrue(variant.reviewEligible)
+        }
+
+        XCTAssertGreaterThan(
+            MathProductionQuestionBank.variants(in: .k2Readiness).count,
+            0
+        )
+        XCTAssertGreaterThan(
+            MathProductionQuestionBank.variants(in: .kindergarten).count,
+            0
+        )
+        XCTAssertGreaterThan(
+            MathProductionQuestionBank.variants(in: .grade1).count,
+            0
+        )
+        XCTAssertGreaterThan(
+            MathProductionQuestionBank.variants(in: .grade2).count,
+            0
+        )
+    }
+
+    func testUnsupportedSkillsRemainVisibleButDoNotReceiveFalseNativeMasteryQuestions() {
+        let unsupportedUntilDedicatedMechanicsExist: [SkillID] = [
+            MathSkills.countTo20,
+            MathSkills.numberOrder20,
+            MathSkills.oneMoreLess20,
+            MathSkills.estimate10,
+            MathSkills.countOn10,
+            MathSkills.findDifference10,
+            MathSkills.inverseFacts10,
+            MathSkills.groupTen,
+            MathSkills.placeValue,
+            MathSkills.buildTwoDigit,
+            MathSkills.readTwoDigit,
+            MathSkills.compareTwoDigit,
+            MathSkills.orderTwoDigit,
+            MathSkills.patternAB,
+            MathSkills.patternAAB,
+            MathSkills.patternABC,
+            MathSkills.patternMissing,
+            MathSkills.patternCreate,
+            MathSkills.recognizeShapes,
+            MathSkills.shapeAttributes,
+            MathSkills.composeShapes,
+            MathSkills.rotateShapes,
+            MathSkills.symmetry,
+            MathSkills.positionalLanguage,
+            MathSkills.mapRoute,
+            MathSkills.compareLength,
+            MathSkills.compareWeight,
+            MathSkills.compareCapacity,
+            MathSkills.nonstandardMeasure,
+            MathSkills.classifyObjects,
+            MathSkills.pictureGraph,
+            MathSkills.timeDayparts,
+            MathSkills.coinValues,
+            MathSkills.chooseStrategy,
+            MathSkills.multipleSolutions,
+            MathSkills.multiStep,
+            MathSkills.equalGroups,
+            MathSkills.repeatedAddition,
+            MathSkills.equalSharing,
+            MathSkills.halves,
+            MathSkills.quarters
+        ]
+
+        for skillID in unsupportedUntilDedicatedMechanicsExist {
+            XCTAssertNotNil(
+                MathCurriculumMatrix.alignment(for: skillID),
+                "Unsupported skills must stay visible in the curriculum matrix."
+            )
+            XCTAssertFalse(
+                MathProductionQuestionBank.hasNativeAssessment(for: skillID),
+                "Do not award mastery for \(skillID.rawValue) until a mechanic can observe the required act."
+            )
+        }
+    }
+
+
 }
