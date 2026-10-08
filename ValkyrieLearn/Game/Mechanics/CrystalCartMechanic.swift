@@ -1647,10 +1647,13 @@ import LearningCore
                     }
                     title("EQUAL STONES", x: x, y: -49, size: 12)
                 case .capacity:
-                    // Both vessels share identical dimensions; each visible
-                    // band represents one equal-size measuring cup of capacity.
+                    // All cups share a fixed-width base and each band is an
+                    // equal-size scoop. Vessel HEIGHT changes with capacity,
+                    // so the child compares what can fit, not water level in two
+                    // equal-capacity containers.
+                    let vesselHeight = CGFloat(value) * 11 + 4
                     _ = box(
-                        88, 88, x: x, y: -5, color: .clear,
+                        88, vesselHeight, x: x, y: -45 + vesselHeight / 2, color: .clear,
                         outline: UIColor(red: 0.75, green: 0.93, blue: 0.99, alpha: 1),
                         name: MathMechanicID.measurementWorkshop
                     )
