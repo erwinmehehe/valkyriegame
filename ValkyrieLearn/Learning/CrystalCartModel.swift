@@ -356,6 +356,175 @@ public struct PatternLoomModel: Codable, Equatable, Sendable {
     }
 }
 
+
+public enum ShapeForgeTask: String, Codable, CaseIterable, Sendable {
+    case recognize
+    case attributes
+    case rotate
+}
+
+public enum ForgeShape: Int, Codable, CaseIterable, Sendable {
+    case triangle = 1
+    case square
+    case rectangle
+    case circle
+
+    public var name: String {
+        switch self {
+        case .triangle: return "triangle"
+        case .square: return "square"
+        case .rectangle: return "rectangle"
+        case .circle: return "circle"
+        }
+    }
+
+    public var corners: Int {
+        switch self {
+        case .triangle: return 3
+        case .square, .rectangle: return 4
+        case .circle: return 0
+        }
+    }
+}
+
+/// Models a visible selection or a physical rotation, not a text-only answer.
+public struct ShapeForgeModel: Codable, Equatable, Sendable {
+    public enum ModelError: Error {
+        case unsupportedMechanic
+        case unsupportedOperation
+        case invalidConfiguration
+    }
+
+    public let encounter: LearningEncounter
+    public let task: ShapeForgeTask
+    public let shape: ForgeShape?
+    public private(set) var selectedOption: Int?
+    public private(set) var currentOrientation: Int
+    public private(set) var attempts: Int
+    public private(set) var support: SupportLevel
+    public private(set) var completed: Bool
+    public let startedAt: Date
+
+    public var isRotation: Bool { task == .rotate }
+    public var targetOrientation: Int { encounter.targetQuantity }
+
+    // Child sees three actual shape tiles. Shift changes their placement while
+    // the prompt remains tied to the shape identity, not a fixed answer position.
+    public var shapeChoices: [ForgeShape] {
+        guard let shape else { return [] }
+        let all: [ForgeShape] = [
+            shape,
+            ForgeShape(rawValue: shape.rawValue % 4 + 1)!,
+            ForgeShape(rawValue: (shape.rawValue + 1) % 4 + 1)!
+        ]
+        let shift = encounter.initialQuantity
+        return (0..<3).map { all[($0 + shift) % 3] }
+    }
+
+    public var cornerChoices: [Int] {
+        let base = [0, 3, 4]
+        let shift = encounter.initialQuantity
+        return (0..<3).map { base[($0 + shift) % 3] }
+    }
+
+    public var correctOption: Int? {
+        switch task {
+        case .recognize:
+            guard let shape else { return nil }
+            return shapeChoices.firstIndex(of: shape).map { $0 + 1 }
+        case .attributes:
+            guard let shape else { return nil }
+            return cornerChoices.firstIndex(of: shape.corners).map { $0 + 1 }
+        case .rotate:
+            return nil
+        }
+    }
+
+    public init(encounter: LearningEncounter, at date: Date = Date()) throws {
+        guard encounter.mechanicID == MathMechanicID.shapeForge else {
+            throw ModelError.unsupportedMechanic
+        }
+        guard encounter.operation == .shape else {
+            throw ModelError.unsupportedOperation
+        }
+        let fields = encounter.context.split(separator: ".")
+        guard fields.count == 2, fields[0] == "forge",
+              let task = ShapeForgeTask(rawValue: String(fields[1])) else {
+            throw ModelError.invalidConfiguration
+        }
+
+        let expectedSkill: SkillID
+        switch task {
+        case .recognize:
+            expectedSkill = MathSkills.recognizeShapes
+        case .attributes:
+            expectedSkill = MathSkills.shapeAttributes
+        case .rotate:
+            expectedSkill = MathSkills.rotateShapes
+        }
+        guard encounter.skillID == expectedSkill else {
+            throw ModelError.invalidConfiguration
+        }
+        if task == .rotate {
+            guard (0...3).contains(encounter.initialQuantity),
+                  (0...3).contains(encounter.targetQuantity),
+                  encounter.initialQuantity != encounter.targetQuantity else {
+                throw ModelError.invalidConfiguration
+            }
+        } else {
+            guard (0...2).contains(encounter.initialQuantity),
+                  ForgeShape(rawValue: encounter.targetQuantity) != nil else {
+                throw ModelError.invalidConfiguration
+            }
+        }
+
+        self.encounter = encounter
+        self.task = task
+        self.shape = task == .rotate ? nil : ForgeShape(rawValue: encounter.targetQuantity)
+        selectedOption = nil
+        currentOrientation = task == .rotate ? encounter.initialQuantity : 0
+        attempts = 0
+        support = .independent
+        completed = false
+        startedAt = date
+    }
+
+    @discardableResult public mutating func chooseOption(_ option: Int) -> Bool {
+        guard !completed, !isRotation, (1...3).contains(option),
+              selectedOption != option else { return false }
+        selectedOption = option
+        return true
+    }
+
+    @discardableResult public mutating func turn(_ delta: Int) -> Bool {
+        guard !completed, isRotation, delta == -1 || delta == 1 else { return false }
+        currentOrientation = (currentOrientation + delta + 4) % 4
+        return true
+    }
+
+    public mutating func apply(_ scaffold: Scaffold) {
+        support = ManipulativeEvidence.stronger(support, scaffold.support)
+    }
+
+    public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
+        guard !completed else { return nil }
+        if !isRotation && selectedOption == nil { return nil }
+        attempts += 1
+        let correct = isRotation
+            ? currentOrientation == targetOrientation
+            : selectedOption == correctOption
+        completed = correct
+        return ManipulativeEvidence.make(
+            encounter: encounter,
+            outcome: correct ? .correct : .incorrect,
+            support: support,
+            attempts: attempts,
+            startedAt: startedAt,
+            at: date
+        )
+    }
+}
+
 public enum MathMechanicID {
     public static let crystalCart = "crystalCart"
     public static let balanceScale = "balanceScale"
@@ -364,6 +533,7 @@ public enum MathMechanicID {
     public static let missingNumberBridge = "missingNumberBridge"
     public static let placeValueFactory = "placeValueFactory"
     public static let patternLoom = "patternLoom"
+    public static let shapeForge = "shapeForge"
 
     public static let adaptiveSet: Set<String> = [
         crystalCart,
@@ -372,7 +542,8 @@ public enum MathMechanicID {
         tenFrameGate,
         missingNumberBridge,
         placeValueFactory,
-        patternLoom
+        patternLoom,
+        shapeForge
     ]
 }
 
@@ -729,6 +900,8 @@ public enum MathManipulativeSupport {
             return encounter.operation == .missingAddend
         case MathMechanicID.patternLoom:
             return (try? PatternLoomModel(encounter: encounter)) != nil
+        case MathMechanicID.shapeForge:
+            return (try? ShapeForgeModel(encounter: encounter)) != nil
         case MathMechanicID.placeValueFactory:
             return [.quantityMatching, .comparison].contains(encounter.operation)
                 && (1...99).contains(encounter.targetQuantity)
@@ -755,6 +928,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
     case missingBridge(MissingNumberBridgeModel)
     case placeValueFactory(PlaceValueFactoryModel)
     case patternLoom(PatternLoomModel)
+    case shapeForge(ShapeForgeModel)
 
     public init(encounter: LearningEncounter, at date: Date = Date()) throws {
         switch encounter.mechanicID {
@@ -772,6 +946,8 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             self = .placeValueFactory(try PlaceValueFactoryModel(encounter: encounter, at: date))
         case MathMechanicID.patternLoom:
             self = .patternLoom(try PatternLoomModel(encounter: encounter, at: date))
+        case MathMechanicID.shapeForge:
+            self = .shapeForge(try ShapeForgeModel(encounter: encounter, at: date))
         default:
             throw MathMechanicRuntimeError.unsupportedEncounter
         }
@@ -786,6 +962,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .missingBridge(let model): return model.encounter
         case .placeValueFactory(let model): return model.encounter
         case .patternLoom(let model): return model.encounter
+        case .shapeForge(let model): return model.encounter
         }
     }
 
@@ -798,6 +975,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .missingBridge(let model): return model.completed
         case .placeValueFactory(let model): return model.completed
         case .patternLoom(let model): return model.completed
+        case .shapeForge(let model): return model.completed
         }
     }
 
@@ -810,6 +988,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .missingBridge(let model): return model.support
         case .placeValueFactory(let model): return model.support
         case .patternLoom(let model): return model.support
+        case .shapeForge(let model): return model.support
         }
     }
 
@@ -831,7 +1010,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.increment()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge:
             return false
         }
     }
@@ -854,7 +1033,7 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
             let changed = model.decrement()
             self = .missingBridge(model)
             return changed
-        case .balanceScale, .placeValueFactory, .patternLoom:
+        case .balanceScale, .placeValueFactory, .patternLoom, .shapeForge:
             return false
         }
     }
@@ -921,6 +1100,21 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         return changed
     }
 
+
+    @discardableResult public mutating func chooseShapeOption(_ option: Int) -> Bool {
+        guard case .shapeForge(var model) = self else { return false }
+        let changed = model.chooseOption(option)
+        self = .shapeForge(model)
+        return changed
+    }
+
+    @discardableResult public mutating func rotateShape(_ delta: Int) -> Bool {
+        guard case .shapeForge(var model) = self else { return false }
+        let changed = model.turn(delta)
+        self = .shapeForge(model)
+        return changed
+    }
+
     public mutating func apply(_ scaffold: Scaffold) {
         switch self {
         case .crystalCart(var model):
@@ -944,6 +1138,9 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .patternLoom(var model):
             model.apply(scaffold)
             self = .patternLoom(model)
+        case .shapeForge(var model):
+            model.apply(scaffold)
+            self = .shapeForge(model)
         }
     }
 
@@ -976,6 +1173,10 @@ public enum MathMechanicRuntime: Codable, Equatable, Sendable {
         case .patternLoom(var model):
             let evidence = model.submit(at: date)
             self = .patternLoom(model)
+            return evidence
+        case .shapeForge(var model):
+            let evidence = model.submit(at: date)
+            self = .shapeForge(model)
             return evidence
         }
     }
