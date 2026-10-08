@@ -2772,6 +2772,176 @@ import LearningCore
     }
 }
 
+/// Difference Bridge is a real manipulation, not a multiple-choice subtraction.
+/// Each tap on a matched column links two gems and exposes the leftovers.
+@MainActor final class DifferencePairsMechanic: SKNode, MathCastleReactiveMechanic {
+    private let contents = SKNode()
+    private let status = ArtSystem.label("", size: 15)
+
+    override init() {
+        super.init()
+        name = MathMechanicID.differencePairs
+        zPosition = 750
+
+        let tray = ArtSystem.supplyTray(CGSize(width: 530, height: 282))
+        tray.position.y = -14
+        tray.zPosition = -5
+        tray.name = MathMechanicID.differencePairs
+        addChild(tray)
+
+        let title = ArtSystem.plaque(
+            CGSize(width: 318, height: 47),
+            fill: UIColor(red: 0.09, green: 0.19, blue: 0.30, alpha: 0.98),
+            stroke: UIColor(red: 0.97, green: 0.81, blue: 0.49, alpha: 1),
+            radius: 15
+        )
+        title.position.y = 128
+        title.name = MathMechanicID.differencePairs
+        addChild(title)
+        let heading = ArtSystem.label("DIFFERENCE BRIDGE", size: 19)
+        heading.fontName = "AvenirNext-Heavy"
+        heading.fontColor = .white
+        heading.name = MathMechanicID.differencePairs
+        title.addChild(heading)
+
+        status.position.y = 95
+        status.fontName = "AvenirNext-DemiBold"
+        status.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.75, alpha: 1)
+        status.name = MathMechanicID.differencePairs
+        addChild(status)
+        addChild(contents)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use programmatic mechanics") }
+
+    private func label(_ value: String, at point: CGPoint, size: CGFloat = 14,
+                       color: UIColor = .white, name: String? = nil) {
+        let item = ArtSystem.label(value, size: size)
+        item.position = point
+        item.fontName = "AvenirNext-DemiBold"
+        item.fontColor = color
+        item.name = name ?? MathMechanicID.differencePairs
+        contents.addChild(item)
+    }
+
+    private func control(_ text: String, named identifier: String, x: CGFloat) {
+        let button = ArtSystem.plaque(
+            CGSize(width: 75, height: 54),
+            fill: UIColor(red: 0.11, green: 0.26, blue: 0.35, alpha: 0.97),
+            stroke: UIColor(red: 0.96, green: 0.80, blue: 0.47, alpha: 0.9),
+            radius: 18
+        )
+        button.position = CGPoint(x: x, y: -121)
+        button.name = identifier
+        button.zPosition = 50
+        contents.addChild(button)
+        let caption = ArtSystem.label(text, size: text.count > 3 ? 12 : 17)
+        caption.fontName = "AvenirNext-Heavy"
+        caption.fontColor = .white
+        caption.name = identifier
+        button.addChild(caption)
+    }
+
+    func render(_ model: DifferencePairsModel) {
+        contents.removeAllChildren()
+        status.text = "GOLD \(model.goldCount)/\(model.goldTarget)  ·  BLUE \(model.blueCount)/\(model.blueTarget)"
+        let firstX: CGFloat = -207
+        let pitch: CGFloat = 46
+
+        for column in 0..<10 {
+            let x = firstX + CGFloat(column) * pitch
+            let linked = model.pairedColumns.contains(column)
+            let goldPresent = column < model.goldCount
+            let bluePresent = column < model.blueCount
+
+            // Aligned seats stay visible while the child builds each row.
+            for y in [CGFloat(39), CGFloat(-34)] {
+                let seat = SKShapeNode(circleOfRadius: 17)
+                seat.position = CGPoint(x: x, y: y)
+                seat.strokeColor = UIColor(white: 1, alpha: 0.20)
+                seat.fillColor = UIColor(white: 1, alpha: 0.025)
+                seat.lineWidth = 1.5
+                seat.zPosition = 1
+                seat.name = MathMechanicID.differencePairs
+                contents.addChild(seat)
+            }
+
+            if linked {
+                let link = SKShapeNode(rectOf: CGSize(width: 7, height: 42), cornerRadius: 3)
+                link.position = CGPoint(x: x, y: 2)
+                link.fillColor = UIColor(red: 0.75, green: 1, blue: 0.77, alpha: 0.92)
+                link.strokeColor = .clear
+                link.glowWidth = 5
+                link.zPosition = 2
+                link.name = "diffMatch\(column)"
+                contents.addChild(link)
+            }
+
+            if goldPresent {
+                let gold = SKShapeNode(circleOfRadius: 15)
+                gold.position = CGPoint(x: x, y: 39)
+                gold.fillColor = UIColor(red: 1, green: linked ? 0.90 : 0.69,
+                                         blue: linked ? 0.68 : 0.22, alpha: 1)
+                gold.strokeColor = UIColor(red: 1, green: 0.95, blue: 0.74, alpha: 1)
+                gold.lineWidth = 2
+                gold.zPosition = 4
+                gold.name = "diffMatch\(column)"
+                contents.addChild(gold)
+            }
+            if bluePresent {
+                let blue = SKShapeNode(circleOfRadius: 15)
+                blue.position = CGPoint(x: x, y: -34)
+                blue.fillColor = UIColor(red: 0.21, green: linked ? 0.93 : 0.70,
+                                         blue: 0.96, alpha: 1)
+                blue.strokeColor = UIColor(red: 0.72, green: 0.98, blue: 1, alpha: 1)
+                blue.lineWidth = 2
+                blue.zPosition = 4
+                blue.name = "diffMatch\(column)"
+                contents.addChild(blue)
+            }
+
+            // The large transparent touch surface covers the aligned pair,
+            // providing a tap alternative to dragging tiny crystals.
+            if goldPresent && bluePresent && !linked {
+                let target = SKShapeNode(rectOf: CGSize(width: 42, height: 88),
+                                         cornerRadius: 12)
+                target.position = CGPoint(x: x, y: 2)
+                target.fillColor = UIColor(white: 1, alpha: 0.01)
+                target.strokeColor = .clear
+                target.zPosition = 8
+                target.name = "diffMatch\(column)"
+                contents.addChild(target)
+            }
+        }
+
+        if let difference = model.discoveredDifference {
+            label("\(difference) left without a partner",
+                  at: CGPoint(x: 0, y: -79), size: 16,
+                  color: UIColor(red: 1, green: 0.94, blue: 0.65, alpha: 1))
+        } else {
+            label(model.goldCount > 0 && model.blueCount > 0
+                  ? "Touch each aligned pair of crystals"
+                  : "Build both rows with the controls below",
+                  at: CGPoint(x: 0, y: -79), size: 15)
+        }
+
+        control("GOLD +", named: "diffGoldPlus", x: -196)
+        control("GOLD −", named: "diffGoldMinus", x: -98)
+        control("BLUE +", named: "diffBluePlus", x: 0)
+        control("BLUE −", named: "diffBlueMinus", x: 98)
+        control("UNDO", named: "diffUndoPair", x: 196)
+    }
+
+    func playSuccessReaction(reducedMotion: Bool) {
+        guard !reducedMotion else { return }
+        contents.removeAction(forKey: "differenceSuccess")
+        contents.run(.sequence([
+            .scale(to: 1.03, duration: 0.16),
+            .scale(to: 1.0, duration: 0.19)
+        ]), withKey: "differenceSuccess")
+    }
+}
+
 @MainActor enum MathCastleMechanicFactory {
     static func makeNode(for encounter: LearningEncounter) -> SKNode? {
         switch encounter.mechanicID {
@@ -2801,6 +2971,8 @@ import LearningCore
             return ReasoningStudioMechanic()
         case MathMechanicID.numberTrail:
             return NumberTrailMechanic()
+        case MathMechanicID.differencePairs:
+            return DifferencePairsMechanic()
         default:
             return nil
         }
