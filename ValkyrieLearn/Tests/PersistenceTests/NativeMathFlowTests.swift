@@ -385,7 +385,7 @@ import LearningCore
         XCTAssertEqual(state.profile, profile)
         XCTAssertEqual(
             scene.instruction.text,
-            "1 jumps make a total of 4. Pull Pip's lever when you're ready."
+            "1 jump make a total of 4. Pull Pip's lever when you're ready."
         )
     }
 
