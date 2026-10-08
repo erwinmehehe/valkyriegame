@@ -73,7 +73,7 @@ import LearningCore
             (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed."),
             (reasoning, CGPoint(x: 820, y: 310), CGPoint(x: 700, y: 319), "0 steps using counting on."),
             (estimate, CGPoint(x: 820, y: 310), CGPoint(x: 663, y: 188), "Fireflies flashed. Estimate dial is on 5."),
-            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2.",
+            (countOn, CGPoint(x: 820, y: 310), CGPoint(x: 922, y: 188), "1 of 1 jumps placed. Marker at 2."),
             (difference, CGPoint(x: 820, y: 310), CGPoint(x: 636, y: 190), "1 pairs matched. 0 leftovers collected."),
             (rover, CGPoint(x: 820, y: 310), CGPoint(x: 918, y: 190), "Rover moved 1 step on the grid.")
         ]
