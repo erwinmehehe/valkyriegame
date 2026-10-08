@@ -1435,6 +1435,58 @@ public enum MathProductionQuestionBank {
             }
         }
 
+
+        // Grouping Garden: each item is placed in a visible group. The
+        // representations are genuinely constructed rather than auto-filled.
+        for task in [GroupingGardenTask.equalGroups, .repeatedAddition, .equalSharing] {
+            let skill: SkillID
+            switch task {
+            case .equalGroups: skill = MathSkills.equalGroups
+            case .repeatedAddition: skill = MathSkills.repeatedAddition
+            case .equalSharing: skill = MathSkills.equalSharing
+            case .halves, .quarters: continue
+            }
+            for groups in 2...5 {
+                for itemsPerGroup in 1...5 where groups * itemsPerGroup <= 20 {
+                    add(
+                        "prod-garden-\(task.rawValue)-\(groups)-\(itemsPerGroup)",
+                        skill: skill,
+                        mechanic: MathMechanicID.groupingGarden,
+                        representation: .concrete,
+                        operation: .groupingGarden,
+                        initial: groups,
+                        target: itemsPerGroup,
+                        prompt: task == .equalSharing
+                            ? "Share \(groups * itemsPerGroup) berries fairly into \(groups) baskets."
+                            : "Make \(groups) groups with \(itemsPerGroup) berries in each group.",
+                        context: "garden.\(task.rawValue).counters",
+                        difficulty: groups * itemsPerGroup <= 10 ? 2 : 3,
+                        purpose: .practice
+                    )
+                }
+            }
+        }
+        for (task, skill, sectors) in [
+            (GroupingGardenTask.halves, MathSkills.halves, 2),
+            (.quarters, MathSkills.quarters, 4)
+        ] {
+            for shape in ["circle", "rectangle"] {
+                add(
+                    "prod-garden-\(task.rawValue)-\(shape)",
+                    skill: skill,
+                    mechanic: MathMechanicID.groupingGarden,
+                    representation: .pictorial,
+                    operation: .groupingGarden,
+                    initial: sectors,
+                    target: 1,
+                    prompt: "Choose one of \(sectors) equal parts of the \(shape).",
+                    context: "garden.\(task.rawValue).\(shape)",
+                    difficulty: sectors == 2 ? 1 : 2,
+                    purpose: .representationTransfer
+                )
+            }
+        }
+
         return result
     }()
 
