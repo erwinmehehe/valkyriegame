@@ -1444,14 +1444,14 @@ public enum MathProductionQuestionBank {
                     "prod-garden-groups-\(groups)-\(size)",
                     skill: MathSkills.equalGroups,
                     mechanic: MathMechanicID.groupingGarden,
-                    representation: .concrete,
+                    representation: groups == 2 ? .story : .concrete,
                     operation: .grouping,
                     initial: groups,
                     target: size,
-                    prompt: "Grow \(groups) groups of \(size) seeds. Place every seed in a basket.",
+                    prompt: "Pip has \(groups) little garden beds. Grow \(size) seeds in each bed so every friend has an equal garden.",
                     context: "garden.equalGroups",
                     difficulty: size <= 3 ? 2 : 3,
-                    purpose: .practice
+                    purpose: groups == 2 ? .storyTransfer : .practice
                 )
             }
             for size in 2...6 {
@@ -1474,14 +1474,14 @@ public enum MathProductionQuestionBank {
                     "prod-garden-sharing-\(groups)-\(size)",
                     skill: MathSkills.equalSharing,
                     mechanic: MathMechanicID.groupingGarden,
-                    representation: .concrete,
+                    representation: .story,
                     operation: .grouping,
                     initial: groups,
                     target: size,
-                    prompt: "Share \(groups * size) seeds equally between \(groups) friends.",
+                    prompt: "\(groups) friends found \(groups * size) magic seeds. Plant them so every friend takes home an equal share.",
                     context: "garden.equalSharing",
                     difficulty: groups * size <= 10 ? 2 : 3,
-                    purpose: .practice
+                    purpose: .storyTransfer
                 )
             }
         }
