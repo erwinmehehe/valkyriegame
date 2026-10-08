@@ -158,7 +158,7 @@ import LearningCore
 
             let dim = ArtSystem.box(
                 designCanvasSize,
-                color: UIColor(white: 0.02, alpha: 0.14),
+                color: UIColor(white: 0.02, alpha: 0.05),
                 radius: 0
             )
             dim.strokeColor = .clear
@@ -235,7 +235,7 @@ import LearningCore
 
         let horizonWash = ArtSystem.box(
             CGSize(width: 1280, height: 250),
-            color: UIColor(red: 0.09, green: 0.18, blue: 0.25, alpha: 0.34),
+            color: UIColor(red: 0.09, green: 0.18, blue: 0.25, alpha: 0.10),
             radius: 0
         )
         horizonWash.strokeColor = .clear
@@ -275,6 +275,8 @@ import LearningCore
         terrace.position = CGPoint(x: 640, y: 190)
         terrace.zPosition = 24
         terrace.name = "weatherTerrace"
+        // Stonework is present in the painted terrace; don't mask it with a UI tray.
+        terrace.alpha = 0.18
         addChild(terrace)
 
         let terraceInlay = ArtSystem.box(
@@ -296,11 +298,15 @@ import LearningCore
             )
             lamp.position = CGPoint(x: x, y: 240)
             lamp.zPosition = 31
+            lamp.alpha = 0.28
             addChild(lamp)
         }
 
         let tower = SKNode()
-        tower.position = CGPoint(x: 715, y: 405)
+        // A compact weather instrument on the terrace reads as a game prop.
+        // The full-size translucent tower used to cover the illustrated skyline.
+        tower.position = CGPoint(x: 750, y: 320)
+        tower.setScale(0.47)
         tower.zPosition = -30
         tower.name = "weatherTowerStructure"
 
