@@ -39,6 +39,9 @@ import LearningCore
         let grouping = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
         )
+        let reasoning = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
+        )
         let cases: [(LearningEncounter, CGPoint, CGPoint, String)] = [
             (MathFoundation.workshopExamples[0], CGPoint(x: 830, y: 265), CGPoint(x: 595, y: 235), "1 crystal in the cart."),
             (MathCastleEncounterCatalog.balanceScale[0], CGPoint(x: 670, y: 286), CGPoint(x: 670, y: 286), "Left pan selected."),
@@ -55,7 +58,8 @@ import LearningCore
             (clock, CGPoint(x: 820, y: 310), CGPoint(x: 981, y: 264), "Clock hands now show 1:00."),
             (routines, CGPoint(x: 820, y: 310), CGPoint(x: 645, y: 192), "1 of 4 daily events sorted."),
             (pesos, CGPoint(x: 820, y: 310), CGPoint(x: 746, y: 245), "₱1 in selected teaching coins."),
-            (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed.")
+            (grouping, CGPoint(x: 820, y: 310), CGPoint(x: 740, y: 189), "1 of 2 garden seeds placed."),
+            (reasoning, CGPoint(x: 820, y: 310), CGPoint(x: 700, y: 319), "0 steps using counting on.")
         ]
         for (encounter, machine, input, message) in cases {
             let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
@@ -389,6 +393,75 @@ import LearningCore
         )
     }
 
+
+    func testReasoningStudioNativeStrategyTapsRequireVisibleSteps() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 700, y: 319)) // choose count-on
+        scene.handleTap(at: CGPoint(x: 728, y: 187)) // add visible jump
+        guard case .reasoningStudio(let model)? = state.runtime else {
+            return XCTFail("Reasoning Studio runtime not active")
+        }
+        XCTAssertEqual(model.chosenStrategy, .countOn)
+        XCTAssertEqual(model.strategySteps, 1)
+        XCTAssertFalse(model.completed)
+        XCTAssertEqual(state.profile, profile)
+        XCTAssertEqual(
+            scene.instruction.text,
+            "1 steps using counting on. Pull Pip's lever when you're ready."
+        )
+    }
+
+    func testReasoningStudioNativeTwoStepConfirmAndResetDoNotScore() throws {
+        let encounter = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.multiStep)
+                .first(where: { $0.encounter.initialQuantity == 5
+                    && $0.encounter.targetQuantity == 22
+                    && $0.encounter.context == "studio.steps.addSubtract" })?.encounter
+        )
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        XCTAssertTrue(state.startWorkshop(encounter))
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: SKView())
+        defer { scene.willLeave() }
+        scene.valkyrie.position = CGPoint(x: 490, y: 175)
+        scene.handleTap(at: CGPoint(x: 820, y: 310))
+        let profile = state.profile
+
+        scene.handleTap(at: CGPoint(x: 944, y: 188)) // +1
+        scene.handleTap(at: CGPoint(x: 820, y: 188)) // check first step
+        scene.handleTap(at: CGPoint(x: 696, y: 188)) // -1
+        scene.handleTap(at: CGPoint(x: 820, y: 188)) // check second step
+        guard case .reasoningStudio(let built)? = state.runtime else {
+            return XCTFail("Reasoning Studio disappeared")
+        }
+        XCTAssertEqual(built.observedIntermediate, 6)
+        XCTAssertEqual(built.observedFinal, 5)
+        XCTAssertFalse(built.completed)
+        XCTAssertEqual(state.profile, profile)
+
+        scene.handleTap(at: CGPoint(x: 1044, y: 364)) // reset both stages
+        guard case .reasoningStudio(let cleared)? = state.runtime else {
+            return XCTFail("Reasoning Studio reset failed")
+        }
+        XCTAssertNil(cleared.observedIntermediate)
+        XCTAssertNil(cleared.observedFinal)
+        XCTAssertEqual(cleared.workingValue, 5)
+        XCTAssertEqual(state.profile, profile)
+    }
+
     func testCartLimitDoesNotReplayPipReactionAndDragFeedbackMatchesTapFeedback() throws {
         let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
         XCTAssertTrue(state.startWorkshop(MathFoundation.workshopExamples[0]))
@@ -469,9 +542,12 @@ import LearningCore
         let grouping = try XCTUnwrap(
             MathProductionQuestionBank.variants(for: MathSkills.equalGroups).first?.encounter
         )
+        let reasoning = try XCTUnwrap(
+            MathProductionQuestionBank.variants(for: MathSkills.chooseStrategy).first?.encounter
+        )
         let examples = [MathFoundation.workshopExamples[0], MathCastleEncounterCatalog.balanceScale[0],
             MathCastleEncounterCatalog.numberBondMachine[0], MathCastleEncounterCatalog.tenFrameGate[0],
-            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping]
+            MathCastleEncounterCatalog.missingNumberBridge[0], placeValue, pattern, shape, sorting, pictureGraph, clock, routines, pesos, grouping, reasoning]
         for encounter in examples {
             let container = try LearningStore.container(inMemory: true)
             let state = try AppState(context: ModelContext(container))
