@@ -271,6 +271,11 @@ public struct MathAdventure: Codable, Equatable, Sendable {
         return runtime?.chooseGardenFraction(part) ?? false
     }
 
+    @discardableResult public mutating func adjustGardenSum(_ delta: Int) -> Bool {
+        guard interactionStarted else { return false }
+        return runtime?.adjustGardenSum(delta) ?? false
+    }
+
     @discardableResult public mutating func adjustClockHour(_ delta: Int) -> Bool {
         guard interactionStarted else { return false }
         return runtime?.adjustClockHour(delta) ?? false
