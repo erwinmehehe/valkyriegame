@@ -39,6 +39,7 @@ public enum StoryRewardID: String, Codable, CaseIterable, Hashable, Sendable {
     case puzzlePalaceLantern
     case starlightBridgeCharm
     case lumiLivingBloom
+    case miloShadowMoth
 }
 
 public enum CartOperation: String, Codable, CaseIterable, Sendable {
@@ -282,6 +283,8 @@ public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
     public var starlightBridgeQuest: StarlightBridgeQuest?
     /// Optional so profiles saved before Lumi's garden simulation still decode.
     public var lumiLivingGarden: LumiLivingGarden?
+    /// Optional to preserve compatibility with older SwiftData profile saves.
+    public var miloShadowWorkshop: MiloShadowWorkshop?
 
     public init(id: UUID = UUID()) { self.id = id }
     public func progress(for skill: SkillID) -> SkillProgress { skills[skill.rawValue] ?? SkillProgress() }
