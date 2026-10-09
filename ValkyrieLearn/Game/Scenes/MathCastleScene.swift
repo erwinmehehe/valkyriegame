@@ -1711,6 +1711,14 @@ import LearningCore
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch; startPoint = touch.location(in: self); didDrag = false
+        if bridgeQuestMode {
+            let quest = state.starlightBridgeQuest
+            if let index = bridgeQuestIndex(near: startPoint, points: bridgeInventoryPoints),
+               quest.availableCrystals.contains(index) {
+                bridgeQuestDraggedCrystal = index
+            }
+            return
+        }
         if canManipulate(), let name = targetName(at: startPoint),
            ["supply", "cartCrystal", "bondSupply", "bondToken", "tenFrameSupply", "tenFrameFilled", "missingSupply", "missingPlank"].contains(name) {
             dragOrigin = name
@@ -1722,6 +1730,22 @@ import LearningCore
         let point = touch.location(in: self)
         guard hypot(point.x - startPoint.x, point.y - startPoint.y) > 12 else { return }
         didDrag = true
+        if bridgeQuestMode {
+            guard bridgeQuestDraggedCrystal != nil else { return }
+            if ghost == nil {
+                let sparkle = SKShapeNode(circleOfRadius: 28)
+                sparkle.fillColor = UIColor(red: 0.77, green: 0.95, blue: 1, alpha: 0.82)
+                sparkle.strokeColor = .white
+                sparkle.lineWidth = 3
+                sparkle.glowWidth = reducedMotion ? 0 : 10
+                sparkle.name = "decorativeBridgeQuestGhost"
+                sparkle.zPosition = 1900
+                addChild(sparkle)
+                ghost = sparkle
+            }
+            ghost?.position = point
+            return
+        }
         guard dragOrigin != nil else { return }
         if ghost == nil {
             ghost = dragOrigin == "missingSupply" || dragOrigin == "missingPlank"
@@ -1736,7 +1760,20 @@ import LearningCore
         guard let touch = activeTouch, touches.contains(touch) else { return }
         let point = touch.location(in: self)
         if hypot(point.x - startPoint.x, point.y - startPoint.y) > 12 { didDrag = true }
-        defer { clearDrag() }
+        defer { clearDrag(); bridgeQuestDraggedCrystal = nil }
+        if bridgeQuestMode {
+            if didDrag {
+                if let crystal = bridgeQuestDraggedCrystal,
+                   let socket = bridgeQuestIndex(near: point, points: bridgeSocketPoints) {
+                    installBridgeQuestCrystal(crystal, socket: socket)
+                } else {
+                    instruction.text = "Move a carried crystal into any empty bridge socket."
+                }
+                return
+            }
+            handleTap(at: point)
+            return
+        }
         if didDrag {
             if canManipulate(), let origin = dragOrigin { drop(origin: origin, at: point) }
             return
@@ -2088,8 +2125,22 @@ import LearningCore
 
     // Shared by native touches and hosted interaction tests.
     func handleTap(at point: CGPoint) {
-        if handleMechanicDirectControl(at: point) { return }
+        if bridgeQuestMode {
+            if targetName(at: point) == "home" {
+                valkyrie.cancelTravel()
+                pip.cancelTravel()
+                state.travel(to: .storyTree)
+            } else {
+                handleBridgeQuestTap(at: point)
+            }
+            return
+        }
         let target = targetName(at: point)
+        if target == "starlightQuestBeacon" {
+            enterBridgeQuest()
+            return
+        }
+        if handleMechanicDirectControl(at: point) { return }
         if crossingBridge {
             if target == "home" {
                 valkyrie.cancelTravel(); pip.cancelTravel(); crossingBridge = false
@@ -2228,6 +2279,10 @@ import LearningCore
                 self.instruction.text = "Pip's gears hum! Explore or choose a new work order."
             }
         case "next", "routeDestinationBeacon":
+            guard bridgeQuestAllowsPassage || state.runtime?.completed != true else {
+                instruction.text = "The bridge needs crystals! Tap the blue star and finish its sockets."
+                return
+            }
             guard state.runtime == nil || state.runtime?.completed == true || state.workshop else {
                 instruction.text = "Finish Pip's work order first. You can explore and come back."
                 return
@@ -2558,7 +2613,10 @@ import LearningCore
         activeTouch = nil; dragOrigin = nil; ghost?.removeFromParent(); ghost = nil; didDrag = false
     }
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let touch = activeTouch, touches.contains(touch) { clearDrag() }
+        if let touch = activeTouch, touches.contains(touch) {
+            clearDrag()
+            bridgeQuestDraggedCrystal = nil
+        }
     }
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
