@@ -865,6 +865,28 @@ final class StarlightBridgeQuestTests: XCTestCase {
         XCTAssertTrue(resumed.skills.isEmpty)
     }
 
+    func testBridgeColorExperimentsPreserveRescueAndSavedLearningState() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertFalse(quest.swapInstalledCrystals(0, 1))
+        XCTAssertTrue(quest.discover())
+        for id in 0..<3 {
+            XCTAssertTrue(quest.collect(id))
+            XCTAssertTrue(quest.install(id, into: id))
+        }
+        XCTAssertTrue(quest.isComplete)
+        XCTAssertFalse(quest.swapInstalledCrystals(0, 0))
+        XCTAssertFalse(quest.swapInstalledCrystals(0, 3))
+        XCTAssertTrue(quest.swapInstalledCrystals(0, 2))
+        XCTAssertEqual(quest.installedCrystals, [0: 2, 1: 1, 2: 0])
+        XCTAssertTrue(quest.isComplete)
+        XCTAssertTrue(quest.availableCrystals.isEmpty)
+        XCTAssertTrue(quest.swapInstalledCrystals(0, 2))
+        XCTAssertEqual(quest.installedCrystals, [0: 0, 1: 1, 2: 2])
+        let decoded = try JSONDecoder().decode(StarlightBridgeQuest.self,
+                                               from: JSONEncoder().encode(quest))
+        XCTAssertEqual(decoded, quest)
+    }
+
     func testHiddenStarIsOptionalPersistentAndAvailableOnReturnVisits() throws {
         var quest = StarlightBridgeQuest()
         XCTAssertFalse(quest.hasFoundHiddenStar)
