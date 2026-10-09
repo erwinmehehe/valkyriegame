@@ -385,6 +385,25 @@ import LearningCore
         return true
     }
 
+    /// Bridge experiments are intentionally unscored. Persist only their
+    /// physical arrangement and visible discovery/reward.
+    @discardableResult
+    func toggleStarlightBridgeBrace(_ span: Int) -> Bool {
+        var quest = starlightBridgeQuest
+        guard quest.toggleBrace(at: span) else { return false }
+        profile.starlightBridgeQuest = quest
+        persist()
+        return true
+    }
+
+    func testStarlightBridge(with load: BridgeTestLoad) -> BridgeTestResult? {
+        var quest = starlightBridgeQuest
+        guard let result = quest.testBridge(with: load) else { return nil }
+        profile.starlightBridgeQuest = quest
+        persist()
+        return result
+    }
+
     func hasStoryReward(_ reward: StoryRewardID) -> Bool {
         profile.hasStoryReward(reward)
     }

@@ -35,6 +35,23 @@ import LearningCore
         UIColor(red: 0.79, green: 0.62, blue: 1.0, alpha: 1)
     ]
 
+    // Physical load-testing mini-game: a child can keep investigating
+    // after rescuing the firefly. This does not generate learning evidence.
+    private var bridgeSelectedLoad: BridgeTestLoad = .supplyCart
+    private var bridgeTrialResult: BridgeTestResult?
+    private let bridgeBracePoints = [
+        CGPoint(x: 760, y: 184),
+        CGPoint(x: 905, y: 184),
+        CGPoint(x: 1050, y: 184)
+    ]
+    // The rescued firefly and supply cart stand on existing stone plinths,
+    // and the lever is mounted at the bridge's foot, not floating in the sky.
+    private let bridgeLoadChoicePoints = [
+        CGPoint(x: 468, y: 306), // light firefly on middle courtyard plinth
+        CGPoint(x: 605, y: 306)  // supply cart on right courtyard plinth
+    ]
+    private let bridgeTestLeverPoint = CGPoint(x: 1150, y: 270)
+
     private var activeTouch: UITouch?
     private var dragOrigin: String?
     private var startPoint = CGPoint.zero
@@ -952,6 +969,7 @@ import LearningCore
         bridgeQuestMode = true
         bridgeQuestBusy = false
         bridgeQuestSelectedCrystal = nil
+        bridgeTrialResult = nil
         clearDrag()
         engaged = false
         setActiveMachineKinetics(false)
@@ -959,7 +977,7 @@ import LearningCore
         setBridgeQuestControlsHidden(true)
         rebuildBridgeQuestStage()
         if state.starlightBridgeQuest.isComplete {
-            instruction.text = "The firefly is safe. Visit Story Tree to move your bridge charm."
+            instruction.text = "Bridge laboratory! Choose a light or heavy load and test its supports."
         } else {
             instruction.text = "A firefly is stranded! Find crystals to repair its bridge."
         }
@@ -1155,8 +1173,9 @@ import LearningCore
         stage.addChild(sign)
 
         let status = ArtSystem.label(
-            quest.isComplete ? "BRIDGE RESTORED" :
-                "BRIDGE LIGHT   \(quest.installedCount) / \(StarlightBridgeQuest.crystalCount)",
+            quest.hasDeliveredSupplies ? "CART DELIVERED" :
+                quest.isComplete ? "BRIDGE RESTORED" :
+                    "BRIDGE LIGHT   \(quest.installedCount) / \(StarlightBridgeQuest.crystalCount)",
             size: 16
         )
         status.name = "bridgeQuestStatus"
@@ -1165,6 +1184,9 @@ import LearningCore
         sign.addChild(status)
 
         addBridgeFirefly(to: stage, rescued: quest.isComplete)
+        if quest.isComplete {
+            buildBridgeLoadWorkshop(on: stage, quest: quest)
+        }
 
         if quest.isComplete {
             let star = ArtSystem.label("✦", size: 70)
@@ -1238,6 +1260,315 @@ import LearningCore
         }
     }
 
+    // MARK: - Pip's Bridge Load Laboratory
+
+    private func buildBridgeLoadWorkshop(on stage: SKNode, quest: StarlightBridgeQuest) {
+        // Three structural supports follow the three in-world deck planks.
+        // Tap a timber brace to remove/reuse it; only two can be installed.
+        for (span, position) in bridgeBracePoints.enumerated() {
+            let braced = quest.braces.contains(span)
+            let support = SKNode()
+            support.name = "bridgeLoadBrace\(span)"
+            support.position = position
+            support.zPosition = 16
+
+            let woodenFoot = ArtSystem.box(
+                CGSize(width: 82, height: 15),
+                color: UIColor(red: 0.39, green: 0.27, blue: 0.18, alpha: 0.95),
+                radius: 4
+            )
+            woodenFoot.name = support.name
+            woodenFoot.position.y = -19
+            woodenFoot.strokeColor = braced
+                ? UIColor(red: 1, green: 0.81, blue: 0.38, alpha: 1)
+                : UIColor(red: 0.66, green: 0.58, blue: 0.46, alpha: 0.56)
+            woodenFoot.lineWidth = 2
+            support.addChild(woodenFoot)
+
+            // Keep a generous touch surface without painting a quiz-like
+            // circular button over the castle floor.
+            let hit = SKShapeNode(circleOfRadius: 37)
+            hit.name = support.name
+            hit.fillColor = .clear
+            hit.strokeColor = .clear
+            hit.zPosition = 3
+            support.addChild(hit)
+
+            let beamPath = CGMutablePath()
+            beamPath.move(to: CGPoint(x: -26, y: -12))
+            beamPath.addLine(to: CGPoint(x: 0, y: 23))
+            beamPath.addLine(to: CGPoint(x: 26, y: -12))
+            let beams = SKShapeNode(path: beamPath)
+            beams.name = support.name
+            beams.lineWidth = braced ? 9 : 3
+            beams.strokeColor = braced
+                ? UIColor(red: 0.89, green: 0.66, blue: 0.33, alpha: 1)
+                : UIColor(red: 0.69, green: 0.65, blue: 0.60, alpha: 0.40)
+            beams.glowWidth = braced && !reducedMotion ? 5 : 0
+            support.addChild(beams)
+
+            makeAccessible(
+                support,
+                label: braced ? "Remove the brace from bridge span \(span + 1)"
+                    : "Place a reusable brace under bridge span \(span + 1)",
+                hint: "Tap to change the bridge structure, then test its strength."
+            )
+            stage.addChild(support)
+        }
+
+        // Choose which real-world traveler uses the bridge, without asking
+        // the child to pick a "correct answer" from a panel.
+        for (index, load) in BridgeTestLoad.allCases.enumerated() {
+            let choice = SKNode()
+            choice.name = "bridgeTestLoad\(index)"
+            choice.position = bridgeLoadChoicePoints[index]
+            choice.zPosition = 18
+
+            // The load stands on the *existing* plinth. A narrow glimmer on
+            // its base indicates selection; no floating option card or circle.
+            let illuminatedBase = SKShapeNode(ellipseOf: CGSize(width: 94, height: 16))
+            illuminatedBase.position.y = -31
+            illuminatedBase.name = choice.name
+            illuminatedBase.fillColor = bridgeSelectedLoad == load
+                ? UIColor(red: 1, green: 0.78, blue: 0.34, alpha: 0.42)
+                : UIColor(red: 0.25, green: 0.23, blue: 0.29, alpha: 0.40)
+            illuminatedBase.strokeColor = bridgeSelectedLoad == load
+                ? UIColor(red: 1, green: 0.92, blue: 0.55, alpha: 0.95)
+                : UIColor(red: 0.63, green: 0.62, blue: 0.65, alpha: 0.40)
+            illuminatedBase.lineWidth = bridgeSelectedLoad == load ? 4 : 2
+            choice.addChild(illuminatedBase)
+
+            if load == .firefly {
+                for side in [CGFloat(-1), CGFloat(1)] {
+                    let wing = SKShapeNode(ellipseOf: CGSize(width: 20, height: 32))
+                    wing.name = choice.name
+                    wing.position = CGPoint(x: side * 18, y: 13)
+                    wing.zRotation = side * 0.41
+                    wing.fillColor = UIColor(red: 0.86, green: 0.97, blue: 1, alpha: 0.58)
+                    wing.strokeColor = .white.withAlphaComponent(0.8)
+                    choice.addChild(wing)
+                }
+                let light = ArtSystem.label("✦", size: 35)
+                light.name = choice.name
+                light.fontColor = UIColor(red: 1, green: 0.94, blue: 0.56, alpha: 1)
+                light.position.y = 7
+                choice.addChild(light)
+            } else {
+                let cargo = ArtSystem.box(
+                    CGSize(width: 48, height: 26),
+                    color: UIColor(red: 0.66, green: 0.46, blue: 0.22, alpha: 1),
+                    radius: 6
+                )
+                cargo.name = choice.name
+                cargo.position.y = 5
+                choice.addChild(cargo)
+                for wheelX in [-20.0, 20.0] {
+                    let wheel = SKShapeNode(circleOfRadius: 8)
+                    wheel.name = choice.name
+                    wheel.position = CGPoint(x: wheelX, y: -16)
+                    wheel.fillColor = UIColor(red: 0.14, green: 0.17, blue: 0.23, alpha: 1)
+                    wheel.strokeColor = .white.withAlphaComponent(0.6)
+                    wheel.lineWidth = 2
+                    choice.addChild(wheel)
+                }
+            }
+
+            let label = ArtSystem.label(load == .firefly ? "FIREFLY" : "SUPPLY CART", size: 12)
+            label.name = choice.name
+            label.position.y = -59
+            label.fontColor = UIColor(red: 1, green: 0.95, blue: 0.77, alpha: 1)
+            choice.addChild(label)
+            makeAccessible(choice, label: load == .firefly
+                ? "Choose light firefly for bridge test" : "Choose heavy supply cart for bridge test",
+                hint: "Tap a traveler, then pull the trial lever.")
+            stage.addChild(choice)
+        }
+
+        // A physical lever, rather than a quiz submit button, triggers the trial.
+        let lever = SKNode()
+        lever.name = "bridgeTestLever"
+        lever.position = bridgeTestLeverPoint
+        lever.zPosition = 20
+        let foot = ArtSystem.box(
+            CGSize(width: 110, height: 26),
+            color: UIColor(red: 0.51, green: 0.34, blue: 0.19, alpha: 1),
+            radius: 7
+        )
+        foot.position.y = -29
+        foot.name = lever.name
+        lever.addChild(foot)
+        let shaft = ArtSystem.box(
+            CGSize(width: 12, height: 59),
+            color: UIColor(red: 0.85, green: 0.71, blue: 0.40, alpha: 1),
+            radius: 5
+        )
+        shaft.name = lever.name
+        shaft.position.y = 10
+        shaft.zRotation = -0.26
+        lever.addChild(shaft)
+        let handle = SKShapeNode(circleOfRadius: 23)
+        handle.name = lever.name
+        handle.position = CGPoint(x: 10, y: 40)
+        handle.fillColor = UIColor(red: 0.54, green: 0.90, blue: 0.91, alpha: 1)
+        handle.strokeColor = .white
+        handle.lineWidth = 3
+        lever.addChild(handle)
+        let label = ArtSystem.label("TEST", size: 15)
+        label.name = lever.name
+        label.position.y = -60
+        label.fontColor = .white
+        lever.addChild(label)
+        let tap = SKShapeNode(circleOfRadius: 37)
+        tap.name = lever.name
+        tap.fillColor = .clear
+        tap.strokeColor = .clear
+        tap.position.y = 18
+        tap.zPosition = 3
+        lever.addChild(tap)
+        makeAccessible(lever, label: "Pull Pip's bridge load test lever",
+                       hint: "See whether the selected load can cross the supported bridge.")
+        stage.addChild(lever)
+
+        let braces = ArtSystem.label("BRACES  \(quest.braces.count) / 2", size: 17)
+        braces.name = "bridgeTestBraceCounter"
+        braces.position = CGPoint(x: 908, y: 112)
+        braces.fontColor = UIColor(red: 0.99, green: 0.90, blue: 0.65, alpha: 1)
+        stage.addChild(braces)
+
+        if quest.hasDeliveredSupplies {
+            // Small brass gear mounted on the bridge's existing status plaque
+            // rather than gold lettering floating on the bright sky.
+            let delivered = ArtSystem.label("⚙", size: 24)
+            delivered.name = "bridgeTestSuppliesDelivered"
+            delivered.position = CGPoint(x: 1009, y: 408)
+            delivered.fontColor = UIColor(red: 1, green: 0.85, blue: 0.38, alpha: 1)
+            stage.addChild(delivered)
+        }
+
+        // Failure is a physical bending span and a stopped traveler, not a
+        // punitive red answer panel. Keep the evidence visible for reflection.
+        if let result = bridgeTrialResult {
+            let traveler = SKNode()
+            traveler.name = "bridgeTestTraveler"
+            traveler.zPosition = 36
+            if bridgeSelectedLoad == .firefly {
+                let spark = ArtSystem.label("✦", size: 38)
+                spark.fontColor = UIColor(red: 1, green: 0.97, blue: 0.49, alpha: 1)
+                traveler.addChild(spark)
+            } else {
+                let cargo = ArtSystem.box(
+                    CGSize(width: 56, height: 29),
+                    color: UIColor(red: 0.64, green: 0.41, blue: 0.19, alpha: 1),
+                    radius: 6
+                )
+                cargo.position.y = 8
+                cargo.strokeColor = UIColor(red: 0.94, green: 0.81, blue: 0.44, alpha: 1)
+                cargo.lineWidth = 3
+                traveler.addChild(cargo)
+                for x in [CGFloat(-21), CGFloat(21)] {
+                    let wheel = SKShapeNode(circleOfRadius: 8)
+                    wheel.position = CGPoint(x: x, y: -15)
+                    wheel.fillColor = UIColor(red: 0.14, green: 0.15, blue: 0.20, alpha: 1)
+                    wheel.strokeColor = .white
+                    wheel.lineWidth = 2
+                    traveler.addChild(wheel)
+                }
+            }
+
+            let endX: CGFloat
+            switch result {
+            case .crossed:
+                endX = 1150
+            case .stoppedAt(let weak):
+                endX = bridgeSocketPoints[weak].x
+                // Crack the actual timber at the stressed section instead
+                // of displaying a round red wrong-answer marker.
+                let crack = CGMutablePath()
+                crack.move(to: CGPoint(x: -33, y: -5))
+                crack.addLine(to: CGPoint(x: -14, y: 8))
+                crack.addLine(to: CGPoint(x: -3, y: -9))
+                crack.addLine(to: CGPoint(x: 15, y: 10))
+                crack.addLine(to: CGPoint(x: 32, y: -6))
+                let bent = SKShapeNode(path: crack)
+                bent.name = "bridgeTestWeakSpan\(weak)"
+                bent.position = CGPoint(x: bridgeSocketPoints[weak].x, y: 240)
+                bent.strokeColor = UIColor(red: 1, green: 0.52, blue: 0.24, alpha: 1)
+                bent.lineWidth = 7
+                bent.glowWidth = reducedMotion ? 0 : 10
+                stage.addChild(bent)
+                if !reducedMotion {
+                    bent.run(.sequence([
+                        .moveBy(x: -4, y: -5, duration: 0.11),
+                        .moveBy(x: 7, y: 8, duration: 0.17),
+                        .moveBy(x: -3, y: -3, duration: 0.13)
+                    ]), withKey: "bridgeBend")
+                }
+            }
+            let dest = CGPoint(x: endX, y: 356)
+            traveler.position = reducedMotion ? dest : CGPoint(x: 685, y: 356)
+            stage.addChild(traveler)
+            if !reducedMotion {
+                traveler.run(.move(to: dest, duration: result == .crossed ? 1.25 : 0.78),
+                             withKey: "bridgeLoadTravel")
+            }
+        }
+    }
+
+    private func handleBridgeLoadTap(at point: CGPoint) -> Bool {
+        guard state.starlightBridgeQuest.isComplete else { return false }
+
+        if let index = bridgeQuestIndex(near: point, points: bridgeBracePoints) {
+            guard state.toggleStarlightBridgeBrace(index) else {
+                instruction.text = "Only two braces! Tap a fitted one to move it."
+                return true
+            }
+            bridgeTrialResult = nil
+            pip.operate(reducedMotion: reducedMotion)
+            state.audio.play("gear")
+            rebuildBridgeQuestStage()
+            instruction.text = "Brace moved. Test the light firefly or the heavier supply cart."
+            return true
+        }
+
+        if let index = bridgeQuestIndex(near: point, points: bridgeLoadChoicePoints) {
+            bridgeSelectedLoad = BridgeTestLoad.allCases[index]
+            bridgeTrialResult = nil
+            selectionFeedback()
+            rebuildBridgeQuestStage()
+            instruction.text = bridgeSelectedLoad == .firefly
+                ? "Light firefly ready. Pull TEST and watch the bridge!"
+                : "Heavy supply cart ready. Place braces, then pull TEST."
+            return true
+        }
+
+        if hypot(point.x - bridgeTestLeverPoint.x, point.y - bridgeTestLeverPoint.y) < 49 {
+            guard let outcome = state.testStarlightBridge(with: bridgeSelectedLoad) else {
+                return true
+            }
+            bridgeTrialResult = outcome
+            pip.pose(.react)
+            if outcome == .crossed {
+                state.audio.play("success")
+            } else {
+                state.audio.play("gear")
+            }
+            rebuildBridgeQuestStage()
+            switch outcome {
+            case .crossed:
+                if bridgeSelectedLoad == .supplyCart {
+                    valkyrie.pose(.celebrate)
+                    instruction.text = "Supplies delivered! Try moving the braces and test again."
+                } else {
+                    instruction.text = "Firefly crossed! Will a heavy cart make it too?"
+                }
+            case .stoppedAt(let weak):
+                instruction.text = "Bridge bent at span \(weak + 1)! Move a brace below it and retry."
+            }
+            return true
+        }
+        return false
+    }
+
     private func bridgeQuestIndex(near point: CGPoint, points: [CGPoint]) -> Int? {
         points.indices.first {
             hypot(point.x - points[$0].x, point.y - points[$0].y) <= 51
@@ -1251,6 +1582,7 @@ import LearningCore
         }
         guard !bridgeQuestBusy else { return }
         let quest = state.starlightBridgeQuest
+        if handleBridgeLoadTap(at: point) { return }
         if !quest.isComplete,
            hypot(point.x - 1150, point.y - 368) < 43 {
             pip.pose(.react)

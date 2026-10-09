@@ -730,6 +730,16 @@ import SpriteKit
             }
         }
 
+        if state.starlightBridgeQuest.hasDeliveredSupplies {
+            // A second discovery: the player's successful bridge engineering
+            // remains visible when they come home.
+            let gear = ArtSystem.label("⚙", size: 22)
+            gear.name = "starlightBridgeSupplyGear"
+            gear.position = CGPoint(x: -27, y: -24)
+            gear.fontColor = UIColor(red: 1, green: 0.84, blue: 0.37, alpha: 1)
+            root.addChild(gear)
+        }
+
         let hit = SKShapeNode(circleOfRadius: 37)
         hit.fillColor = .clear
         hit.strokeColor = .clear
@@ -737,12 +747,15 @@ import SpriteKit
         hit.zPosition = 2
         root.addChild(hit)
 
-        makeAccessible(
-            root,
-            label: state.starlightBridgeQuest.hasFoundHiddenStar
-                ? "Starlight Bridge charm with discovered hidden star" : "Starlight Bridge charm",
-            hint: "Tap to hang it on a different Story Tree branch."
-        )
+        var charmLabel = "Starlight Bridge charm"
+        if state.starlightBridgeQuest.hasFoundHiddenStar {
+            charmLabel += " with discovered hidden star"
+        }
+        if state.starlightBridgeQuest.hasDeliveredSupplies {
+            charmLabel += " and bridge engineering gear"
+        }
+        makeAccessible(root, label: charmLabel,
+                       hint: "Tap to hang it on a different Story Tree branch.")
         addChild(root)
         bridgeCharmNode = root
     }
