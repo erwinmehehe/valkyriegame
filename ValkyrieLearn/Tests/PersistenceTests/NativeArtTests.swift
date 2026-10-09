@@ -2604,7 +2604,10 @@ import LearningCore
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoOrb"))
         XCTAssertNotNil(stopGo.childNode(withName: "//stopGoOrbHalo"))
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoBarrier"))
-        XCTAssertNotNil(stopGo.childNode(withName: "stopGoLegend"))
+        XCTAssertNil(stopGo.childNode(withName: "stopGoLegend"),
+                     "The physical shutter replaces tiny redundant floor instructions.")
+        XCTAssertNotNil(stopGo.childNode(withName: "//decorativeStopGoShutter"),
+                        "The mounted signal must have a visible HOLD/GO shutter.")
         XCTAssertEqual(
             stopGo.children.filter { $0.name == "stopGoBrace" }.count,
             3,
