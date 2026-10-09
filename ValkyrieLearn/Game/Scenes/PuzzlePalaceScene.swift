@@ -3962,8 +3962,8 @@ import LearningCore
         _ = state.recordPuzzle(rotationEncounter, outcome: correct ? .correct : .incorrect,
                                support: attemptSupport, attempts: attempts,
                                responseTime: Date().timeIntervalSince(startedAt))
-        reflectChosenMirror(node, aligned: correct)
         guard correct else {
+            reflectChosenMirror(node, aligned: false)
             support = support == .independent ? .lightHint : .demonstration
             node.strokeColor = .systemRed
             nudge(node)
@@ -3989,6 +3989,9 @@ import LearningCore
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorRotationProgress()
+        // Restoration updates all receiver lamps. Apply the current successful
+        // reflection *afterwards*, including for a correct hinted attempt.
+        reflectChosenMirror(node, aligned: true)
         successFeedback()
         focusMoment(on: node.position)
         valkyrie.pose(.celebrate)
