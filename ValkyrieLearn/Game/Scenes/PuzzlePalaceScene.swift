@@ -5157,9 +5157,19 @@ import LearningCore
     }
 
     func handleTap(at point: CGPoint) {
-        let target = place == .resortVault
-            ? (resortPedestalTarget(at: point) ?? targetName(at: point))
-            : targetName(at: point)
+        // The unlocked Mirror Hall door sits near the Re-sort Vault's right
+        // pedestal. Route activation takes precedence inside its visible 60pt
+        // button, otherwise the pedestal steals a legitimate navigation tap.
+        let mirrorDoor = childNode(withName: "mirrorHallRoute")
+        let mirrorDoorTapped = place == .resortVault
+            && state.puzzleMirrorHallAvailable
+            && mirrorDoor != nil
+            && hypot(point.x - mirrorDoor!.position.x,
+                     point.y - mirrorDoor!.position.y) <= 40
+        let target = mirrorDoorTapped ? "mirrorHallRoute"
+            : place == .resortVault
+                ? (resortPedestalTarget(at: point) ?? targetName(at: point))
+                : targetName(at: point)
 
         // Let Home cancel the journey, but never restart the same route or
         // interrupt its arrival callback with a stray floor or puzzle tap.
@@ -5579,6 +5589,9 @@ import LearningCore
                 stone.fillColor = UIColor(red: 0.56, green: 0.38, blue: 0.18, alpha: 0.85)
                 stone.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.36, alpha: 1)
                 stone.glowWidth = reducedMotion ? 0 : 8
+                stone.userData = NSMutableDictionary(dictionary: [
+                    "runePathPowered": true
+                ])
             }
         }
 
