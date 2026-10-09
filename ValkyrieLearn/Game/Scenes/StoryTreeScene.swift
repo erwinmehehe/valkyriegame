@@ -44,10 +44,12 @@ import SpriteKit
         CGPoint(x: 435, y: 485),
         CGPoint(x: 555, y: 470)
     ]
+    // These are real Story Tree canopy branches, not points above the
+    // distant castle scenery. The first placement is visibly on the tree.
     private let bridgeCharmSlots = [
-        CGPoint(x: 945, y: 475),
-        CGPoint(x: 1055, y: 520),
-        CGPoint(x: 1155, y: 465)
+        CGPoint(x: 240, y: 585),
+        CGPoint(x: 435, y: 600),
+        CGPoint(x: 610, y: 605)
     ]
 
     override func didMove(to view: SKView) {
