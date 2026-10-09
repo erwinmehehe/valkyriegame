@@ -27,6 +27,7 @@ import SpriteKit
     private var moonLanternNode: SKNode?
     private var wordGardenLanternNode: SKNode?
     private var puzzlePalaceLanternNode: SKNode?
+    private var bridgeCharmNode: SKNode?
     private var lastKineticReducedMotion: Bool?
     private let moonLanternSlots = [
         CGPoint(x: 295, y: 500),
@@ -42,6 +43,11 @@ import SpriteKit
         CGPoint(x: 335, y: 455),
         CGPoint(x: 435, y: 485),
         CGPoint(x: 555, y: 470)
+    ]
+    private let bridgeCharmSlots = [
+        CGPoint(x: 945, y: 475),
+        CGPoint(x: 1055, y: 520),
+        CGPoint(x: 1155, y: 465)
     ]
 
     override func didMove(to view: SKView) {
@@ -200,14 +206,18 @@ import SpriteKit
         renderMoonLantern()
         renderWordGardenLantern()
         renderPuzzlePalaceLantern()
+        renderBridgeCharm()
 
         let rewardCount = [
             state.hasStoryReward(.moonLantern),
             state.hasStoryReward(.wordGardenLantern),
-            state.hasStoryReward(.puzzlePalaceLantern)
+            state.hasStoryReward(.puzzlePalaceLantern),
+            state.hasStoryReward(.starlightBridgeCharm)
         ].filter { $0 }.count
         if rewardCount >= 2 {
             instruction.text = "Your lanterns are glowing. Choose where Valkyrie explores next."
+        } else if state.hasStoryReward(.starlightBridgeCharm) {
+            instruction.text = "Pip's bridge charm is home! Tap it to move it to another branch."
         } else if state.hasStoryReward(.puzzlePalaceLantern) {
             instruction.text = "Tiko's Palace Lantern is home. Choose the next adventure."
         } else if state.hasStoryReward(.wordGardenLantern) {
@@ -329,7 +339,7 @@ import SpriteKit
         }
 
         for (index, name) in [
-            "moonLantern", "wordGardenLantern", "puzzlePalaceLantern"
+            "moonLantern", "wordGardenLantern", "puzzlePalaceLantern", "starlightBridgeCharm"
         ].enumerated() {
             guard let lantern = childNode(withName: name) else { continue }
             lantern.removeAction(forKey: "hubLanternSway")
@@ -671,6 +681,50 @@ import SpriteKit
         puzzlePalaceLanternNode = lantern
     }
 
+    /// A permanent, player-placeable keepsake from the bridge rescue.
+    /// Uses the same save/placement contract as the existing three lanterns.
+    private func renderBridgeCharm() {
+        bridgeCharmNode?.removeFromParent()
+        bridgeCharmNode = nil
+        guard state.hasStoryReward(.starlightBridgeCharm) else { return }
+        let slot = state.storyRewardPlacement(.starlightBridgeCharm) % bridgeCharmSlots.count
+        let root = SKNode()
+        root.name = "starlightBridgeCharm"
+        root.position = bridgeCharmSlots[slot]
+        root.zPosition = 905
+
+        let halo = SKShapeNode(circleOfRadius: 43)
+        halo.fillColor = UIColor(red: 0.43, green: 0.77, blue: 1.0, alpha: 0.20)
+        halo.strokeColor = UIColor(red: 0.72, green: 0.94, blue: 1.0, alpha: 0.75)
+        halo.glowWidth = reducedMotion ? 0 : 11
+        halo.name = root.name
+        root.addChild(halo)
+
+        let chain = SKShapeNode(rectOf: CGSize(width: 6, height: 22), cornerRadius: 3)
+        chain.position.y = 40
+        chain.fillColor = UIColor(red: 0.94, green: 0.76, blue: 0.38, alpha: 1)
+        chain.strokeColor = .clear
+        chain.name = root.name
+        root.addChild(chain)
+
+        let jewel = ArtSystem.label("✦", size: 38)
+        jewel.fontColor = UIColor(red: 0.92, green: 0.99, blue: 1, alpha: 1)
+        jewel.name = root.name
+        root.addChild(jewel)
+
+        let hit = SKShapeNode(circleOfRadius: 37)
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = root.name
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Starlight Bridge charm",
+                       hint: "Tap to hang it on a different Story Tree branch.")
+        addChild(root)
+        bridgeCharmNode = root
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = activeTouch, touches.contains(touch) else { return }
         defer {
@@ -866,6 +920,18 @@ import SpriteKit
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "The Flower Lantern found a new branch."
+
+        case "starlightBridgeCharm":
+            guard state.hasStoryReward(.starlightBridgeCharm) else { return }
+            selectionFeedback()
+            _ = state.cycleStoryRewardPlacement(
+                .starlightBridgeCharm, slotCount: bridgeCharmSlots.count
+            )
+            renderBridgeCharm()
+            syncStoryTreeKinetics()
+            state.audio.play("success")
+            valkyrie.pose(.interact)
+            instruction.text = "Your Starlight Bridge charm found a new branch."
 
         case "puzzlePalaceLantern":
             selectionFeedback()
