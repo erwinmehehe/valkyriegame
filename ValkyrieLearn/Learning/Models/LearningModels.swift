@@ -146,6 +146,18 @@ public struct ActivityRecord: Codable, Equatable, Sendable {
         self.skillID = skillID; self.representation = representation; self.timestamp = timestamp
     }
 }
+/// Two real-world loads for the child's optional, repeatable bridge experiment.
+public enum BridgeTestLoad: String, Codable, CaseIterable, Sendable {
+    case firefly
+    case supplyCart
+}
+
+public enum BridgeTestResult: Equatable, Sendable {
+    case crossed
+    /// The first span that bends under the chosen load.
+    case stoppedAt(Int)
+}
+
 /// A small, physical exploration quest rather than another scored worksheet.
 /// Collect any three starlight shards and choose which bridge sockets to power.
 /// Completing this *never* creates math mastery evidence; the normal adaptive
@@ -160,7 +172,47 @@ public struct StarlightBridgeQuest: Codable, Equatable, Sendable {
     /// Optional so earlier native quest saves still restore after this upgrade.
     public private(set) var hiddenStarFound: Bool?
 
+    /// Optional fields keep profiles produced before this mini-game decodable.
+    public private(set) var reinforcedSpans: Set<Int>?
+    public private(set) var successfulSupplyDelivery: Bool?
+    public private(set) var trialCount: Int?
+
     public init() {}
+
+    public var braces: Set<Int> { reinforcedSpans ?? [] }
+    public var hasDeliveredSupplies: Bool { successfulSupplyDelivery == true }
+    public var trialsCompleted: Int { trialCount ?? 0 }
+
+    /// Choose where two reusable wooden braces go; tap one again to remove it.
+    /// Children may experiment with as many different arrangements as they want.
+    @discardableResult
+    public mutating func toggleBrace(at span: Int) -> Bool {
+        guard isComplete, (0..<Self.crystalCount).contains(span) else { return false }
+        var chosen = braces
+        if chosen.contains(span) {
+            chosen.remove(span)
+        } else {
+            guard chosen.count < 2 else { return false }
+            chosen.insert(span)
+        }
+        reinforcedSpans = chosen
+        return true
+    }
+
+    /// Light fireflies can cross the restored span. A supply cart causes the
+    /// left/right weak spans to bow unless reinforced. A failed trial shows
+    /// exactly where it stopped, with no lost progress or negative scoring.
+    /// The child can move braces and test again in any order.
+    public mutating func testBridge(with load: BridgeTestLoad) -> BridgeTestResult? {
+        guard isComplete else { return nil }
+        trialCount = trialsCompleted + 1
+        if load == .firefly { return .crossed }
+        if let weak = [0, 2].first(where: { !braces.contains($0) }) {
+            return .stoppedAt(weak)
+        }
+        successfulSupplyDelivery = true
+        return .crossed
+    }
 
     public var hasFoundHiddenStar: Bool { hiddenStarFound == true }
 
