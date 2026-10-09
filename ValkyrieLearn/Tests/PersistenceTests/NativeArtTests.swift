@@ -124,6 +124,96 @@ import LearningCore
         XCTAssertEqual(resumed.storyRewardPlacement(.starlightBridgeCharm), 1)
     }
 
+    func testBridgeLoadLabShowsFailuresRecoversAndSavesStoryTreeEngineeringGear() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let store = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(store))
+        state.travel(to: .mathCastle)
+        XCTAssertTrue(state.discoverStarlightBridge())
+        for index in 0..<StarlightBridgeQuest.crystalCount {
+            XCTAssertTrue(state.collectStarlightCrystal(index))
+            XCTAssertTrue(state.installStarlightCrystal(index, into: index))
+        }
+        XCTAssertTrue(state.hasStoryReward(.starlightBridgeCharm))
+        let originalSkills = state.profile.skills
+
+        let scene = MathCastleScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        let beacon = try XCTUnwrap(scene.childNode(withName: "starlightQuestBeacon"))
+        scene.handleTap(at: beacon.position)
+
+        for index in 0..<3 {
+            XCTAssertNotNil(scene.childNode(withName: "//bridgeLoadBrace\(index)"))
+        }
+        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestLoad0"))
+        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestLoad1"))
+        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestLever"))
+
+        // The heavier cart tests the physical bridge, revealing the weakest span.
+        scene.handleTap(at: CGPoint(x: 1150, y: 513))
+        XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 1)
+        XCTAssertFalse(state.starlightBridgeQuest.hasDeliveredSupplies)
+        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
+        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestTraveler"))
+        XCTAssertEqual(state.profile.skills, originalSkills)
+        try await capture(scene, in: view, name: "Math-Castle-Bridge-Load-Trial-Bends")
+
+        // Reusable timber supports, not answers: children move two braces.
+        scene.handleTap(at: CGPoint(x: 760, y: 184))
+        scene.handleTap(at: CGPoint(x: 1050, y: 184))
+        XCTAssertEqual(state.starlightBridgeQuest.braces, Set([0, 2]))
+        scene.handleTap(at: CGPoint(x: 905, y: 184))
+        XCTAssertEqual(state.starlightBridgeQuest.braces, Set([0, 2]),
+                       "No extra support is created from an invalid third tap.")
+
+        scene.handleTap(at: CGPoint(x: 1150, y: 513))
+        XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 2)
+        XCTAssertTrue(state.starlightBridgeQuest.hasDeliveredSupplies)
+        XCTAssertNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
+        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestSuppliesDelivered"))
+        try await capture(scene, in: view, name: "Math-Castle-Bridge-Load-Trial-Supplies-Delivered")
+
+        // A light firefly crosses without the braces, and experiments can
+        // continue after the optional supplies achievement.
+        scene.handleTap(at: CGPoint(x: 760, y: 184))
+        scene.handleTap(at: CGPoint(x: 1050, y: 184))
+        XCTAssertTrue(state.starlightBridgeQuest.braces.isEmpty)
+        scene.handleTap(at: CGPoint(x: 435, y: 512))
+        scene.handleTap(at: CGPoint(x: 1150, y: 513))
+        XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 3)
+        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestTraveler"))
+        XCTAssertNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
+        XCTAssertEqual(state.profile.skills, originalSkills)
+
+        scene.handleTap(at: CGPoint(x: 1170, y: 625))
+        XCTAssertNil(scene.childNode(withName: "starlightQuestStage"))
+        scene.willLeave()
+
+        let restored = try AppState(context: ModelContext(store))
+        XCTAssertTrue(restored.starlightBridgeQuest.hasDeliveredSupplies)
+        XCTAssertEqual(restored.starlightBridgeQuest.trialsCompleted, 3)
+        XCTAssertTrue(restored.starlightBridgeQuest.braces.isEmpty)
+        XCTAssertEqual(restored.profile.skills, originalSkills)
+
+        restored.travel(to: .storyTree)
+        let tree = StoryTreeScene(state: restored)
+        tree.reducedMotion = true
+        view.presentScene(tree)
+        let charm = try XCTUnwrap(tree.childNode(withName: "starlightBridgeCharm"))
+        XCTAssertNotNil(tree.childNode(withName: "//starlightBridgeSupplyGear"))
+        XCTAssertTrue((charm.accessibilityLabel ?? "").contains("engineering gear"))
+        try await capture(tree, in: view, name: "Story-Tree-Bridge-Engineering-Gear")
+        tree.willLeave()
+    }
+
     func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
