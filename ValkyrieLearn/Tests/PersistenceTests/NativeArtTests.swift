@@ -2929,8 +2929,19 @@ import LearningCore
         let inspectedSocket = try XCTUnwrap(
             bugLantern.childNode(withName: "bugStepSocket\(bugEncounter.brokenIndex)") as? SKShapeNode
         )
-        XCTAssertEqual(inspectedSocket.strokeColor,
-                       UIColor(red: 0.95, green: 0.75, blue: 0.44, alpha: 1))
+        // UIColor instances may compare unequal even when their extended-sRGB
+        // components match. Compare actual rendered channel values instead.
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        XCTAssertTrue(inspectedSocket.strokeColor.getRed(
+            &red, green: &green, blue: &blue, alpha: &alpha
+        ))
+        XCTAssertEqual(red, 0.95, accuracy: 0.002)
+        XCTAssertEqual(green, 0.75, accuracy: 0.002)
+        XCTAssertEqual(blue, 0.44, accuracy: 0.002)
+        XCTAssertEqual(alpha, 1, accuracy: 0.002)
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count,
             debugEvidenceBeforeRepair,
