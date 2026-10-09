@@ -175,6 +175,17 @@ import LearningCore
         XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestVictory"))
         try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Restored")
 
+        // Native integration: color changes don't erase the structural
+        // supports, replayable heavy-load results or mastered learning.
+        let originalLights = state.starlightBridgeQuest.installedCrystals
+        castle.handleTap(at: sockets[0])
+        castle.handleTap(at: sockets[1])
+        XCTAssertEqual(state.starlightBridgeQuest.installedCrystals[0], originalLights[1])
+        XCTAssertEqual(state.starlightBridgeQuest.installedCrystals[1], originalLights[0])
+        XCTAssertTrue(state.starlightBridgeQuest.isComplete)
+        XCTAssertEqual(state.profile.skills, initialMathEvidence)
+        try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Color-Experiment")
+
         castle.handleTap(at: CGPoint(x: 1170, y: 625))
         XCTAssertNil(castle.childNode(withName: "starlightQuestStage"))
         castle.willLeave()

@@ -940,6 +940,37 @@ final class StarlightBridgeQuestTests: XCTestCase {
         XCTAssertEqual(snapshot.starlightBridgeQuest, quest)
     }
 
+    func testColorSwapsAndBridgeLoadExperimentsRemainIndependent() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertFalse(quest.swapInstalledCrystals(0, 1))
+        XCTAssertTrue(quest.discover())
+        for id in 0..<3 {
+            XCTAssertTrue(quest.collect(id))
+            XCTAssertTrue(quest.install(id, into: id))
+        }
+        XCTAssertFalse(quest.swapInstalledCrystals(0, 0))
+        XCTAssertFalse(quest.swapInstalledCrystals(0, 3))
+        // An unsupported cart stalls; experimenting with color does not
+        // accidentally repair the structure or award learning evidence.
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .stoppedAt(0))
+        XCTAssertTrue(quest.swapInstalledCrystals(0, 2))
+        XCTAssertEqual(quest.installedCrystals, [0: 2, 1: 1, 2: 0])
+        XCTAssertTrue(quest.isComplete)
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .stoppedAt(0))
+        XCTAssertFalse(quest.hasDeliveredSupplies)
+        XCTAssertTrue(quest.toggleBrace(at: 0))
+        XCTAssertTrue(quest.toggleBrace(at: 2))
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .crossed)
+        XCTAssertTrue(quest.hasDeliveredSupplies)
+        XCTAssertTrue(quest.swapInstalledCrystals(0, 2))
+        XCTAssertEqual(quest.installedCrystals, [0: 0, 1: 1, 2: 2])
+        XCTAssertTrue(quest.hasDeliveredSupplies)
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .crossed)
+        XCTAssertEqual(try JSONDecoder().decode(
+            StarlightBridgeQuest.self, from: JSONEncoder().encode(quest)
+        ), quest)
+    }
+
     func testHiddenStarIsOptionalPersistentAndAvailableOnReturnVisits() throws {
         var quest = StarlightBridgeQuest()
         XCTAssertFalse(quest.hasFoundHiddenStar)

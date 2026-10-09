@@ -229,6 +229,20 @@ public struct StarlightBridgeQuest: Codable, Equatable, Sendable {
         return true
     }
 
+    /// Move light between repaired sockets without undoing the rescue.
+    /// The heavy-load experiment is intentionally independent of color order.
+    @discardableResult
+    public mutating func swapInstalledCrystals(_ first: Int, _ second: Int) -> Bool {
+        guard isComplete, first != second,
+              (0..<Self.crystalCount).contains(first),
+              (0..<Self.crystalCount).contains(second),
+              let left = installedCrystals[first],
+              let right = installedCrystals[second] else { return false }
+        installedCrystals[first] = right
+        installedCrystals[second] = left
+        return true
+    }
+
     public var isComplete: Bool { installedCrystals.count == Self.crystalCount }
     public var installedCount: Int { installedCrystals.count }
     public var availableCrystals: [Int] {
