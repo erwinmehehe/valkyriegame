@@ -16,6 +16,114 @@ import LearningCore
         XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
     }
 
+    func testBridgeRescueExplorationRestoresAcrossLaunchAndPlacesTreeCharm() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        state.travel(to: .mathCastle)
+        let initialMathEvidence = state.profile.skills
+
+        let castle = MathCastleScene(state: state)
+        castle.reducedMotion = true
+        view.presentScene(castle)
+        let beacon = try XCTUnwrap(castle.childNode(withName: "starlightQuestBeacon"))
+        XCTAssertTrue(beacon.isAccessibilityElement)
+        castle.handleTap(at: beacon.position)
+        XCTAssertTrue(state.starlightBridgeQuest.discovered)
+        XCTAssertNotNil(castle.childNode(withName: "starlightQuestStage"))
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestCache0"))
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestFirefly"))
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestProgressSign"))
+        for index in 0..<StarlightBridgeQuest.crystalCount {
+            let cache = try XCTUnwrap(castle.childNode(withName: "//bridgeQuestCache\(index)"))
+            let pedestal = try XCTUnwrap(castle.childNode(
+                withName: "//decorativeCrystalPedestal\(index)"
+            ))
+            XCTAssertEqual(cache.position.x, pedestal.position.x, accuracy: 0.001)
+            XCTAssertGreaterThan(cache.position.y, pedestal.position.y,
+                                 "Crystal should sit on a physical pedestal, not in the sky.")
+        }
+        XCTAssertEqual(state.profile.skills, initialMathEvidence)
+        try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Discovery")
+
+        let caches: [CGPoint] = [
+            CGPoint(x: 330, y: 306), CGPoint(x: 468, y: 306), CGPoint(x: 605, y: 306)
+        ]
+        for (index, point) in caches.enumerated() {
+            castle.handleTap(at: point)
+            try await waitUntil(timeout: 3) {
+                state.starlightBridgeQuest.collectedCrystals.contains(index)
+            }
+        }
+        XCTAssertEqual(state.starlightBridgeQuest.availableCrystals, [0, 1, 2])
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestSecret"))
+        castle.handleTap(at: CGPoint(x: 1055, y: 460))
+        XCTAssertTrue(state.starlightBridgeQuest.hasFoundHiddenStar)
+        XCTAssertEqual(state.profile.skills, initialMathEvidence,
+                       "The optional hidden star cannot award mathematical mastery.")
+
+        let inventory: [CGPoint] = [
+            CGPoint(x: 360, y: 130), CGPoint(x: 490, y: 130), CGPoint(x: 620, y: 130)
+        ]
+        let sockets: [CGPoint] = [
+            CGPoint(x: 760, y: 302), CGPoint(x: 905, y: 302), CGPoint(x: 1050, y: 302)
+        ]
+        for index in 0..<3 {
+            castle.handleTap(at: inventory[index])
+            castle.handleTap(at: sockets[(index + 1) % 3])
+            try await waitUntil(timeout: 3) {
+                state.starlightBridgeQuest.installedCount == index + 1
+            }
+        }
+
+        XCTAssertTrue(state.starlightBridgeQuest.isComplete)
+        XCTAssertTrue(state.hasStoryReward(.starlightBridgeCharm))
+        XCTAssertEqual(state.profile.skills, initialMathEvidence,
+                       "A fun physical bridge quest cannot manufacture Math mastery.")
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestVictory"))
+        try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Restored")
+
+        castle.handleTap(at: CGPoint(x: 1170, y: 625))
+        XCTAssertNil(castle.childNode(withName: "starlightQuestStage"))
+        castle.willLeave()
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertTrue(restored.starlightBridgeQuest.isComplete)
+        XCTAssertTrue(restored.starlightBridgeQuest.hasFoundHiddenStar)
+        XCTAssertTrue(restored.hasStoryReward(.starlightBridgeCharm))
+        XCTAssertEqual(restored.profile.skills, initialMathEvidence)
+
+        restored.travel(to: .storyTree)
+        let tree = StoryTreeScene(state: restored)
+        tree.reducedMotion = true
+        view.presentScene(tree)
+        let charm = try XCTUnwrap(tree.childNode(withName: "starlightBridgeCharm"))
+        XCTAssertTrue(charm.isAccessibilityElement)
+        XCTAssertNotNil(tree.childNode(withName: "//starlightBridgeSecretStar"),
+                        "The optional secret should visibly persist on the earned charm.")
+        XCTAssertTrue((charm.accessibilityLabel ?? "").contains("hidden star"))
+        XCTAssertEqual(charm.position, CGPoint(x: 240, y: 585),
+                       "The reward should hang in the Story Tree canopy, not over distant Math Castle.")
+        XCTAssertEqual(restored.storyRewardPlacement(.starlightBridgeCharm), 0)
+        try await capture(tree, in: view, name: "Story-Tree-Starlight-Bridge-Charm")
+        tree.handleTap(at: charm.position)
+        XCTAssertEqual(restored.storyRewardPlacement(.starlightBridgeCharm), 1)
+        XCTAssertNotEqual(
+            try XCTUnwrap(tree.childNode(withName: "starlightBridgeCharm")).position,
+            charm.position
+        )
+        tree.willLeave()
+        let resumed = try AppState(context: ModelContext(container))
+        XCTAssertEqual(resumed.storyRewardPlacement(.starlightBridgeCharm), 1)
+    }
+
     func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)

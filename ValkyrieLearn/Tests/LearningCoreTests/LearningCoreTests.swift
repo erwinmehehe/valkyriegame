@@ -792,3 +792,114 @@ final class LearningCoreTests: XCTestCase {
     }
 
 }
+
+final class StarlightBridgeQuestTests: XCTestCase {
+    func testQuestRequiresDiscoveryAndCannotInventOrDuplicateCrystals() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertFalse(quest.discovered)
+        XCTAssertFalse(quest.isComplete)
+        XCTAssertFalse(quest.collect(0), "A crystal cannot be collected before discovery.")
+        XCTAssertFalse(quest.install(0, into: 0))
+        XCTAssertTrue(quest.discover())
+        XCTAssertFalse(quest.discover())
+        XCTAssertFalse(quest.collect(-1))
+        XCTAssertFalse(quest.collect(StarlightBridgeQuest.crystalCount))
+        XCTAssertTrue(quest.collect(0))
+        XCTAssertFalse(quest.collect(0))
+        XCTAssertEqual(quest.availableCrystals, [0])
+        XCTAssertFalse(quest.install(1, into: 0), "Uncollected crystals cannot power sockets.")
+        XCTAssertFalse(quest.install(0, into: -1))
+        XCTAssertFalse(quest.install(0, into: StarlightBridgeQuest.crystalCount))
+        XCTAssertEqual(quest.installedCount, 0)
+    }
+
+    func testQuestAllowsFreeChoiceButRequiresThreeDistinctInstalledCrystals() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertTrue(quest.discover())
+        for crystal in 0..<StarlightBridgeQuest.crystalCount {
+            XCTAssertTrue(quest.collect(crystal))
+        }
+        XCTAssertEqual(quest.availableCrystals, [0, 1, 2])
+        XCTAssertTrue(quest.install(2, into: 0))
+        XCTAssertFalse(quest.install(2, into: 1), "Cannot install one crystal twice.")
+        XCTAssertFalse(quest.install(0, into: 0), "Cannot overwrite a socket.")
+        XCTAssertTrue(quest.install(0, into: 2))
+        XCTAssertFalse(quest.isComplete)
+        XCTAssertEqual(quest.availableCrystals, [1])
+        XCTAssertTrue(quest.install(1, into: 1))
+        XCTAssertTrue(quest.isComplete)
+        XCTAssertEqual(quest.installedCrystals, [0: 2, 1: 1, 2: 0])
+        XCTAssertTrue(quest.availableCrystals.isEmpty)
+        XCTAssertFalse(quest.install(1, into: 0))
+        XCTAssertFalse(quest.collect(1))
+    }
+
+    func testQuestAndLegacyLearnerProfilesRestoreWithoutChangingMastery() throws {
+        let untouched = LearnerProfile()
+        let encodedLegacy = try JSONEncoder().encode(untouched)
+        var restored = try JSONDecoder().decode(LearnerProfile.self, from: encodedLegacy)
+        XCTAssertNil(restored.starlightBridgeQuest)
+        XCTAssertTrue(restored.skills.isEmpty)
+        XCTAssertFalse(restored.hasStoryReward(.starlightBridgeCharm))
+
+        var quest = StarlightBridgeQuest()
+        XCTAssertTrue(quest.discover())
+        XCTAssertTrue(quest.collect(1))
+        restored.starlightBridgeQuest = quest
+        let saved = try JSONEncoder().encode(restored)
+        var resumed = try JSONDecoder().decode(LearnerProfile.self, from: saved)
+        XCTAssertEqual(resumed.starlightBridgeQuest, quest)
+        XCTAssertTrue(resumed.skills.isEmpty, "Collecting gems cannot manufacture mastery.")
+
+        var recoveredQuest = try XCTUnwrap(resumed.starlightBridgeQuest)
+        XCTAssertTrue(recoveredQuest.collect(0))
+        XCTAssertTrue(recoveredQuest.collect(2))
+        XCTAssertTrue(recoveredQuest.install(1, into: 2))
+        XCTAssertTrue(recoveredQuest.install(0, into: 0))
+        XCTAssertTrue(recoveredQuest.install(2, into: 1))
+        resumed.starlightBridgeQuest = recoveredQuest
+        XCTAssertTrue(try XCTUnwrap(
+            JSONDecoder().decode(LearnerProfile.self, from: JSONEncoder().encode(resumed))
+                .starlightBridgeQuest
+        ).isComplete)
+        XCTAssertTrue(resumed.skills.isEmpty)
+    }
+
+    func testHiddenStarIsOptionalPersistentAndAvailableOnReturnVisits() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertFalse(quest.hasFoundHiddenStar)
+        XCTAssertFalse(quest.discoverHiddenStar())
+        XCTAssertTrue(quest.discover())
+        XCTAssertTrue(quest.collect(0))
+        XCTAssertFalse(quest.discoverHiddenStar(), "One gem must not reveal the secret.")
+        XCTAssertTrue(quest.collect(1))
+        XCTAssertTrue(quest.discoverHiddenStar())
+        XCTAssertFalse(quest.discoverHiddenStar(), "One hidden star cannot be collected twice.")
+        XCTAssertEqual(quest.installedCount, 0, "Secret play must not repair sockets.")
+        let restored = try JSONDecoder().decode(StarlightBridgeQuest.self,
+                                                from: JSONEncoder().encode(quest))
+        XCTAssertTrue(restored.hasFoundHiddenStar)
+
+        var replayQuest = StarlightBridgeQuest()
+        XCTAssertTrue(replayQuest.discover())
+        for index in 0..<StarlightBridgeQuest.crystalCount {
+            XCTAssertTrue(replayQuest.collect(index))
+            XCTAssertTrue(replayQuest.install(index, into: index))
+        }
+        XCTAssertTrue(replayQuest.isComplete)
+        XCTAssertTrue(replayQuest.discoverHiddenStar(),
+                      "Finding the secret later must not require restarting the main rescue.")
+        XCTAssertTrue(replayQuest.isComplete)
+
+        // A save from the earlier, secret-less bridge implementation still decodes.
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(replayQuest)) as? [String: Any])
+        payload.removeValue(forKey: "hiddenStarFound")
+        let older = try JSONSerialization.data(withJSONObject: payload)
+        let migrated = try JSONDecoder().decode(StarlightBridgeQuest.self, from: older)
+        XCTAssertTrue(migrated.isComplete)
+        XCTAssertFalse(migrated.hasFoundHiddenStar)
+        XCTAssertTrue(migrated.availableCrystals.isEmpty)
+    }
+
+}
