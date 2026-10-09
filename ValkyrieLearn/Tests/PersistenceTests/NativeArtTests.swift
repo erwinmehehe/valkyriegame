@@ -235,6 +235,80 @@ import LearningCore
         tree.willLeave()
     }
 
+    func testLumiLivingGardenPlantingBloomsSaveAndDecoratesStoryTree() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let view = SKView(frame: window.bounds)
+        let controller = UIViewController()
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        state.travel(to: .wordGarden)
+        let originalEvidence = state.profile.skills
+        let scene = WordGardenScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+
+        let beacon = try XCTUnwrap(scene.childNode(withName: "livingGardenBeacon"))
+        XCTAssertTrue(beacon.isAccessibilityElement)
+        scene.handleTap(at: beacon.position)
+        XCTAssertNotNil(scene.childNode(withName: "livingGardenStage"))
+        XCTAssertNotNil(scene.childNode(withName: "//livingPlot0"))
+        XCTAssertNotNil(scene.childNode(withName: "//livingSeed0"))
+        XCTAssertNotNil(scene.childNode(withName: "//livingCare0"))
+        XCTAssertFalse(state.hasStoryReward(.lumiLivingBloom))
+
+        // Choose the starflower, plant it, then experiment with rain and sun.
+        scene.handleTap(at: CGPoint(x: 485, y: 535))
+        scene.handleTap(at: CGPoint(x: 550, y: 360))
+        XCTAssertEqual(state.lumiLivingGarden.plot(at: 0)?.seed, .starflower)
+        scene.handleTap(at: CGPoint(x: 495, y: 160))
+        scene.handleTap(at: CGPoint(x: 550, y: 360))
+        XCTAssertEqual(state.lumiLivingGarden.bloomingCount, 0)
+        scene.handleTap(at: CGPoint(x: 705, y: 160))
+        scene.handleTap(at: CGPoint(x: 550, y: 360))
+        XCTAssertEqual(state.lumiLivingGarden.bloomingCount, 1)
+        XCTAssertTrue(state.hasStoryReward(.lumiLivingBloom))
+        XCTAssertEqual(state.profile.skills, originalEvidence,
+                       "Creative planting cannot award literacy mastery.")
+        try await capture(scene, in: view, name: "Word-Garden-Lumi-Living-Patch-Bloom")
+
+        // Caring with shade visibly closes a sun-loving blossom, then sunlight
+        // opens it again without erasing the earned persistent reward.
+        scene.handleTap(at: CGPoint(x: 915, y: 160))
+        scene.handleTap(at: CGPoint(x: 550, y: 360))
+        XCTAssertEqual(state.lumiLivingGarden.bloomingCount, 0)
+        XCTAssertTrue(state.hasStoryReward(.lumiLivingBloom))
+        scene.handleTap(at: CGPoint(x: 705, y: 160))
+        scene.handleTap(at: CGPoint(x: 550, y: 360))
+        XCTAssertEqual(state.lumiLivingGarden.bloomingCount, 1)
+
+        scene.handleTap(at: CGPoint(x: 1170, y: 628))
+        XCTAssertNil(scene.childNode(withName: "livingGardenStage"))
+        XCTAssertNotNil(scene.childNode(withName: "livingGardenBeacon"))
+        scene.willLeave()
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertEqual(restored.lumiLivingGarden.bloomingCount, 1)
+        XCTAssertEqual(restored.lumiLivingGarden.plot(at: 0)?.seed, .starflower)
+        XCTAssertTrue(restored.hasStoryReward(.lumiLivingBloom))
+        XCTAssertEqual(restored.profile.skills, originalEvidence)
+        restored.travel(to: .storyTree)
+        let tree = StoryTreeScene(state: restored)
+        tree.reducedMotion = true
+        view.presentScene(tree)
+        let flower = try XCTUnwrap(tree.childNode(withName: "lumiLivingBloom"))
+        XCTAssertTrue(flower.isAccessibilityElement)
+        XCTAssertEqual(restored.storyRewardPlacement(.lumiLivingBloom), 0)
+        try await capture(tree, in: view, name: "Story-Tree-Lumi-Living-Bloom")
+        tree.handleTap(at: flower.position)
+        XCTAssertEqual(restored.storyRewardPlacement(.lumiLivingBloom), 1)
+        tree.willLeave()
+    }
+
     func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
