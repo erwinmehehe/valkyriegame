@@ -74,6 +74,7 @@ import LearningCore
     private var mirrorPracticeBusy = false
     private var mirrorApproaching = false
     private var lastPalaceKineticReducedMotion: Bool?
+    private var routeTransitionPending = false
     private let mirrorChoicePoints = [
         CGPoint(x: 525, y: 390),
         CGPoint(x: 765, y: 390),
@@ -2799,7 +2800,7 @@ import LearningCore
 
         instruction.text = attemptSupport == .independent
             ? "Same stones, new rule—both sorts held. Another vault set is waking."
-            : "That re-sort is stable. Repeat this same-set rule change independently."
+            : "That re-sort is stable. Try the next vault set independently."
 
         run(.sequence([
             .wait(forDuration: reducedMotion ? 0.22 : 0.95),
@@ -3791,7 +3792,27 @@ import LearningCore
         if resetSupport { support = .independent }
         startedAt = Date()
         solved = false
-        pathAcceptingInput = true
+
+        // Tiko ends a successful route on top of the map. Return the
+        // companion to the walkable lane before a new map becomes tappable,
+        // otherwise he obscures the next challenge's actual tiles.
+        let companionStart = CGPoint(x: 305, y: 190)
+        if tiko.position.y > walkable.maxY {
+            pathAcceptingInput = false
+            if reducedMotion {
+                tiko.position = companionStart
+                pathAcceptingInput = true
+            } else {
+                tiko.run(.sequence([
+                    .fadeOut(withDuration: 0.12),
+                    .run { [weak self] in self?.tiko.position = companionStart },
+                    .fadeIn(withDuration: 0.12),
+                    .run { [weak self] in self?.pathAcceptingInput = true }
+                ]), withKey: "pathCompanionReset")
+            }
+        } else {
+            pathAcceptingInput = true
+        }
 
         let grid = SKNode()
         grid.name = "pathGrid"
@@ -5098,6 +5119,24 @@ import LearningCore
         handleTap(at: point)
     }
 
+    /// An unlocked palace route is a single-tap journey: the child does not
+    /// have to guess that a second tap at the doorway is required.
+    /// Ignore subsequent scenery taps while the transition walk is underway.
+    private func followUnlockedRoute(to world: AppState.World, at destination: CGPoint, prompt: String) {
+        guard !routeTransitionPending else { return }
+        routeTransitionPending = true
+        let enter = { [weak self] in
+            guard let self else { return }
+            self.state.travel(to: world)
+        }
+        if isNear(destination) {
+            enter()
+        } else {
+            instruction.text = prompt
+            travel(to: destination, then: enter)
+        }
+    }
+
     private func resortPedestalTarget(at point: CGPoint) -> String? {
         let pedestalNames: Set<String> = [
             "resortLeftPedestal",
@@ -5118,9 +5157,23 @@ import LearningCore
     }
 
     func handleTap(at point: CGPoint) {
-        let target = place == .resortVault
-            ? (resortPedestalTarget(at: point) ?? targetName(at: point))
-            : targetName(at: point)
+        // The unlocked Mirror Hall door sits near the Re-sort Vault's right
+        // pedestal. Route activation takes precedence inside its visible 60pt
+        // button, otherwise the pedestal steals a legitimate navigation tap.
+        let mirrorDoor = childNode(withName: "mirrorHallRoute")
+        let mirrorDoorTapped = place == .resortVault
+            && state.puzzleMirrorHallAvailable
+            && mirrorDoor != nil
+            && hypot(point.x - mirrorDoor!.position.x,
+                     point.y - mirrorDoor!.position.y) <= 40
+        let target = mirrorDoorTapped ? "mirrorHallRoute"
+            : place == .resortVault
+                ? (resortPedestalTarget(at: point) ?? targetName(at: point))
+                : targetName(at: point)
+
+        // Let Home cancel the journey, but never restart the same route or
+        // interrupt its arrival callback with a stray floor or puzzle tap.
+        if routeTransitionPending && target != "home" { return }
 
         // A stray floor tap must not cancel the walk that will unlock this interaction.
         if place == .mirrorHall && mirrorApproaching
@@ -5140,13 +5193,10 @@ import LearningCore
 
         case "memoryBridgeRoute":
             guard place == .runeGate, state.puzzleMemoryBridgeAvailable else { return }
-            let destination = CGPoint(x: 1005, y: 175)
-            if isNear(destination) {
-                state.travel(to: .memoryBridge)
-            } else {
-                instruction.text = "Walk through the opened Rune Gate to Memory Bridge."
-                travel(to: destination)
-            }
+            followUnlockedRoute(
+                to: .memoryBridge, at: CGPoint(x: 1005, y: 175),
+                prompt: "Walk through the opened Rune Gate to Memory Bridge."
+            )
 
         case "memoryPad":
             guard place == .memoryBridge,
@@ -5155,13 +5205,10 @@ import LearningCore
 
         case "stopGoRoute":
             guard place == .memoryBridge, state.puzzleStopGoAvailable else { return }
-            let destination = CGPoint(x: 1000, y: 175)
-            if isNear(destination) {
-                state.travel(to: .stopGoOrbs)
-            } else {
-                instruction.text = "Cross Memory Bridge to the orb chamber."
-                travel(to: destination)
-            }
+            followUnlockedRoute(
+                to: .stopGoOrbs, at: CGPoint(x: 1000, y: 175),
+                prompt: "Cross Memory Bridge to the orb chamber."
+            )
 
         case "memoryBridgeBack":
             state.travel(to: .memoryBridge)
@@ -5171,13 +5218,10 @@ import LearningCore
 
         case "sortingPedestalRoute":
             guard place == .stopGoOrbs, state.puzzleSortingAvailable else { return }
-            let destination = CGPoint(x: 1000, y: 175)
-            if isNear(destination) {
-                state.travel(to: .sortingPedestal)
-            } else {
-                instruction.text = "Pass the stabilized orb barrier to the Sorting Pedestal."
-                travel(to: destination)
-            }
+            followUnlockedRoute(
+                to: .sortingPedestal, at: CGPoint(x: 1000, y: 175),
+                prompt: "Pass the stabilized orb barrier to the Sorting Pedestal."
+            )
 
         case "stopGoBack":
             state.travel(to: .stopGoOrbs)
@@ -5190,13 +5234,10 @@ import LearningCore
 
         case "resortVaultRoute":
             guard place == .sortingPedestal, state.puzzleResortAvailable else { return }
-            let destination = CGPoint(x: 1000, y: 175)
-            if isNear(destination) {
-                state.travel(to: .resortVault)
-            } else {
-                instruction.text = "Follow Tiko through the stable pedestals to the Re-sort Vault."
-                travel(to: destination)
-            }
+            followUnlockedRoute(
+                to: .resortVault, at: CGPoint(x: 1000, y: 175),
+                prompt: "Follow Tiko through the stable pedestals to the Re-sort Vault."
+            )
 
         case "sortingBack":
             state.travel(to: .sortingPedestal)
@@ -5209,13 +5250,10 @@ import LearningCore
 
         case "mirrorHallRoute":
             guard place == .resortVault, state.puzzleMirrorHallAvailable else { return }
-            let destination = CGPoint(x: 1000, y: 175)
-            if isNear(destination) {
-                state.travel(to: .mirrorHall)
-            } else {
-                instruction.text = "Follow Tiko through the stable vault into Mirror Hall."
-                travel(to: destination)
-            }
+            followUnlockedRoute(
+                to: .mirrorHall, at: CGPoint(x: 1000, y: 175),
+                prompt: "Follow Tiko through the stable vault into Mirror Hall."
+            )
 
         case "resortVaultBack":
             state.travel(to: .resortVault)
@@ -5440,7 +5478,7 @@ import LearningCore
 
             instruction.text = attemptSupport == .independent
                 ? "That seal is awake. Tiko found the next rune lock."
-                : "Tiko helped with that seal. Solve the same pattern independently next."
+                : "Tiko helped with that seal. Try the next rune lock independently."
 
             run(
                 .sequence([
@@ -5519,8 +5557,9 @@ import LearningCore
             }
         }
 
-        if let crest = childNode(withName: "//puzzleGateCrest") as? SKLabelNode {
-            crest.alpha = 0.55 + CGFloat(count) * 0.15
+        if let crest = childNode(withName: "//puzzleGateCrest") as? SKShapeNode {
+            crest.alpha = min(1, 0.55 + CGFloat(count) * 0.15)
+            crest.glowWidth = reducedMotion ? 0 : CGFloat(count) * 4
         }
     }
 
@@ -5543,9 +5582,17 @@ import LearningCore
                 withKey: "gateOpen"
             )
         }
-        if let path = childNode(withName: "runePath") as? SKShapeNode {
-            path.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.36, alpha: 1)
-            path.glowWidth = 12
+        if let path = childNode(withName: "runePath") {
+            // runePath is a container SKNode, not an SKShapeNode. Light its
+            // actual stone children instead of silently failing the cast.
+            for stone in path.children.compactMap({ $0 as? SKShapeNode }) {
+                stone.fillColor = UIColor(red: 0.56, green: 0.38, blue: 0.18, alpha: 0.85)
+                stone.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.36, alpha: 1)
+                stone.glowWidth = reducedMotion ? 0 : 8
+                stone.userData = NSMutableDictionary(dictionary: [
+                    "runePathPowered": true
+                ])
+            }
         }
 
         tiko.pose(.celebrate)

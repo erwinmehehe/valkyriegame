@@ -936,6 +936,141 @@ import LearningCore
         restoredTree.willLeave()
     }
 
+
+    func testTikoReturnsToTheWalkableLaneBetweenPathTileMaps() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let view = SKView(frame: window.bounds)
+        let controller = UIViewController()
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation + PuzzlePalaceEncounterCatalog.ruleSwitching {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzlePathTilesAvailable)
+        let puzzle = try XCTUnwrap(state.nextPuzzlePathTilesEncounter())
+        let correctIndex = try XCTUnwrap(puzzle.choices.indices.first {
+            puzzle.isValidChoice($0)
+        })
+        state.travel(to: .pathTiles)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+
+        let ys: [CGFloat] = [325, 245, 165]
+        scene.handleTap(at: CGPoint(x: 1100, y: ys[correctIndex]))
+        try await waitUntil(timeout: 4) { scene.childNode(withName: "pathNext") != nil }
+        XCTAssertGreaterThan(scene.tiko.position.y, scene.walkable.maxY,
+                             "Successful path demonstration should reach the map goal")
+        scene.handleTap(at: CGPoint(x: 1160, y: 145))
+        XCTAssertNotNil(scene.childNode(withName: "pathGrid"))
+        XCTAssertLessThanOrEqual(scene.tiko.position.y, scene.walkable.maxY,
+                                 "Tiko must not cover the next map after choosing Next")
+        scene.willLeave()
+    }
+
+    func testPuzzlePalaceRouteSingleTapWalksIntoMemoryBridgeWithoutSecondTap() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let view = SKView(frame: window.bounds)
+        let controller = UIViewController()
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzleRuneGateComplete)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        XCTAssertNotNil(scene.childNode(withName: "memoryBridgeRoute"))
+        XCTAssertLessThan(scene.valkyrie.position.x, 300)
+
+        // A single distant doorway tap should walk, then enter the next room.
+        // Repeated doorway and stray floor taps cannot restart/cancel that walk.
+        scene.handleTap(at: CGPoint(x: 1010, y: 175))
+        XCTAssertEqual(state.world, .storyTree)
+        scene.handleTap(at: CGPoint(x: 1010, y: 175))
+        scene.handleTap(at: CGPoint(x: 500, y: 175))
+        try await waitUntil(timeout: 5) { state.world == .memoryBridge }
+        scene.willLeave()
+    }
+
+    func testEveryCompletedPalaceDoorwayMovesToTheNextRoom() throws {
+        let state = try AppState(context: ModelContext(try LearningStore.container(inMemory: true)))
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation + PuzzlePalaceEncounterCatalog.ruleSwitching {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+            _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+
+        let doorways: [(AppState.World, String, AppState.World)] = [
+            (.puzzlePalace, "memoryBridgeRoute", .memoryBridge),
+            (.memoryBridge, "stopGoRoute", .stopGoOrbs),
+            (.stopGoOrbs, "sortingPedestalRoute", .sortingPedestal),
+            (.sortingPedestal, "resortVaultRoute", .resortVault),
+            (.resortVault, "mirrorHallRoute", .mirrorHall)
+        ]
+        for (origin, target, destination) in doorways {
+            state.travel(to: origin)
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            scene.didMove(to: SKView())
+            XCTAssertNotNil(scene.childNode(withName: target), "Missing unlocked doorway \(target)")
+            scene.valkyrie.position = CGPoint(x: 1000, y: 175)
+            scene.handleTap(at: CGPoint(x: 1010, y: 175))
+            XCTAssertEqual(state.world, destination)
+            scene.willLeave()
+        }
+    }
+
     func testPuzzlePalaceRuneGateRoutesFromStoryTreeAndPersistsEvidence() async throws {
         let container = try LearningStore.container(inMemory: true)
         let state = try AppState(context: ModelContext(container))
@@ -1003,6 +1138,17 @@ import LearningCore
         XCTAssertEqual(openPalace.children.filter { $0.name == "runeChoice" }.count, 0)
         let gate = try XCTUnwrap(openPalace.childNode(withName: "puzzleGate") as? SKShapeNode)
         XCTAssertEqual(gate.glowWidth, 16)
+        let crest = try XCTUnwrap(openPalace.childNode(withName: "//puzzleGateCrest") as? SKShapeNode)
+        XCTAssertEqual(crest.alpha, 1, accuracy: 0.001,
+                       "The Rune Gate's actual shape crest must respond to earned progress")
+        let runePath = try XCTUnwrap(openPalace.childNode(withName: "runePath"))
+        let stones = runePath.children.compactMap { $0 as? SKShapeNode }
+        XCTAssertEqual(stones.count, 4)
+        XCTAssertTrue(stones.allSatisfy {
+            ($0.userData?["runePathPowered"] as? Bool) == true
+                && $0.fillColor.cgColor.alpha > 0.75
+                && $0.strokeColor.cgColor.alpha > 0.94
+        }, "Opening the gate must power and brighten all four actual path stones")
         XCTAssertNotNil(openPalace.childNode(withName: "memoryBridgeRoute"))
         openPalace.valkyrie.position = CGPoint(x: 1005, y: 175)
         openPalace.handleTap(at: CGPoint(x: 1005, y: 165))

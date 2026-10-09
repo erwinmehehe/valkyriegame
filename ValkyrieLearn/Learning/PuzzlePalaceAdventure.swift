@@ -1209,15 +1209,32 @@ public enum PuzzlePalaceEncounterCatalog {
 }
 
 public enum PuzzlePalaceDirector {
+    /// Prefer unseen, still-unearned tasks. An assisted solution or failed
+    /// attempt must not immediately serve the memorized answer again when a
+    /// different unfinished puzzle is available. Once all have been tried,
+    /// revisit an older unfinished task instead of the last attempted one.
+    private static func nextFreshUnfinishedIndex(
+        ids: [String], skill: SkillID, profile: LearnerProfile
+    ) -> Int? {
+        let evidence = profile.progress(for: skill).evidence
+        let independent = Set(evidence.filter {
+            $0.outcome == .correct && $0.supportLevel == .independent
+        }.map(\.encounterID))
+        let unfinished = ids.indices.filter { !independent.contains(ids[$0]) }
+        guard !unfinished.isEmpty else { return nil }
+
+        let seen = Set(evidence.map(\.encounterID))
+        return unfinished.first { !seen.contains(ids[$0]) }
+            ?? unfinished.first { ids[$0] != evidence.last?.encounterID }
+            ?? unfinished.first
+    }
+
     public static func nextRuneGateEncounter(profile: LearnerProfile) -> PuzzleEncounter {
         let candidates = PuzzlePalaceEncounterCatalog.runeGate
-        let independent = Set(
-            profile.progress(for: PuzzleSkills.visualPatternContinue).evidence
-                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
-                .map(\.encounterID)
-        )
-        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
-            return unfinished
+        if let index = nextFreshUnfinishedIndex(
+            ids: candidates.map(\.id), skill: PuzzleSkills.visualPatternContinue, profile: profile
+        ) {
+            return candidates[index]
         }
         let attempts = profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.count
         return candidates[attempts % candidates.count]
@@ -1248,13 +1265,10 @@ public enum PuzzlePalaceDirector {
     public static func nextMemoryBridgeEncounter(profile: LearnerProfile) -> PuzzleMemoryEncounter? {
         guard canEnterMemoryBridge(profile: profile) else { return nil }
         let candidates = PuzzlePalaceEncounterCatalog.memoryBridge
-        let independent = Set(
-            profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence
-                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
-                .map(\.encounterID)
-        )
-        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
-            return unfinished
+        if let index = nextFreshUnfinishedIndex(
+            ids: candidates.map(\.id), skill: PuzzleSkills.visualSequenceMemory, profile: profile
+        ) {
+            return candidates[index]
         }
         let attempts = profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence.count
         return candidates[attempts % candidates.count]
@@ -1285,13 +1299,10 @@ public enum PuzzlePalaceDirector {
     public static func nextStopGoEncounter(profile: LearnerProfile) -> PuzzleInhibitionEncounter? {
         guard canEnterStopGoOrbs(profile: profile) else { return nil }
         let candidates = PuzzlePalaceEncounterCatalog.stopGoOrbs
-        let independent = Set(
-            profile.progress(for: PuzzleSkills.responseInhibition).evidence
-                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
-                .map(\.encounterID)
-        )
-        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
-            return unfinished
+        if let index = nextFreshUnfinishedIndex(
+            ids: candidates.map(\.id), skill: PuzzleSkills.responseInhibition, profile: profile
+        ) {
+            return candidates[index]
         }
         let attempts = profile.progress(for: PuzzleSkills.responseInhibition).evidence.count
         return candidates[attempts % candidates.count]
@@ -1370,13 +1381,10 @@ public enum PuzzlePalaceDirector {
     public static func nextChangedRuleResortEncounter(profile: LearnerProfile) -> PuzzleResortEncounter? {
         guard canEnterChangedRuleResort(profile: profile) else { return nil }
         let candidates = PuzzlePalaceEncounterCatalog.changedRuleResort
-        let independent = Set(
-            profile.progress(for: PuzzleSkills.changedRuleSort).evidence
-                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
-                .map(\.encounterID)
-        )
-        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
-            return unfinished
+        if let index = nextFreshUnfinishedIndex(
+            ids: candidates.map(\.id), skill: PuzzleSkills.changedRuleSort, profile: profile
+        ) {
+            return candidates[index]
         }
         let attempts = profile.progress(for: PuzzleSkills.changedRuleSort).evidence.count
         return candidates[attempts % candidates.count]
@@ -1410,13 +1418,10 @@ public enum PuzzlePalaceDirector {
     public static func nextMirrorHallEncounter(profile: LearnerProfile) -> PuzzleOrientationEncounter? {
         guard canEnterMirrorHall(profile: profile) else { return nil }
         let candidates = PuzzlePalaceEncounterCatalog.mirrorHallOrientation
-        let independent = Set(
-            profile.progress(for: PuzzleSkills.spatialOrientation).evidence
-                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
-                .map(\.encounterID)
-        )
-        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
-            return unfinished
+        if let index = nextFreshUnfinishedIndex(
+            ids: candidates.map(\.id), skill: PuzzleSkills.spatialOrientation, profile: profile
+        ) {
+            return candidates[index]
         }
         let attempts = profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count
         return candidates[attempts % candidates.count]
@@ -1682,13 +1687,10 @@ public enum PuzzlePalaceDirector {
         skill: SkillID,
         profile: LearnerProfile
     ) -> PuzzleSortEncounter {
-        let independent = Set(
-            profile.progress(for: skill).evidence
-                .filter { $0.outcome == .correct && $0.supportLevel == .independent }
-                .map(\.encounterID)
-        )
-        if let unfinished = candidates.first(where: { !independent.contains($0.id) }) {
-            return unfinished
+        if let index = nextFreshUnfinishedIndex(
+            ids: candidates.map(\.id), skill: skill, profile: profile
+        ) {
+            return candidates[index]
         }
         let attempts = profile.progress(for: skill).evidence.count
         return candidates[attempts % candidates.count]
