@@ -157,8 +157,23 @@ public struct StarlightBridgeQuest: Codable, Equatable, Sendable {
     public private(set) var collectedCrystals: Set<Int> = []
     /// Socket index -> crystal index. Free placement is intentional player agency.
     public private(set) var installedCrystals: [Int: Int] = [:]
+    /// Optional so earlier native quest saves still restore after this upgrade.
+    public private(set) var hiddenStarFound: Bool?
 
     public init() {}
+
+    public var hasFoundHiddenStar: Bool { hiddenStarFound == true }
+
+    /// Discoverable even on a return visit after the firefly was rescued.
+    /// This is creative exploration, never a scored maths encounter.
+    @discardableResult
+    public mutating func discoverHiddenStar() -> Bool {
+        guard discovered, collectedCrystals.count >= 2, !hasFoundHiddenStar else {
+            return false
+        }
+        hiddenStarFound = true
+        return true
+    }
 
     public var isComplete: Bool { installedCrystals.count == Self.crystalCount }
     public var installedCount: Int { installedCrystals.count }
