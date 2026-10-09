@@ -37,6 +37,7 @@ public enum StoryRewardID: String, Codable, CaseIterable, Hashable, Sendable {
     case moonLantern
     case wordGardenLantern
     case puzzlePalaceLantern
+    case starlightBridgeCharm
 }
 
 public enum CartOperation: String, Codable, CaseIterable, Sendable {
@@ -145,6 +146,55 @@ public struct ActivityRecord: Codable, Equatable, Sendable {
         self.skillID = skillID; self.representation = representation; self.timestamp = timestamp
     }
 }
+/// A small, physical exploration quest rather than another scored worksheet.
+/// Collect any three starlight shards and choose which bridge sockets to power.
+/// Completing this *never* creates math mastery evidence; the normal adaptive
+/// Math Castle work order still determines educational progress.
+public struct StarlightBridgeQuest: Codable, Equatable, Sendable {
+    public static let crystalCount = 3
+
+    public private(set) var discovered = false
+    public private(set) var collectedCrystals: Set<Int> = []
+    /// Socket index -> crystal index. Free placement is intentional player agency.
+    public private(set) var installedCrystals: [Int: Int] = [:]
+
+    public init() {}
+
+    public var isComplete: Bool { installedCrystals.count == Self.crystalCount }
+    public var installedCount: Int { installedCrystals.count }
+    public var availableCrystals: [Int] {
+        (0..<Self.crystalCount).filter {
+            collectedCrystals.contains($0) && !installedCrystals.values.contains($0)
+        }
+    }
+
+    @discardableResult
+    public mutating func discover() -> Bool {
+        guard !discovered else { return false }
+        discovered = true
+        return true
+    }
+
+    @discardableResult
+    public mutating func collect(_ crystal: Int) -> Bool {
+        guard discovered, !isComplete, (0..<Self.crystalCount).contains(crystal) else {
+            return false
+        }
+        return collectedCrystals.insert(crystal).inserted
+    }
+
+    @discardableResult
+    public mutating func install(_ crystal: Int, into socket: Int) -> Bool {
+        guard discovered, !isComplete,
+              (0..<Self.crystalCount).contains(socket),
+              collectedCrystals.contains(crystal),
+              installedCrystals[socket] == nil,
+              !installedCrystals.values.contains(crystal) else { return false }
+        installedCrystals[socket] = crystal
+        return true
+    }
+}
+
 public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var schemaVersion = 1
@@ -160,6 +210,8 @@ public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
     public var storyRewardPlacements: [String: Int]?
     /// Optional to preserve decoding of profiles saved before Science Lab.
     public var scienceAdventure: ScienceAdventure?
+    /// Optional for decoding learner profiles saved before the bridge adventure.
+    public var starlightBridgeQuest: StarlightBridgeQuest?
 
     public init(id: UUID = UUID()) { self.id = id }
     public func progress(for skill: SkillID) -> SkillProgress { skills[skill.rawValue] ?? SkillProgress() }
