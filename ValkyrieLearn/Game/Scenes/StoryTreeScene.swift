@@ -712,6 +712,22 @@ import SpriteKit
         jewel.name = root.name
         root.addChild(jewel)
 
+        if state.starlightBridgeQuest.hasFoundHiddenStar {
+            // The optional secret makes a lasting difference to the reward
+            // instead of flashing once and vanishing after the tap.
+            let secret = ArtSystem.label("✧", size: 23)
+            secret.name = "starlightBridgeSecretStar"
+            secret.position = CGPoint(x: 28, y: -24)
+            secret.fontColor = UIColor(red: 1.0, green: 0.81, blue: 0.34, alpha: 1)
+            root.addChild(secret)
+            if !reducedMotion {
+                secret.run(.repeatForever(.sequence([
+                    .scale(to: 1.17, duration: 0.85),
+                    .scale(to: 1, duration: 0.85)
+                ])), withKey: "hiddenStarTwinkle")
+            }
+        }
+
         let hit = SKShapeNode(circleOfRadius: 37)
         hit.fillColor = .clear
         hit.strokeColor = .clear
@@ -719,8 +735,12 @@ import SpriteKit
         hit.zPosition = 2
         root.addChild(hit)
 
-        makeAccessible(root, label: "Starlight Bridge charm",
-                       hint: "Tap to hang it on a different Story Tree branch.")
+        makeAccessible(
+            root,
+            label: state.starlightBridgeQuest.hasFoundHiddenStar
+                ? "Starlight Bridge charm with discovered hidden star" : "Starlight Bridge charm",
+            hint: "Tap to hang it on a different Story Tree branch."
+        )
         addChild(root)
         bridgeCharmNode = root
     }
