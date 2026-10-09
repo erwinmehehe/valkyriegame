@@ -1107,6 +1107,25 @@ import LearningCore
         addChild(root)
     }
 
+    // Sample actual floor stone from an existing Palace painting. Every movable
+    // tile keeps native hit testing and semantics; the painting itself is untouched.
+    private lazy var palaceStoneTexture: SKTexture? = {
+        guard let painting = ArtSystem.texture("PuzzleRuneGateIllustratedV2") else { return nil }
+        return SKTexture(
+            rect: CGRect(x: 0.31, y: 0.055, width: 0.22, height: 0.18),
+            in: painting
+        )
+    }()
+
+    private func carvedPalaceStone(_ size: CGSize, radius: CGFloat) -> SKShapeNode {
+        let face = SKShapeNode(rectOf: size, cornerRadius: radius)
+        face.fillColor = UIColor(red: 0.67, green: 0.57, blue: 0.70, alpha: 1)
+        face.fillTexture = palaceStoneTexture
+        face.strokeColor = UIColor(red: 0.97, green: 0.79, blue: 0.49, alpha: 0.95)
+        face.lineWidth = 3
+        return face
+    }
+
     // One set of stone-and-brass tools is reused across the palace. These are
     // physical SpriteKit shapes, not text-only UI floating above the paintings.
     private func palaceCog(
@@ -1130,8 +1149,18 @@ import LearningCore
         path.closeSubpath()
         let cog = SKShapeNode(path: path)
         cog.fillColor = fill
+        cog.fillTexture = palaceStoneTexture
         cog.strokeColor = stroke
         cog.lineWidth = 3
+
+        // A recessed central bearing makes the silhouette read as an installed
+        // clockwork part rather than a flat on-screen command icon.
+        let bearing = SKShapeNode(circleOfRadius: radius * 0.68)
+        bearing.fillColor = UIColor(red: 0.12, green: 0.09, blue: 0.17, alpha: 0.44)
+        bearing.strokeColor = stroke.withAlphaComponent(0.48)
+        bearing.lineWidth = 2
+        bearing.name = "decorativeCogBearing"
+        cog.addChild(bearing)
         return cog
     }
 
@@ -1290,31 +1319,50 @@ import LearningCore
 
         let board = SKNode()
         board.name = "runeBoard"
-        board.position = paintedDoorPoint(CGPoint(x: 947, y: 408))
+        // Keep the lock centered on the actual 4:3 painted door rather than
+        // leaving the lower row hanging over the stairs.
+        board.position = paintedDoorPoint(CGPoint(x: 949, y: 489))
+        board.position.y -= 11
         board.zPosition = 720
         addChild(board)
 
-        // The carved runes seat along a narrow lock rail in the painted door.
-        // This is not a giant multiple-choice sign in the middle of the room.
+        // Four engraved lock recesses sit INSIDE the painted door rather than
+        // stretching beyond its arch like a horizontal answer menu. Read in
+        // ordinary row order: top-left, top-right, bottom-left, bottom-right.
         let housing = SKShapeNode(
-            rectOf: CGSize(width: 335, height: 16), cornerRadius: 7
+            rectOf: CGSize(width: 161, height: 164), cornerRadius: 24
         )
-        housing.fillColor = UIColor(red: 0.47, green: 0.32, blue: 0.20, alpha: 0.86)
-        housing.strokeColor = UIColor(red: 0.87, green: 0.69, blue: 0.40, alpha: 0.90)
-        housing.lineWidth = 2
-        housing.position.y = -29
+        housing.fillColor = UIColor(red: 0.18, green: 0.12, blue: 0.23, alpha: 0.29)
+        housing.strokeColor = UIColor(red: 0.90, green: 0.72, blue: 0.44, alpha: 0.77)
+        housing.lineWidth = 3
         housing.name = "runeLockHousing"
         housing.zPosition = -3
         board.addChild(housing)
 
+        let engravedTrail = CGMutablePath()
+        engravedTrail.move(to: CGPoint(x: -40, y: 38))
+        engravedTrail.addLine(to: CGPoint(x: 40, y: 38))
+        engravedTrail.addLine(to: CGPoint(x: -40, y: -38))
+        engravedTrail.addLine(to: CGPoint(x: 40, y: -38))
+        let inlay = SKShapeNode(path: engravedTrail)
+        inlay.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.45, alpha: 0.56)
+        inlay.lineWidth = 5
+        inlay.name = "decorativeRuneCircuit"
+        inlay.zPosition = -2
+        board.addChild(inlay)
+
+        let lockSlots = [
+            CGPoint(x: -40, y: 38), CGPoint(x: 40, y: 38),
+            CGPoint(x: -40, y: -38), CGPoint(x: 40, y: -38)
+        ]
         for (index, rune) in encounter.fixedRunes.enumerated() {
             let stone = runeStone(rune, name: "fixedRune")
-            stone.position = CGPoint(x: CGFloat(index) * 79 - 118, y: 0)
+            stone.position = lockSlots[index]
             board.addChild(stone)
         }
 
         let socket = runeSocket()
-        socket.position = CGPoint(x: 118, y: 0)
+        socket.position = lockSlots[3]
         socket.name = "runeSocket"
         board.addChild(socket)
 
@@ -1335,21 +1383,15 @@ import LearningCore
     }
 
     private func runeStone(_ rune: String, name: String) -> SKShapeNode {
-        let stone = SKShapeNode(
-            rectOf: CGSize(width: 62, height: 68),
-            cornerRadius: 16
-        )
-        stone.fillColor = UIColor(red: 0.39, green: 0.29, blue: 0.29, alpha: 1)
-        stone.strokeColor = UIColor(red: 0.91, green: 0.75, blue: 0.48, alpha: 0.94)
-        stone.lineWidth = 3
+        let stone = carvedPalaceStone(CGSize(width: 62, height: 68), radius: 14)
         stone.name = name
 
         let inset = SKShapeNode(
             rectOf: CGSize(width: 49, height: 55),
             cornerRadius: 12
         )
-        inset.fillColor = UIColor(red: 0.21, green: 0.155, blue: 0.21, alpha: 1)
-        inset.strokeColor = UIColor(red: 0.64, green: 0.48, blue: 0.35, alpha: 0.87)
+        inset.fillColor = UIColor(red: 0.22, green: 0.14, blue: 0.28, alpha: 0.36)
+        inset.strokeColor = UIColor(red: 0.94, green: 0.76, blue: 0.48, alpha: 0.78)
         inset.lineWidth = 2
         inset.name = name
         stone.addChild(inset)
@@ -1391,7 +1433,7 @@ import LearningCore
     private func runeChoice(_ rune: String, index: Int) -> SKShapeNode {
         let stone = runeStone(rune, name: "runeChoice")
         stone.setScale(1.19)
-        stone.fillColor = UIColor(red: 0.43, green: 0.31, blue: 0.23, alpha: 1)
+        stone.fillColor = UIColor(red: 0.80, green: 0.71, blue: 0.76, alpha: 1)
 
         // The selectable piece rests on a low stone plinth at floor level.
         let ledge = SKShapeNode(
@@ -1435,8 +1477,8 @@ import LearningCore
         voidPath.addLine(to: CGPoint(x: 465, y: 211))
         voidPath.closeSubpath()
         let chasm = SKShapeNode(path: voidPath)
-        chasm.fillColor = UIColor(red: 0.035, green: 0.025, blue: 0.09, alpha: 0.89)
-        chasm.strokeColor = UIColor(red: 0.54, green: 0.45, blue: 0.67, alpha: 0.83)
+        chasm.fillColor = UIColor(red: 0.11, green: 0.10, blue: 0.26, alpha: 0.73)
+        chasm.strokeColor = UIColor(red: 0.74, green: 0.62, blue: 0.77, alpha: 0.85)
         chasm.lineWidth = 6
         chasm.name = "memoryChasm"
         chasm.zPosition = 235
@@ -1451,14 +1493,12 @@ import LearningCore
         addChild(depth)
 
         for index in 0..<4 {
-            let plank = SKShapeNode(
-                rectOf: CGSize(width: 161, height: 107),
-                cornerRadius: 12
+            let plank = carvedPalaceStone(
+                CGSize(width: 161, height: 107), radius: 12
             )
-            plank.fillColor = UIColor(red: 0.32, green: 0.27, blue: 0.41, alpha: 1)
-            plank.strokeColor = UIColor(red: 0.73, green: 0.61, blue: 0.52, alpha: 0.85)
+            plank.strokeColor = UIColor(red: 0.91, green: 0.77, blue: 0.58, alpha: 0.95)
             plank.lineWidth = 4
-            plank.position = CGPoint(x: 532 + CGFloat(index) * 151, y: 292)
+            plank.position = CGPoint(x: 532 + CGFloat(index) * 151, y: 278)
             plank.yScale = 0.58
             plank.alpha = 0.48
             plank.name = "memoryBridgePlank\(index)"
@@ -1478,8 +1518,8 @@ import LearningCore
             let inset = SKShapeNode(
                 rectOf: CGSize(width: 140, height: 69), cornerRadius: 9
             )
-            inset.fillColor = UIColor(red: 0.37, green: 0.31, blue: 0.49, alpha: 1)
-            inset.strokeColor = UIColor(red: 0.88, green: 0.75, blue: 0.54, alpha: 0.75)
+            inset.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.33, alpha: 0.32)
+            inset.strokeColor = UIColor(red: 0.97, green: 0.82, blue: 0.58, alpha: 0.86)
             inset.lineWidth = 2
             inset.position.y = 6
             inset.name = "memoryPlankCarvedStone"
@@ -1500,8 +1540,9 @@ import LearningCore
             let bank = SKShapeNode(
                 rectOf: CGSize(width: 76, height: 131), cornerRadius: 13
             )
-            bank.fillColor = UIColor(red: 0.38, green: 0.32, blue: 0.44, alpha: 0.95)
-            bank.strokeColor = UIColor(red: 0.76, green: 0.61, blue: 0.40, alpha: 1)
+            bank.fillColor = UIColor(red: 0.62, green: 0.56, blue: 0.67, alpha: 0.98)
+            bank.fillTexture = palaceStoneTexture
+            bank.strokeColor = UIColor(red: 0.92, green: 0.76, blue: 0.48, alpha: 1)
             bank.lineWidth = 4
             bank.position = CGPoint(x: x, y: 289)
             bank.zPosition = 265
@@ -1556,15 +1597,12 @@ import LearningCore
             ?? "symbol"
         makeAccessible(root, label: "Memory rune: \(runeName)")
 
-        let stone = ArtSystem.medallion(
-            radius: 47,
-            fill: UIColor(
-                red: 0.18 + CGFloat(index) * 0.02,
-                green: 0.13,
-                blue: 0.32,
-                alpha: 0.98
-            ),
-            stroke: UIColor(red: 0.70, green: 0.60, blue: 0.96, alpha: 0.94)
+        let stone = carvedPalaceStone(CGSize(width: 91, height: 89), radius: 19)
+        stone.fillColor = UIColor(
+            red: 0.73 + CGFloat(index) * 0.015,
+            green: 0.65,
+            blue: 0.79,
+            alpha: 1
         )
         stone.name = "memoryPad"
         root.addChild(stone)
@@ -1574,15 +1612,9 @@ import LearningCore
         glyph.name = "memoryPad"
         root.addChild(glyph)
 
-        let foot = ArtSystem.panel(
-            CGSize(width: 70, height: 20),
-            fill: UIColor(red: 0.11, green: 0.08, blue: 0.20, alpha: 0.96),
-            stroke: UIColor(red: 0.44, green: 0.35, blue: 0.66, alpha: 0.58),
-            radius: 7,
-            lineWidth: 2,
-            shadowAlpha: 0.16
-        )
-        foot.position.y = -57
+        let foot = carvedPalaceStone(CGSize(width: 104, height: 17), radius: 5)
+        foot.fillColor = UIColor(red: 0.48, green: 0.38, blue: 0.54, alpha: 1)
+        foot.position.y = -55
         foot.name = "memoryPad"
         foot.zPosition = -1
         root.addChild(foot)
@@ -1761,9 +1793,10 @@ import LearningCore
                 continue
             }
             plank.removeAllActions()
+            plank.position.y = 278
             plank.yScale = 0.58
             plank.alpha = 0.48
-            plank.strokeColor = UIColor(red: 0.48, green: 0.39, blue: 0.70, alpha: 0.62)
+            plank.strokeColor = UIColor(red: 0.65, green: 0.54, blue: 0.71, alpha: 0.68)
             plank.glowWidth = 0
         }
     }
@@ -1776,9 +1809,13 @@ import LearningCore
         plank.strokeColor = UIColor(red: 0.96, green: 0.75, blue: 0.34, alpha: 1)
         plank.glowWidth = 8
         if reducedMotion {
+            plank.position.y = 292
             plank.yScale = 1
         } else {
-            plank.run(.scaleY(to: 1, duration: 0.22))
+            plank.run(.group([
+                .moveTo(y: 292, duration: 0.25),
+                .scaleY(to: 1, duration: 0.25)
+            ]), withKey: "raiseBridgeStone")
         }
     }
 
@@ -1816,9 +1853,10 @@ import LearningCore
             guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
                 continue
             }
+            plank.position.y = 292
             plank.yScale = 1
             plank.alpha = 1
-            plank.fillColor = UIColor(red: 0.34, green: 0.27, blue: 0.45, alpha: 0.98)
+            plank.fillColor = UIColor(red: 0.75, green: 0.69, blue: 0.78, alpha: 1)
             plank.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.36, alpha: 1)
             plank.glowWidth = 8
         }
@@ -4209,10 +4247,11 @@ import LearningCore
 
         let socketXs: [CGFloat] = [585, 760, 935]
         for index in 0..<3 {
-            let socket = SKShapeNode(circleOfRadius: 43)
-            socket.fillColor = UIColor(red: 0.12, green: 0.15, blue: 0.24, alpha: 0.94)
-            socket.strokeColor = UIColor(red: 0.54, green: 0.72, blue: 0.82, alpha: 0.78)
-            socket.lineWidth = 4
+            let socket = palaceCog(
+                radius: 53, teeth: 12,
+                fill: UIColor(red: 0.37, green: 0.27, blue: 0.25, alpha: 1),
+                stroke: UIColor(red: 0.91, green: 0.71, blue: 0.42, alpha: 1)
+            )
             socket.position = CGPoint(x: socketXs[index], y: 285)
             socket.name = "commandSocket\(index)"
             socket.zPosition = 500
@@ -4324,6 +4363,12 @@ import LearningCore
         for index in 0..<3 {
             guard let socket = childNode(withName: "commandSocket\(index)") as? SKShapeNode else { continue }
             socket.removeAllChildren()
+            let bearing = SKShapeNode(circleOfRadius: 34)
+            bearing.fillColor = UIColor(red: 0.13, green: 0.11, blue: 0.20, alpha: 0.96)
+            bearing.strokeColor = UIColor(red: 0.76, green: 0.59, blue: 0.39, alpha: 0.88)
+            bearing.lineWidth = 3
+            bearing.name = socket.name
+            socket.addChild(bearing)
             if commandSteps.indices.contains(index) {
                 let step = commandSteps[index]
                 socket.fillColor = UIColor(red: 0.18, green: 0.34, blue: 0.42, alpha: 1)
@@ -4331,8 +4376,8 @@ import LearningCore
                 let glyph = ArtSystem.label(step.glyph, size: 30)
                 glyph.name = socket.name
                 socket.addChild(glyph)
-                let tiny = ArtSystem.label(step.title, size: 9)
-                tiny.position.y = -57
+                let tiny = ArtSystem.label(step.title, size: 14)
+                tiny.position.y = -63
                 tiny.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.67, alpha: 1)
                 tiny.name = socket.name
                 socket.addChild(tiny)
@@ -5842,7 +5887,7 @@ import LearningCore
             solved = true
             clearAttentionCue()
             pulse(node)
-            fillSocket(with: value)
+            seatCarvedRune(from: node, value: value)
             _ = state.recordPuzzle(
                 encounter,
                 outcome: .correct,
@@ -5892,6 +5937,36 @@ import LearningCore
                 : "Tiko lit matching positions. Follow the repeating pair, then try again."
             runeAcceptingInput = true
         }
+    }
+
+    private func seatCarvedRune(from selected: SKNode, value: String) {
+        guard let socket = childNode(withName: "//runeSocket") else {
+            fillSocket(with: value)
+            return
+        }
+        guard !reducedMotion else {
+            fillSocket(with: value)
+            return
+        }
+
+        let destination = socket.parent?.convert(socket.position, to: self) ?? socket.position
+        let travelingStone = runeStone(value, name: "decorativeRuneInTransit")
+        travelingStone.position = selected.position
+        travelingStone.setScale(1.19)
+        travelingStone.zPosition = 1800
+        selected.isHidden = true
+        addChild(travelingStone)
+
+        // The piece physically travels from its floor plinth into the door.
+        // Save/evidence stays synchronous; visuals never decide correctness.
+        travelingStone.run(.sequence([
+            .group([
+                .move(to: destination, duration: 0.32),
+                .scale(to: 1, duration: 0.32)
+            ]),
+            .run { [weak self] in self?.fillSocket(with: value) },
+            .removeFromParent()
+        ]), withKey: "seatRune")
     }
 
     private func fillSocket(with rune: String) {

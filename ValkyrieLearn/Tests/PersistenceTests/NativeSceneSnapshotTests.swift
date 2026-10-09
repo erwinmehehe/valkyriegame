@@ -113,6 +113,105 @@ import LearningCore
         assertSnapshot(of: signature.joined(separator: "\n"), as: .lines, named: "rune-pads")
     }
 
+    func testRunePatternLivesInsideTheDoorInsteadOfAcrossTheScenery() throws {
+        let (window, view) = makeView()
+        let state = try freshState()
+        state.reducedMotion = true
+        state.travel(to: .puzzlePalace)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let board = try XCTUnwrap(scene.childNode(withName: "runeBoard"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "puzzleGate"))
+        XCTAssertEqual(board.position.x, gate.position.x, accuracy: 0.001)
+        XCTAssertEqual(board.position.y, gate.position.y - 11, accuracy: 0.001,
+                       "The door-mounted lock must not slide down onto the steps on 4:3 iPads.")
+        let housing = try XCTUnwrap(scene.childNode(withName: "//runeLockHousing"))
+        let runes = board.children.filter { $0.name == "fixedRune" }
+        let socket = try XCTUnwrap(scene.childNode(withName: "//runeSocket"))
+        XCTAssertEqual(runes.count, 3)
+        XCTAssertEqual(runes.map(\.position), [
+            CGPoint(x: -40, y: 38), CGPoint(x: 40, y: 38),
+            CGPoint(x: -40, y: -38)
+        ])
+        XCTAssertEqual(socket.position, CGPoint(x: 40, y: -38))
+        XCTAssertGreaterThan(housing.frame.width, 140)
+        XCTAssertLessThan(housing.frame.width, 170,
+                          "The four lock pieces must remain within the illustrated door.")
+        XCTAssertTrue(runes.allSatisfy {
+            ($0 as? SKShapeNode)?.fillTexture != nil
+        }, "Runes must use the established painted Palace stone material.")
+        let choices = scene.children.compactMap {
+            $0.name == "runeChoice" ? $0 as? SKShapeNode : nil
+        }
+        XCTAssertEqual(choices.count, 3)
+        XCTAssertTrue(choices.allSatisfy { $0.fillTexture != nil && $0.isAccessibilityElement })
+    }
+
+    func testMemoryBridgeHasPhysicalStoneDeckAndAccessiblePads() throws {
+        let (window, view) = makeView()
+        let state = try freshState()
+        state.reducedMotion = true
+        unlockRuneGate(in: state)
+        state.travel(to: .memoryBridge)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let plank = try XCTUnwrap(scene.childNode(withName: "memoryBridgePlank0") as? SKShapeNode)
+        XCTAssertNotNil(plank.fillTexture)
+        XCTAssertEqual(plank.position.y, 278, accuracy: 0.001)
+        XCTAssertEqual(plank.yScale, 0.58, accuracy: 0.001)
+
+        let pads = scene.children.filter { $0.name == "memoryPad" }
+        XCTAssertEqual(pads.count, 4)
+        for pad in pads {
+            let stone = try XCTUnwrap(
+                pad.children.first { $0.name == "memoryPad" } as? SKShapeNode
+            )
+            XCTAssertNotNil(stone.fillTexture)
+            XCTAssertGreaterThanOrEqual(stone.frame.width, 85)
+            XCTAssertTrue(pad.isAccessibilityElement)
+            XCTAssertEqual(scene.targetName(at: pad.position), "memoryPad")
+        }
+    }
+
+    func testCommandGearsAreMechanicalSocketsRatherThanFlatCircles() throws {
+        let (window, view) = makeView()
+        let state = try freshState()
+        state.reducedMotion = true
+        state.travel(to: .commandGears)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        for index in 0..<3 {
+            let socket = try XCTUnwrap(
+                scene.childNode(withName: "commandSocket\(index)") as? SKShapeNode
+            )
+            let outline = try XCTUnwrap(socket.path)
+            XCTAssertGreaterThan(outline.boundingBox.width, 100,
+                                 "Each position needs a real gear-tooth silhouette.")
+            XCTAssertNotNil(socket.fillTexture)
+        }
+    }
+
     func testOptionalPixelGoldenMasterRecording() throws {
         // Never accept machine-generated visual goldens without owner review.
         // Enable for a *local*, deliberate golden-master recording session:
