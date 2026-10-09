@@ -16,6 +16,92 @@ import LearningCore
         XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
     }
 
+    func testBridgeRescueExplorationRestoresAcrossLaunchAndPlacesTreeCharm() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let container = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(container))
+        state.travel(to: .mathCastle)
+        let initialMathEvidence = state.profile.skills
+
+        let castle = MathCastleScene(state: state)
+        castle.reducedMotion = true
+        view.presentScene(castle)
+        let beacon = try XCTUnwrap(castle.childNode(withName: "starlightQuestBeacon"))
+        XCTAssertTrue(beacon.isAccessibilityElement)
+        castle.handleTap(at: beacon.position)
+        XCTAssertTrue(state.starlightBridgeQuest.discovered)
+        XCTAssertNotNil(castle.childNode(withName: "starlightQuestStage"))
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestCache0"))
+        XCTAssertEqual(state.profile.skills, initialMathEvidence)
+        try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Discovery")
+
+        let caches: [CGPoint] = [
+            CGPoint(x: 475, y: 465), CGPoint(x: 635, y: 455), CGPoint(x: 795, y: 465)
+        ]
+        for (index, point) in caches.enumerated() {
+            castle.handleTap(at: point)
+            try await waitUntil(timeout: 3) {
+                state.starlightBridgeQuest.collectedCrystals.contains(index)
+            }
+        }
+        XCTAssertEqual(state.starlightBridgeQuest.availableCrystals, [0, 1, 2])
+
+        let inventory: [CGPoint] = [
+            CGPoint(x: 500, y: 145), CGPoint(x: 640, y: 145), CGPoint(x: 780, y: 145)
+        ]
+        let sockets: [CGPoint] = [
+            CGPoint(x: 695, y: 330), CGPoint(x: 850, y: 330), CGPoint(x: 1005, y: 330)
+        ]
+        for index in 0..<3 {
+            castle.handleTap(at: inventory[index])
+            castle.handleTap(at: sockets[(index + 1) % 3])
+            try await waitUntil(timeout: 3) {
+                state.starlightBridgeQuest.installedCount == index + 1
+            }
+        }
+
+        XCTAssertTrue(state.starlightBridgeQuest.isComplete)
+        XCTAssertTrue(state.hasStoryReward(.starlightBridgeCharm))
+        XCTAssertEqual(state.profile.skills, initialMathEvidence,
+                       "A fun physical bridge quest cannot manufacture Math mastery.")
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestVictory"))
+        try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Restored")
+
+        castle.handleTap(at: CGPoint(x: 1170, y: 625))
+        XCTAssertNil(castle.childNode(withName: "starlightQuestStage"))
+        castle.willLeave()
+
+        let restored = try AppState(context: ModelContext(container))
+        XCTAssertTrue(restored.starlightBridgeQuest.isComplete)
+        XCTAssertTrue(restored.hasStoryReward(.starlightBridgeCharm))
+        XCTAssertEqual(restored.profile.skills, initialMathEvidence)
+
+        restored.travel(to: .storyTree)
+        let tree = StoryTreeScene(state: restored)
+        tree.reducedMotion = true
+        view.presentScene(tree)
+        let charm = try XCTUnwrap(tree.childNode(withName: "starlightBridgeCharm"))
+        XCTAssertTrue(charm.isAccessibilityElement)
+        XCTAssertEqual(restored.storyRewardPlacement(.starlightBridgeCharm), 0)
+        try await capture(tree, in: view, name: "Story-Tree-Starlight-Bridge-Charm")
+        tree.handleTap(at: charm.position)
+        XCTAssertEqual(restored.storyRewardPlacement(.starlightBridgeCharm), 1)
+        XCTAssertNotEqual(
+            try XCTUnwrap(tree.childNode(withName: "starlightBridgeCharm")).position,
+            charm.position
+        )
+        tree.willLeave()
+        let resumed = try AppState(context: ModelContext(container))
+        XCTAssertEqual(resumed.storyRewardPlacement(.starlightBridgeCharm), 1)
+    }
+
     func testFlowerGateUsesSourceResolutionAndKeepsActorAndChoicesClear() throws {
         let atlas = try XCTUnwrap(ArtSystem.texture("WordGardenSourceAtlas"))
         XCTAssertGreaterThanOrEqual(atlas.size().width, 1600)
