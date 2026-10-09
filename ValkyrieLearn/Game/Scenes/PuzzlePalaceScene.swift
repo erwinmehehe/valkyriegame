@@ -2273,10 +2273,28 @@ import LearningCore
         route.zPosition = 840
     }
 
+    // Reuse only approved painted stone as a surface material. The actual
+    // obstacle, movable tokens and assessment remain live native SpriteKit.
+    private lazy var sortingMasonryTexture: SKTexture? = {
+        guard let painting = ArtSystem.texture("PuzzleSortingPedestalIllustratedV2") else { return nil }
+        return SKTexture(
+            rect: CGRect(x: 0.05, y: 0.065, width: 0.20, height: 0.19), in: painting
+        )
+    }()
+
+    private func sortingCarvedSlab(_ size: CGSize, radius: CGFloat = 14) -> SKShapeNode {
+        let slab = SKShapeNode(rectOf: size, cornerRadius: radius)
+        slab.fillColor = UIColor(red: 0.63, green: 0.68, blue: 0.70, alpha: 1)
+        slab.fillTexture = sortingMasonryTexture
+        slab.strokeColor = UIColor(red: 0.86, green: 0.75, blue: 0.49, alpha: 1)
+        slab.lineWidth = 3
+        return slab
+    }
+
     private func buildSortingWorld() {
         let floor = SKShapeNode(ellipseOf: CGSize(width: 790, height: 230))
-        floor.fillColor = UIColor(red: 0.07, green: 0.055, blue: 0.16, alpha: 0.16)
-        floor.strokeColor = UIColor(red: 0.52, green: 0.42, blue: 0.78, alpha: 0.50)
+        floor.fillColor = UIColor(red: 0.09, green: 0.18, blue: 0.22, alpha: 0.035)
+        floor.strokeColor = UIColor(red: 0.83, green: 0.73, blue: 0.55, alpha: 0.08)
         floor.lineWidth = 4
         floor.position = CGPoint(x: 750, y: 365)
         floor.name = "sortingFloor"
@@ -2285,7 +2303,7 @@ import LearningCore
 
         let runeRing = SKShapeNode(ellipseOf: CGSize(width: 650, height: 168))
         runeRing.fillColor = .clear
-        runeRing.strokeColor = UIColor(red: 0.68, green: 0.55, blue: 0.90, alpha: 0.22)
+        runeRing.strokeColor = UIColor(red: 0.83, green: 0.73, blue: 0.55, alpha: 0.09)
         runeRing.lineWidth = 2
         runeRing.position = CGPoint(x: 750, y: 365)
         runeRing.zPosition = 121
@@ -2294,12 +2312,9 @@ import LearningCore
         buildSortPedestal(at: CGPoint(x: 530, y: 355), name: "sortLeftPedestal")
         buildSortPedestal(at: CGPoint(x: 970, y: 355), name: "sortRightPedestal")
 
-        let dial = ArtSystem.medallion(
-            radius: 72,
-            fill: UIColor(red: 0.17, green: 0.12, blue: 0.29, alpha: 0.98),
-            stroke: UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 0.94),
-            glow: reducedMotion ? 0 : 3
-        )
+        let dial = sortingCarvedSlab(CGSize(width: 186, height: 64), radius: 20)
+        dial.fillColor = UIColor(red: 0.52, green: 0.64, blue: 0.67, alpha: 1)
+        dial.glowWidth = reducedMotion ? 0 : 1
         dial.position = CGPoint(x: 750, y: 515)
         dial.name = "sortingRuleDial"
         dial.zPosition = 560
@@ -2310,14 +2325,8 @@ import LearningCore
         ruleGlyph.name = "sortingRuleGlyph"
         dial.addChild(ruleGlyph)
 
-        let stage = ArtSystem.panel(
-            CGSize(width: 156, height: 42),
-            fill: UIColor(red: 0.12, green: 0.09, blue: 0.22, alpha: 0.86),
-            stroke: UIColor(red: 0.48, green: 0.39, blue: 0.70, alpha: 0.52),
-            radius: 16,
-            lineWidth: 2,
-            shadowAlpha: 0.18
-        )
+        let stage = sortingCarvedSlab(CGSize(width: 170, height: 32), radius: 14)
+        stage.fillColor = UIColor(red: 0.46, green: 0.55, blue: 0.56, alpha: 1)
         stage.position = CGPoint(x: 750, y: 430)
         stage.name = "sortingObjectStage"
         stage.zPosition = 430
@@ -2354,53 +2363,69 @@ import LearningCore
     }
 
     private func buildSortPedestal(at point: CGPoint, name: String) {
+        // One floor-anchored receiving alcove for both sorting rooms.
+        // Keep original names/coordinates so evidence and touch routing stay intact.
         let root = SKNode()
         root.name = name
         root.position = point
         root.zPosition = 420
 
-        let bowl = SKShapeNode(ellipseOf: CGSize(width: 185, height: 82))
-        bowl.fillColor = UIColor(red: 0.23, green: 0.16, blue: 0.38, alpha: 0.98)
-        bowl.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 0.92)
-        bowl.lineWidth = 5
+        let groundShadow = SKShapeNode(ellipseOf: CGSize(width: 220, height: 28))
+        groundShadow.position.y = -132
+        groundShadow.fillColor = UIColor(red: 0.055, green: 0.075, blue: 0.10, alpha: 0.33)
+        groundShadow.strokeColor = .clear
+        groundShadow.name = "decorativeSortingFootShadow"
+        groundShadow.zPosition = -4
+        root.addChild(groundShadow)
+
+        let foot = sortingCarvedSlab(CGSize(width: 202, height: 30), radius: 9)
+        foot.position.y = -118
+        foot.name = name
+        foot.zPosition = -3
+        root.addChild(foot)
+
+        let pillar = sortingCarvedSlab(CGSize(width: 142, height: 104), radius: 15)
+        pillar.position.y = -64
+        pillar.fillColor = UIColor(red: 0.48, green: 0.55, blue: 0.62, alpha: 1)
+        pillar.name = name
+        pillar.zPosition = -2
+        root.addChild(pillar)
+
+        for x in [CGFloat(-51), 51] {
+            let inlay = SKShapeNode(rectOf: CGSize(width: 7, height: 75), cornerRadius: 3)
+            inlay.position = CGPoint(x: x, y: -70)
+            inlay.fillColor = UIColor(red: 0.80, green: 0.63, blue: 0.38, alpha: 0.68)
+            inlay.strokeColor = .clear
+            inlay.name = "decorativeSortingBrassInlay"
+            inlay.zPosition = -1
+            root.addChild(inlay)
+        }
+
+        let bowl = sortingCarvedSlab(CGSize(width: 205, height: 88), radius: 27)
+        bowl.position.y = 7
         bowl.name = name
         root.addChild(bowl)
 
-        let inset = SKShapeNode(ellipseOf: CGSize(width: 150, height: 56))
-        inset.fillColor = UIColor(red: 0.31, green: 0.22, blue: 0.45, alpha: 0.34)
-        inset.strokeColor = UIColor(white: 1, alpha: 0.10)
-        inset.lineWidth = 1
-        inset.name = name
-        root.addChild(inset)
+        let recess = SKShapeNode(ellipseOf: CGSize(width: 166, height: 60))
+        recess.position.y = 12
+        recess.fillColor = UIColor(red: 0.08, green: 0.22, blue: 0.29, alpha: 0.93)
+        recess.strokeColor = UIColor(red: 0.93, green: 0.78, blue: 0.52, alpha: 0.94)
+        recess.lineWidth = 3
+        recess.name = name
+        recess.zPosition = 1
+        root.addChild(recess)
 
-        let stem = ArtSystem.panel(
-            CGSize(width: 72, height: 94),
-            fill: UIColor(red: 0.12, green: 0.09, blue: 0.22, alpha: 0.98),
-            stroke: UIColor(red: 0.46, green: 0.36, blue: 0.68, alpha: 0.58),
-            radius: 16,
-            lineWidth: 2,
-            shadowAlpha: 0.18
-        )
-        stem.position.y = -78
-        stem.name = name
-        stem.zPosition = -1
-        root.addChild(stem)
-
-        let crest = ArtSystem.medallion(
-            radius: 17,
-            fill: UIColor(red: 0.20, green: 0.14, blue: 0.33, alpha: 0.96),
-            stroke: UIColor(red: 0.68, green: 0.56, blue: 0.91, alpha: 0.72)
-        )
-        crest.position.y = -4
-        crest.name = name
-        stem.addChild(crest)
-
-        let glyph = ArtSystem.label("?", size: 42)
+        let glyph = ArtSystem.label("◇", size: 42)
         glyph.name = name + "Glyph"
-        glyph.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.56, alpha: 1)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.64, alpha: 1)
+        glyph.position.y = 15
+        glyph.zPosition = 2
         root.addChild(glyph)
 
+        let side = name.contains("Left") ? "left" : "right"
+        makeAccessible(root, label: "Place the sorting stone in the \(side) alcove")
         addChild(root)
+        registerInteraction(root, clearance: 12)
     }
 
     private func buildSortingEncounter() {
@@ -2482,9 +2507,8 @@ import LearningCore
     private func sortingObjectNode(_ object: PuzzleSortObject) -> SKNode {
         let root = SKNode()
 
-        let stone = SKShapeNode(circleOfRadius: 48)
-        stone.fillColor = UIColor(red: 0.34, green: 0.27, blue: 0.46, alpha: 1)
-        stone.strokeColor = UIColor(red: 0.88, green: 0.73, blue: 0.38, alpha: 1)
+        let stone = sortingCarvedSlab(CGSize(width: 94, height: 94), radius: 22)
+        stone.fillColor = UIColor(red: 0.56, green: 0.62, blue: 0.69, alpha: 1)
         stone.lineWidth = 5
         stone.name = "sortingObject"
         root.addChild(stone)
@@ -2583,7 +2607,7 @@ import LearningCore
             .wait(forDuration: reducedMotion ? 0.12 : 0.55),
             .run { [weak dial] in
                 dial?.glowWidth = 0
-                dial?.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+                dial?.strokeColor = UIColor(red: 0.86, green: 0.75, blue: 0.49, alpha: 1)
             }
         ]), withKey: "sortHintGlow")
     }
@@ -2704,8 +2728,8 @@ import LearningCore
 
     private func buildResortWorld() {
         let vault = SKShapeNode(rectOf: CGSize(width: 830, height: 285), cornerRadius: 58)
-        vault.fillColor = UIColor(red: 0.09, green: 0.07, blue: 0.17, alpha: 0.18)
-        vault.strokeColor = UIColor(red: 0.50, green: 0.41, blue: 0.76, alpha: 0.78)
+        vault.fillColor = UIColor(red: 0.10, green: 0.13, blue: 0.22, alpha: 0.035)
+        vault.strokeColor = UIColor(red: 0.85, green: 0.73, blue: 0.53, alpha: 0.15)
         vault.lineWidth = 6
         vault.position = CGPoint(x: 755, y: 395)
         vault.name = "resortVault"
@@ -2715,10 +2739,9 @@ import LearningCore
         buildSortPedestal(at: CGPoint(x: 475, y: 300), name: "resortLeftPedestal")
         buildSortPedestal(at: CGPoint(x: 1035, y: 300), name: "resortRightPedestal")
 
-        let dial = SKShapeNode(circleOfRadius: 76)
-        dial.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.31, alpha: 0.98)
-        dial.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
-        dial.lineWidth = 7
+        let dial = sortingCarvedSlab(CGSize(width: 186, height: 64), radius: 20)
+        dial.fillColor = UIColor(red: 0.54, green: 0.62, blue: 0.69, alpha: 1)
+        dial.lineWidth = 4
         dial.position = CGPoint(x: 755, y: 535)
         dial.name = "resortRuleDial"
         dial.zPosition = 580
@@ -2737,8 +2760,8 @@ import LearningCore
         addChild(passLabel)
 
         let door = SKShapeNode(rectOf: CGSize(width: 105, height: 245), cornerRadius: 34)
-        door.fillColor = UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.42)
-        door.strokeColor = UIColor(red: 0.56, green: 0.46, blue: 0.82, alpha: 0.90)
+        door.fillColor = UIColor(red: 0.15, green: 0.20, blue: 0.28, alpha: 0.14)
+        door.strokeColor = UIColor(red: 0.82, green: 0.67, blue: 0.48, alpha: 0.66)
         door.lineWidth = 7
         door.position = CGPoint(x: 1135, y: 415)
         door.name = "resortDoor"
@@ -2981,7 +3004,7 @@ import LearningCore
             .wait(forDuration: reducedMotion ? 0.12 : 0.55),
             .run { [weak dial] in
                 dial?.glowWidth = 0
-                dial?.strokeColor = UIColor(red: 0.72, green: 0.59, blue: 0.96, alpha: 1)
+                dial?.strokeColor = UIColor(red: 0.86, green: 0.75, blue: 0.49, alpha: 1)
             }
         ]), withKey: "resortHintGlow")
     }
