@@ -1832,8 +1832,21 @@ import LearningCore
 
     func handleTap(at point: CGPoint) {
         guard !hasLeftScene else { return }
-        if interactionInFlight && targetName(at: point) != "home" { return }
         let name = targetName(at: point)
+        if livingGardenMode {
+            if name == "home" {
+                willLeave()
+                state.travel(to: .storyTree)
+            } else {
+                handleLivingGardenTap(at: point)
+            }
+            return
+        }
+        if name == "livingGardenBeacon", place == .flowerGate {
+            enterLivingGarden()
+            return
+        }
+        if interactionInFlight && name != "home" { return }
 
         switch name {
         case "home":
@@ -2492,6 +2505,9 @@ import LearningCore
     override func willLeave() {
         hasLeftScene = true
         interactionInFlight = false
+        livingGardenMode = false
+        livingGardenStage?.removeFromParent()
+        livingGardenStage = nil
         removeAction(forKey: "nextLiteracyEncounter")
         removeAction(forKey: "nextSunmillEncounter")
         removeAction(forKey: "wordGardenPreview")
