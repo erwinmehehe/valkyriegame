@@ -2784,6 +2784,16 @@ import LearningCore
         try await capture(repairLab, in: view, name: "Puzzle-Palace-native-bug-repair")
         XCTAssertNotNil(repairLab.childNode(withName: "repairLanternFixture"))
         XCTAssertNotNil(repairLab.childNode(withName: "repairRail"))
+        XCTAssertNotNil(repairLab.childNode(withName: "repairDriveShaft"),
+                        "The clockwork engine must be visibly connected to the gear rail.")
+        XCTAssertNotNil(repairLab.childNode(withName: "//repairMachineRotor"))
+        let testLever = try XCTUnwrap(repairLab.childNode(withName: "repairFix"))
+        XCTAssertTrue(testLever.isAccessibilityElement)
+        XCTAssertGreaterThanOrEqual(testLever.calculateAccumulatedFrame().width, 80)
+        for index in 0..<4 {
+            let housing = try XCTUnwrap(repairLab.childNode(withName: "repairSocketBase\(index)"))
+            XCTAssertGreaterThanOrEqual(housing.calculateAccumulatedFrame().width, 140)
+        }
         let repairSteps = repairLab.children.filter {
             $0.name?.hasPrefix("repairStep") == true
                 && !($0.name?.contains("Label") ?? false)
@@ -2826,6 +2836,13 @@ import LearningCore
             state.profile.progress(for: PuzzleSkills.debugSequence).evidence.last?.outcome,
             .correct
         )
+        let poweredCore = try XCTUnwrap(
+            repairLab.childNode(withName: "//repairLanternCore") as? SKShapeNode
+        )
+        XCTAssertGreaterThan(
+            poweredCore.fillColor.cgColor.components?.first ?? 0, 0.3,
+            "A repaired machine should physically power up, not merely show a checkmark."
+        )
         XCTAssertEqual(firstRepairStep.position.x, secondStepX, accuracy: 0.001)
         XCTAssertEqual(secondRepairStep.position.x, firstStepX, accuracy: 0.001)
         XCTAssertEqual(firstRepairLabel.position.x, secondLabelX, accuracy: 0.001)
@@ -2849,6 +2866,8 @@ import LearningCore
         XCTAssertNil(restoredRepairLab.childNode(withName: "repairFix"))
         XCTAssertNil(restoredRepairLab.childNode(withName: "repairReset"))
         XCTAssertNotNil(restoredRepairLab.childNode(withName: "repairHome"))
+        XCTAssertNotNil(restoredRepairLab.childNode(withName: "//repairMachineRotor"))
+        try await capture(restoredRepairLab, in: view, name: "Puzzle-Palace-native-repair-clockwork-powered")
         restoredRepairLab.willLeave()
 
         state.travel(to: .mathCastle)
@@ -3010,9 +3029,51 @@ import LearningCore
             XCTAssertGreaterThanOrEqual(painting.size.width, scene.size.width)
             XCTAssertTrue(painting.userData?["aspectFilledForIPad"] as? Bool ?? false)
             XCTAssertFalse(painting.isUserInteractionEnabled)
+            // The approved painting, not duplicate generated SpriteKit architecture,
+            // supplies the finished environment in all ten rooms.
+            for decoration in ["puzzleStageDais", "puzzleStageInlay", "puzzleFloorSeal",
+                               "puzzleCrystalFixture", "puzzleRoomIdentity"] {
+                XCTAssertTrue(
+                    scene.childNode(withName: decoration)?.isHidden == true,
+                    "\(name): redundant \(decoration) must not paint over the room."
+                )
+            }
+            if world == .puzzlePalace {
+                let gate = try XCTUnwrap(scene.childNode(withName: "puzzleGate") as? SKShapeNode)
+                XCTAssertEqual(gate.position.x, 931, accuracy: 1)
+                XCTAssertEqual(gate.fillColor.cgColor.alpha, 0, accuracy: 0.001)
+                XCTAssertNotNil(scene.childNode(withName: "//puzzleGateLock"))
+                XCTAssertNotNil(scene.childNode(withName: "//puzzleGateOpening"))
+                XCTAssertNotNil(scene.childNode(withName: "//runeLockHousing"))
+            }
+            if world == .bugLanternRepair {
+                XCTAssertNotNil(scene.childNode(withName: "repairDriveShaft"))
+                XCTAssertNotNil(scene.childNode(withName: "//repairMachineRotor"))
+                XCTAssertNotNil(scene.childNode(withName: "repairFix"))
+            }
             try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
             scene.willLeave()
         }
+
+        // An actual open passage should replace the painted closed door after
+        // restored progress, including on a 4:3 iPad and after a new scene.
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(
+                encounter, outcome: .correct, support: .independent,
+                attempts: 1, responseTime: 1
+            )
+        }
+        state.travel(to: .puzzlePalace)
+        let opened = PuzzlePalaceScene(state: state)
+        opened.reducedMotion = true
+        view.presentScene(opened)
+        let passage = try XCTUnwrap(
+            opened.childNode(withName: "//puzzleGateOpening") as? SKShapeNode
+        )
+        XCTAssertEqual(passage.alpha, 1, accuracy: 0.001)
+        XCTAssertNotNil(opened.childNode(withName: "memoryBridgeRoute"))
+        try await capture(opened, in: view, name: "Illustrated-Palace-4x3-RuneGate-Open")
+        opened.willLeave()
     }
 
     private func capture(_ scene: AdventureScene, in view: SKView, name: String) async throws {
