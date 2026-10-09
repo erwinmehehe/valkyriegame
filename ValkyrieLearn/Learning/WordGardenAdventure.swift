@@ -1,5 +1,87 @@
 import Foundation
 
+/// Lumi's optional, unscored living-garden experiment. Different seeds have
+/// genuinely different needs. Children can explore, notice, and revise choices
+/// without a multiple-choice quiz or an incorrect-answer penalty.
+public enum LumiSeed: Int, CaseIterable, Codable, Equatable, Sendable {
+    case starflower = 0
+    case rainvine = 1
+    case shadefern = 2
+}
+
+public enum LumiGardenCare: String, Codable, Equatable, Sendable {
+    case water
+    case sun
+    case shade
+}
+
+public struct LumiGardenPlot: Codable, Equatable, Sendable {
+    public let seed: LumiSeed
+    public private(set) var water: Int = 0
+    public private(set) var sunlight = false
+
+    public init(seed: LumiSeed) { self.seed = seed }
+
+    public var isBlooming: Bool {
+        switch seed {
+        case .starflower: return water >= 1 && sunlight
+        case .rainvine: return water >= 2
+        case .shadefern: return water >= 1 && !sunlight
+        }
+    }
+
+    /// 0 = planted seed, 1 = shoot, 2 = open bloom, or 1 when a fern
+    /// momentarily curls up in heat; no irreversible failure state.
+    public var growthStage: Int {
+        if isBlooming { return 2 }
+        return water > 0 || sunlight ? 1 : 0
+    }
+
+    @discardableResult
+    public mutating func apply(_ care: LumiGardenCare) -> Bool {
+        switch care {
+        case .water:
+            guard water < 2 else { return false }
+            water += 1
+        case .sun:
+            guard !sunlight else { return false }
+            sunlight = true
+        case .shade:
+            guard sunlight else { return false }
+            sunlight = false
+        }
+        return true
+    }
+}
+
+public struct LumiLivingGarden: Codable, Equatable, Sendable {
+    public static let plotCount = 3
+    public private(set) var plots: [Int: LumiGardenPlot] = [:]
+    public init() {}
+
+    public var bloomingCount: Int { plots.values.filter(\.isBlooming).count }
+
+    public func plot(at index: Int) -> LumiGardenPlot? { plots[index] }
+
+    /// Replanting is intentional experimentation: the child can try another
+    /// species or start over without losing earned Story Tree decorations.
+    @discardableResult
+    public mutating func plant(_ seed: LumiSeed, at index: Int) -> Bool {
+        guard (0..<Self.plotCount).contains(index),
+              plots[index]?.seed != seed else { return false }
+        plots[index] = LumiGardenPlot(seed: seed)
+        return true
+    }
+
+    @discardableResult
+    public mutating func tend(_ care: LumiGardenCare, at index: Int) -> Bool {
+        guard (0..<Self.plotCount).contains(index), var plot = plots[index],
+              plot.apply(care) else { return false }
+        plots[index] = plot
+        return true
+    }
+}
+
 public struct LiteracyEncounter: Identifiable, Equatable, Sendable {
     public let id: String
     public let skillID: SkillID
