@@ -1509,6 +1509,17 @@ import LearningCore
                                       point.y - choices[$0].y) <= 57 }
     }
 
+    /// A child should be able to touch the flower itself, not only the clay
+    /// pot at the base. This zone includes the stem, leaves and full bloom.
+    private func gardenPlotIndex(at point: CGPoint) -> Int? {
+        gardenPlotPoints.indices.first { index in
+            let pot = gardenPlotPoints[index]
+            return abs(point.x - pot.x) <= 66
+                && point.y >= pot.y - 75
+                && point.y <= pot.y + 135
+        }
+    }
+
     private func renderLivingGarden() {
         livingGardenStage?.removeFromParent()
         let root = SKNode()
@@ -1735,7 +1746,7 @@ import LearningCore
             renderLivingGarden()
             return
         }
-        guard let index = gardenIndex(at: point, among: gardenPlotPoints) else {
+        guard let index = gardenPlotIndex(at: point) else {
             instruction.text = "Try a seed, a weather tool, or a garden pot."
             return
         }
