@@ -940,6 +940,13 @@ import LearningCore
     private func enterBridgeQuest() {
         guard !crossingBridge, !hasLeftScene else { return }
         _ = state.discoverStarlightBridge()
+        // An unfinished repair pauses the old ready route. Completing the
+        // crystal lattice will allow the existing adaptive machine to energize it.
+        if !state.starlightBridgeQuest.isComplete, state.runtime?.completed == true {
+            resetPhysicalProgression()
+            wasPowered = false
+            bridgeRouteNode.isHidden = true
+        }
         bridgeQuestMode = true
         bridgeQuestBusy = false
         bridgeQuestSelectedCrystal = nil
@@ -974,7 +981,8 @@ import LearningCore
         refresh()
         buildBridgeQuestBeacon()
         if state.starlightBridgeQuest.isComplete {
-            if state.runtime?.completed == true && !routeReady {
+            if state.runtime?.completed == true && !routeReady
+                && physicalBridge?.action(forKey: "routeOpen") == nil {
                 openPhysicalProgression(animated: true)
                 bridgeRouteNode.isHidden = false
             }
@@ -1195,7 +1203,6 @@ import LearningCore
             if quest.isComplete {
                 self.successFeedback(at: CGPoint(x: 850, y: 395))
                 self.instruction.text = "You rebuilt the bridge! Your charm is now at Story Tree. Tap ↩ to continue."
-                self.buildBridgeQuestBeacon()
             } else {
                 self.instruction.text = "A new part of the bridge shines! \(StarlightBridgeQuest.crystalCount - quest.installedCount) to go."
             }
@@ -2588,18 +2595,25 @@ import LearningCore
         guard state.runtime != nil, state.runtime?.completed == false else {
             instruction.text = "Choose a new order or a workshop station."; return
         }
+        // One tap is enough: Valkyrie approaches and starts interacting.
+        // Children should not have to repeat the same tap after an animation.
+        let start = { [weak self] in
+            guard let self, !self.hasLeftScene, !self.bridgeQuestMode,
+                  self.state.runtime?.completed == false else { return }
+            self.valkyrie.face(toward: CGPoint(x: 820, y: 310))
+            self.pip.face(toward: CGPoint(x: 820, y: 310))
+            self.state.beginInteraction()
+            self.engaged = true
+            self.wakeMechanic()
+            self.setActiveMachineKinetics(true)
+            self.refresh()
+        }
         if isNear(station) {
-            valkyrie.face(toward: CGPoint(x: 820, y: 310))
-            pip.face(toward: CGPoint(x: 820, y: 310))
-            state.beginInteraction()
-            engaged = true
-            wakeMechanic()
-            setActiveMachineKinetics(true)
-            refresh()
-        } else {
+            start()
+        } else if valkyrie.action(forKey: "travel") == nil {
             engaged = false
-            instruction.text = "Valkyrie is walking over. Tap the machine again when she arrives."
-            travel(to: station)
+            instruction.text = "Valkyrie is walking to Pip's machine. Watch what happens!"
+            travel(to: station, then: start)
         }
     }
 
