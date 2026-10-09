@@ -7,6 +7,11 @@ import LearningCore
     override var worldTitle: String { "Science Lab · Greenhouse" }
     override var walkable: CGRect { CGRect(x: 90, y: 135, width: 1100, height: 170) }
 
+    // Preview-only: the candidate vectors were visually rejected against the
+    // approved painterly references. Default remains the approved scenery.
+    // Tests can opt in to capture side-by-side review images before approval.
+    var useCandidateVectorArtwork = false
+
     let milo = MiloNode()
     var greenhouseStage: GreenhouseStage { state.scienceAdventure.greenhouseStage }
     var greenhouseComplete: Bool { state.scienceAdventure.greenhouseComplete }
@@ -138,7 +143,23 @@ import LearningCore
         // distant scenery. The greenhouse frame, path and teaching objects remain
         // native SpriteKit nodes in front, so this improves depth without changing
         // any interaction or learning state.
-        if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
+        if useCandidateVectorArtwork,
+           let texture = ArtSystem.texture("ScienceGreenhousePaintedHD") {
+            let backdrop = SKSpriteNode(
+                texture: texture,
+                size: CGSize(width: 1280, height: 960)
+            )
+            backdrop.position = CGPoint(x: 640, y: 360)
+            backdrop.zPosition = -230
+            backdrop.name = "scienceGreenhouseBackdropHD"
+            backdrop.isUserInteractionEnabled = false
+            backdrop.userData = NSMutableDictionary(dictionary: [
+                "sourceAsset": "ScienceGreenhousePaintedHD",
+                "vectorPainted": true,
+                "designSize": "1280x960"
+            ])
+            addChild(backdrop)
+        } else if let atlas = ArtSystem.texture("WordGardenSourceAtlas") {
             let greenhouseTexture = SKTexture(
                 rect: CGRect(x: 0, y: 0.502, width: 0.499, height: 0.498),
                 in: atlas

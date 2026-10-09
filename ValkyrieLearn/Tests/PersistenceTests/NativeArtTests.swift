@@ -638,7 +638,7 @@ import LearningCore
         }
     }
 
-    func testScienceWorldsReuseRetinaPreparedIllustratedBackdrops() throws {
+    func testScienceVectorCandidatesLoadAtRetinaOnlyWhenExplicitlyPreviewed() throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
         )
@@ -646,21 +646,24 @@ import LearningCore
         state.travel(to: .scienceLab)
         let greenhouse = ScienceLabScene(state: state)
         greenhouse.reducedMotion = true
+        greenhouse.useCandidateVectorArtwork = true
         greenhouse.didMove(to: SKView())
         let greenhouseBackdrop = try XCTUnwrap(
             greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
         )
         XCTAssertEqual(
-            greenhouseBackdrop.userData?["retinaPrepared"] as? Bool,
-            true
+            greenhouseBackdrop.userData?["vectorPainted"] as? Bool,
+            true,
+            "Standalone vector painting must load; atlas fallback is not accepted."
         )
         XCTAssertEqual(
-            greenhouseBackdrop.userData?["sourceCrop"] as? String,
-            "word-garden-upper-crop"
+            greenhouseBackdrop.userData?["sourceAsset"] as? String,
+            "ScienceGreenhousePaintedHD"
         )
+        XCTAssertEqual(greenhouseBackdrop.userData?["designSize"] as? String, "1280x960")
         let greenhouseImage = try XCTUnwrap(greenhouseBackdrop.texture?.cgImage())
         XCTAssertGreaterThanOrEqual(greenhouseImage.width, 2560)
-        XCTAssertGreaterThanOrEqual(greenhouseImage.height, 1440)
+        XCTAssertGreaterThanOrEqual(greenhouseImage.height, 1920)
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSeedBench"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceWaterValve"))
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceSunPrism"))
@@ -692,24 +695,65 @@ import LearningCore
         state.travel(to: .scienceCreatureGrove)
         let grove = CreatureGroveScene(state: state)
         grove.reducedMotion = true
+        grove.useCandidateVectorArtwork = true
         grove.didMove(to: SKView())
         let groveBackdrop = try XCTUnwrap(
             grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
         )
         XCTAssertEqual(
-            groveBackdrop.userData?["retinaPrepared"] as? Bool,
-            true
+            groveBackdrop.userData?["vectorPainted"] as? Bool,
+            true,
+            "Standalone vector painting must load; atlas fallback is not accepted."
         )
         XCTAssertEqual(
-            groveBackdrop.userData?["sourceCrop"] as? String,
-            "word-garden-lower-crop"
+            groveBackdrop.userData?["sourceAsset"] as? String,
+            "ScienceCreatureGrovePaintedHD"
         )
+        XCTAssertEqual(groveBackdrop.userData?["designSize"] as? String, "1280x960")
         let groveImage = try XCTUnwrap(groveBackdrop.texture?.cgImage())
         XCTAssertGreaterThanOrEqual(groveImage.width, 2560)
-        XCTAssertGreaterThanOrEqual(groveImage.height, 1440)
+        XCTAssertGreaterThanOrEqual(groveImage.height, 1920)
         XCTAssertNotNil(grove.childNode(withName: "scienceGroveDuck"))
         XCTAssertNotNil(grove.childNode(withName: "scienceHabitatPond"))
         XCTAssertNotNil(grove.childNode(withName: "scienceWebbedFeet"))
+        grove.willLeave()
+    }
+
+
+    func testApprovedPainterlyScienceArtRemainsDefaultOnNormalLaunch() throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.travel(to: .scienceLab)
+        let greenhouse = ScienceLabScene(state: state)
+        XCTAssertFalse(greenhouse.useCandidateVectorArtwork)
+        greenhouse.reducedMotion = true
+        greenhouse.didMove(to: SKView())
+        let originalGreenhouse = try XCTUnwrap(
+            greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(
+            originalGreenhouse.userData?["sourceAsset"] as? String,
+            "WordGardenSourceAtlas",
+            "The approved painterly background must not be replaced without art sign-off."
+        )
+        XCTAssertEqual(originalGreenhouse.userData?["retinaPrepared"] as? Bool, true)
+        XCTAssertNil(originalGreenhouse.userData?["vectorPainted"])
+        XCTAssertEqual(originalGreenhouse.size, CGSize(width: 1280, height: 720))
+        greenhouse.willLeave()
+
+        state.travel(to: .scienceCreatureGrove)
+        let grove = CreatureGroveScene(state: state)
+        XCTAssertFalse(grove.useCandidateVectorArtwork)
+        grove.reducedMotion = true
+        grove.didMove(to: SKView())
+        let originalGrove = try XCTUnwrap(
+            grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(originalGrove.userData?["sourceAsset"] as? String, "WordGardenSourceAtlas")
+        XCTAssertEqual(originalGrove.userData?["retinaPrepared"] as? Bool, true)
+        XCTAssertNil(originalGrove.userData?["vectorPainted"])
+        XCTAssertEqual(originalGrove.size, CGSize(width: 1280, height: 720))
         grove.willLeave()
     }
 
@@ -2979,6 +3023,68 @@ import LearningCore
         XCTAssertFalse(scene.crossingBridge, "Bridge route did not finish within ten seconds")
     }
 
+
+    func testScienceArtBeforeAfterReviewCapturesOnFourByThreeIPad() async throws {
+        // The candidate vectors are a *review option*, not an approved
+        // visual upgrade. Save actual iPad Simulator screenshots of both
+        // choices so an art reviewer can compare equivalent compositions.
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer {
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+
+        for previewCandidate in [false, true] {
+            let label = previewCandidate ? "Candidate" : "Approved"
+
+            state.travel(to: .scienceLab)
+            let greenhouse = ScienceLabScene(state: state)
+            greenhouse.useCandidateVectorArtwork = previewCandidate
+            greenhouse.reducedMotion = true
+            view.presentScene(greenhouse)
+            XCTAssertEqual(greenhouse.size, CGSize(width: 1280, height: 960))
+            let greenNode = try XCTUnwrap(
+                greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
+            )
+            XCTAssertEqual(
+                greenNode.userData?["vectorPainted"] as? Bool ?? false,
+                previewCandidate
+            )
+            try await capture(
+                greenhouse, in: view,
+                name: "Science-Art-Review-\(label)-Greenhouse-4x3"
+            )
+            greenhouse.willLeave()
+
+            state.travel(to: .scienceCreatureGrove)
+            let grove = CreatureGroveScene(state: state)
+            grove.useCandidateVectorArtwork = previewCandidate
+            grove.reducedMotion = true
+            view.presentScene(grove)
+            XCTAssertEqual(grove.size, CGSize(width: 1280, height: 960))
+            let groveNode = try XCTUnwrap(
+                grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
+            )
+            XCTAssertEqual(
+                groveNode.userData?["vectorPainted"] as? Bool ?? false,
+                previewCandidate
+            )
+            try await capture(
+                grove, in: view,
+                name: "Science-Art-Review-\(label)-CreatureGrove-4x3"
+            )
+            grove.willLeave()
+        }
+    }
+
     func testIllustratedPalaceRoomsOnFourByThreeIPad() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let controller = UIViewController()
@@ -3561,7 +3667,14 @@ import LearningCore
         greenhouse.reducedMotion = true
         greenhouse.didMove(to: SKView())
 
-        XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseBackdropHD"))
+        let greenhouseArt = try XCTUnwrap(
+            greenhouse.childNode(withName: "scienceGreenhouseBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(greenhouseArt.userData?["sourceAsset"] as? String, "WordGardenSourceAtlas")
+        XCTAssertTrue(greenhouseArt.userData?["retinaPrepared"] as? Bool ?? false)
+        XCTAssertFalse(greenhouseArt.userData?["vectorPainted"] as? Bool ?? false)
+        XCTAssertEqual(greenhouseArt.size, CGSize(width: 1280, height: 720))
+        XCTAssertFalse(greenhouseArt.isUserInteractionEnabled)
         XCTAssertNotNil(greenhouse.childNode(withName: "scienceGreenhouseFrame"))
         XCTAssertLessThan(greenhouse.childNode(withName: "scienceGreenhouseFrame")?.alpha ?? 1, 0.01)
         XCTAssertLessThan(greenhouse.childNode(withName: "scienceGround")?.alpha ?? 1, 0.3)
@@ -3641,7 +3754,14 @@ import LearningCore
         grove.reducedMotion = true
         grove.didMove(to: SKView())
 
-        XCTAssertNotNil(grove.childNode(withName: "creatureGroveBackdropHD"))
+        let groveArt = try XCTUnwrap(
+            grove.childNode(withName: "creatureGroveBackdropHD") as? SKSpriteNode
+        )
+        XCTAssertEqual(groveArt.userData?["sourceAsset"] as? String, "WordGardenSourceAtlas")
+        XCTAssertTrue(groveArt.userData?["retinaPrepared"] as? Bool ?? false)
+        XCTAssertFalse(groveArt.userData?["vectorPainted"] as? Bool ?? false)
+        XCTAssertEqual(groveArt.size, CGSize(width: 1280, height: 720))
+        XCTAssertFalse(groveArt.isUserInteractionEnabled)
         XCTAssertNotNil(grove.childNode(withName: "grovePath"))
         XCTAssertLessThan(grove.childNode(withName: "grovePath")?.alpha ?? 1, 0.3)
         XCTAssertNotNil(grove.childNode(withName: "//grovePondBank"))

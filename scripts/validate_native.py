@@ -69,6 +69,31 @@ for path, metadata in companion_hd['assets'].items():
     data = (ROOT/path).read_bytes()
     assert git_blob_sha(data) == metadata['blobSHA'], path
     assert image_dimensions(data, path) == metadata['size'], path
+# Original vector paintings are scene-only PDF assets. They render at Retina
+# resolution on device; unlike raster resampling they retain source geometry.
+science_art = json.loads((ROOT/'ValkyrieLearn/Resources/SCIENCE_VECTOR_ART_MANIFEST.json').read_text())
+assert science_art['sourceCanvas'] == [1280, 960]
+assert science_art['retinaTarget'] == [2560, 1920]
+assert science_art['status'] == 'review_only', 'Unapproved artwork must not be promoted silently.'
+assert science_art['defaultRenderer'] == 'approved_painterly_atlas'
+for scene in ['ScienceLabScene.swift', 'CreatureGroveScene.swift']:
+    scene_source = (ROOT/'ValkyrieLearn/Game/Scenes'/scene).read_text()
+    assert 'var useCandidateVectorArtwork = false' in scene_source, scene
+    assert 'if useCandidateVectorArtwork,' in scene_source, scene
+
+assert len(science_art['assets']) == 2
+for path, metadata in science_art['assets'].items():
+    raw = (ROOT/path).read_bytes()
+    assert raw.startswith(b'%PDF-1.4'), path
+    assert b'/MediaBox [0 0 1280 960]' in raw, path
+    assert b'/Type /Page' in raw, path
+    assert raw.rstrip().endswith(b'%%EOF'), path
+    assert git_blob_sha(raw) == metadata['blobSHA'], path
+    contents = json.loads((ROOT/path).with_name('Contents.json').read_text())
+    assert contents['properties']['preserves-vector-representation'] is True, path
+    assert contents['images'][0]['filename'] == 'art.pdf', path
+print('PASS dedicated Science world vector PDF art hashes, canvas and asset-catalog packaging.')
+
 print('PASS HD companion art hashes and dimensions.')
 
 manifest = json.loads((ROOT/'ValkyrieLearn/Resources/V331_ART_MANIFEST.json').read_text())
@@ -94,6 +119,30 @@ for character in ['Valkyrie', 'Pip']:
     atlas = ROOT/'ValkyrieLearn/Resources'/(character+'.atlas')
     for pose in ['idle','walk','interact','celebrate','react']:
         assert list(atlas.glob(pose+'_*.png')), (character, pose)
+# Identity lock: environmental art changes must never silently restyle Valkyrie.
+# The signed-off original sprite pixels are pinned in the v3.31 manifest.
+valkyrie_sprite_paths = {
+    name for name in manifest['outputs']
+    if name.startswith('Valkyrie.atlas/') and name.endswith('.png')
+}
+assert valkyrie_sprite_paths == {
+    'Valkyrie.atlas/idle_01.png',
+    'Valkyrie.atlas/walk_01.png',
+    'Valkyrie.atlas/walk_02.png',
+    'Valkyrie.atlas/interact_01.png',
+    'Valkyrie.atlas/celebrate_01.png',
+    'Valkyrie.atlas/react_01.png',
+}
+assert {
+    path.name for path in (ROOT/'ValkyrieLearn/Resources/Valkyrie.atlas').glob('*.png')
+} == {Path(name).name for name in valkyrie_sprite_paths}
+for name in sorted(valkyrie_sprite_paths):
+    actual = hashlib.sha256((ROOT/'ValkyrieLearn/Resources'/name).read_bytes()).hexdigest()
+    assert actual == manifest['outputs'][name]['sha256'], (
+        f'VALKYRIE IDENTITY LOCK: original sprite changed: {name}'
+    )
+print('PASS Valkyrie original sprite identities locked to approved hashes.')
+
 print('PASS approved art hashes, dimensions and required atlas poses.')
 
 # Generated bridge props remain separate from the approved v3.31 import.
