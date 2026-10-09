@@ -1424,83 +1424,102 @@ import LearningCore
     }
 
     private func buildMemoryBridgeWorld() {
-        let chasm = SKShapeNode(ellipseOf: CGSize(width: 735, height: 210))
-        chasm.fillColor = UIColor(red: 0.025, green: 0.018, blue: 0.070, alpha: 0.16)
-        chasm.strokeColor = UIColor(red: 0.40, green: 0.31, blue: 0.62, alpha: 0.50)
-        chasm.lineWidth = 5
-        chasm.position = CGPoint(x: 760, y: 405)
+        // A broken crossing in the palace floor, not four UI rectangles in
+        // front of the waterfall. The four stones form one continuous deck.
+        let voidPath = CGMutablePath()
+        voidPath.move(to: CGPoint(x: 393, y: 294))
+        voidPath.addLine(to: CGPoint(x: 478, y: 376))
+        voidPath.addLine(to: CGPoint(x: 1054, y: 376))
+        voidPath.addLine(to: CGPoint(x: 1126, y: 294))
+        voidPath.addLine(to: CGPoint(x: 1056, y: 211))
+        voidPath.addLine(to: CGPoint(x: 465, y: 211))
+        voidPath.closeSubpath()
+        let chasm = SKShapeNode(path: voidPath)
+        chasm.fillColor = UIColor(red: 0.035, green: 0.025, blue: 0.09, alpha: 0.89)
+        chasm.strokeColor = UIColor(red: 0.54, green: 0.45, blue: 0.67, alpha: 0.83)
+        chasm.lineWidth = 6
         chasm.name = "memoryChasm"
-        chasm.zPosition = 110
+        chasm.zPosition = 235
         addChild(chasm)
 
-        let innerVoid = SKShapeNode(ellipseOf: CGSize(width: 610, height: 150))
-        innerVoid.fillColor = UIColor(red: 0.01, green: 0.008, blue: 0.04, alpha: 0.18)
-        innerVoid.strokeColor = .clear
-        innerVoid.position = CGPoint(x: 760, y: 405)
-        innerVoid.zPosition = 112
-        addChild(innerVoid)
-
-        let mist = ArtSystem.label("✦     ·     ✦     ·     ✦", size: 27)
-        mist.fontColor = UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.34)
-        mist.position = CGPoint(x: 760, y: 405)
-        mist.name = "memoryChasmMist"
-        mist.zPosition = 120
-        addChild(mist)
+        let depth = SKShapeNode(ellipseOf: CGSize(width: 535, height: 73))
+        depth.position = CGPoint(x: 760, y: 264)
+        depth.fillColor = UIColor(red: 0.28, green: 0.19, blue: 0.41, alpha: 0.27)
+        depth.strokeColor = .clear
+        depth.name = "memoryChasmDepth"
+        depth.zPosition = 237
+        addChild(depth)
 
         for index in 0..<4 {
-            let plank = ArtSystem.panel(
-                CGSize(width: 112, height: 58),
-                fill: UIColor(red: 0.21, green: 0.15, blue: 0.34, alpha: 0.78),
-                stroke: UIColor(red: 0.58, green: 0.47, blue: 0.82, alpha: 0.54),
-                radius: 15,
-                lineWidth: 3,
-                shadowAlpha: 0.20
+            let plank = SKShapeNode(
+                rectOf: CGSize(width: 161, height: 107),
+                cornerRadius: 12
             )
-            plank.position = CGPoint(x: 545 + CGFloat(index) * 145, y: 375)
+            plank.fillColor = UIColor(red: 0.32, green: 0.27, blue: 0.41, alpha: 1)
+            plank.strokeColor = UIColor(red: 0.73, green: 0.61, blue: 0.52, alpha: 0.85)
+            plank.lineWidth = 4
+            plank.position = CGPoint(x: 532 + CGFloat(index) * 151, y: 292)
             plank.yScale = 0.58
-            plank.alpha = 0.55
+            plank.alpha = 0.48
             plank.name = "memoryBridgePlank\(index)"
             plank.zPosition = 270
             addChild(plank)
+
+            let lip = SKShapeNode(
+                rectOf: CGSize(width: 145, height: 13), cornerRadius: 3
+            )
+            lip.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.24, alpha: 1)
+            lip.strokeColor = UIColor(red: 0.81, green: 0.66, blue: 0.43, alpha: 0.91)
+            lip.lineWidth = 2
+            lip.position.y = -43
+            lip.name = "memoryPlankFrontEdge"
+            plank.addChild(lip)
+
+            let inset = SKShapeNode(
+                rectOf: CGSize(width: 140, height: 69), cornerRadius: 9
+            )
+            inset.fillColor = UIColor(red: 0.37, green: 0.31, blue: 0.49, alpha: 1)
+            inset.strokeColor = UIColor(red: 0.88, green: 0.75, blue: 0.54, alpha: 0.75)
+            inset.lineWidth = 2
+            inset.position.y = 6
+            inset.name = "memoryPlankCarvedStone"
+            plank.addChild(inset)
+
+            for x in [CGFloat(-50), 50] {
+                let bolt = SKShapeNode(circleOfRadius: 5)
+                bolt.position = CGPoint(x: x, y: 3)
+                bolt.fillColor = UIColor(red: 0.92, green: 0.77, blue: 0.48, alpha: 1)
+                bolt.strokeColor = UIColor(red: 0.31, green: 0.22, blue: 0.25, alpha: 1)
+                bolt.lineWidth = 1
+                bolt.name = "memoryPlankBolt"
+                plank.addChild(bolt)
+            }
         }
 
         for x in [CGFloat(420), CGFloat(1100)] {
-            let anchor = ArtSystem.medallion(
-                radius: 28,
-                fill: UIColor(red: 0.16, green: 0.11, blue: 0.28, alpha: 0.92),
-                stroke: UIColor(red: 0.68, green: 0.56, blue: 0.92, alpha: 0.72),
-                glow: reducedMotion ? 0 : 3
+            let bank = SKShapeNode(
+                rectOf: CGSize(width: 76, height: 131), cornerRadius: 13
             )
-            anchor.position = CGPoint(x: x, y: 395)
-            anchor.zPosition = 275
-            anchor.addChild(ArtSystem.label("◈", size: 24))
-            addChild(anchor)
+            bank.fillColor = UIColor(red: 0.38, green: 0.32, blue: 0.44, alpha: 0.95)
+            bank.strokeColor = UIColor(red: 0.76, green: 0.61, blue: 0.40, alpha: 1)
+            bank.lineWidth = 4
+            bank.position = CGPoint(x: x, y: 289)
+            bank.zPosition = 265
+            bank.name = "memoryBridgeBank"
+            addChild(bank)
         }
 
         for index in 0..<PuzzlePalaceEncounterCatalog.memoryBridge.count {
             let light = ArtSystem.medallion(
-                radius: 15,
+                radius: 13,
                 fill: UIColor(red: 0.20, green: 0.14, blue: 0.32, alpha: 0.96),
-                stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
+                stroke: UIColor(red: 0.79, green: 0.63, blue: 0.46, alpha: 0.72)
             )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 58, y: 555)
             light.name = "memoryProgress\(index)"
             light.zPosition = 520
             addChild(light)
         }
-
-        let startMarker = ArtSystem.plaque(
-            CGSize(width: 82, height: 30),
-            fill: UIColor(red: 0.09, green: 0.07, blue: 0.18, alpha: 0.86),
-            stroke: UIColor(red: 0.66, green: 0.55, blue: 0.90, alpha: 0.56),
-            radius: 14
-        )
-        startMarker.position = CGPoint(x: 345, y: 355)
-        startMarker.zPosition = 320
-        let markerLabel = ArtSystem.label("TIKO", size: 12)
-        markerLabel.fontColor = UIColor(red: 0.88, green: 0.80, blue: 1.0, alpha: 1)
-        startMarker.addChild(markerLabel)
-        addChild(startMarker)
     }
 
     private func buildMemoryEncounter() {
@@ -1798,9 +1817,29 @@ import LearningCore
         }
 
         if let chasm = childNode(withName: "memoryChasm") as? SKShapeNode {
-            chasm.strokeColor = UIColor(red: 0.72, green: 0.62, blue: 0.96, alpha: 0.92)
-            chasm.glowWidth = 9
+            chasm.strokeColor = UIColor(red: 0.84, green: 0.68, blue: 0.46, alpha: 1)
+            chasm.glowWidth = reducedMotion ? 0 : 2
             chasm.name = "memoryBridgeRestored"
+        }
+        // Long side rails make the four touching stones read as a single
+        // crossing. Kept non-interactive so existing touch routing is stable.
+        if childNode(withName: "memoryBridgeJoinedRail") == nil {
+            let joined = SKNode()
+            joined.name = "memoryBridgeJoinedRail"
+            joined.zPosition = 281
+            for y in [CGFloat(352), 231] {
+                let rail = SKShapeNode(
+                    rectOf: CGSize(width: 605, height: 10),
+                    cornerRadius: 5
+                )
+                rail.fillColor = UIColor(red: 0.68, green: 0.48, blue: 0.27, alpha: 1)
+                rail.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.46, alpha: 1)
+                rail.lineWidth = 2
+                rail.position = CGPoint(x: 758, y: y)
+                rail.name = "memoryDeckRailing"
+                joined.addChild(rail)
+            }
+            addChild(joined)
         }
 
         tiko.pose(.celebrate)
@@ -5852,6 +5891,104 @@ import LearningCore
         }
     }
 
+    /// The approved painting stays intact when locked. Once earned, a real
+    /// painted-world opening and two sliding leaves replace the closed door.
+    /// The overlay is a sibling of puzzleGate: regression tests intentionally
+    /// keep that interactive lock compact.
+    private func revealPaintedRuneDoors() {
+        guard childNode(withName: "runeDoorPassage") == nil,
+              let gate = childNode(withName: "puzzleGate") else { return }
+
+        let doorway = SKNode()
+        doorway.position = gate.position
+        doorway.zPosition = 355
+        doorway.name = "runeDoorPassage"
+        addChild(doorway)
+
+        let openingPath = CGMutablePath()
+        openingPath.move(to: CGPoint(x: -94, y: -126))
+        openingPath.addLine(to: CGPoint(x: -94, y: 35))
+        openingPath.addCurve(
+            to: CGPoint(x: 94, y: 35),
+            control1: CGPoint(x: -94, y: 156),
+            control2: CGPoint(x: 94, y: 156)
+        )
+        openingPath.addLine(to: CGPoint(x: 94, y: -126))
+        openingPath.closeSubpath()
+        let opening = SKShapeNode(path: openingPath)
+        opening.fillColor = UIColor(red: 0.055, green: 0.040, blue: 0.13, alpha: 1)
+        opening.strokeColor = UIColor(red: 0.93, green: 0.73, blue: 0.41, alpha: 0.93)
+        opening.lineWidth = 6
+        opening.name = "runeDoorOpenInterior"
+        doorway.addChild(opening)
+
+        // Depth and light, not a thin gold seam on top of closed painted doors.
+        let distanceLight = SKShapeNode(ellipseOf: CGSize(width: 104, height: 192))
+        distanceLight.position = CGPoint(x: 0, y: -16)
+        distanceLight.fillColor = UIColor(red: 0.44, green: 0.30, blue: 0.67, alpha: 0.40)
+        distanceLight.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.45, alpha: 0.35)
+        distanceLight.lineWidth = 3
+        distanceLight.name = "runeDoorDistanceLight"
+        opening.addChild(distanceLight)
+
+        let star = SKShapeNode(circleOfRadius: 12)
+        star.fillColor = UIColor(red: 1, green: 0.89, blue: 0.64, alpha: 1)
+        star.strokeColor = UIColor(red: 1, green: 0.94, blue: 0.74, alpha: 1)
+        star.lineWidth = 2
+        star.position = CGPoint(x: 0, y: 34)
+        star.glowWidth = reducedMotion ? 0 : 11
+        star.name = "runeDoorDestination"
+        opening.addChild(star)
+
+        // Capture the authentic door material from the approved scene. A pair
+        // of matching texture leaves parts to reveal the passage. Cropping
+        // is from the existing asset; no new character or environment repaint.
+        if let painting = childNode(withName: "puzzleIllustratedBackdrop") as? SKSpriteNode,
+           let texture = painting.texture {
+            let cropWidth: CGFloat = 188
+            let cropHeight: CGFloat = 254
+            let leftEdge = painting.position.x - painting.size.width / 2
+            let bottomEdge = painting.position.y - painting.size.height / 2
+            let artworkX = (gate.position.x - cropWidth / 2 - leftEdge) / painting.size.width
+            let artworkY = (gate.position.y - cropHeight / 2 - bottomEdge) / painting.size.height
+            for half in 0..<2 {
+                let rect = CGRect(
+                    x: artworkX + CGFloat(half) * cropWidth / (2 * painting.size.width),
+                    y: artworkY,
+                    width: cropWidth / (2 * painting.size.width),
+                    height: cropHeight / painting.size.height
+                )
+                let leaf = SKSpriteNode(
+                    texture: SKTexture(rect: rect, in: texture),
+                    size: CGSize(width: cropWidth / 2, height: cropHeight)
+                )
+                leaf.position = CGPoint(x: half == 0 ? -47 : 47, y: 0)
+                leaf.zPosition = 3
+                leaf.name = "runeDoorLeaf\(half)"
+                doorway.addChild(leaf)
+
+                // A physical door is open in the completed screenshot even
+                // when restored from saved progress with Reduced Motion on.
+                let direction: CGFloat = half == 0 ? -1 : 1
+                if reducedMotion {
+                    leaf.position.x += direction * 98
+                } else {
+                    leaf.run(.moveBy(x: direction * 98, y: 0, duration: 0.60),
+                             withKey: "runeDoorSlide")
+                }
+            }
+        }
+
+        // A clear navigable threshold connects the light to the floor route.
+        let sill = SKShapeNode(ellipseOf: CGSize(width: 212, height: 24))
+        sill.position.y = -131
+        sill.fillColor = UIColor(red: 0.67, green: 0.47, blue: 0.24, alpha: 0.79)
+        sill.strokeColor = UIColor(red: 0.96, green: 0.81, blue: 0.51, alpha: 1)
+        sill.lineWidth = 3
+        sill.name = "runeDoorSill"
+        doorway.addChild(sill)
+    }
+
     private func openRuneGate() {
         runeAcceptingInput = false
         removeAction(forKey: "nextPuzzleRune")
@@ -5863,9 +6000,9 @@ import LearningCore
             gate.glowWidth = 16
         }
         if let passage = childNode(withName: "//puzzleGateOpening") as? SKShapeNode {
-            passage.alpha = 1
-            passage.glowWidth = reducedMotion ? 0 : 5
+            passage.alpha = 0  // The actual opening is the stone-framed passage.
         }
+        revealPaintedRuneDoors()
         if let door = childNode(withName: "//puzzleGateDoor") as? SKShapeNode {
             door.run(
                 .group([
