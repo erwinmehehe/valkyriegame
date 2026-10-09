@@ -39,6 +39,11 @@ source_group = put('Sources','PBXGroup', children=list(file_refs.values()), name
 products = []
 targets = []
 package = put('LocalPackage', 'XCLocalSwiftPackageReference', relativePath='.')
+# SnapshotTesting lives only in the hosted native-test bundle. Never link its
+# Xcode/SwiftSyntax dependencies into the shipped iPad application.
+snapshot_package = put('SnapshotTestingPackage', 'XCRemoteSwiftPackageReference',
+                       repositoryURL='https://github.com/pointfreeco/swift-snapshot-testing',
+                       requirement={'kind':'exactVersion', 'version':'1.19.6'})
 app_id = uid('Target:ValkyrieLearn')
 for name,files,kind in [('ValkyrieLearn',app_files,'application'),('LearningCoreTests',core_tests,'bundle.unit-test'),('PersistenceTests',store_tests,'bundle.unit-test')]:
     product = put('Product:'+name,'PBXFileReference', explicitFileType='wrapper.application' if kind=='application' else 'wrapper.cfbundle',
@@ -48,7 +53,18 @@ for name,files,kind in [('ValkyrieLearn',app_files,'application'),('LearningCore
     sources = put('Sources:'+name,'PBXSourcesBuildPhase',buildActionMask=2147483647,files=source_builds,runOnlyForDeploymentPostprocessing=0)
     product_dependency = put('PackageProduct:'+name,'XCSwiftPackageProductDependency',package=package,productName='LearningCore')
     framework_build = put('LinkPackage:'+name,'PBXBuildFile',productRef=product_dependency)
-    frameworks = put('Frameworks:'+name,'PBXFrameworksBuildPhase',buildActionMask=2147483647,files=[framework_build],runOnlyForDeploymentPostprocessing=0)
+    framework_builds = [framework_build]
+    package_deps = [product_dependency]
+    if name == 'PersistenceTests':
+        snapshot_product = put('PackageProduct:PersistenceTests:SnapshotTesting',
+                               'XCSwiftPackageProductDependency',package=snapshot_package,
+                               productName='SnapshotTesting')
+        framework_builds.append(put('LinkPackage:PersistenceTests:SnapshotTesting',
+                                    'PBXBuildFile',productRef=snapshot_product))
+        package_deps.append(snapshot_product)
+    frameworks = put('Frameworks:'+name,'PBXFrameworksBuildPhase',
+                     buildActionMask=2147483647,files=framework_builds,
+                     runOnlyForDeploymentPostprocessing=0)
     resource_builds = [put('Resource:'+p.relative_to(ROOT).as_posix(),'PBXBuildFile',fileRef=file_refs[p.relative_to(ROOT).as_posix()]) for p in resources] if kind=='application' else []
     resource_phase = put('Resources:'+name,'PBXResourcesBuildPhase',buildActionMask=2147483647,files=resource_builds,runOnlyForDeploymentPostprocessing=0)
     configs=[]
@@ -73,7 +89,7 @@ for name,files,kind in [('ValkyrieLearn',app_files,'application'),('LearningCore
         proxy=put('AppProxy','PBXContainerItemProxy',containerPortal=uid('Project'),proxyType=1,remoteGlobalIDString=app_id,remoteInfo='ValkyrieLearn')
         dependencies=[put('AppDependency','PBXTargetDependency',target=app_id,targetProxy=proxy)]
     targets.append(put('Target:'+name,'PBXNativeTarget',buildConfigurationList=config_list,buildPhases=[sources,frameworks,resource_phase],buildRules=[],dependencies=dependencies,
-                       name=name,productName=name,productReference=product,productType='com.apple.product-type.'+kind,packageProductDependencies=[product_dependency]))
+                       name=name,productName=name,productReference=product,productType='com.apple.product-type.'+kind,packageProductDependencies=package_deps))
 products_group=put('Products','PBXGroup',children=products,name='Products',sourceTree='<group>')
 main_group=put('MainGroup','PBXGroup',children=[source_group,products_group],sourceTree='<group>')
 project_configs=[]
@@ -86,7 +102,7 @@ for config in ['Debug','Release']:
 project_config_list=put('ProjectConfigs','XCConfigurationList',buildConfigurations=project_configs,defaultConfigurationIsVisible=0,defaultConfigurationName='Release')
 project_id=put('Project','PBXProject',attributes={'BuildIndependentTargetsInParallel':'YES','LastUpgradeCheck':'1600'},buildConfigurationList=project_config_list,
               compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=main_group,
-              productRefGroup=products_group,projectDirPath='',projectRoot='',targets=targets,packageReferences=[package])
+              productRefGroup=products_group,projectDirPath='',projectRoot='',targets=targets,packageReferences=[package,snapshot_package])
 text='// !$*UTF8*$!\n{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n'
 text+='\n'.join(f'{key} = {quote(value)};' for key,value in sorted(objects.items()))
 text+='\n}; rootObject = '+project_id+'; }\n'
