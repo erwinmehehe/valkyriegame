@@ -113,6 +113,44 @@ import LearningCore
         assertSnapshot(of: signature.joined(separator: "\n"), as: .lines, named: "rune-pads")
     }
 
+    func testSortingRoomsHaveGroundedStoneAlcovesInsteadOfPurpleButtons() throws {
+        let (window, view) = makeView()
+        let state = try freshState()
+        state.reducedMotion = true
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let cases: [(AppState.World, [String], String)] = [
+            (.sortingPedestal, ["sortLeftPedestal", "sortRightPedestal"], "sortingRuleDial"),
+            (.resortVault, ["resortLeftPedestal", "resortRightPedestal"], "resortRuleDial")
+        ]
+        for (world, names, dialName) in cases {
+            state.travel(to: world)
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            view.presentScene(scene)
+
+            for name in names {
+                let alcove = try XCTUnwrap(scene.childNode(withName: name))
+                XCTAssertTrue(alcove.isAccessibilityElement,
+                              "Grounded alcoves must retain child-accessible touch labels.")
+                let masonry = alcove.children.compactMap { $0 as? SKShapeNode }
+                    .filter { $0.name == name && $0.fillTexture != nil }
+                XCTAssertGreaterThanOrEqual(masonry.count, 3,
+                             "A physical bowl, connected pillar and foot must share carved materials.")
+                XCTAssertNotNil(alcove.childNode(withName: name + "Glyph"),
+                                "The sort rule must still identify each receiving alcove.")
+            }
+
+            let dial = try XCTUnwrap(
+                scene.childNode(withName: dialName) as? SKShapeNode
+            )
+            XCTAssertNotNil(dial.fillTexture)
+            XCTAssertLessThan(dial.frame.height, 90,
+                              "The rule should be a compact stone plaque, not a giant floating disk.")
+            scene.willLeave()
+        }
+    }
+
     func testOptionalPixelGoldenMasterRecording() throws {
         // Never accept machine-generated visual goldens without owner review.
         // Enable for a *local*, deliberate golden-master recording session:
