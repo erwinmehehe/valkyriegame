@@ -1460,6 +1460,18 @@ import LearningCore
 
         let ys: [CGFloat] = [325, 245, 165]
         scene.handleTap(at: CGPoint(x: 1100, y: ys[correctIndex]))
+        let trace = try XCTUnwrap(scene.childNode(withName: "//pathRouteTrace") as? SKShapeNode)
+        XCTAssertNotNil(trace.path, "The chosen route must have a visible in-world connection.")
+        XCTAssertEqual(trace.lineWidth, 10, accuracy: 0.001)
+        let startingTile = try XCTUnwrap(puzzle.route(for: correctIndex).first)
+        let startingStone = try XCTUnwrap(scene.childNode(
+            withName: "//pathStone\(startingTile.x)_\(startingTile.y)"
+        ))
+        let raisedBevel = try XCTUnwrap(
+            startingStone.childNode(withName: "pathStoneBevel") as? SKShapeNode
+        )
+        XCTAssertEqual(raisedBevel.position.y, 9, accuracy: 0.001,
+                       "Safe stones should appear lifted even with Reduced Motion.")
         try await waitUntil(timeout: 4) { scene.childNode(withName: "pathNext") != nil }
         XCTAssertGreaterThan(scene.tiko.position.y, scene.walkable.maxY,
                              "Successful path demonstration should reach the map goal")
@@ -2604,7 +2616,10 @@ import LearningCore
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoOrb"))
         XCTAssertNotNil(stopGo.childNode(withName: "//stopGoOrbHalo"))
         XCTAssertNotNil(stopGo.childNode(withName: "stopGoBarrier"))
-        XCTAssertNotNil(stopGo.childNode(withName: "stopGoLegend"))
+        XCTAssertNil(stopGo.childNode(withName: "stopGoLegend"),
+                     "The physical shutter replaces tiny redundant floor instructions.")
+        XCTAssertNotNil(stopGo.childNode(withName: "//decorativeStopGoShutter"),
+                        "The mounted signal must have a visible HOLD/GO shutter.")
         XCTAssertEqual(
             stopGo.children.filter { $0.name == "stopGoBrace" }.count,
             3,
