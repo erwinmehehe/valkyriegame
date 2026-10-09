@@ -1342,6 +1342,7 @@ import LearningCore
             pedestal.name = "runeChoice"
             pedestal.userData = NSMutableDictionary(dictionary: ["choice": choice])
             addChild(pedestal)
+            registerInteraction(pedestal, clearance: 12)
         }
 
         showAttentionCue(
@@ -1430,7 +1431,6 @@ import LearningCore
         stone.addChild(shadow)
 
         makeAccessible(stone, label: "Place the \(rune) rune in the palace lock")
-        registerInteraction(stone, clearance: 12)
         return stone
     }
 
@@ -4861,79 +4861,217 @@ import LearningCore
     }
 
     private func buildBugRepairWorld() {
-        let rail = ArtSystem.box(
-            CGSize(width: 760, height: 24),
-            color: UIColor(red: 0.34, green: 0.25, blue: 0.15, alpha: 0.96),
-            radius: 8
+        // Clockwork workshop: the rail, drive shaft and four gear sockets are
+        // physically connected. Keep the illustrated wall and forge visible.
+        let drive = CGMutablePath()
+        drive.move(to: CGPoint(x: 760, y: 487))
+        drive.addLine(to: CGPoint(x: 760, y: 367))
+        let shaft = SKShapeNode(path: drive)
+        shaft.strokeColor = UIColor(red: 0.33, green: 0.22, blue: 0.18, alpha: 1)
+        shaft.lineWidth = 26
+        shaft.name = "repairDriveShaft"
+        shaft.zPosition = 690
+        addChild(shaft)
+
+        let shaftInlay = SKShapeNode(path: drive)
+        shaftInlay.strokeColor = UIColor(red: 0.86, green: 0.65, blue: 0.37, alpha: 0.98)
+        shaftInlay.lineWidth = 7
+        shaftInlay.name = "repairDriveShaftInlay"
+        shaftInlay.zPosition = 691
+        addChild(shaftInlay)
+
+        let rail = SKShapeNode(
+            rectOf: CGSize(width: 780, height: 30),
+            cornerRadius: 14
         )
-        rail.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.32, alpha: 0.88)
-        rail.lineWidth = 2
-        rail.position = CGPoint(x: 760, y: 292)
+        rail.fillColor = UIColor(red: 0.36, green: 0.25, blue: 0.20, alpha: 1)
+        rail.strokeColor = UIColor(red: 0.80, green: 0.58, blue: 0.35, alpha: 1)
+        rail.lineWidth = 4
+        rail.position = CGPoint(x: 760, y: 355)
         rail.name = "repairRail"
-        rail.zPosition = 120
+        rail.zPosition = 760
         addChild(rail)
 
-        let lantern = SKShapeNode(circleOfRadius: 66)
-        lantern.fillColor = UIColor(red: 0.14, green: 0.13, blue: 0.28, alpha: 0.98)
-        lantern.strokeColor = UIColor(red: 0.64, green: 0.70, blue: 0.98, alpha: 0.96)
-        lantern.lineWidth = 8
-        lantern.position = CGPoint(x: 760, y: 535)
-        lantern.name = "repairLanternFixture"
-        lantern.zPosition = 650
-        addChild(lantern)
+        let xs: [CGFloat] = [485, 665, 845, 1025]
+        for (index, x) in xs.enumerated() {
+            let housing = palaceCog(
+                radius: 83, teeth: 12,
+                fill: UIColor(red: 0.30, green: 0.22, blue: 0.19, alpha: 1),
+                stroke: UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+            )
+            housing.position = CGPoint(x: x, y: 355)
+            housing.name = "repairSocketBase\(index)"
+            housing.zPosition = 785
+            addChild(housing)
 
-        let core = SKShapeNode(circleOfRadius: 38)
-        core.fillColor = UIColor(red: 0.42, green: 0.55, blue: 0.96, alpha: 0.96)
-        core.strokeColor = UIColor(red: 0.86, green: 0.90, blue: 1.0, alpha: 1)
-        core.lineWidth = 4
-        core.glowWidth = 12
+            let axle = SKShapeNode(circleOfRadius: 46)
+            axle.fillColor = UIColor(red: 0.14, green: 0.11, blue: 0.15, alpha: 1)
+            axle.strokeColor = UIColor(red: 0.67, green: 0.50, blue: 0.32, alpha: 0.9)
+            axle.lineWidth = 3
+            axle.name = "repairSocketAxle"
+            housing.addChild(axle)
+        }
+
+        let engine = SKShapeNode(
+            rectOf: CGSize(width: 210, height: 120),
+            cornerRadius: 36
+        )
+        engine.fillColor = UIColor(red: 0.25, green: 0.18, blue: 0.18, alpha: 0.99)
+        engine.strokeColor = UIColor(red: 0.90, green: 0.71, blue: 0.43, alpha: 0.98)
+        engine.lineWidth = 6
+        engine.position = CGPoint(x: 760, y: 535)
+        engine.name = "repairLanternFixture"
+        engine.zPosition = 650
+        addChild(engine)
+
+        for x in [CGFloat(-82), 82] {
+            let rivet = SKShapeNode(circleOfRadius: 7)
+            rivet.position = CGPoint(x: x, y: 0)
+            rivet.fillColor = UIColor(red: 0.93, green: 0.77, blue: 0.48, alpha: 1)
+            rivet.strokeColor = UIColor(red: 0.28, green: 0.19, blue: 0.16, alpha: 1)
+            rivet.lineWidth = 2
+            rivet.name = "repairFixtureRivet"
+            engine.addChild(rivet)
+        }
+
+        let core = SKShapeNode(circleOfRadius: 47)
+        core.fillColor = UIColor(red: 0.15, green: 0.14, blue: 0.23, alpha: 1)
+        core.strokeColor = UIColor(red: 0.80, green: 0.65, blue: 0.43, alpha: 1)
+        core.lineWidth = 3
         core.name = "repairLanternCore"
-        lantern.addChild(core)
+        engine.addChild(core)
 
-        let glyph = ArtSystem.label("⇄", size: 30)
-        glyph.fontColor = UIColor(red: 0.12, green: 0.12, blue: 0.28, alpha: 1)
-        glyph.name = "repairLanternGlyph"
-        core.addChild(glyph)
+        let rotor = palaceCog(
+            radius: 32, teeth: 10,
+            fill: UIColor(red: 0.55, green: 0.37, blue: 0.22, alpha: 1),
+            stroke: UIColor(red: 0.94, green: 0.75, blue: 0.45, alpha: 1)
+        )
+        rotor.name = "repairMachineRotor"
+        core.addChild(rotor)
 
-        let title = ArtSystem.label("REPAIR THE WHOLE PLAN", size: 21)
-        title.fontColor = UIColor(red: 0.96, green: 0.97, blue: 1.0, alpha: 0.98)
-        title.position = CGPoint(x: 760, y: 625)
+        let hub = SKShapeNode(circleOfRadius: 12)
+        hub.fillColor = UIColor(red: 0.10, green: 0.09, blue: 0.15, alpha: 1)
+        hub.strokeColor = UIColor(red: 0.97, green: 0.78, blue: 0.43, alpha: 1)
+        hub.lineWidth = 3
+        hub.name = "repairMachineHub"
+        rotor.addChild(hub)
+
+        let title = ArtSystem.label("TIKO'S CLOCKWORK WORKSHOP", size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1, green: 0.93, blue: 0.76, alpha: 1)
+        title.position = CGPoint(x: 760, y: 627)
         title.name = "bugRepairTitle"
         title.zPosition = 820
         addChild(title)
 
-        let cue = ArtSystem.label("Pick two commands to swap, then tap FIX.", size: 15)
-        cue.fontColor = UIColor(red: 0.90, green: 0.88, blue: 1.0, alpha: 0.88)
-        cue.position = CGPoint(x: 760, y: 455)
+        let cue = ArtSystem.label("Find the two misplaced gears.", size: 17)
+        cue.fontColor = UIColor(red: 1, green: 0.94, blue: 0.80, alpha: 0.98)
+        cue.position = CGPoint(x: 760, y: 457)
         cue.name = "repairCue"
         cue.zPosition = 820
         addChild(cue)
 
         for index in 0..<PuzzlePalaceEncounterCatalog.bugRepairFamilies.count {
-            let lamp = SKShapeNode(circleOfRadius: 12)
-            lamp.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.31, alpha: 1)
-            lamp.strokeColor = UIColor(red: 0.64, green: 0.70, blue: 0.98, alpha: 0.88)
-            lamp.lineWidth = 3
-            lamp.position = CGPoint(x: 1090 + CGFloat(index) * 38, y: 535)
+            let lamp = SKShapeNode(circleOfRadius: 10)
+            lamp.fillColor = UIColor(red: 0.20, green: 0.14, blue: 0.18, alpha: 1)
+            lamp.strokeColor = UIColor(red: 0.82, green: 0.64, blue: 0.38, alpha: 0.88)
+            lamp.lineWidth = 2
+            lamp.position = CGPoint(x: 1090 + CGFloat(index) * 34, y: 535)
             lamp.name = "repairProgress\(index)"
             lamp.zPosition = 820
             addChild(lamp)
         }
 
-        let fix = worldGear("✓", name: "repairFix",
-                            at: CGPoint(x: 1145, y: 300), radius: 40,
-                            accessibilityLabel: "Fix selected command pair")
-        fix.zPosition = 920
+        // A grounded pull lever replaces the old floating checkmark icon.
+        // Hit node names remain "repairFix" for stable native interaction APIs.
+        let lever = SKNode()
+        lever.position = CGPoint(x: 1145, y: 300)
+        lever.name = "repairFix"
+        lever.zPosition = 920
+
+        let leverBase = SKShapeNode(
+            rectOf: CGSize(width: 88, height: 110),
+            cornerRadius: 18
+        )
+        leverBase.fillColor = UIColor(red: 0.29, green: 0.20, blue: 0.17, alpha: 1)
+        leverBase.strokeColor = UIColor(red: 0.95, green: 0.74, blue: 0.41, alpha: 1)
+        leverBase.lineWidth = 4
+        leverBase.name = "repairFix"
+        lever.addChild(leverBase)
+
+        let leverStem = SKShapeNode(
+            rectOf: CGSize(width: 14, height: 43),
+            cornerRadius: 7
+        )
+        leverStem.position.y = 12
+        leverStem.fillColor = UIColor(red: 0.76, green: 0.54, blue: 0.30, alpha: 1)
+        leverStem.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.43, alpha: 1)
+        leverStem.lineWidth = 2
+        leverStem.name = "repairFix"
+        lever.addChild(leverStem)
+
+        let handle = SKShapeNode(circleOfRadius: 17)
+        handle.position.y = 32
+        handle.fillColor = UIColor(red: 0.94, green: 0.71, blue: 0.38, alpha: 1)
+        handle.strokeColor = UIColor(red: 1, green: 0.91, blue: 0.67, alpha: 1)
+        handle.lineWidth = 3
+        handle.name = "repairFix"
+        lever.addChild(handle)
+
+        let leverLabel = ArtSystem.label("TEST", size: 16)
+        leverLabel.fontName = "AvenirNext-DemiBold"
+        leverLabel.fontColor = UIColor(red: 1, green: 0.94, blue: 0.80, alpha: 1)
+        leverLabel.position.y = -34
+        leverLabel.name = "repairFix"
+        lever.addChild(leverLabel)
+
+        makeAccessible(lever, label: "Pull the workshop lever to test the repaired plan")
+        addChild(lever)
+        registerInteraction(lever, clearance: 12)
 
         let reset = worldGear("↺", name: "repairReset",
-                              at: CGPoint(x: 1145, y: 395), radius: 31,
-                              accessibilityLabel: "Clear repair selection")
+                              at: CGPoint(x: 1145, y: 427), radius: 28,
+                              accessibilityLabel: "Clear selected gears")
         reset.zPosition = 920
 
         let back = worldControl("‹", name: "bugLanternBack",
                                 at: CGPoint(x: 1180, y: 665), radius: 30,
                                 accessibilityLabel: "Back to Bug Lantern")
         back.zPosition = 2050
+    }
+
+    private func setRepairMachinePowered(_ powered: Bool) {
+        let bronze = UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+        let gold = UIColor(red: 1.0, green: 0.82, blue: 0.43, alpha: 1)
+        if let core = childNode(withName: "//repairLanternCore") as? SKShapeNode {
+            core.fillColor = powered
+                ? UIColor(red: 0.46, green: 0.33, blue: 0.19, alpha: 1)
+                : UIColor(red: 0.15, green: 0.14, blue: 0.23, alpha: 1)
+            core.glowWidth = powered && !reducedMotion ? 8 : 0
+        }
+        if let rail = childNode(withName: "repairRail") as? SKShapeNode {
+            rail.strokeColor = powered ? gold : bronze
+        }
+        for index in 0..<4 {
+            if let housing = childNode(withName: "repairSocketBase\(index)") as? SKShapeNode {
+                housing.strokeColor = powered ? gold : bronze
+            }
+        }
+        if powered, !reducedMotion,
+           let rotor = childNode(withName: "//repairMachineRotor") {
+            rotor.removeAction(forKey: "repairRotor")
+            rotor.run(.rotate(byAngle: .pi * 2, duration: 0.8), withKey: "repairRotor")
+        }
+    }
+
+    private func showRepairMachineMiss() {
+        guard !reducedMotion,
+              let rotor = childNode(withName: "//repairMachineRotor") else { return }
+        rotor.removeAction(forKey: "repairRotor")
+        rotor.run(.sequence([
+            .rotate(byAngle: -.pi / 10, duration: 0.16),
+            .rotate(byAngle: .pi / 10, duration: 0.16)
+        ]), withKey: "repairRotor")
     }
 
     private func clearRepairSteps() {
@@ -4952,40 +5090,51 @@ import LearningCore
         startedAt = Date()
         solved = false
         repairAcceptingInput = true
+        setRepairMachinePowered(false)
 
         let xs: [CGFloat] = [485, 665, 845, 1025]
         for (index, step) in repairEncounter.presented.enumerated() {
-            let plate = SKShapeNode(
-                rectOf: CGSize(width: 132, height: 104),
-                cornerRadius: 24
+            // Physically removable brass gears on the shared machine shaft.
+            // Preserve step IDs, positions and accessibility for all tests and
+            // for the existing evidence/scaffold flow.
+            let plate = palaceCog(
+                radius: 71, teeth: 11,
+                fill: UIColor(red: 0.45, green: 0.32, blue: 0.22, alpha: 1),
+                stroke: UIColor(red: 0.90, green: 0.70, blue: 0.41, alpha: 1)
             )
-            plate.fillColor = UIColor(red: 0.12, green: 0.16, blue: 0.25, alpha: 0.98)
-            plate.strokeColor = UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.82)
-            plate.lineWidth = 4
             plate.position = CGPoint(x: xs[index], y: 355)
             plate.name = "repairStep\(index)"
             plate.zPosition = 850
             plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
 
-            let number = ArtSystem.label("\(index + 1)", size: 13)
-            number.fontColor = UIColor(white: 1, alpha: 0.40)
-            number.position = CGPoint(x: -48, y: 34)
+            let center = SKShapeNode(circleOfRadius: 52)
+            center.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.19, alpha: 1)
+            center.strokeColor = UIColor(red: 0.88, green: 0.67, blue: 0.42, alpha: 0.90)
+            center.lineWidth = 3
+            center.name = plate.name
+            plate.addChild(center)
+
+            let number = ArtSystem.label("\(index + 1)", size: 15)
+            number.fontName = "AvenirNext-DemiBold"
+            number.fontColor = UIColor(red: 0.97, green: 0.77, blue: 0.47, alpha: 1)
+            number.position = CGPoint(x: -37, y: 39)
             number.name = plate.name
             plate.addChild(number)
 
-            let commandGlyph = ArtSystem.label(step.glyph, size: 32)
-            commandGlyph.fontColor = .white
-            commandGlyph.position.y = 8
+            let commandGlyph = ArtSystem.label(step.glyph, size: 35)
+            commandGlyph.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.77, alpha: 1)
+            commandGlyph.position.y = 2
             commandGlyph.name = plate.name
             plate.addChild(commandGlyph)
 
-            makeAccessible(plate, label: "Command \(index + 1): \(step.title)")
+            makeAccessible(plate, label: "Gear \(index + 1): \(step.title)")
             addChild(plate)
-            registerInteraction(plate, clearance: 16)
+            registerInteraction(plate, clearance: 12)
 
-            let label = ArtSystem.label(step.title, size: 11)
-            label.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.67, alpha: 1)
-            label.position = CGPoint(x: xs[index], y: 280)
+            let label = ArtSystem.label(step.title, size: 14)
+            label.fontName = "AvenirNext-DemiBold"
+            label.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.75, alpha: 1)
+            label.position = CGPoint(x: xs[index], y: 264)
             label.name = "repairStepLabel\(index)"
             label.zPosition = 850
             addChild(label)
@@ -4995,8 +5144,8 @@ import LearningCore
         instruction.text = repairEncounter.prompt
         showAttentionCue(
             at: CGPoint(x: 760, y: 355),
-            tint: UIColor(red: 0.82, green: 0.60, blue: 0.98, alpha: 1),
-            width: 380
+            tint: UIColor(red: 0.94, green: 0.72, blue: 0.42, alpha: 1),
+            width: 385
         )
         tiko.pose(.interact)
     }
@@ -5016,8 +5165,8 @@ import LearningCore
         selectionFeedback()
         renderRepairSelection()
         instruction.text = repairSelection.count == 2
-            ? "Two commands selected. Tap FIX to swap them."
-            : "Select one more command that should trade places."
+            ? "Pull the TEST lever and watch the clockwork."
+            : "Choose one more gear to swap."
     }
 
     private func renderRepairSelection() {
@@ -5025,10 +5174,15 @@ import LearningCore
             guard let plate = childNode(withName: "repairStep\(index)") as? SKShapeNode else { continue }
             let selected = repairSelection.contains(index)
             plate.strokeColor = selected
-                ? UIColor(red: 0.52, green: 0.91, blue: 1.0, alpha: 1)
-                : UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.82)
-            plate.glowWidth = selected ? 10 : 0
-            plate.setScale(selected ? 1.04 : 1)
+                ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
+                : UIColor(red: 0.90, green: 0.70, blue: 0.41, alpha: 1)
+            plate.glowWidth = selected && !reducedMotion ? 6 : 0
+            plate.setScale(selected ? 1.05 : 1)
+            if let socket = childNode(withName: "repairSocketBase\(index)") as? SKShapeNode {
+                socket.strokeColor = selected
+                    ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
+                    : UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+            }
         }
     }
 
@@ -5071,10 +5225,7 @@ import LearningCore
                 self.successFeedback()
                 self.valkyrie.pose(.celebrate)
                 self.tiko.pose(.celebrate)
-                if let core = self.childNode(withName: "//repairLanternCore") as? SKShapeNode {
-                    core.fillColor = .systemGreen
-                    core.glowWidth = 18
-                }
+                self.setRepairMachinePowered(true)
                 self.refreshBugRepairProgress(animated: true)
 
                 if self.state.puzzleBugRepairComplete {
@@ -5092,6 +5243,7 @@ import LearningCore
                 }
             } else {
                 self.errorFeedback()
+                self.showRepairMachineMiss()
                 self.support = self.support == .independent ? .lightHint : .strongHint
                 self.valkyrie.pose(.react)
                 self.tiko.pose(.react)
@@ -5186,10 +5338,7 @@ import LearningCore
         if let cue = childNode(withName: "repairCue") as? SKLabelNode {
             cue.text = "All three plans are repaired."
         }
-        if let core = childNode(withName: "//repairLanternCore") as? SKShapeNode {
-            core.fillColor = .systemGreen
-            core.glowWidth = 18
-        }
+        setRepairMachinePowered(true)
         if childNode(withName: "repairHome") == nil {
             let home = worldControl("⌂", name: "repairHome",
                                     at: CGPoint(x: 1110, y: 175), radius: 31,
