@@ -620,12 +620,20 @@ import LearningCore
             scene.didMove(to: SKView())
             scene.valkyrie.position = CGPoint(x: 490, y: 175)
             scene.handleTap(at: CGPoint(x: 830, y: 265))
-            scene.handleTap(at: CGPoint(x: 1120, y: 250))
             let light = try XCTUnwrap(scene.childNode(withName: "castlePowerLight") as? SKShapeNode)
+            let untouchedProfile = state.profile
+            scene.handleTap(at: CGPoint(x: 1120, y: 250)) // Untouched work is not a wrong attempt.
+            XCTAssertEqual(state.profile, untouchedProfile)
+            XCTAssertEqual(light.glowWidth, 0)
+            XCTAssertNil(light.action(forKey: "gentleRetry"))
+
+            scene.handleTap(at: CGPoint(x: 595, y: 235)) // Make a real, incomplete attempt.
+            scene.handleTap(at: CGPoint(x: 1120, y: 250))
             XCTAssertEqual(light.glowWidth, 5)
             XCTAssertNotNil(light.action(forKey: "gentleRetry"))
             let target = try XCTUnwrap(state.runtime?.encounter.targetQuantity)
-            for _ in 0..<target { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
+            XCTAssertGreaterThan(target, 1)
+            for _ in 1..<target { scene.handleTap(at: CGPoint(x: 595, y: 235)) }
             scene.handleTap(at: CGPoint(x: 1120, y: 250))
             XCTAssertTrue(state.runtime?.completed == true)
             XCTAssertEqual(light.glowWidth, 16)

@@ -49,7 +49,7 @@ public struct CrystalCartModel: Codable, Equatable, Sendable {
     public mutating func apply(_ scaffold: Scaffold) { support = maxSupport(support, scaffold.support) }
     private func maxSupport(_ a: SupportLevel, _ b: SupportLevel) -> SupportLevel { a.rawValue >= b.rawValue ? a : b }
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
-        guard !completed else { return nil }
+        guard !completed, quantity != encounter.initialQuantity else { return nil }
         attempts += 1
         let correct = quantity == encounter.targetQuantity
         completed = correct
@@ -176,6 +176,7 @@ public struct PlaceValueFactoryModel: Codable, Equatable, Sendable {
             )
         }
 
+        guard selectedTens > 0 || selectedOnes > 0 else { return nil }
         attempts += 1
         let correct = selectedTens == expectedTens && selectedOnes == expectedOnes
         completed = correct
@@ -2222,7 +2223,7 @@ public struct NumberBondMachineModel: Codable, Equatable, Sendable {
     }
 
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
-        guard !completed else { return nil }
+        guard !completed, selectedPart > 0 else { return nil }
         attempts += 1
         let correct = selectedPart == correctMissingPart
         completed = correct
@@ -2301,7 +2302,8 @@ public struct TenFrameModel: Codable, Equatable, Sendable {
     }
 
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
-        guard !previewIsVisible(at: date), !completed else { return nil }
+        guard !previewIsVisible(at: date), !completed,
+              filled != encounter.initialQuantity else { return nil }
         attempts += 1
         let correct = filled == encounter.targetQuantity
         completed = correct
@@ -2444,7 +2446,7 @@ public struct MissingNumberBridgeModel: Codable, Equatable, Sendable {
     }
 
     public mutating func submit(at date: Date = Date()) -> LearningEvidence? {
-        guard !completed else { return nil }
+        guard !completed, selectedNumber > 0 else { return nil }
         attempts += 1
         let correct = selectedNumber == correctNumber
         completed = correct

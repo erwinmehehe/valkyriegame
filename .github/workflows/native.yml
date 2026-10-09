@@ -41,6 +41,10 @@ jobs:
           git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
           git diff --name-only --no-renames FETCH_HEAD HEAD | python3 scripts/verify_valkyrie_identity.py --changed-stdin
       - run: python3 scripts/validate_native.py
+      - name: Reject missing native SpriteKit image references
+        run: python3 scripts/verify_spritekit_assets.py
+      - name: Test image reference scanner
+        run: python3 -m unittest discover -s scripts -p 'test_verify_spritekit_assets.py'
 
   ipad-build-and-tests:
     needs:
