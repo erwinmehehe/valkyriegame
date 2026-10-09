@@ -128,6 +128,10 @@ import LearningCore
         }
 
         let board = try XCTUnwrap(scene.childNode(withName: "runeBoard"))
+        let gate = try XCTUnwrap(scene.childNode(withName: "puzzleGate"))
+        XCTAssertEqual(board.position.x, gate.position.x, accuracy: 0.001)
+        XCTAssertEqual(board.position.y, gate.position.y - 11, accuracy: 0.001,
+                       "The door-mounted lock must not slide down onto the steps on 4:3 iPads.")
         let housing = try XCTUnwrap(scene.childNode(withName: "//runeLockHousing"))
         let runes = board.children.filter { $0.name == "fixedRune" }
         let socket = try XCTUnwrap(scene.childNode(withName: "//runeSocket"))
