@@ -2141,6 +2141,7 @@ import LearningCore
         XCTAssertEqual(impact.position.x, choice.position.x, accuracy: 0.001)
         XCTAssertEqual(impact.position.y, 252, accuracy: 0.001,
                        "A correct reflection should reach its actual floor receiver.")
+        try await capture(scene, in: view, name: "Puzzle-Palace-Mirror-Hall-Reflected-Receiver")
 
         let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
         XCTAssertEqual(evidence.count, 1)
@@ -2287,6 +2288,7 @@ import LearningCore
         XCTAssertEqual(missImpact.position.y, 306, accuracy: 0.001,
                        "A wrong turn must cast a missed beam, not light the receiver.")
         XCTAssertEqual(missImpact.alpha, 1, accuracy: 0.001)
+        try await capture(scene, in: view, name: "Puzzle-Palace-Mirror-Hall-Missed-Reflection")
         scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
         scene.handleTap(at: wrong.position)
         try await waitUntil {
