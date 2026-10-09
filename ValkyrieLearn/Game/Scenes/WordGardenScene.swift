@@ -1449,6 +1449,8 @@ import LearningCore
         root.name = "livingGardenBeacon"
         root.position = CGPoint(x: 475, y: 465)
         root.zPosition = 850
+        let growingCount = state.lumiLivingGarden.bloomingCount
+        root.userData = NSMutableDictionary(dictionary: ["bloomingCount": growingCount])
         let bed = ArtSystem.box(
             CGSize(width: 122, height: 52),
             color: UIColor(red: 0.33, green: 0.24, blue: 0.16, alpha: 0.96),
@@ -1458,12 +1460,14 @@ import LearningCore
         bed.strokeColor = UIColor(red: 0.87, green: 0.75, blue: 0.41, alpha: 0.95)
         bed.lineWidth = 3
         root.addChild(bed)
-        let sprout = ArtSystem.label("❀", size: 38)
-        sprout.name = root.name
+        let sprout = ArtSystem.label(growingCount > 0 ? "✿" : "❀", size: 38)
+        sprout.name = growingCount > 0 ? "livingGardenAwakenedBloom" : root.name
         sprout.position.y = 10
-        sprout.fontColor = UIColor(red: 0.71, green: 0.94, blue: 0.52, alpha: 1)
+        sprout.fontColor = growingCount > 0
+            ? UIColor(red: 1, green: 0.83, blue: 0.42, alpha: 1)
+            : UIColor(red: 0.71, green: 0.94, blue: 0.52, alpha: 1)
         root.addChild(sprout)
-        let sign = ArtSystem.label("SEED PATCH", size: 13)
+        let sign = ArtSystem.label(growingCount > 0 ? "GARDEN ALIVE" : "SEED PATCH", size: 13)
         sign.name = root.name
         sign.position.y = -18
         sign.fontColor = .white
@@ -1493,7 +1497,10 @@ import LearningCore
         gardenSelectedCare = nil
         livingGardenStage?.removeFromParent()
         livingGardenStage = nil
-        childNode(withName: "livingGardenBeacon")?.isHidden = false
+        // The actual Flower Gate courtyard changes once a seed blooms. The
+        // child can see it even outside the experiment stage or after relaunch.
+        childNode(withName: "livingGardenBeacon")?.removeFromParent()
+        buildLivingGardenBeacon()
         // Resume the ordinary, unscored-interrupted encounter from the start.
         if state.flowerGateComplete {
             activateFlowerGate()
