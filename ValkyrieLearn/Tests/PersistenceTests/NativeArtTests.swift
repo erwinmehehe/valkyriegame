@@ -3080,10 +3080,14 @@ import LearningCore
         let opened = PuzzlePalaceScene(state: state)
         opened.reducedMotion = true
         view.presentScene(opened)
+        // The restored opening is the carved passage behind the moving door.
+        // The original narrow glow guide is intentionally hidden by the new art.
         let passage = try XCTUnwrap(
-            opened.childNode(withName: "//puzzleGateOpening") as? SKShapeNode
+            opened.childNode(withName: "//runeDoorOpenInterior") as? SKShapeNode
         )
+        XCTAssertFalse(passage.isHidden)
         XCTAssertEqual(passage.alpha, 1, accuracy: 0.001)
+        XCTAssertNotNil(opened.childNode(withName: "runeDoorPassage"))
         XCTAssertNotNil(opened.childNode(withName: "memoryBridgeRoute"))
         try await capture(opened, in: view, name: "Illustrated-Palace-4x3-RuneGate-Open")
         opened.willLeave()
