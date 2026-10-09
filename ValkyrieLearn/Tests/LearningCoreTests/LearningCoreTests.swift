@@ -1142,7 +1142,6 @@ final class MiloShadowWorkshopTests: XCTestCase {
     }
 }
 
-
 final class MiloWindKiteRescueTests: XCTestCase {
     func testWindStrengthAndMaterialChangeDistanceWithoutPunishingExperimentation() throws {
         var play = MiloWindKiteRescue()

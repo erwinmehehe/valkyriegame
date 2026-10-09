@@ -58,10 +58,12 @@ import SpriteKit
         CGPoint(x: 305, y: 420),
         CGPoint(x: 420, y: 400)
     ]
+    // Keep the moth among the Story Tree leaves, not on top of the
+    // Science Lab world button (previous default: 745, 575).
     private let miloShadowMothSlots = [
-        CGPoint(x: 745, y: 575),
-        CGPoint(x: 560, y: 595),
-        CGPoint(x: 350, y: 610)
+        CGPoint(x: 350, y: 615),
+        CGPoint(x: 575, y: 625),
+        CGPoint(x: 155, y: 595)
     ]
 
     override func didMove(to view: SKView) {
