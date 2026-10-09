@@ -1044,3 +1044,70 @@ final class LumiLivingGardenTests: XCTestCase {
     }
 }
 
+final class MiloShadowWorkshopTests: XCTestCase {
+    func testMovingLightChangesShadowDirectionAndHeightChangesSize() throws {
+        var play = MiloShadowWorkshop()
+        XCTAssertFalse(play.choose(.star), "Cannot mutate a workshop before discovery.")
+        XCTAssertFalse(play.moveLamp(to: 0))
+        XCTAssertFalse(play.setHeight(.low))
+        XCTAssertFalse(play.observe())
+
+        XCTAssertTrue(play.explore())
+        XCTAssertFalse(play.explore())
+        XCTAssertEqual(play.projection.direction, .middle)
+        let center = play.projection
+        XCTAssertEqual(center.horizontalOffset, 0, accuracy: 0.0001)
+        XCTAssertTrue(play.moveLamp(to: 0))
+        XCTAssertEqual(play.projection.direction, .right)
+        XCTAssertGreaterThan(play.projection.horizontalOffset, 0)
+        XCTAssertTrue(play.moveLamp(to: 4))
+        XCTAssertEqual(play.projection.direction, .left)
+        XCTAssertLessThan(play.projection.horizontalOffset, 0)
+        XCTAssertFalse(play.moveLamp(to: -1))
+        XCTAssertFalse(play.moveLamp(to: 5))
+        XCTAssertFalse(play.moveLamp(to: 4))
+        XCTAssertTrue(play.moveLamp(to: 2))
+        XCTAssertTrue(play.setHeight(.low))
+        XCTAssertGreaterThan(play.projection.scale, center.scale,
+                             "The light closer to a prop must cast a larger shadow.")
+        XCTAssertFalse(play.setHeight(.low))
+        XCTAssertTrue(play.setHeight(.high))
+        XCTAssertEqual(play.projection.scale, center.scale, accuracy: 0.0001)
+    }
+
+    func testContrastingExperimentsRevealMothButNeverCreateMastery() throws {
+        var play = MiloShadowWorkshop()
+        XCTAssertTrue(play.explore())
+        XCTAssertTrue(play.observe())
+        XCTAssertFalse(play.observe(), "Repeated identical tests are not new observations.")
+        XCTAssertFalse(play.hasFoundMoth)
+        XCTAssertTrue(play.setHeight(.low))
+        XCTAssertTrue(play.observe())
+        XCTAssertFalse(play.hasFoundMoth, "Two light heights alone are not enough.")
+        XCTAssertTrue(play.choose(.star))
+        XCTAssertTrue(play.observe())
+        XCTAssertTrue(play.hasFoundMoth, "Two heights and two shapes reveal the hidden moth.")
+        XCTAssertTrue(play.choose(.gear))
+        XCTAssertTrue(play.moveLamp(to: 4))
+        XCTAssertTrue(play.observe())
+        XCTAssertTrue(play.hasFoundMoth)
+        XCTAssertEqual(play.observations.count, 4)
+
+        let saved = try JSONEncoder().encode(play)
+        XCTAssertEqual(try JSONDecoder().decode(MiloShadowWorkshop.self, from: saved), play)
+
+        let legacy = try JSONEncoder().encode(LearnerProfile())
+        var profile = try JSONDecoder().decode(LearnerProfile.self, from: legacy)
+        XCTAssertNil(profile.miloShadowWorkshop)
+        XCTAssertTrue(profile.skills.isEmpty)
+        profile.miloShadowWorkshop = play
+        let resumed = try JSONDecoder().decode(LearnerProfile.self,
+                                               from: JSONEncoder().encode(profile))
+        XCTAssertEqual(resumed.miloShadowWorkshop, play)
+        XCTAssertTrue(resumed.skills.isEmpty,
+                      "An optional shadow toy cannot manufacture science mastery.")
+        XCTAssertFalse(resumed.hasStoryReward(.miloShadowMoth),
+                       "Only a completed AppState discovery may award the moth.")
+    }
+}
+
