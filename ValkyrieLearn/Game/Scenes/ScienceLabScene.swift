@@ -22,6 +22,20 @@ import LearningCore
     private var touchStart = CGPoint.zero
     private var moved = false
     private var lastScienceKineticReducedMotion: Bool?
+    private var shadowWorkshopMode = false
+    private var shadowDraggingLamp = false
+    private var shadowWorkshopStage: SKNode?
+    private let shadowPropTrayPoints = [
+        CGPoint(x: 412, y: 158), CGPoint(x: 610, y: 158), CGPoint(x: 808, y: 158)
+    ]
+    private let shadowHeightLeverPoint = CGPoint(x: 1088, y: 535)
+    private let shadowTestLeverPoint = CGPoint(x: 1095, y: 262)
+    private let shadowExitPoint = CGPoint(x: 1160, y: 622)
+
+    private func shadowLampPoint(_ play: MiloShadowWorkshop) -> CGPoint {
+        CGPoint(x: 420 + CGFloat(play.lampNotch) * 125,
+                y: play.height == .high ? 571 : 504)
+    }
 
     override func didMove(to view: SKView) {
         prepareAdaptiveLandscapeCanvas(for: view)
@@ -39,6 +53,7 @@ import LearningCore
         valkyrie.setScale(0.5)
         renderPlant()
         renderGate()
+        buildShadowWorkshopBeacon()
 
         if greenhouseStage == .lit && !greenhouseComplete,
            let challenge = state.scienceNextFieldStudy(in: .greenhouse) {
@@ -879,6 +894,12 @@ import LearningCore
         activeTouch = touch
         touchStart = touch.location(in: self)
         moved = false
+        if shadowWorkshopMode {
+            shadowDraggingLamp = hypot(
+                touchStart.x - shadowLampPoint(state.miloShadowWorkshop).x,
+                touchStart.y - shadowLampPoint(state.miloShadowWorkshop).y
+            ) <= 55
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -887,12 +908,19 @@ import LearningCore
         if hypot(point.x - touchStart.x, point.y - touchStart.y) > 12 {
             moved = true
         }
+        if shadowWorkshopMode && shadowDraggingLamp {
+            let notch = min(4, max(0, Int(((point.x - 420) / 125).rounded())))
+            if state.setMiloShadowLampNotch(notch) {
+                renderShadowWorkshop()
+            }
+        }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = activeTouch, touches.contains(touch) {
             activeTouch = nil
             moved = false
+            shadowDraggingLamp = false
         }
     }
 
@@ -904,6 +932,14 @@ import LearningCore
         }
 
         let point = touch.location(in: self)
+        if shadowDraggingLamp {
+            shadowDraggingLamp = false
+            let notch = min(4, max(0, Int(((point.x - 420) / 125).rounded())))
+            _ = state.setMiloShadowLampNotch(notch)
+            renderShadowWorkshop()
+            instruction.text = "Watch the shadow shift opposite the moving lamp. Try SHINE."
+            return
+        }
         guard !moved, hypot(point.x - touchStart.x, point.y - touchStart.y) <= 12 else { return }
         handleTap(at: point)
     }
@@ -935,12 +971,29 @@ import LearningCore
 
     override func willLeave() {
         activeTouch = nil
+        shadowDraggingLamp = false
+        shadowWorkshopMode = false
+        shadowWorkshopStage?.removeFromParent()
+        shadowWorkshopStage = nil
         milo.cancelTravel()
         super.willLeave()
     }
 
     func handleTap(at point: CGPoint) {
         let target = targetName(at: point)
+        if shadowWorkshopMode {
+            if target == "scienceHome" {
+                willLeave()
+                state.travel(to: .storyTree)
+            } else {
+                handleShadowWorkshopTap(at: point)
+            }
+            return
+        }
+        if target == "shadowWorkshopBeacon" {
+            enterShadowWorkshop()
+            return
+        }
 
         if greenhouseStage == .lit,
            !greenhouseComplete,
