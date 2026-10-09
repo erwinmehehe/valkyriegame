@@ -1319,7 +1319,10 @@ import LearningCore
 
         let board = SKNode()
         board.name = "runeBoard"
-        board.position = paintedDoorPoint(CGPoint(x: 949, y: 419))
+        // Keep the lock centered on the actual 4:3 painted door rather than
+        // leaving the lower row hanging over the stairs.
+        board.position = paintedDoorPoint(CGPoint(x: 949, y: 489))
+        board.position.y -= 11
         board.zPosition = 720
         addChild(board)
 
