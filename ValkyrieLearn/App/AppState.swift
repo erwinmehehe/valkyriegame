@@ -365,6 +365,15 @@ import LearningCore
     }
 
     @discardableResult
+    func swapStarlightBridgeCrystals(_ first: Int, _ second: Int) -> Bool {
+        var quest = starlightBridgeQuest
+        guard quest.swapInstalledCrystals(first, second) else { return false }
+        profile.starlightBridgeQuest = quest
+        persist()
+        return true
+    }
+
+    @discardableResult
     func discoverHiddenStarlightStar() -> Bool {
         var quest = starlightBridgeQuest
         guard quest.discoverHiddenStar() else { return false }
