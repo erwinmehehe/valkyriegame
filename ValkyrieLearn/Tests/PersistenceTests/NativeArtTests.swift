@@ -3007,6 +3007,10 @@ import LearningCore
         for index in repairEncounter.swapIndices {
             let step = try XCTUnwrap(repairLab.childNode(withName: "repairStep\(index)"))
             repairLab.handleTap(at: step.position)
+            XCTAssertEqual(step.position.y, 373, accuracy: 0.001,
+                           "Selected repair gears must lift physically from their sockets.")
+            XCTAssertEqual(step.xScale, 1, accuracy: 0.001,
+                           "Selection must not simply enlarge a flat answer icon.")
         }
         let fixGear = try XCTUnwrap(repairLab.childNode(withName: "repairFix"))
         repairLab.handleTap(at: fixGear.position)
