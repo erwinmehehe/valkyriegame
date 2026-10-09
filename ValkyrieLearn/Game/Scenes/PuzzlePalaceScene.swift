@@ -864,16 +864,24 @@ import LearningCore
 
         // Illustration supplies masonry and depth. Native lights and physical
         // puzzle mechanics remain separate so they can react to the child.
-        let quietScenery: Set<String> = [
+        // The approved painting already contains the complete room. Legacy
+        // synthetic architecture and floating crystal decorations made a second,
+        // visibly disconnected room above it. Retain nodes for older native
+        // structure/regression checks, but never draw the duplicate decoration.
+        let paintedScenery: Set<String> = [
             "puzzleArchitecture", "puzzleUpperVault", "puzzleVaultCornice",
             "puzzleFloor", "puzzleFloorTexture", "puzzlePillar",
-            "decorativePuzzlePillarCap", "puzzleRoomIdentity"
+            "decorativePuzzlePillarCap", "puzzleRoomIdentity",
+            "puzzleStageDais", "puzzleStageInlay", "puzzleFloorSeal",
+            "puzzleCrystalFixture", "decorativePuzzleCrystalHalo",
+            "decorativePuzzleVaultGem", "decorativePuzzleKeystone"
         ]
         for node in children {
             guard let name = node.name else { continue }
-            if quietScenery.contains(name) || name.hasPrefix("puzzleAlcove")
-                || name.hasPrefix("puzzleVaultRib") {
-                node.alpha = min(node.alpha, 0.10)
+            if paintedScenery.contains(name) || name.hasPrefix("puzzleAlcove")
+                || name.hasPrefix("puzzleVaultRib")
+                || name.hasPrefix("puzzleCrystalSconce") {
+                node.isHidden = true
             }
         }
     }
@@ -1099,46 +1107,135 @@ import LearningCore
         addChild(root)
     }
 
+    // One set of stone-and-brass tools is reused across the palace. These are
+    // physical SpriteKit shapes, not text-only UI floating above the paintings.
+    private func palaceCog(
+        radius: CGFloat,
+        teeth: Int,
+        fill: UIColor,
+        stroke: UIColor
+    ) -> SKShapeNode {
+        let path = CGMutablePath()
+        for index in 0..<(teeth * 4) {
+            let angle = CGFloat(index) * .pi / CGFloat(teeth * 2)
+            let outer = index % 4 == 0 || index % 4 == 1
+            let distance = outer ? radius : radius * 0.87
+            let point = CGPoint(x: cos(angle) * distance, y: sin(angle) * distance)
+            if index == 0 {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
+        }
+        path.closeSubpath()
+        let cog = SKShapeNode(path: path)
+        cog.fillColor = fill
+        cog.strokeColor = stroke
+        cog.lineWidth = 3
+        return cog
+    }
+
+    // The approved 16:9 painting is aspect-filled on a 4:3 iPad.
+    // Follow its doorway when fitting native lock pieces on either surface.
+    private func paintedDoorPoint(_ point: CGPoint) -> CGPoint {
+        let scale = max(1, size.height / designCanvasSize.height)
+        return CGPoint(
+            x: 640 + (point.x - 640) * scale,
+            y: 360 + (point.y - 360) * scale
+        )
+    }
+
     private func buildRuneGate() {
-        let arch = SKShapeNode(rectOf: CGSize(width: 154, height: 232), cornerRadius: 70)
-        arch.fillColor = UIColor(red: 0.10, green: 0.09, blue: 0.23, alpha: 0.72)
-        arch.strokeColor = UIColor(red: 0.69, green: 0.58, blue: 0.95, alpha: 0.86)
+        // Follow the doorway in the painted background instead of drawing a
+        // second, oversized purple cartoon portal to its right.
+        let arch = SKShapeNode(
+            rectOf: CGSize(width: 168, height: 238),
+            cornerRadius: 74
+        )
+        arch.fillColor = .clear
+        arch.strokeColor = UIColor(red: 0.88, green: 0.70, blue: 0.37, alpha: 0.035)
         arch.lineWidth = 5
-        arch.position = CGPoint(x: 1090, y: 376)
+        arch.position = paintedDoorPoint(CGPoint(x: 949, y: 489))
         arch.name = "puzzleGate"
         arch.zPosition = 360
         addChild(arch)
 
-        let door = SKShapeNode(rectOf: CGSize(width: 102, height: 160), cornerRadius: 46)
-        door.fillColor = UIColor(red: 0.055, green: 0.05, blue: 0.14, alpha: 0.94)
-        door.strokeColor = UIColor(red: 0.46, green: 0.55, blue: 0.86, alpha: 0.64)
-        door.lineWidth = 3
-        door.position.y = -18
+        // An actual opening is revealed on solving the final lock. The
+        // illustrated (closed) door underneath is then occluded by the passage.
+        let passage = SKShapeNode(
+            rectOf: CGSize(width: 32, height: 153),
+            cornerRadius: 15
+        )
+        passage.position.y = -11
+        passage.fillColor = UIColor(red: 1, green: 0.84, blue: 0.53, alpha: 0.82)
+        passage.strokeColor = UIColor(red: 1, green: 0.92, blue: 0.64, alpha: 0.68)
+        passage.lineWidth = 4
+        passage.alpha = 0
+        passage.name = "puzzleGateOpening"
+        passage.zPosition = -2
+        arch.addChild(passage)
+
+        let door = SKShapeNode(
+            rectOf: CGSize(width: 134, height: 188),
+            cornerRadius: 56
+        )
+        door.fillColor = .clear
+        door.strokeColor = UIColor(red: 0.84, green: 0.62, blue: 0.37, alpha: 0.045)
+        door.lineWidth = 2
+        door.position.y = -11
         door.name = "puzzleGateDoor"
         arch.addChild(door)
 
+        // Brass hinges and the actual lock make the affordance part of the
+        // illustrated door. These pieces retreat with the door when it opens.
+        for y in [CGFloat(-58), 60] {
+            let hinge = SKShapeNode(rectOf: CGSize(width: 116, height: 6), cornerRadius: 3)
+            hinge.fillColor = UIColor(red: 0.48, green: 0.34, blue: 0.20, alpha: 0.72)
+            hinge.strokeColor = UIColor(red: 0.83, green: 0.66, blue: 0.37, alpha: 0.86)
+            hinge.lineWidth = 1.5
+            hinge.position.y = y
+            hinge.name = "decorativeRuneDoorHinge"
+            door.addChild(hinge)
+        }
+
+        let lock = palaceCog(
+            radius: 25, teeth: 8,
+            fill: UIColor(red: 0.29, green: 0.21, blue: 0.24, alpha: 0.96),
+            stroke: UIColor(red: 0.86, green: 0.70, blue: 0.43, alpha: 1)
+        )
+        lock.name = "puzzleGateLock"
+        lock.zPosition = 3
+        lock.position.y = -14
+        door.addChild(lock)
+
+        let keyhole = SKShapeNode(circleOfRadius: 10)
+        keyhole.fillColor = UIColor(red: 0.10, green: 0.075, blue: 0.14, alpha: 1)
+        keyhole.strokeColor = UIColor(red: 0.98, green: 0.81, blue: 0.48, alpha: 0.82)
+        keyhole.lineWidth = 2
+        keyhole.name = "puzzleGateKeyhole"
+        lock.addChild(keyhole)
+
         let crown = SKShapeNode(path: {
-            let p = CGMutablePath()
-            p.move(to: CGPoint(x: 0, y: 18))
-            p.addLine(to: CGPoint(x: -15, y: 0))
-            p.addLine(to: CGPoint(x: 0, y: -18))
-            p.addLine(to: CGPoint(x: 15, y: 0))
-            p.closeSubpath()
-            return p
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: 15))
+            path.addLine(to: CGPoint(x: -12, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -15))
+            path.addLine(to: CGPoint(x: 12, y: 0))
+            path.closeSubpath()
+            return path
         }())
-        crown.position.y = 86
-        crown.fillColor = UIColor(red: 0.42, green: 0.72, blue: 1.0, alpha: 0.76)
-        crown.strokeColor = UIColor(red: 0.93, green: 0.72, blue: 0.34, alpha: 0.92)
-        crown.lineWidth = 3
-        crown.glowWidth = reducedMotion ? 0 : 4
+        crown.position.y = 91
+        crown.fillColor = UIColor(red: 0.78, green: 0.57, blue: 0.26, alpha: 0.98)
+        crown.strokeColor = UIColor(red: 0.98, green: 0.85, blue: 0.51, alpha: 0.98)
+        crown.lineWidth = 2
         crown.name = "puzzleGateCrest"
         arch.addChild(crown)
 
-        let threshold = SKShapeNode(ellipseOf: CGSize(width: 150, height: 28))
-        threshold.fillColor = UIColor(red: 0.16, green: 0.12, blue: 0.26, alpha: 0.78)
-        threshold.strokeColor = UIColor(red: 0.77, green: 0.58, blue: 0.28, alpha: 0.54)
+        let threshold = SKShapeNode(ellipseOf: CGSize(width: 152, height: 19))
+        threshold.fillColor = UIColor(red: 0.30, green: 0.18, blue: 0.14, alpha: 0.28)
+        threshold.strokeColor = UIColor(red: 0.87, green: 0.69, blue: 0.39, alpha: 0.65)
         threshold.lineWidth = 2
-        threshold.position = CGPoint(x: 1090, y: 246)
+        threshold.position = paintedDoorPoint(CGPoint(x: 949, y: 262))
         threshold.name = "decorativeRuneGateThreshold"
         threshold.zPosition = 345
         addChild(threshold)
@@ -1193,31 +1290,31 @@ import LearningCore
 
         let board = SKNode()
         board.name = "runeBoard"
-        board.position = CGPoint(x: 710, y: 430)
+        board.position = paintedDoorPoint(CGPoint(x: 947, y: 408))
         board.zPosition = 720
         addChild(board)
 
-        let threadPath = CGMutablePath()
-        threadPath.move(to: CGPoint(x: -220, y: -10))
-        threadPath.addCurve(
-            to: CGPoint(x: 220, y: -10),
-            control1: CGPoint(x: -80, y: -34),
-            control2: CGPoint(x: 80, y: -34)
+        // The carved runes seat along a narrow lock rail in the painted door.
+        // This is not a giant multiple-choice sign in the middle of the room.
+        let housing = SKShapeNode(
+            rectOf: CGSize(width: 335, height: 16), cornerRadius: 7
         )
-        let thread = SKShapeNode(path: threadPath)
-        thread.strokeColor = UIColor(red: 0.58, green: 0.72, blue: 1.0, alpha: 0.22)
-        thread.lineWidth = 3
-        thread.name = "decorativeRuneThread"
-        board.addChild(thread)
+        housing.fillColor = UIColor(red: 0.47, green: 0.32, blue: 0.20, alpha: 0.86)
+        housing.strokeColor = UIColor(red: 0.87, green: 0.69, blue: 0.40, alpha: 0.90)
+        housing.lineWidth = 2
+        housing.position.y = -29
+        housing.name = "runeLockHousing"
+        housing.zPosition = -3
+        board.addChild(housing)
 
         for (index, rune) in encounter.fixedRunes.enumerated() {
             let stone = runeStone(rune, name: "fixedRune")
-            stone.position = CGPoint(x: CGFloat(index - 1) * 108 - 58, y: 0)
+            stone.position = CGPoint(x: CGFloat(index) * 79 - 118, y: 0)
             board.addChild(stone)
         }
 
         let socket = runeSocket()
-        socket.position = CGPoint(x: 166, y: 0)
+        socket.position = CGPoint(x: 118, y: 0)
         socket.name = "runeSocket"
         board.addChild(socket)
 
@@ -1227,6 +1324,7 @@ import LearningCore
             pedestal.name = "runeChoice"
             pedestal.userData = NSMutableDictionary(dictionary: ["choice": choice])
             addChild(pedestal)
+            registerInteraction(pedestal, clearance: 12)
         }
 
         showAttentionCue(
@@ -1236,72 +1334,87 @@ import LearningCore
         )
     }
 
-    private func runeStone(_ rune: String, name: String) -> SKNode {
-        let stone = ArtSystem.medallion(
-            radius: 38,
-            fill: UIColor(red: 0.19, green: 0.15, blue: 0.31, alpha: 0.94),
-            stroke: UIColor(red: 0.73, green: 0.61, blue: 0.94, alpha: 0.72),
-            glow: reducedMotion ? 0 : 2
+    private func runeStone(_ rune: String, name: String) -> SKShapeNode {
+        let stone = SKShapeNode(
+            rectOf: CGSize(width: 62, height: 68),
+            cornerRadius: 16
         )
+        stone.fillColor = UIColor(red: 0.39, green: 0.29, blue: 0.29, alpha: 1)
+        stone.strokeColor = UIColor(red: 0.91, green: 0.75, blue: 0.48, alpha: 0.94)
+        stone.lineWidth = 3
         stone.name = name
 
-        let glyph = ArtSystem.label(rune, size: 35)
-        glyph.fontColor = UIColor(red: 1.0, green: 0.89, blue: 0.49, alpha: 1)
+        let inset = SKShapeNode(
+            rectOf: CGSize(width: 49, height: 55),
+            cornerRadius: 12
+        )
+        inset.fillColor = UIColor(red: 0.21, green: 0.155, blue: 0.21, alpha: 1)
+        inset.strokeColor = UIColor(red: 0.64, green: 0.48, blue: 0.35, alpha: 0.87)
+        inset.lineWidth = 2
+        inset.name = name
+        stone.addChild(inset)
+
+        let glyph = ArtSystem.label(rune, size: 30)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.85, blue: 0.52, alpha: 1)
         glyph.name = name
         stone.addChild(glyph)
-
-        let foot = SKShapeNode(ellipseOf: CGSize(width: 72, height: 16))
-        foot.fillColor = UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.74)
-        foot.strokeColor = UIColor(red: 0.75, green: 0.57, blue: 0.27, alpha: 0.32)
-        foot.lineWidth = 1.5
-        foot.position.y = -46
-        foot.name = name
-        stone.addChild(foot)
         return stone
     }
 
-    private func runeSocket() -> SKNode {
-        let socket = ArtSystem.medallion(
-            radius: 38,
-            fill: UIColor(red: 0.055, green: 0.045, blue: 0.12, alpha: 0.94),
-            stroke: UIColor(red: 0.66, green: 0.59, blue: 0.88, alpha: 0.70),
-            glow: reducedMotion ? 0 : 3
+    private func runeSocket() -> SKShapeNode {
+        let socket = SKShapeNode(
+            rectOf: CGSize(width: 62, height: 68),
+            cornerRadius: 16
         )
+        socket.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.14, alpha: 1)
+        socket.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.40, alpha: 0.96)
+        socket.lineWidth = 4
         socket.name = "runeSocket"
 
-        let mark = ArtSystem.label("?", size: 32)
-        mark.fontColor = UIColor(red: 0.84, green: 0.79, blue: 0.95, alpha: 0.92)
+        let inlay = SKShapeNode(
+            rectOf: CGSize(width: 48, height: 54),
+            cornerRadius: 11
+        )
+        inlay.fillColor = UIColor(red: 0.075, green: 0.055, blue: 0.10, alpha: 1)
+        inlay.strokeColor = UIColor(red: 0.48, green: 0.34, blue: 0.28, alpha: 0.86)
+        inlay.lineWidth = 2
+        inlay.name = "runeSocketInlay"
+        socket.addChild(inlay)
+
+        let mark = ArtSystem.label("?", size: 29)
+        mark.fontColor = UIColor(red: 0.99, green: 0.83, blue: 0.54, alpha: 1)
         mark.name = "runeSocketMark"
         socket.addChild(mark)
         return socket
     }
 
-    private func runeChoice(_ rune: String, index: Int) -> SKNode {
-        let node = ArtSystem.medallion(
-            radius: 45,
-            fill: UIColor(
-                red: 0.18 + CGFloat(index) * 0.015,
-                green: 0.13,
-                blue: 0.30,
-                alpha: 0.94
-            ),
-            stroke: UIColor(red: 0.73, green: 0.61, blue: 0.94, alpha: 0.72),
-            glow: reducedMotion ? 0 : 2
+    private func runeChoice(_ rune: String, index: Int) -> SKShapeNode {
+        let stone = runeStone(rune, name: "runeChoice")
+        stone.setScale(1.19)
+        stone.fillColor = UIColor(red: 0.43, green: 0.31, blue: 0.23, alpha: 1)
+
+        // The selectable piece rests on a low stone plinth at floor level.
+        let ledge = SKShapeNode(
+            rectOf: CGSize(width: 94, height: 21),
+            cornerRadius: 7
         )
-        node.name = "runeChoice"
+        ledge.position.y = -50
+        ledge.fillColor = UIColor(red: 0.29, green: 0.22, blue: 0.22, alpha: 0.98)
+        ledge.strokeColor = UIColor(red: 0.88, green: 0.70, blue: 0.44, alpha: 0.85)
+        ledge.lineWidth = 2
+        ledge.name = "runeChoice"
+        stone.addChild(ledge)
 
-        let glyph = ArtSystem.label(rune, size: 37)
-        glyph.fontColor = UIColor(red: 1.0, green: 0.89, blue: 0.49, alpha: 1)
-        glyph.name = "runeChoice"
-        node.addChild(glyph)
-
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: 92, height: 18))
-        shadow.fillColor = UIColor(red: 0.04, green: 0.03, blue: 0.09, alpha: 0.26)
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 114, height: 22))
+        shadow.fillColor = UIColor(red: 0.13, green: 0.075, blue: 0.11, alpha: 0.31)
         shadow.strokeColor = .clear
-        shadow.position.y = -52
+        shadow.position.y = -66
+        shadow.zPosition = -2
         shadow.name = "runeChoice"
-        node.addChild(shadow)
-        return node
+        stone.addChild(shadow)
+
+        makeAccessible(stone, label: "Place the \(rune) rune in the palace lock")
+        return stone
     }
 
     private func clearRuneObjects() {
@@ -1311,83 +1424,102 @@ import LearningCore
     }
 
     private func buildMemoryBridgeWorld() {
-        let chasm = SKShapeNode(ellipseOf: CGSize(width: 735, height: 210))
-        chasm.fillColor = UIColor(red: 0.025, green: 0.018, blue: 0.070, alpha: 0.16)
-        chasm.strokeColor = UIColor(red: 0.40, green: 0.31, blue: 0.62, alpha: 0.50)
-        chasm.lineWidth = 5
-        chasm.position = CGPoint(x: 760, y: 405)
+        // A broken crossing in the palace floor, not four UI rectangles in
+        // front of the waterfall. The four stones form one continuous deck.
+        let voidPath = CGMutablePath()
+        voidPath.move(to: CGPoint(x: 393, y: 294))
+        voidPath.addLine(to: CGPoint(x: 478, y: 376))
+        voidPath.addLine(to: CGPoint(x: 1054, y: 376))
+        voidPath.addLine(to: CGPoint(x: 1126, y: 294))
+        voidPath.addLine(to: CGPoint(x: 1056, y: 211))
+        voidPath.addLine(to: CGPoint(x: 465, y: 211))
+        voidPath.closeSubpath()
+        let chasm = SKShapeNode(path: voidPath)
+        chasm.fillColor = UIColor(red: 0.035, green: 0.025, blue: 0.09, alpha: 0.89)
+        chasm.strokeColor = UIColor(red: 0.54, green: 0.45, blue: 0.67, alpha: 0.83)
+        chasm.lineWidth = 6
         chasm.name = "memoryChasm"
-        chasm.zPosition = 110
+        chasm.zPosition = 235
         addChild(chasm)
 
-        let innerVoid = SKShapeNode(ellipseOf: CGSize(width: 610, height: 150))
-        innerVoid.fillColor = UIColor(red: 0.01, green: 0.008, blue: 0.04, alpha: 0.18)
-        innerVoid.strokeColor = .clear
-        innerVoid.position = CGPoint(x: 760, y: 405)
-        innerVoid.zPosition = 112
-        addChild(innerVoid)
-
-        let mist = ArtSystem.label("✦     ·     ✦     ·     ✦", size: 27)
-        mist.fontColor = UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.34)
-        mist.position = CGPoint(x: 760, y: 405)
-        mist.name = "memoryChasmMist"
-        mist.zPosition = 120
-        addChild(mist)
+        let depth = SKShapeNode(ellipseOf: CGSize(width: 535, height: 73))
+        depth.position = CGPoint(x: 760, y: 264)
+        depth.fillColor = UIColor(red: 0.28, green: 0.19, blue: 0.41, alpha: 0.27)
+        depth.strokeColor = .clear
+        depth.name = "memoryChasmDepth"
+        depth.zPosition = 237
+        addChild(depth)
 
         for index in 0..<4 {
-            let plank = ArtSystem.panel(
-                CGSize(width: 112, height: 58),
-                fill: UIColor(red: 0.21, green: 0.15, blue: 0.34, alpha: 0.78),
-                stroke: UIColor(red: 0.58, green: 0.47, blue: 0.82, alpha: 0.54),
-                radius: 15,
-                lineWidth: 3,
-                shadowAlpha: 0.20
+            let plank = SKShapeNode(
+                rectOf: CGSize(width: 161, height: 107),
+                cornerRadius: 12
             )
-            plank.position = CGPoint(x: 545 + CGFloat(index) * 145, y: 375)
+            plank.fillColor = UIColor(red: 0.32, green: 0.27, blue: 0.41, alpha: 1)
+            plank.strokeColor = UIColor(red: 0.73, green: 0.61, blue: 0.52, alpha: 0.85)
+            plank.lineWidth = 4
+            plank.position = CGPoint(x: 532 + CGFloat(index) * 151, y: 292)
             plank.yScale = 0.58
-            plank.alpha = 0.55
+            plank.alpha = 0.48
             plank.name = "memoryBridgePlank\(index)"
             plank.zPosition = 270
             addChild(plank)
+
+            let lip = SKShapeNode(
+                rectOf: CGSize(width: 145, height: 13), cornerRadius: 3
+            )
+            lip.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.24, alpha: 1)
+            lip.strokeColor = UIColor(red: 0.81, green: 0.66, blue: 0.43, alpha: 0.91)
+            lip.lineWidth = 2
+            lip.position.y = -43
+            lip.name = "memoryPlankFrontEdge"
+            plank.addChild(lip)
+
+            let inset = SKShapeNode(
+                rectOf: CGSize(width: 140, height: 69), cornerRadius: 9
+            )
+            inset.fillColor = UIColor(red: 0.37, green: 0.31, blue: 0.49, alpha: 1)
+            inset.strokeColor = UIColor(red: 0.88, green: 0.75, blue: 0.54, alpha: 0.75)
+            inset.lineWidth = 2
+            inset.position.y = 6
+            inset.name = "memoryPlankCarvedStone"
+            plank.addChild(inset)
+
+            for x in [CGFloat(-50), 50] {
+                let bolt = SKShapeNode(circleOfRadius: 5)
+                bolt.position = CGPoint(x: x, y: 3)
+                bolt.fillColor = UIColor(red: 0.92, green: 0.77, blue: 0.48, alpha: 1)
+                bolt.strokeColor = UIColor(red: 0.31, green: 0.22, blue: 0.25, alpha: 1)
+                bolt.lineWidth = 1
+                bolt.name = "memoryPlankBolt"
+                plank.addChild(bolt)
+            }
         }
 
         for x in [CGFloat(420), CGFloat(1100)] {
-            let anchor = ArtSystem.medallion(
-                radius: 28,
-                fill: UIColor(red: 0.16, green: 0.11, blue: 0.28, alpha: 0.92),
-                stroke: UIColor(red: 0.68, green: 0.56, blue: 0.92, alpha: 0.72),
-                glow: reducedMotion ? 0 : 3
+            let bank = SKShapeNode(
+                rectOf: CGSize(width: 76, height: 131), cornerRadius: 13
             )
-            anchor.position = CGPoint(x: x, y: 395)
-            anchor.zPosition = 275
-            anchor.addChild(ArtSystem.label("◈", size: 24))
-            addChild(anchor)
+            bank.fillColor = UIColor(red: 0.38, green: 0.32, blue: 0.44, alpha: 0.95)
+            bank.strokeColor = UIColor(red: 0.76, green: 0.61, blue: 0.40, alpha: 1)
+            bank.lineWidth = 4
+            bank.position = CGPoint(x: x, y: 289)
+            bank.zPosition = 265
+            bank.name = "memoryBridgeBank"
+            addChild(bank)
         }
 
         for index in 0..<PuzzlePalaceEncounterCatalog.memoryBridge.count {
             let light = ArtSystem.medallion(
-                radius: 15,
+                radius: 13,
                 fill: UIColor(red: 0.20, green: 0.14, blue: 0.32, alpha: 0.96),
-                stroke: UIColor(red: 0.66, green: 0.56, blue: 0.92, alpha: 0.72)
+                stroke: UIColor(red: 0.79, green: 0.63, blue: 0.46, alpha: 0.72)
             )
             light.position = CGPoint(x: 1010 + CGFloat(index) * 58, y: 555)
             light.name = "memoryProgress\(index)"
             light.zPosition = 520
             addChild(light)
         }
-
-        let startMarker = ArtSystem.plaque(
-            CGSize(width: 82, height: 30),
-            fill: UIColor(red: 0.09, green: 0.07, blue: 0.18, alpha: 0.86),
-            stroke: UIColor(red: 0.66, green: 0.55, blue: 0.90, alpha: 0.56),
-            radius: 14
-        )
-        startMarker.position = CGPoint(x: 345, y: 355)
-        startMarker.zPosition = 320
-        let markerLabel = ArtSystem.label("TIKO", size: 12)
-        markerLabel.fontColor = UIColor(red: 0.88, green: 0.80, blue: 1.0, alpha: 1)
-        startMarker.addChild(markerLabel)
-        addChild(startMarker)
     }
 
     private func buildMemoryEncounter() {
@@ -1415,7 +1547,14 @@ import LearningCore
     private func memoryPad(_ symbol: String, index: Int) -> SKNode {
         let root = SKNode()
         root.name = "memoryPad"
+        // These physical rune controls must render above the newly raised
+        // 3D bridge deck and chasm. Otherwise SpriteKit hit-testing selects
+        // the stone scenery and a child's input is silently ignored.
+        root.zPosition = 900
         root.userData = NSMutableDictionary(dictionary: ["symbol": symbol])
+        let runeName = ["★": "star", "☾": "moon", "◆": "diamond", "●": "circle"][symbol]
+            ?? "symbol"
+        makeAccessible(root, label: "Memory rune: \(runeName)")
 
         let stone = ArtSystem.medallion(
             radius: 47,
@@ -1685,9 +1824,29 @@ import LearningCore
         }
 
         if let chasm = childNode(withName: "memoryChasm") as? SKShapeNode {
-            chasm.strokeColor = UIColor(red: 0.72, green: 0.62, blue: 0.96, alpha: 0.92)
-            chasm.glowWidth = 9
+            chasm.strokeColor = UIColor(red: 0.84, green: 0.68, blue: 0.46, alpha: 1)
+            chasm.glowWidth = reducedMotion ? 0 : 2
             chasm.name = "memoryBridgeRestored"
+        }
+        // Long side rails make the four touching stones read as a single
+        // crossing. Kept non-interactive so existing touch routing is stable.
+        if childNode(withName: "memoryBridgeJoinedRail") == nil {
+            let joined = SKNode()
+            joined.name = "memoryBridgeJoinedRail"
+            joined.zPosition = 281
+            for y in [CGFloat(352), 231] {
+                let rail = SKShapeNode(
+                    rectOf: CGSize(width: 605, height: 10),
+                    cornerRadius: 5
+                )
+                rail.fillColor = UIColor(red: 0.68, green: 0.48, blue: 0.27, alpha: 1)
+                rail.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.46, alpha: 1)
+                rail.lineWidth = 2
+                rail.position = CGPoint(x: 758, y: y)
+                rail.name = "memoryDeckRailing"
+                joined.addChild(rail)
+            }
+            addChild(joined)
         }
 
         tiko.pose(.celebrate)
@@ -3646,76 +3805,58 @@ import LearningCore
 
 
     private func buildPathTilesWorld() {
-        // A compact stone dais makes the grid feel like part of Puzzle Palace
-        // instead of a full-screen modal panel.
-        let daisShadow = SKShapeNode(
-            rectOf: CGSize(width: 430, height: 300),
-            cornerRadius: 32
-        )
-        daisShadow.fillColor = UIColor.black.withAlphaComponent(0.10)
-        daisShadow.strokeColor = .clear
-        daisShadow.position = CGPoint(x: 766, y: 392)
-        daisShadow.zPosition = 96
-        addChild(daisShadow)
+        // The map is now an in-world stone crossing on the floor rather than
+        // a blue classroom grid hanging over a painted palace wall.
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 500, height: 296))
+        shadow.fillColor = UIColor(red: 0.07, green: 0.055, blue: 0.13, alpha: 0.27)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 760, y: 288)
+        shadow.zPosition = 96
+        shadow.name = "pathFloorShadow"
+        addChild(shadow)
 
-        let chamber = SKShapeNode(
-            rectOf: CGSize(width: 410, height: 282),
-            cornerRadius: 26
-        )
-        chamber.fillColor = UIColor(red: 0.12, green: 0.16, blue: 0.24, alpha: 0.26)
-        chamber.strokeColor = UIColor(red: 0.56, green: 0.76, blue: 0.82, alpha: 0.72)
-        chamber.lineWidth = 3
-        chamber.position = CGPoint(x: 760, y: 402)
+        let chamber = SKShapeNode(ellipseOf: CGSize(width: 448, height: 278))
+        chamber.fillColor = UIColor(red: 0.20, green: 0.17, blue: 0.27, alpha: 0.38)
+        chamber.strokeColor = UIColor(red: 0.76, green: 0.59, blue: 0.39, alpha: 0.68)
+        chamber.lineWidth = 4
+        chamber.position = CGPoint(x: 760, y: 295)
         chamber.name = "pathTilesChamber"
         chamber.zPosition = 100
         addChild(chamber)
 
-        let threshold = ArtSystem.box(
-            CGSize(width: 360, height: 18),
-            color: UIColor(red: 0.48, green: 0.38, blue: 0.22, alpha: 0.95),
-            radius: 6
-        )
-        threshold.strokeColor = UIColor(red: 0.86, green: 0.70, blue: 0.36, alpha: 0.78)
-        threshold.lineWidth = 2
-        threshold.position = CGPoint(x: 760, y: 250)
-        threshold.zPosition = 110
-        addChild(threshold)
+        let stoneRim = SKShapeNode(ellipseOf: CGSize(width: 412, height: 246))
+        stoneRim.fillColor = .clear
+        stoneRim.strokeColor = UIColor(red: 0.97, green: 0.81, blue: 0.55, alpha: 0.25)
+        stoneRim.lineWidth = 3
+        stoneRim.position = CGPoint(x: 760, y: 298)
+        stoneRim.name = "pathFloorStoneRim"
+        stoneRim.zPosition = 105
+        addChild(stoneRim)
 
-        let title = ArtSystem.label("PLAN THE PATH", size: 22)
-        title.fontColor = UIColor(red: 0.92, green: 0.96, blue: 1.0, alpha: 0.96)
+        let title = ArtSystem.label("HELP TIKO CROSS", size: 20)
+        title.fontColor = UIColor(red: 1, green: 0.91, blue: 0.72, alpha: 0.96)
         title.name = "pathTilesTitle"
-        title.position = CGPoint(x: 760, y: 575)
+        title.position = CGPoint(x: 760, y: 504)
         title.zPosition = 800
         addChild(title)
 
-        // Progress is mounted as palace lamps rather than floating HUD dots.
+        // Carved progress studs are mounted beside the real floor crossing.
         for index in 0..<PuzzlePalaceEncounterCatalog.pathTileFamilies.count {
-            let x = 690 + CGFloat(index) * 70
-
-            let bracket = SKShapeNode(
-                rectOf: CGSize(width: 8, height: 24),
-                cornerRadius: 3
-            )
-            bracket.fillColor = UIColor(red: 0.58, green: 0.46, blue: 0.28, alpha: 0.95)
-            bracket.strokeColor = .clear
-            bracket.position = CGPoint(x: x, y: 548)
-            bracket.zPosition = 815
-            addChild(bracket)
-
-            let light = SKShapeNode(circleOfRadius: 13)
-            light.fillColor = UIColor(red: 0.18, green: 0.24, blue: 0.34, alpha: 1)
-            light.strokeColor = UIColor(red: 0.56, green: 0.82, blue: 0.90, alpha: 0.88)
-            light.lineWidth = 3
-            light.position = CGPoint(x: x, y: 531)
-            light.name = "pathProgress\(index)"
-            light.zPosition = 820
-            addChild(light)
+            let stud = SKShapeNode(circleOfRadius: 12)
+            stud.fillColor = UIColor(red: 0.29, green: 0.21, blue: 0.23, alpha: 1)
+            stud.strokeColor = UIColor(red: 0.91, green: 0.74, blue: 0.47, alpha: 0.95)
+            stud.lineWidth = 3
+            stud.position = CGPoint(x: 690 + CGFloat(index) * 70, y: 475)
+            stud.name = "pathProgress\(index)"
+            stud.zPosition = 820
+            addChild(stud)
         }
 
-        let routeHeader = ArtSystem.label("CHOOSE A ROUTE", size: 16)
-        routeHeader.fontColor = UIColor(red: 1.0, green: 0.87, blue: 0.52, alpha: 0.94)
-        routeHeader.position = CGPoint(x: 1100, y: 390)
+        let routeHeader = ArtSystem.label("PICK A STONE TRAIL", size: 16)
+        routeHeader.fontColor = UIColor(red: 1, green: 0.88, blue: 0.60, alpha: 0.97)
+        routeHeader.position = CGPoint(x: 1090, y: 393)
         routeHeader.zPosition = 820
+        routeHeader.name = "pathTrailHeader"
         addChild(routeHeader)
 
         let back = worldControl("‹", name: "mirrorHallBack",
@@ -3737,42 +3878,60 @@ import LearningCore
         root.zPosition = 900
         root.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
 
-        let rail = ArtSystem.box(
-            CGSize(width: 285, height: 64),
-            color: UIColor(red: 0.16, green: 0.13, blue: 0.23, alpha: 0.94),
-            radius: 12
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 293, height: 26))
+        shadow.position.y = -31
+        shadow.fillColor = UIColor(red: 0.08, green: 0.05, blue: 0.11, alpha: 0.29)
+        shadow.strokeColor = .clear
+        shadow.zPosition = -2
+        shadow.name = name
+        root.addChild(shadow)
+
+        // Each route is a linked collection of sculpted stone pieces on a low
+        // workbench, not an A/B/C answer button in a translucent rectangle.
+        let bench = SKShapeNode(
+            rectOf: CGSize(width: 286, height: 70), cornerRadius: 16
         )
-        rail.strokeColor = UIColor(red: 0.78, green: 0.62, blue: 0.34, alpha: 0.86)
-        rail.lineWidth = 2
-        rail.name = name
-        root.addChild(rail)
+        bench.fillColor = UIColor(red: 0.42, green: 0.32, blue: 0.33, alpha: 0.96)
+        bench.strokeColor = UIColor(red: 0.92, green: 0.72, blue: 0.43, alpha: 1)
+        bench.lineWidth = 3
+        bench.name = name
+        root.addChild(bench)
 
-        let option = ArtSystem.label(["I", "II", "III"][index], size: 15)
-        option.fontColor = UIColor(red: 1.0, green: 0.84, blue: 0.46, alpha: 1)
-        option.position = CGPoint(x: -124, y: 0)
-        option.name = name
-        root.addChild(option)
+        let inset = SKShapeNode(
+            rectOf: CGSize(width: 270, height: 55), cornerRadius: 11
+        )
+        inset.fillColor = UIColor(red: 0.21, green: 0.17, blue: 0.26, alpha: 0.95)
+        inset.strokeColor = UIColor(red: 0.60, green: 0.49, blue: 0.42, alpha: 0.85)
+        inset.lineWidth = 2
+        inset.name = name
+        bench.addChild(inset)
 
-        let spacing: CGFloat = 39
-        let totalWidth = CGFloat(max(0, directions.count - 1)) * spacing
-        let startX = -totalWidth / 2 + 12
+        let crest = ArtSystem.label(["✦", "◆", "◈"][index], size: 20)
+        crest.fontColor = UIColor(red: 1, green: 0.85, blue: 0.55, alpha: 1)
+        crest.position = CGPoint(x: -125, y: 0)
+        crest.name = name
+        root.addChild(crest)
 
+        let spacing: CGFloat = directions.count > 5 ? 34 : 39
+        let startX = -CGFloat(directions.count - 1) * spacing / 2 + 13
         for (step, direction) in directions.enumerated() {
-            let socket = SKShapeNode(circleOfRadius: 16)
-            socket.fillColor = UIColor(red: 0.14, green: 0.25, blue: 0.34, alpha: 1)
-            socket.strokeColor = UIColor(red: 0.48, green: 0.78, blue: 0.88, alpha: 0.82)
-            socket.lineWidth = 2
-            socket.position = CGPoint(x: startX + CGFloat(step) * spacing, y: 0)
-            socket.name = name
+            let slate = SKShapeNode(
+                rectOf: CGSize(width: 31, height: 38), cornerRadius: 7
+            )
+            slate.position = CGPoint(x: startX + CGFloat(step) * spacing, y: 0)
+            slate.fillColor = UIColor(red: 0.51, green: 0.43, blue: 0.52, alpha: 1)
+            slate.strokeColor = UIColor(red: 0.91, green: 0.75, blue: 0.51, alpha: 0.98)
+            slate.lineWidth = 2
+            slate.name = name
+            root.addChild(slate)
 
-            let glyph = ArtSystem.label(direction.glyph, size: 18)
-            glyph.fontColor = .white
-            glyph.name = name
-            socket.addChild(glyph)
-            root.addChild(socket)
+            let engravedArrow = ArtSystem.label(direction.glyph, size: 20)
+            engravedArrow.fontColor = UIColor(red: 0.13, green: 0.10, blue: 0.19, alpha: 1)
+            engravedArrow.name = name
+            slate.addChild(engravedArrow)
         }
 
-        makeAccessible(root, label: "Route option \(index + 1)")
+        makeAccessible(root, label: "Route option \(index + 1): try stone trail")
         addChild(root)
         registerInteraction(root, clearance: 16)
         return root
@@ -3816,7 +3975,7 @@ import LearningCore
 
         let grid = SKNode()
         grid.name = "pathGrid"
-        grid.position = CGPoint(x: 760, y: 420)
+        grid.position = CGPoint(x: 760, y: 294)
         grid.zPosition = 500
         addChild(grid)
 
@@ -3827,27 +3986,55 @@ import LearningCore
         for y in 0..<pathEncounter.gridHeight {
             for x in 0..<pathEncounter.gridWidth {
                 let tile = PuzzleTile(x: x, y: y)
-                let square = SKShapeNode(rectOf: CGSize(width: 58, height: 58), cornerRadius: 10)
-                square.position = CGPoint(x: originX + CGFloat(x) * tileSize,
-                                          y: originY + CGFloat(y) * tileSize)
+                let square = SKShapeNode(
+                    rectOf: CGSize(width: 58, height: 58),
+                    cornerRadius: 12
+                )
+                square.position = CGPoint(
+                    x: originX + CGFloat(x) * tileSize,
+                    y: originY + CGFloat(y) * tileSize
+                )
+                square.name = "pathStone\(x)_\(y)"
                 square.lineWidth = 3
-                square.strokeColor = UIColor(red: 0.45, green: 0.72, blue: 0.86, alpha: 0.75)
+                square.strokeColor = UIColor(red: 0.85, green: 0.69, blue: 0.48, alpha: 0.91)
+                square.fillColor = UIColor(red: 0.45, green: 0.38, blue: 0.49, alpha: 1)
+
+                let bevel = SKShapeNode(
+                    rectOf: CGSize(width: 49, height: 46),
+                    cornerRadius: 9
+                )
+                bevel.position.y = 3
+                bevel.name = "pathStoneBevel"
+                bevel.fillColor = UIColor(red: 0.53, green: 0.46, blue: 0.57, alpha: 1)
+                bevel.strokeColor = UIColor(red: 0.76, green: 0.64, blue: 0.57, alpha: 0.83)
+                bevel.lineWidth = 2
+                square.addChild(bevel)
+
                 if pathEncounter.blocked.contains(tile) {
-                    square.fillColor = UIColor(red: 0.12, green: 0.12, blue: 0.18, alpha: 1)
-                    let glyph = ArtSystem.label("✕", size: 24)
-                    glyph.fontColor = .systemRed
-                    square.addChild(glyph)
-                } else {
-                    square.fillColor = UIColor(red: 0.15, green: 0.28, blue: 0.38, alpha: 0.96)
-                }
-                if tile == pathEncounter.start {
-                    square.fillColor = UIColor(red: 0.21, green: 0.55, blue: 0.78, alpha: 1)
-                    let glyph = ArtSystem.label("T", size: 25)
-                    square.addChild(glyph)
+                    square.fillColor = UIColor(red: 0.14, green: 0.12, blue: 0.17, alpha: 1)
+                    bevel.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.23, alpha: 1)
+                    let crack = CGMutablePath()
+                    crack.move(to: CGPoint(x: -18, y: 19))
+                    crack.addLine(to: CGPoint(x: -4, y: 4))
+                    crack.addLine(to: CGPoint(x: 7, y: 11))
+                    crack.addLine(to: CGPoint(x: 18, y: -18))
+                    let brokenStone = SKShapeNode(path: crack)
+                    brokenStone.strokeColor = UIColor(red: 0.83, green: 0.53, blue: 0.43, alpha: 0.96)
+                    brokenStone.lineWidth = 4
+                    brokenStone.name = "pathBrokenStone"
+                    square.addChild(brokenStone)
+                } else if tile == pathEncounter.start {
+                    square.strokeColor = UIColor(red: 0.88, green: 0.78, blue: 0.58, alpha: 1)
+                    let symbol = ArtSystem.label("◉", size: 27)
+                    symbol.fontColor = UIColor(red: 0.98, green: 0.92, blue: 0.71, alpha: 1)
+                    symbol.name = "pathStartingStone"
+                    square.addChild(symbol)
                 } else if tile == pathEncounter.goal {
-                    square.fillColor = UIColor(red: 0.70, green: 0.52, blue: 0.16, alpha: 1)
-                    let glyph = ArtSystem.label("★", size: 28)
-                    square.addChild(glyph)
+                    square.strokeColor = UIColor(red: 1, green: 0.83, blue: 0.49, alpha: 1)
+                    let symbol = ArtSystem.label("★", size: 31)
+                    symbol.fontColor = UIColor(red: 1, green: 0.88, blue: 0.57, alpha: 1)
+                    symbol.name = "pathDestinationStone"
+                    square.addChild(symbol)
                 }
                 grid.addChild(square)
             }
@@ -3862,13 +4049,32 @@ import LearningCore
             )
         }
 
-        instruction.text = pathEncounter.prompt
+        instruction.text = "Find a safe stone trail, then watch Tiko try it."
         showAttentionCue(
-            at: CGPoint(x: 760, y: 420),
-            tint: UIColor(red: 0.54, green: 0.82, blue: 0.96, alpha: 1),
+            at: CGPoint(x: 760, y: 294),
+            tint: UIColor(red: 0.95, green: 0.76, blue: 0.48, alpha: 1),
             width: 320
         )
         tiko.pose(.interact)
+    }
+
+    private func revealAttemptedStoneTrail(
+        _ route: [PuzzleTile],
+        encounter: PuzzlePathEncounter
+    ) {
+        guard let grid = childNode(withName: "pathGrid") else { return }
+        var safeSoFar = true
+        for tile in route {
+            guard encounter.isInBounds(tile),
+                  let stone = grid.childNode(withName: "pathStone\(tile.x)_\(tile.y)") as? SKShapeNode
+            else { break }
+            if encounter.blocked.contains(tile) { safeSoFar = false }
+            stone.strokeColor = safeSoFar
+                ? UIColor(red: 1, green: 0.86, blue: 0.50, alpha: 1)
+                : UIColor(red: 0.99, green: 0.51, blue: 0.40, alpha: 1)
+            stone.glowWidth = safeSoFar && !reducedMotion ? 6 : 0
+            if !safeSoFar { break }
+        }
     }
 
     private func resolvePathChoice(_ index: Int) {
@@ -3878,6 +4084,8 @@ import LearningCore
         attempts += 1
         let attemptSupport = support
         let correct = activeEncounter.isValidChoice(index)
+        let attemptedRoute = activeEncounter.route(for: index)
+        revealAttemptedStoneTrail(attemptedRoute, encounter: activeEncounter)
 
         _ = state.recordPuzzle(activeEncounter, outcome: correct ? .correct : .incorrect,
                                support: attemptSupport, attempts: attempts,
@@ -3886,8 +4094,8 @@ import LearningCore
         guard correct else {
             support = support == .independent ? .lightHint : .strongHint
             instruction.text = support == .lightHint
-                ? "Trace the whole route with your eyes first. A dark tile means the plan cannot work."
-                : "Start at T, look all the way to ★, and reject any route that crosses ✕."
+                ? "That trail reaches a broken stone. Look for a different way."
+                : "Trace from the round start stone to the star. Keep off the cracked stones."
             tiko.pose(.react)
             valkyrie.pose(.react)
             pathEncounter = state.nextPuzzlePathTilesEncounter()
@@ -3909,7 +4117,7 @@ import LearningCore
     private func animateTikoAlongPath(_ route: [PuzzleTile], encounter: PuzzlePathEncounter) {
         let tileSize: CGFloat = 66
         let originX = 760 - CGFloat(encounter.gridWidth - 1) * tileSize / 2
-        let originY = 420 - CGFloat(encounter.gridHeight - 1) * tileSize / 2
+        let originY = 294 - CGFloat(encounter.gridHeight - 1) * tileSize / 2
         let actions: [SKAction] = route.dropFirst().map { tile in
             .move(to: CGPoint(x: originX + CGFloat(tile.x) * tileSize,
                               y: originY + CGFloat(tile.y) * tileSize),
@@ -3919,7 +4127,7 @@ import LearningCore
             .run { [weak self] in
                 guard let self else { return }
                 self.successFeedback()
-                self.focusMoment(on: CGPoint(x: 760, y: 420))
+                self.focusMoment(on: CGPoint(x: 760, y: 294))
                 self.tiko.pose(.celebrate)
                 self.valkyrie.pose(.celebrate)
                 if self.state.puzzlePathTilesComplete {
@@ -4731,79 +4939,217 @@ import LearningCore
     }
 
     private func buildBugRepairWorld() {
-        let rail = ArtSystem.box(
-            CGSize(width: 760, height: 24),
-            color: UIColor(red: 0.34, green: 0.25, blue: 0.15, alpha: 0.96),
-            radius: 8
+        // Clockwork workshop: the rail, drive shaft and four gear sockets are
+        // physically connected. Keep the illustrated wall and forge visible.
+        let drive = CGMutablePath()
+        drive.move(to: CGPoint(x: 760, y: 487))
+        drive.addLine(to: CGPoint(x: 760, y: 367))
+        let shaft = SKShapeNode(path: drive)
+        shaft.strokeColor = UIColor(red: 0.33, green: 0.22, blue: 0.18, alpha: 1)
+        shaft.lineWidth = 26
+        shaft.name = "repairDriveShaft"
+        shaft.zPosition = 690
+        addChild(shaft)
+
+        let shaftInlay = SKShapeNode(path: drive)
+        shaftInlay.strokeColor = UIColor(red: 0.86, green: 0.65, blue: 0.37, alpha: 0.98)
+        shaftInlay.lineWidth = 7
+        shaftInlay.name = "repairDriveShaftInlay"
+        shaftInlay.zPosition = 691
+        addChild(shaftInlay)
+
+        let rail = SKShapeNode(
+            rectOf: CGSize(width: 780, height: 30),
+            cornerRadius: 14
         )
-        rail.strokeColor = UIColor(red: 0.86, green: 0.67, blue: 0.32, alpha: 0.88)
-        rail.lineWidth = 2
-        rail.position = CGPoint(x: 760, y: 292)
+        rail.fillColor = UIColor(red: 0.36, green: 0.25, blue: 0.20, alpha: 1)
+        rail.strokeColor = UIColor(red: 0.80, green: 0.58, blue: 0.35, alpha: 1)
+        rail.lineWidth = 4
+        rail.position = CGPoint(x: 760, y: 355)
         rail.name = "repairRail"
-        rail.zPosition = 120
+        rail.zPosition = 760
         addChild(rail)
 
-        let lantern = SKShapeNode(circleOfRadius: 66)
-        lantern.fillColor = UIColor(red: 0.14, green: 0.13, blue: 0.28, alpha: 0.98)
-        lantern.strokeColor = UIColor(red: 0.64, green: 0.70, blue: 0.98, alpha: 0.96)
-        lantern.lineWidth = 8
-        lantern.position = CGPoint(x: 760, y: 535)
-        lantern.name = "repairLanternFixture"
-        lantern.zPosition = 650
-        addChild(lantern)
+        let xs: [CGFloat] = [485, 665, 845, 1025]
+        for (index, x) in xs.enumerated() {
+            let housing = palaceCog(
+                radius: 83, teeth: 12,
+                fill: UIColor(red: 0.30, green: 0.22, blue: 0.19, alpha: 1),
+                stroke: UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+            )
+            housing.position = CGPoint(x: x, y: 355)
+            housing.name = "repairSocketBase\(index)"
+            housing.zPosition = 785
+            addChild(housing)
 
-        let core = SKShapeNode(circleOfRadius: 38)
-        core.fillColor = UIColor(red: 0.42, green: 0.55, blue: 0.96, alpha: 0.96)
-        core.strokeColor = UIColor(red: 0.86, green: 0.90, blue: 1.0, alpha: 1)
-        core.lineWidth = 4
-        core.glowWidth = 12
+            let axle = SKShapeNode(circleOfRadius: 46)
+            axle.fillColor = UIColor(red: 0.14, green: 0.11, blue: 0.15, alpha: 1)
+            axle.strokeColor = UIColor(red: 0.67, green: 0.50, blue: 0.32, alpha: 0.9)
+            axle.lineWidth = 3
+            axle.name = "repairSocketAxle"
+            housing.addChild(axle)
+        }
+
+        let engine = SKShapeNode(
+            rectOf: CGSize(width: 210, height: 120),
+            cornerRadius: 36
+        )
+        engine.fillColor = UIColor(red: 0.25, green: 0.18, blue: 0.18, alpha: 0.99)
+        engine.strokeColor = UIColor(red: 0.90, green: 0.71, blue: 0.43, alpha: 0.98)
+        engine.lineWidth = 6
+        engine.position = CGPoint(x: 760, y: 535)
+        engine.name = "repairLanternFixture"
+        engine.zPosition = 650
+        addChild(engine)
+
+        for x in [CGFloat(-82), 82] {
+            let rivet = SKShapeNode(circleOfRadius: 7)
+            rivet.position = CGPoint(x: x, y: 0)
+            rivet.fillColor = UIColor(red: 0.93, green: 0.77, blue: 0.48, alpha: 1)
+            rivet.strokeColor = UIColor(red: 0.28, green: 0.19, blue: 0.16, alpha: 1)
+            rivet.lineWidth = 2
+            rivet.name = "repairFixtureRivet"
+            engine.addChild(rivet)
+        }
+
+        let core = SKShapeNode(circleOfRadius: 47)
+        core.fillColor = UIColor(red: 0.15, green: 0.14, blue: 0.23, alpha: 1)
+        core.strokeColor = UIColor(red: 0.80, green: 0.65, blue: 0.43, alpha: 1)
+        core.lineWidth = 3
         core.name = "repairLanternCore"
-        lantern.addChild(core)
+        engine.addChild(core)
 
-        let glyph = ArtSystem.label("⇄", size: 30)
-        glyph.fontColor = UIColor(red: 0.12, green: 0.12, blue: 0.28, alpha: 1)
-        glyph.name = "repairLanternGlyph"
-        core.addChild(glyph)
+        let rotor = palaceCog(
+            radius: 32, teeth: 10,
+            fill: UIColor(red: 0.55, green: 0.37, blue: 0.22, alpha: 1),
+            stroke: UIColor(red: 0.94, green: 0.75, blue: 0.45, alpha: 1)
+        )
+        rotor.name = "repairMachineRotor"
+        core.addChild(rotor)
 
-        let title = ArtSystem.label("REPAIR THE WHOLE PLAN", size: 21)
-        title.fontColor = UIColor(red: 0.96, green: 0.97, blue: 1.0, alpha: 0.98)
-        title.position = CGPoint(x: 760, y: 625)
+        let hub = SKShapeNode(circleOfRadius: 12)
+        hub.fillColor = UIColor(red: 0.10, green: 0.09, blue: 0.15, alpha: 1)
+        hub.strokeColor = UIColor(red: 0.97, green: 0.78, blue: 0.43, alpha: 1)
+        hub.lineWidth = 3
+        hub.name = "repairMachineHub"
+        rotor.addChild(hub)
+
+        let title = ArtSystem.label("TIKO'S CLOCKWORK WORKSHOP", size: 20)
+        title.fontName = "Georgia-Bold"
+        title.fontColor = UIColor(red: 1, green: 0.93, blue: 0.76, alpha: 1)
+        title.position = CGPoint(x: 760, y: 627)
         title.name = "bugRepairTitle"
         title.zPosition = 820
         addChild(title)
 
-        let cue = ArtSystem.label("Pick two commands to swap, then tap FIX.", size: 15)
-        cue.fontColor = UIColor(red: 0.90, green: 0.88, blue: 1.0, alpha: 0.88)
-        cue.position = CGPoint(x: 760, y: 455)
+        let cue = ArtSystem.label("Find the two misplaced gears.", size: 17)
+        cue.fontColor = UIColor(red: 1, green: 0.94, blue: 0.80, alpha: 0.98)
+        cue.position = CGPoint(x: 760, y: 457)
         cue.name = "repairCue"
         cue.zPosition = 820
         addChild(cue)
 
         for index in 0..<PuzzlePalaceEncounterCatalog.bugRepairFamilies.count {
-            let lamp = SKShapeNode(circleOfRadius: 12)
-            lamp.fillColor = UIColor(red: 0.18, green: 0.22, blue: 0.31, alpha: 1)
-            lamp.strokeColor = UIColor(red: 0.64, green: 0.70, blue: 0.98, alpha: 0.88)
-            lamp.lineWidth = 3
-            lamp.position = CGPoint(x: 1090 + CGFloat(index) * 38, y: 535)
+            let lamp = SKShapeNode(circleOfRadius: 10)
+            lamp.fillColor = UIColor(red: 0.20, green: 0.14, blue: 0.18, alpha: 1)
+            lamp.strokeColor = UIColor(red: 0.82, green: 0.64, blue: 0.38, alpha: 0.88)
+            lamp.lineWidth = 2
+            lamp.position = CGPoint(x: 1090 + CGFloat(index) * 34, y: 535)
             lamp.name = "repairProgress\(index)"
             lamp.zPosition = 820
             addChild(lamp)
         }
 
-        let fix = worldGear("✓", name: "repairFix",
-                            at: CGPoint(x: 1145, y: 300), radius: 40,
-                            accessibilityLabel: "Fix selected command pair")
-        fix.zPosition = 920
+        // A grounded pull lever replaces the old floating checkmark icon.
+        // Hit node names remain "repairFix" for stable native interaction APIs.
+        let lever = SKNode()
+        lever.position = CGPoint(x: 1145, y: 300)
+        lever.name = "repairFix"
+        lever.zPosition = 920
+
+        let leverBase = SKShapeNode(
+            rectOf: CGSize(width: 88, height: 110),
+            cornerRadius: 18
+        )
+        leverBase.fillColor = UIColor(red: 0.29, green: 0.20, blue: 0.17, alpha: 1)
+        leverBase.strokeColor = UIColor(red: 0.95, green: 0.74, blue: 0.41, alpha: 1)
+        leverBase.lineWidth = 4
+        leverBase.name = "repairFix"
+        lever.addChild(leverBase)
+
+        let leverStem = SKShapeNode(
+            rectOf: CGSize(width: 14, height: 43),
+            cornerRadius: 7
+        )
+        leverStem.position.y = 12
+        leverStem.fillColor = UIColor(red: 0.76, green: 0.54, blue: 0.30, alpha: 1)
+        leverStem.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.43, alpha: 1)
+        leverStem.lineWidth = 2
+        leverStem.name = "repairFix"
+        lever.addChild(leverStem)
+
+        let handle = SKShapeNode(circleOfRadius: 17)
+        handle.position.y = 32
+        handle.fillColor = UIColor(red: 0.94, green: 0.71, blue: 0.38, alpha: 1)
+        handle.strokeColor = UIColor(red: 1, green: 0.91, blue: 0.67, alpha: 1)
+        handle.lineWidth = 3
+        handle.name = "repairFix"
+        lever.addChild(handle)
+
+        let leverLabel = ArtSystem.label("TEST", size: 16)
+        leverLabel.fontName = "AvenirNext-DemiBold"
+        leverLabel.fontColor = UIColor(red: 1, green: 0.94, blue: 0.80, alpha: 1)
+        leverLabel.position.y = -34
+        leverLabel.name = "repairFix"
+        lever.addChild(leverLabel)
+
+        makeAccessible(lever, label: "Pull the workshop lever to test the repaired plan")
+        addChild(lever)
+        registerInteraction(lever, clearance: 12)
 
         let reset = worldGear("↺", name: "repairReset",
-                              at: CGPoint(x: 1145, y: 395), radius: 31,
-                              accessibilityLabel: "Clear repair selection")
+                              at: CGPoint(x: 1145, y: 427), radius: 28,
+                              accessibilityLabel: "Clear selected gears")
         reset.zPosition = 920
 
         let back = worldControl("‹", name: "bugLanternBack",
                                 at: CGPoint(x: 1180, y: 665), radius: 30,
                                 accessibilityLabel: "Back to Bug Lantern")
         back.zPosition = 2050
+    }
+
+    private func setRepairMachinePowered(_ powered: Bool) {
+        let bronze = UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+        let gold = UIColor(red: 1.0, green: 0.82, blue: 0.43, alpha: 1)
+        if let core = childNode(withName: "//repairLanternCore") as? SKShapeNode {
+            core.fillColor = powered
+                ? UIColor(red: 0.46, green: 0.33, blue: 0.19, alpha: 1)
+                : UIColor(red: 0.15, green: 0.14, blue: 0.23, alpha: 1)
+            core.glowWidth = powered && !reducedMotion ? 8 : 0
+        }
+        if let rail = childNode(withName: "repairRail") as? SKShapeNode {
+            rail.strokeColor = powered ? gold : bronze
+        }
+        for index in 0..<4 {
+            if let housing = childNode(withName: "repairSocketBase\(index)") as? SKShapeNode {
+                housing.strokeColor = powered ? gold : bronze
+            }
+        }
+        if powered, !reducedMotion,
+           let rotor = childNode(withName: "//repairMachineRotor") {
+            rotor.removeAction(forKey: "repairRotor")
+            rotor.run(.rotate(byAngle: .pi * 2, duration: 0.8), withKey: "repairRotor")
+        }
+    }
+
+    private func showRepairMachineMiss() {
+        guard !reducedMotion,
+              let rotor = childNode(withName: "//repairMachineRotor") else { return }
+        rotor.removeAction(forKey: "repairRotor")
+        rotor.run(.sequence([
+            .rotate(byAngle: -.pi / 10, duration: 0.16),
+            .rotate(byAngle: .pi / 10, duration: 0.16)
+        ]), withKey: "repairRotor")
     }
 
     private func clearRepairSteps() {
@@ -4822,40 +5168,51 @@ import LearningCore
         startedAt = Date()
         solved = false
         repairAcceptingInput = true
+        setRepairMachinePowered(false)
 
         let xs: [CGFloat] = [485, 665, 845, 1025]
         for (index, step) in repairEncounter.presented.enumerated() {
-            let plate = SKShapeNode(
-                rectOf: CGSize(width: 132, height: 104),
-                cornerRadius: 24
+            // Physically removable brass gears on the shared machine shaft.
+            // Preserve step IDs, positions and accessibility for all tests and
+            // for the existing evidence/scaffold flow.
+            let plate = palaceCog(
+                radius: 71, teeth: 11,
+                fill: UIColor(red: 0.45, green: 0.32, blue: 0.22, alpha: 1),
+                stroke: UIColor(red: 0.90, green: 0.70, blue: 0.41, alpha: 1)
             )
-            plate.fillColor = UIColor(red: 0.12, green: 0.16, blue: 0.25, alpha: 0.98)
-            plate.strokeColor = UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.82)
-            plate.lineWidth = 4
             plate.position = CGPoint(x: xs[index], y: 355)
             plate.name = "repairStep\(index)"
             plate.zPosition = 850
             plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
 
-            let number = ArtSystem.label("\(index + 1)", size: 13)
-            number.fontColor = UIColor(white: 1, alpha: 0.40)
-            number.position = CGPoint(x: -48, y: 34)
+            let center = SKShapeNode(circleOfRadius: 52)
+            center.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.19, alpha: 1)
+            center.strokeColor = UIColor(red: 0.88, green: 0.67, blue: 0.42, alpha: 0.90)
+            center.lineWidth = 3
+            center.name = plate.name
+            plate.addChild(center)
+
+            let number = ArtSystem.label("\(index + 1)", size: 15)
+            number.fontName = "AvenirNext-DemiBold"
+            number.fontColor = UIColor(red: 0.97, green: 0.77, blue: 0.47, alpha: 1)
+            number.position = CGPoint(x: -37, y: 39)
             number.name = plate.name
             plate.addChild(number)
 
-            let commandGlyph = ArtSystem.label(step.glyph, size: 32)
-            commandGlyph.fontColor = .white
-            commandGlyph.position.y = 8
+            let commandGlyph = ArtSystem.label(step.glyph, size: 35)
+            commandGlyph.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.77, alpha: 1)
+            commandGlyph.position.y = 2
             commandGlyph.name = plate.name
             plate.addChild(commandGlyph)
 
-            makeAccessible(plate, label: "Command \(index + 1): \(step.title)")
+            makeAccessible(plate, label: "Gear \(index + 1): \(step.title)")
             addChild(plate)
-            registerInteraction(plate, clearance: 16)
+            registerInteraction(plate, clearance: 12)
 
-            let label = ArtSystem.label(step.title, size: 11)
-            label.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.67, alpha: 1)
-            label.position = CGPoint(x: xs[index], y: 280)
+            let label = ArtSystem.label(step.title, size: 14)
+            label.fontName = "AvenirNext-DemiBold"
+            label.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.75, alpha: 1)
+            label.position = CGPoint(x: xs[index], y: 264)
             label.name = "repairStepLabel\(index)"
             label.zPosition = 850
             addChild(label)
@@ -4865,8 +5222,8 @@ import LearningCore
         instruction.text = repairEncounter.prompt
         showAttentionCue(
             at: CGPoint(x: 760, y: 355),
-            tint: UIColor(red: 0.82, green: 0.60, blue: 0.98, alpha: 1),
-            width: 380
+            tint: UIColor(red: 0.94, green: 0.72, blue: 0.42, alpha: 1),
+            width: 385
         )
         tiko.pose(.interact)
     }
@@ -4886,8 +5243,8 @@ import LearningCore
         selectionFeedback()
         renderRepairSelection()
         instruction.text = repairSelection.count == 2
-            ? "Two commands selected. Tap FIX to swap them."
-            : "Select one more command that should trade places."
+            ? "Pull the TEST lever and watch the clockwork."
+            : "Choose one more gear to swap."
     }
 
     private func renderRepairSelection() {
@@ -4895,10 +5252,15 @@ import LearningCore
             guard let plate = childNode(withName: "repairStep\(index)") as? SKShapeNode else { continue }
             let selected = repairSelection.contains(index)
             plate.strokeColor = selected
-                ? UIColor(red: 0.52, green: 0.91, blue: 1.0, alpha: 1)
-                : UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.82)
-            plate.glowWidth = selected ? 10 : 0
-            plate.setScale(selected ? 1.04 : 1)
+                ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
+                : UIColor(red: 0.90, green: 0.70, blue: 0.41, alpha: 1)
+            plate.glowWidth = selected && !reducedMotion ? 6 : 0
+            plate.setScale(selected ? 1.05 : 1)
+            if let socket = childNode(withName: "repairSocketBase\(index)") as? SKShapeNode {
+                socket.strokeColor = selected
+                    ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
+                    : UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+            }
         }
     }
 
@@ -4941,10 +5303,7 @@ import LearningCore
                 self.successFeedback()
                 self.valkyrie.pose(.celebrate)
                 self.tiko.pose(.celebrate)
-                if let core = self.childNode(withName: "//repairLanternCore") as? SKShapeNode {
-                    core.fillColor = .systemGreen
-                    core.glowWidth = 18
-                }
+                self.setRepairMachinePowered(true)
                 self.refreshBugRepairProgress(animated: true)
 
                 if self.state.puzzleBugRepairComplete {
@@ -4962,6 +5321,7 @@ import LearningCore
                 }
             } else {
                 self.errorFeedback()
+                self.showRepairMachineMiss()
                 self.support = self.support == .independent ? .lightHint : .strongHint
                 self.valkyrie.pose(.react)
                 self.tiko.pose(.react)
@@ -5042,6 +5402,31 @@ import LearningCore
         }
     }
 
+    private func installCompletedRepairGears() {
+        // The final restored machine should not display four empty sockets.
+        // Leave stable in-world gears installed on every revisit.
+        for index in 0..<4 {
+            guard let socket = childNode(withName: "repairSocketBase\(index)") as? SKShapeNode,
+                  socket.childNode(withName: "repairCompletedGear\(index)") == nil else { continue }
+
+            let installed = palaceCog(
+                radius: 40, teeth: 10,
+                fill: UIColor(red: 0.66, green: 0.45, blue: 0.27, alpha: 1),
+                stroke: UIColor(red: 0.99, green: 0.82, blue: 0.50, alpha: 1)
+            )
+            installed.name = "repairCompletedGear\(index)"
+            installed.zPosition = 3
+            socket.addChild(installed)
+
+            let rivet = SKShapeNode(circleOfRadius: 13)
+            rivet.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.17, alpha: 1)
+            rivet.strokeColor = UIColor(red: 0.97, green: 0.78, blue: 0.44, alpha: 1)
+            rivet.lineWidth = 3
+            rivet.name = "repairCompletedRivet"
+            installed.addChild(rivet)
+        }
+    }
+
     private func finishBugRepair() {
         repairAcceptingInput = false
         repairSelection.removeAll()
@@ -5056,10 +5441,8 @@ import LearningCore
         if let cue = childNode(withName: "repairCue") as? SKLabelNode {
             cue.text = "All three plans are repaired."
         }
-        if let core = childNode(withName: "//repairLanternCore") as? SKShapeNode {
-            core.fillColor = .systemGreen
-            core.glowWidth = 18
-        }
+        setRepairMachinePowered(true)
+        installCompletedRepairGears()
         if childNode(withName: "repairHome") == nil {
             let home = worldControl("⌂", name: "repairHome",
                                     at: CGPoint(x: 1110, y: 175), radius: 31,
@@ -5468,7 +5851,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             refreshRuneGateProgress(animated: true)
-            successFeedback(at: CGPoint(x: 875, y: 455))
+            successFeedback(at: CGPoint(x: 970, y: 405))
             valkyrie.pose(.celebrate)
 
             if state.puzzleRuneGateComplete {
@@ -5518,8 +5901,9 @@ import LearningCore
         glyph.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.50, alpha: 1)
         glyph.name = "runeSocketMark"
         socket.addChild(glyph)
-        socket.strokeColor = .systemGreen
-        socket.glowWidth = 12
+        socket.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.43, alpha: 1)
+        socket.fillColor = UIColor(red: 0.42, green: 0.29, blue: 0.18, alpha: 1)
+        socket.glowWidth = reducedMotion ? 0 : 8
     }
 
     private func showPatternHint() {
@@ -5563,6 +5947,104 @@ import LearningCore
         }
     }
 
+    /// The approved painting stays intact when locked. Once earned, a real
+    /// painted-world opening and two sliding leaves replace the closed door.
+    /// The overlay is a sibling of puzzleGate: regression tests intentionally
+    /// keep that interactive lock compact.
+    private func revealPaintedRuneDoors() {
+        guard childNode(withName: "runeDoorPassage") == nil,
+              let gate = childNode(withName: "puzzleGate") else { return }
+
+        let doorway = SKNode()
+        doorway.position = gate.position
+        doorway.zPosition = 355
+        doorway.name = "runeDoorPassage"
+        addChild(doorway)
+
+        let openingPath = CGMutablePath()
+        openingPath.move(to: CGPoint(x: -94, y: -126))
+        openingPath.addLine(to: CGPoint(x: -94, y: 35))
+        openingPath.addCurve(
+            to: CGPoint(x: 94, y: 35),
+            control1: CGPoint(x: -94, y: 156),
+            control2: CGPoint(x: 94, y: 156)
+        )
+        openingPath.addLine(to: CGPoint(x: 94, y: -126))
+        openingPath.closeSubpath()
+        let opening = SKShapeNode(path: openingPath)
+        opening.fillColor = UIColor(red: 0.055, green: 0.040, blue: 0.13, alpha: 1)
+        opening.strokeColor = UIColor(red: 0.93, green: 0.73, blue: 0.41, alpha: 0.93)
+        opening.lineWidth = 6
+        opening.name = "runeDoorOpenInterior"
+        doorway.addChild(opening)
+
+        // Depth and light, not a thin gold seam on top of closed painted doors.
+        let distanceLight = SKShapeNode(ellipseOf: CGSize(width: 104, height: 192))
+        distanceLight.position = CGPoint(x: 0, y: -16)
+        distanceLight.fillColor = UIColor(red: 0.44, green: 0.30, blue: 0.67, alpha: 0.40)
+        distanceLight.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.45, alpha: 0.35)
+        distanceLight.lineWidth = 3
+        distanceLight.name = "runeDoorDistanceLight"
+        opening.addChild(distanceLight)
+
+        let star = SKShapeNode(circleOfRadius: 12)
+        star.fillColor = UIColor(red: 1, green: 0.89, blue: 0.64, alpha: 1)
+        star.strokeColor = UIColor(red: 1, green: 0.94, blue: 0.74, alpha: 1)
+        star.lineWidth = 2
+        star.position = CGPoint(x: 0, y: 34)
+        star.glowWidth = reducedMotion ? 0 : 11
+        star.name = "runeDoorDestination"
+        opening.addChild(star)
+
+        // Capture the authentic door material from the approved scene. A pair
+        // of matching texture leaves parts to reveal the passage. Cropping
+        // is from the existing asset; no new character or environment repaint.
+        if let painting = childNode(withName: "puzzleIllustratedBackdrop") as? SKSpriteNode,
+           let texture = painting.texture {
+            let cropWidth: CGFloat = 188
+            let cropHeight: CGFloat = 254
+            let leftEdge = painting.position.x - painting.size.width / 2
+            let bottomEdge = painting.position.y - painting.size.height / 2
+            let artworkX = (gate.position.x - cropWidth / 2 - leftEdge) / painting.size.width
+            let artworkY = (gate.position.y - cropHeight / 2 - bottomEdge) / painting.size.height
+            for half in 0..<2 {
+                let rect = CGRect(
+                    x: artworkX + CGFloat(half) * cropWidth / (2 * painting.size.width),
+                    y: artworkY,
+                    width: cropWidth / (2 * painting.size.width),
+                    height: cropHeight / painting.size.height
+                )
+                let leaf = SKSpriteNode(
+                    texture: SKTexture(rect: rect, in: texture),
+                    size: CGSize(width: cropWidth / 2, height: cropHeight)
+                )
+                leaf.position = CGPoint(x: half == 0 ? -47 : 47, y: 0)
+                leaf.zPosition = 3
+                leaf.name = "runeDoorLeaf\(half)"
+                doorway.addChild(leaf)
+
+                // A physical door is open in the completed screenshot even
+                // when restored from saved progress with Reduced Motion on.
+                let direction: CGFloat = half == 0 ? -1 : 1
+                if reducedMotion {
+                    leaf.position.x += direction * 98
+                } else {
+                    leaf.run(.moveBy(x: direction * 98, y: 0, duration: 0.60),
+                             withKey: "runeDoorSlide")
+                }
+            }
+        }
+
+        // A clear navigable threshold connects the light to the floor route.
+        let sill = SKShapeNode(ellipseOf: CGSize(width: 212, height: 24))
+        sill.position.y = -131
+        sill.fillColor = UIColor(red: 0.67, green: 0.47, blue: 0.24, alpha: 0.79)
+        sill.strokeColor = UIColor(red: 0.96, green: 0.81, blue: 0.51, alpha: 1)
+        sill.lineWidth = 3
+        sill.name = "runeDoorSill"
+        doorway.addChild(sill)
+    }
+
     private func openRuneGate() {
         runeAcceptingInput = false
         removeAction(forKey: "nextPuzzleRune")
@@ -5570,9 +6052,13 @@ import LearningCore
         refreshRuneGateProgress(animated: true)
 
         if let gate = childNode(withName: "puzzleGate") as? SKShapeNode {
-            gate.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 1)
+            gate.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 0.045)
             gate.glowWidth = 16
         }
+        if let passage = childNode(withName: "//puzzleGateOpening") as? SKShapeNode {
+            passage.alpha = 0  // The actual opening is the stone-framed passage.
+        }
+        revealPaintedRuneDoors()
         if let door = childNode(withName: "//puzzleGateDoor") as? SKShapeNode {
             door.run(
                 .group([
