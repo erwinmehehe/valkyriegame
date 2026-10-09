@@ -74,6 +74,10 @@ import LearningCore
         CGPoint(x: 1040, y: 244), CGPoint(x: 1080, y: 286),
         CGPoint(x: 1110, y: 350), CGPoint(x: 1110, y: 400)
     ]
+    private var bridgeQuestAllowsPassage: Bool {
+        !state.starlightBridgeQuest.discovered || state.starlightBridgeQuest.isComplete
+    }
+
     private var repairedBridge: Bool {
         state.runtime?.encounter.mechanicID == MathMechanicID.missingNumberBridge
             && state.runtime?.completed == true
@@ -801,7 +805,8 @@ import LearningCore
     }
 
     private func crossBridge() {
-        guard state.runtime?.completed == true, repairedBridge || routeReady, !crossingBridge, !hasLeftScene else { return }
+        guard state.runtime?.completed == true, repairedBridge || routeReady,
+              bridgeQuestAllowsPassage, !crossingBridge, !hasLeftScene else { return }
         clearDrag(); engaged = false; showQuestion(nil)
         crossingBridge = true
         if !repairedBridge, let machine = mechanic {
@@ -816,7 +821,8 @@ import LearningCore
     }
 
     private func returnAcrossBridge(advance: Bool) {
-        guard state.runtime?.completed == true, repairedBridge || routeReady, !crossingBridge, !hasLeftScene else { return }
+        guard state.runtime?.completed == true, repairedBridge || routeReady,
+              bridgeQuestAllowsPassage, !crossingBridge, !hasLeftScene else { return }
         crossingBridge = true
         instruction.text = "Pip is bringing the work order back across the bridge."
         followBridge(Array(bridgePath.reversed())) { [weak self] in
@@ -953,6 +959,10 @@ import LearningCore
     private func leaveBridgeQuest() {
         guard bridgeQuestMode else { return }
         bridgeQuestMode = false
+        if bridgeQuestBusy {
+            valkyrie.cancelTravel()
+            pip.cancelTravel()
+        }
         bridgeQuestBusy = false
         bridgeQuestSelectedCrystal = nil
         bridgeQuestDraggedCrystal = nil
@@ -1105,11 +1115,11 @@ import LearningCore
     }
 
     private func handleBridgeQuestTap(at point: CGPoint) {
-        guard !bridgeQuestBusy else { return }
         if hypot(point.x - 1170, point.y - 625) <= 43 {
             leaveBridgeQuest()
             return
         }
+        guard !bridgeQuestBusy else { return }
         let quest = state.starlightBridgeQuest
         if let source = bridgeQuestIndex(near: point, points: bridgeCrystalPoints),
            !quest.collectedCrystals.contains(source) {
@@ -1336,7 +1346,7 @@ import LearningCore
     }
 
     private func openPhysicalProgression(animated: Bool = true) {
-        guard let bridge = physicalBridge else { return }
+        guard bridgeQuestAllowsPassage, let bridge = physicalBridge else { return }
 
         bridge.isHidden = repairedBridge
         if !animated || reducedMotion || repairedBridge {
@@ -1541,6 +1551,7 @@ import LearningCore
         powerLight?.removeAction(forKey: "inputPulse")
         powerLight?.alpha = 1
         nextGear?.isHidden = !(powered || state.workshop || state.runtime == nil)
+            || (powered && !bridgeQuestAllowsPassage)
 
         if powered {
             powerLight?.fillColor = UIColor(red: 1, green: 0.86, blue: 0.38, alpha: 1)
@@ -1550,7 +1561,9 @@ import LearningCore
                 if initialBuildComplete {
                     playMechanicSuccessReaction()
                 }
-                openPhysicalProgression(animated: initialBuildComplete)
+                if bridgeQuestAllowsPassage {
+                    openPhysicalProgression(animated: initialBuildComplete)
+                }
                 if initialBuildComplete && !reducedMotion {
                     lever?.run(.sequence([
                         .rotate(toAngle: -0.18, duration: 0.16),
@@ -1567,7 +1580,7 @@ import LearningCore
         }
 
         wasPowered = powered
-        bridgeRouteNode.isHidden = !powered
+        bridgeRouteNode.isHidden = !powered || !bridgeQuestAllowsPassage
         // Keep walking actors in front of the completed deck and its equation.
         if repairedBridge { mechanic?.zPosition = 600 }
         updateChallengeGateAppearance()
@@ -1610,6 +1623,9 @@ import LearningCore
     }
 
     private var completionMessage: String {
+        if !bridgeQuestAllowsPassage {
+            return "Pip's machine has power! The bridge still needs its lost starlight crystals."
+        }
         if repairedBridge { return "The gaps are filled! Tap the bridge or arrow to cross with Pip." }
         return state.workshop ? "You made it work! Try another station, or choose a new order."
             : "The castle route has power! Explore, or choose another work order."
