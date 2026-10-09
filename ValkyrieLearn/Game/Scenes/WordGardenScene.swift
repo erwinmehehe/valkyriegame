@@ -1441,6 +1441,343 @@ import LearningCore
         return node
     }
 
+
+    // MARK: - Lumi's living seed patch (free creative play, not a literacy score)
+
+    private func buildLivingGardenBeacon() {
+        let root = SKNode()
+        root.name = "livingGardenBeacon"
+        root.position = CGPoint(x: 475, y: 465)
+        root.zPosition = 850
+        let bed = ArtSystem.box(
+            CGSize(width: 122, height: 52),
+            color: UIColor(red: 0.33, green: 0.24, blue: 0.16, alpha: 0.96),
+            radius: 15
+        )
+        bed.name = root.name
+        bed.strokeColor = UIColor(red: 0.87, green: 0.75, blue: 0.41, alpha: 0.95)
+        bed.lineWidth = 3
+        root.addChild(bed)
+        let sprout = ArtSystem.label("❀", size: 38)
+        sprout.name = root.name
+        sprout.position.y = 10
+        sprout.fontColor = UIColor(red: 0.71, green: 0.94, blue: 0.52, alpha: 1)
+        root.addChild(sprout)
+        let sign = ArtSystem.label("SEED PATCH", size: 13)
+        sign.name = root.name
+        sign.position.y = -18
+        sign.fontColor = .white
+        root.addChild(sign)
+        makeAccessible(root, label: "Lumi's living seed patch",
+                       hint: "Explore planting, rain, sunlight, shade, and different flowers.")
+        addChild(root)
+    }
+
+    private func enterLivingGarden() {
+        guard place == .flowerGate, !livingGardenMode, !interactionInFlight else { return }
+        removeAction(forKey: "wordGardenPreview")
+        removeAction(forKey: "nextLiteracyEncounter")
+        clearQuestionAndChoices()
+        livingGardenMode = true
+        gardenSelectedSeed = nil
+        gardenSelectedCare = nil
+        childNode(withName: "livingGardenBeacon")?.isHidden = true
+        renderLivingGarden()
+        instruction.text = "Choose a seed, then plant it. Try rain, sunlight, or shade."
+    }
+
+    private func exitLivingGarden() {
+        guard livingGardenMode else { return }
+        livingGardenMode = false
+        gardenSelectedSeed = nil
+        gardenSelectedCare = nil
+        livingGardenStage?.removeFromParent()
+        livingGardenStage = nil
+        childNode(withName: "livingGardenBeacon")?.isHidden = false
+        // Resume the ordinary, unscored-interrupted encounter from the start.
+        if state.flowerGateComplete {
+            activateFlowerGate()
+            showSunmillRoute()
+        } else {
+            encounter = state.nextLiteracyEncounter()
+            buildFlowerEncounter()
+        }
+    }
+
+    private func gardenIndex(at point: CGPoint, among choices: [CGPoint]) -> Int? {
+        choices.indices.first { hypot(point.x - choices[$0].x,
+                                      point.y - choices[$0].y) <= 57 }
+    }
+
+    private func renderLivingGarden() {
+        livingGardenStage?.removeFromParent()
+        let root = SKNode()
+        root.name = "livingGardenStage"
+        root.zPosition = 1300
+        addChild(root)
+        livingGardenStage = root
+        let seedNames = ["STARBLOOM", "RAINVINE", "SHADEFERN"]
+        let seedMarks = ["✦", "≈", "☾"]
+        let seedTints: [UIColor] = [
+            UIColor(red: 0.98, green: 0.76, blue: 0.31, alpha: 1),
+            UIColor(red: 0.44, green: 0.82, blue: 0.98, alpha: 1),
+            UIColor(red: 0.70, green: 0.87, blue: 0.61, alpha: 1)
+        ]
+
+        // Seeds rest in a timber nursery rack; no floating answer buttons.
+        for (index, point) in gardenSeedPoints.enumerated() {
+            let seed = LumiSeed(rawValue: index)!
+            let selected = gardenSelectedSeed == seed
+            let tray = SKNode()
+            tray.name = "livingSeed\(index)"
+            tray.position = point
+            let timber = ArtSystem.box(
+                CGSize(width: 138, height: 68),
+                color: UIColor(red: 0.35, green: 0.25, blue: 0.18, alpha: 0.97),
+                radius: 12
+            )
+            timber.name = tray.name
+            timber.strokeColor = seedTints[index]
+            timber.lineWidth = selected ? 6 : 2
+            timber.glowWidth = selected && !reducedMotion ? 10 : 0
+            tray.addChild(timber)
+
+            let seedMark = ArtSystem.label(seedMarks[index], size: 31)
+            seedMark.name = tray.name
+            seedMark.position.y = 10
+            seedMark.fontColor = seedTints[index]
+            tray.addChild(seedMark)
+
+            let label = ArtSystem.label(seedNames[index], size: 12)
+            label.name = tray.name
+            label.position.y = -23
+            label.fontColor = .white
+            tray.addChild(label)
+            makeAccessible(tray, label: "Select \(seedNames[index]) seed",
+                           hint: "Then tap a pot to plant it.")
+            root.addChild(tray)
+        }
+
+        let toolNames = ["RAIN", "SUNLIGHT", "SHADE"]
+        let toolGlyphs = ["☂", "☀", "☾"]
+        let careModes: [LumiGardenCare] = [.water, .sun, .shade]
+        for (index, point) in gardenToolPoints.enumerated() {
+            let selected = gardenSelectedCare == careModes[index]
+            let control = SKNode()
+            control.name = "livingCare\(index)"
+            control.position = point
+            let stone = ArtSystem.box(
+                CGSize(width: 124, height: 58),
+                color: UIColor(red: 0.25, green: 0.30, blue: 0.22, alpha: 0.96),
+                radius: 16
+            )
+            stone.name = control.name
+            stone.strokeColor = selected
+                ? UIColor(red: 1.0, green: 0.87, blue: 0.39, alpha: 1)
+                : UIColor(red: 0.57, green: 0.75, blue: 0.47, alpha: 0.82)
+            stone.lineWidth = selected ? 5 : 2
+            control.addChild(stone)
+            let mark = ArtSystem.label(toolGlyphs[index], size: 27)
+            mark.name = control.name
+            mark.position.y = 9
+            mark.fontColor = .white
+            control.addChild(mark)
+            let label = ArtSystem.label(toolNames[index], size: 12)
+            label.name = control.name
+            label.position.y = -17
+            label.fontColor = UIColor(red: 0.96, green: 0.91, blue: 0.72, alpha: 1)
+            control.addChild(label)
+            makeAccessible(control, label: "Use \(toolNames[index].lowercased())",
+                           hint: "Choose this tool, then touch a planted pot.")
+            root.addChild(control)
+        }
+
+        let garden = state.lumiLivingGarden
+        for (index, point) in gardenPlotPoints.enumerated() {
+            let plot = SKNode()
+            plot.name = "livingPlot\(index)"
+            plot.position = point
+            let shadow = SKShapeNode(ellipseOf: CGSize(width: 143, height: 24))
+            shadow.fillColor = UIColor(red: 0.09, green: 0.13, blue: 0.10, alpha: 0.45)
+            shadow.strokeColor = .clear
+            shadow.position.y = -75
+            plot.addChild(shadow)
+
+            let pot = ArtSystem.box(
+                CGSize(width: 110, height: 78),
+                color: UIColor(red: 0.50, green: 0.27, blue: 0.16, alpha: 1),
+                radius: 16
+            )
+            pot.name = plot.name
+            pot.position.y = -37
+            pot.strokeColor = UIColor(red: 0.88, green: 0.60, blue: 0.32, alpha: 1)
+            pot.lineWidth = 3
+            plot.addChild(pot)
+
+            let soil = SKShapeNode(ellipseOf: CGSize(width: 112, height: 24))
+            soil.name = plot.name
+            soil.position.y = 0
+            soil.fillColor = UIColor(red: 0.26, green: 0.18, blue: 0.12, alpha: 1)
+            soil.strokeColor = UIColor(red: 0.81, green: 0.58, blue: 0.29, alpha: 1)
+            soil.lineWidth = 2
+            plot.addChild(soil)
+
+            if let living = garden.plot(at: index) {
+                let tint = seedTints[living.seed.rawValue]
+                if living.growthStage == 0 {
+                    let seed = SKShapeNode(ellipseOf: CGSize(width: 22, height: 15))
+                    seed.name = plot.name
+                    seed.fillColor = tint
+                    seed.strokeColor = .white
+                    seed.position.y = 5
+                    plot.addChild(seed)
+                } else {
+                    let stalk = SKShapeNode(rectOf: CGSize(width: 10, height: 81), cornerRadius: 5)
+                    stalk.name = plot.name
+                    stalk.position.y = 43
+                    stalk.fillColor = UIColor(red: 0.31, green: 0.72, blue: 0.35, alpha: 1)
+                    stalk.strokeColor = .clear
+                    plot.addChild(stalk)
+
+                    for direction in [-1.0, 1.0] {
+                        let leaf = SKShapeNode(ellipseOf: CGSize(width: 41, height: 19))
+                        leaf.name = plot.name
+                        leaf.position = CGPoint(x: CGFloat(direction) * 21, y: 44)
+                        leaf.zRotation = CGFloat(direction) * 0.43
+                        leaf.fillColor = UIColor(red: 0.42, green: 0.80, blue: 0.38, alpha: 1)
+                        leaf.strokeColor = .clear
+                        plot.addChild(leaf)
+                    }
+
+                    if living.isBlooming {
+                        for petal in 0..<6 {
+                            let angle = CGFloat(petal) * .pi / 3
+                            let bloom = SKShapeNode(ellipseOf: CGSize(width: 24, height: 41))
+                            bloom.name = plot.name
+                            bloom.position = CGPoint(x: sin(angle) * 30,
+                                                     y: 94 + cos(angle) * 30)
+                            bloom.zRotation = -angle
+                            bloom.fillColor = tint
+                            bloom.strokeColor = UIColor.white.withAlphaComponent(0.80)
+                            bloom.lineWidth = 1.5
+                            plot.addChild(bloom)
+                        }
+                        let center = SKShapeNode(circleOfRadius: 18)
+                        center.name = plot.name
+                        center.position.y = 94
+                        center.fillColor = UIColor(red: 1, green: 0.91, blue: 0.43, alpha: 1)
+                        center.strokeColor = .white
+                        center.lineWidth = 2
+                        center.glowWidth = reducedMotion ? 0 : 7
+                        plot.addChild(center)
+                    } else if living.seed == .shadefern && living.sunlight {
+                        let curled = ArtSystem.label("☾", size: 22)
+                        curled.name = plot.name
+                        curled.position.y = 105
+                        curled.fontColor = tint
+                        plot.addChild(curled)
+                    } else {
+                        let bud = SKShapeNode(circleOfRadius: 16)
+                        bud.name = plot.name
+                        bud.position.y = 86
+                        bud.fillColor = tint.withAlphaComponent(0.76)
+                        bud.strokeColor = .white
+                        plot.addChild(bud)
+                    }
+                }
+                makeAccessible(plot, label: "Plot \(index + 1), \(seedNames[living.seed.rawValue]), " +
+                    (living.isBlooming ? "flowering" : "growing"),
+                    hint: "Tap after selecting rain, sun, shade, or a new seed.")
+            } else {
+                let plus = ArtSystem.label("✧", size: 36)
+                plus.name = plot.name
+                plus.position.y = 17
+                plus.fontColor = UIColor(red: 0.94, green: 0.83, blue: 0.63, alpha: 1)
+                plot.addChild(plus)
+                makeAccessible(plot, label: "Empty garden pot \(index + 1)",
+                               hint: "Choose a seed first, then tap this pot.")
+            }
+            root.addChild(plot)
+        }
+
+        let exit = SKShapeNode(circleOfRadius: 33)
+        exit.name = "livingGardenExit"
+        exit.position = CGPoint(x: 1170, y: 628)
+        exit.fillColor = UIColor(red: 0.28, green: 0.23, blue: 0.16, alpha: 0.97)
+        exit.strokeColor = UIColor(red: 0.95, green: 0.77, blue: 0.42, alpha: 1)
+        exit.lineWidth = 3
+        let arrow = ArtSystem.label("‹", size: 33)
+        arrow.name = exit.name
+        exit.addChild(arrow)
+        makeAccessible(exit, label: "Return to Flower Gate")
+        root.addChild(exit)
+    }
+
+    private func handleLivingGardenTap(at point: CGPoint) {
+        if hypot(point.x - 1170, point.y - 628) <= 47 {
+            exitLivingGarden()
+            return
+        }
+        if let index = gardenIndex(at: point, among: gardenSeedPoints),
+           let seed = LumiSeed(rawValue: index) {
+            gardenSelectedSeed = seed
+            gardenSelectedCare = nil
+            state.audio.play("crystal")
+            instruction.text = "Choose a pot for your seed. Every plant has different needs."
+            renderLivingGarden()
+            return
+        }
+        if let index = gardenIndex(at: point, among: gardenToolPoints) {
+            let careModes: [LumiGardenCare] = [.water, .sun, .shade]
+            gardenSelectedCare = careModes[index]
+            gardenSelectedSeed = nil
+            instruction.text = "Now tap a planted pot. See how your plant responds."
+            renderLivingGarden()
+            return
+        }
+        guard let index = gardenIndex(at: point, among: gardenPlotPoints) else {
+            instruction.text = "Try a seed, a weather tool, or a garden pot."
+            return
+        }
+        let bloomsBefore = state.lumiLivingGarden.bloomingCount
+        let changed: Bool
+        if let seed = gardenSelectedSeed {
+            changed = state.plantLumiSeed(seed, at: index)
+            instruction.text = changed ? "A new seed is planted. Choose rain, sun, or shade."
+                : "That seed is already growing here. Try a different seed."
+        } else if let care = gardenSelectedCare {
+            changed = state.tendLumiGarden(care, at: index)
+            if changed {
+                let plot = state.lumiLivingGarden.plot(at: index)
+                instruction.text = plot?.isBlooming == true
+                    ? "It bloomed! Try another seed or change the weather."
+                    : care == .sun && plot?.seed == .shadefern
+                        ? "The fern curled in the sunlight. Can shade help it?"
+                        : "The plant changed! What will happen if you try another tool?"
+            } else {
+                instruction.text = "Nothing new happened. Try another tool or another seed."
+            }
+        } else {
+            instruction.text = "Choose a seed or a weather tool before tapping a pot."
+            return
+        }
+
+        guard changed else { return }
+        state.audio.play(state.lumiLivingGarden.bloomingCount > bloomsBefore ? "success" : "crystal")
+        if state.lumiLivingGarden.bloomingCount > bloomsBefore {
+            lumi.pose(.react)
+            valkyrie.pose(.celebrate)
+            successFeedback(at: gardenPlotPoints[index])
+            if bloomsBefore == 0 {
+                instruction.text = "Lumi's first bloom! You earned a living flower for Story Tree."
+            }
+        } else {
+            lumi.pose(.react)
+            valkyrie.pose(.interact)
+        }
+        renderLivingGarden()
+    }
+
     private func buildSoundFlowers() {
         let points = [
             CGPoint(x: 255, y: 340),
