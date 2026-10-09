@@ -90,6 +90,16 @@ import LearningCore
         XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestVictory"))
         try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Restored")
 
+        // The rescued bridge becomes a reusable, non-scored color experiment.
+        let beforeExperiment = state.starlightBridgeQuest.installedCrystals
+        castle.handleTap(at: sockets[0])
+        castle.handleTap(at: sockets[1])
+        XCTAssertEqual(state.starlightBridgeQuest.installedCrystals[0], beforeExperiment[1])
+        XCTAssertEqual(state.starlightBridgeQuest.installedCrystals[1], beforeExperiment[0])
+        XCTAssertTrue(state.starlightBridgeQuest.isComplete)
+        XCTAssertEqual(state.profile.skills, initialMathEvidence)
+        try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Color-Experiment")
+
         castle.handleTap(at: CGPoint(x: 1170, y: 625))
         XCTAssertNil(castle.childNode(withName: "starlightQuestStage"))
         castle.willLeave()
