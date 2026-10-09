@@ -24,6 +24,19 @@ import LearningCore
     private var touchStart = CGPoint.zero
     private var moved = false
     private var lastScienceKineticReducedMotion: Bool?
+    private var windRescueMode = false
+    private var windRescueStage: SKNode?
+    private var windDraggingSail: MiloWindSail?
+    private var windDragGhost: SKNode?
+    private let windSailPoints = [
+        CGPoint(x: 405, y: 164), CGPoint(x: 620, y: 164), CGPoint(x: 835, y: 164)
+    ]
+    private let windPowerPoints = [
+        CGPoint(x: 420, y: 540), CGPoint(x: 650, y: 540), CGPoint(x: 880, y: 540)
+    ]
+    private let windLaunchPoint = CGPoint(x: 1095, y: 195)
+    private let windExitPoint = CGPoint(x: 1160, y: 622)
+    private let windAssemblyPoint = CGPoint(x: 576, y: 371)
 
     override func didMove(to view: SKView) {
         prepareAdaptiveLandscapeCanvas(for: view)
@@ -38,6 +51,7 @@ import LearningCore
         milo.reducedMotion = reducedMotion
         milo.setScale(0.82)
         addChild(milo)
+        buildWindRescueBeacon()
 
         if weatherStage == .complete && !creatureRouteOpen,
            let challenge = state.scienceNextFieldStudy(in: .weatherTower) {
@@ -673,6 +687,12 @@ import LearningCore
         activeTouch = touch
         touchStart = touch.location(in: self)
         moved = false
+        if windRescueMode {
+            windDraggingSail = windSailPoints.indices.first(where: {
+                hypot(touchStart.x - windSailPoints[$0].x,
+                      touchStart.y - windSailPoints[$0].y) <= 70
+            }).flatMap { MiloWindSail(rawValue: $0) }
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -681,12 +701,28 @@ import LearningCore
         if hypot(point.x - touchStart.x, point.y - touchStart.y) > 12 {
             moved = true
         }
+        if windRescueMode, moved, windDraggingSail != nil {
+            if windDragGhost == nil {
+                let ghost = SKShapeNode(circleOfRadius: 27)
+                ghost.name = "windSailDragGhost"
+                ghost.fillColor = UIColor(red: 0.92, green: 0.87, blue: 0.62, alpha: 0.63)
+                ghost.strokeColor = .white
+                ghost.lineWidth = 3
+                ghost.zPosition = 1850
+                addChild(ghost)
+                windDragGhost = ghost
+            }
+            windDragGhost?.position = point
+        }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = activeTouch, touches.contains(touch) {
             activeTouch = nil
             moved = false
+            windDraggingSail = nil
+            windDragGhost?.removeFromParent()
+            windDragGhost = nil
         }
     }
 
@@ -695,8 +731,22 @@ import LearningCore
         defer {
             activeTouch = nil
             moved = false
+            windDraggingSail = nil
+            windDragGhost?.removeFromParent()
+            windDragGhost = nil
         }
         let point = touch.location(in: self)
+        if windRescueMode, moved {
+            if let dragged = windDraggingSail,
+               abs(point.x - windAssemblyPoint.x) <= 90,
+               abs(point.y - windAssemblyPoint.y) <= 85 {
+                _ = state.chooseMiloWindSail(dragged)
+                state.audio.play("crystal")
+                renderWindRescue()
+                instruction.text = "That sail is attached! Try a gust and launch the wind craft."
+            }
+            return
+        }
         guard !moved, hypot(point.x - touchStart.x, point.y - touchStart.y) <= 12 else { return }
         handleTap(at: point)
     }
@@ -728,12 +778,31 @@ import LearningCore
 
     override func willLeave() {
         activeTouch = nil
+        windDraggingSail = nil
+        windDragGhost?.removeFromParent()
+        windDragGhost = nil
+        windRescueMode = false
+        windRescueStage?.removeFromParent()
+        windRescueStage = nil
         milo.cancelTravel()
         super.willLeave()
     }
 
     func handleTap(at point: CGPoint) {
         let target = targetName(at: point)
+        if windRescueMode {
+            if target == "scienceWeatherHome" {
+                willLeave()
+                state.travel(to: .storyTree)
+            } else {
+                handleWindRescueTap(at: point)
+            }
+            return
+        }
+        if target == "windRescueBeacon" {
+            enterWindRescue()
+            return
+        }
 
         if weatherStage == .complete,
            !creatureRouteOpen,
