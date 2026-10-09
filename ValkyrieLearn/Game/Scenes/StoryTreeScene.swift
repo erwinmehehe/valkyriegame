@@ -28,6 +28,7 @@ import SpriteKit
     private var wordGardenLanternNode: SKNode?
     private var puzzlePalaceLanternNode: SKNode?
     private var bridgeCharmNode: SKNode?
+    private var lumiGardenBloomNode: SKNode?
     private var lastKineticReducedMotion: Bool?
     private let moonLanternSlots = [
         CGPoint(x: 295, y: 500),
@@ -50,6 +51,11 @@ import SpriteKit
         CGPoint(x: 240, y: 585),
         CGPoint(x: 435, y: 600),
         CGPoint(x: 610, y: 605)
+    ]
+    private let lumiBloomSlots = [
+        CGPoint(x: 200, y: 390),
+        CGPoint(x: 305, y: 420),
+        CGPoint(x: 420, y: 400)
     ]
 
     override func didMove(to view: SKView) {
@@ -209,15 +215,19 @@ import SpriteKit
         renderWordGardenLantern()
         renderPuzzlePalaceLantern()
         renderBridgeCharm()
+        renderLumiGardenBloom()
 
         let rewardCount = [
             state.hasStoryReward(.moonLantern),
             state.hasStoryReward(.wordGardenLantern),
             state.hasStoryReward(.puzzlePalaceLantern),
-            state.hasStoryReward(.starlightBridgeCharm)
+            state.hasStoryReward(.starlightBridgeCharm),
+            state.hasStoryReward(.lumiLivingBloom)
         ].filter { $0 }.count
         if rewardCount >= 2 {
             instruction.text = "Your lanterns are glowing. Choose where Valkyrie explores next."
+        } else if state.hasStoryReward(.lumiLivingBloom) {
+            instruction.text = "Lumi's living flower is growing here. Tap its pot to move it."
         } else if state.hasStoryReward(.starlightBridgeCharm) {
             instruction.text = "Pip's bridge charm is home! Tap it to move it to another branch."
         } else if state.hasStoryReward(.puzzlePalaceLantern) {
@@ -760,6 +770,67 @@ import SpriteKit
         bridgeCharmNode = root
     }
 
+    /// A child-placed living bloom earned through experimentation, not
+    /// memorizing rune answers. Restored from the same offline learner profile.
+    private func renderLumiGardenBloom() {
+        lumiGardenBloomNode?.removeFromParent()
+        lumiGardenBloomNode = nil
+        guard state.hasStoryReward(.lumiLivingBloom) else { return }
+        let slot = state.storyRewardPlacement(.lumiLivingBloom) % lumiBloomSlots.count
+        let root = SKNode()
+        root.name = "lumiLivingBloom"
+        root.position = lumiBloomSlots[slot]
+        root.zPosition = 925
+
+        let pot = ArtSystem.box(
+            CGSize(width: 42, height: 31),
+            color: UIColor(red: 0.57, green: 0.31, blue: 0.18, alpha: 1),
+            radius: 7
+        )
+        pot.name = root.name
+        pot.position.y = -20
+        pot.strokeColor = UIColor(red: 0.94, green: 0.66, blue: 0.40, alpha: 1)
+        pot.lineWidth = 2
+        root.addChild(pot)
+
+        let stem = SKShapeNode(rectOf: CGSize(width: 7, height: 48), cornerRadius: 3)
+        stem.position.y = 16
+        stem.name = root.name
+        stem.fillColor = UIColor(red: 0.33, green: 0.72, blue: 0.38, alpha: 1)
+        stem.strokeColor = .clear
+        root.addChild(stem)
+
+        for index in 0..<5 {
+            let angle = CGFloat(index) * 2 * .pi / 5
+            let petal = SKShapeNode(ellipseOf: CGSize(width: 20, height: 32))
+            petal.name = root.name
+            petal.position = CGPoint(x: sin(angle) * 22, y: 44 + cos(angle) * 22)
+            petal.zRotation = -angle
+            petal.fillColor = UIColor(red: 0.98, green: 0.72, blue: 0.42, alpha: 1)
+            petal.strokeColor = .white
+            petal.lineWidth = 1
+            root.addChild(petal)
+        }
+        let center = SKShapeNode(circleOfRadius: 11)
+        center.name = root.name
+        center.position.y = 44
+        center.fillColor = UIColor(red: 1, green: 0.94, blue: 0.42, alpha: 1)
+        center.strokeColor = .white
+        root.addChild(center)
+
+        let hit = SKShapeNode(circleOfRadius: 42)
+        hit.name = root.name
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.position.y = 16
+        hit.zPosition = 2
+        root.addChild(hit)
+        makeAccessible(root, label: "Lumi's living flower",
+                       hint: "Tap to place the flower in another Story Tree spot.")
+        addChild(root)
+        lumiGardenBloomNode = root
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = activeTouch, touches.contains(touch) else { return }
         defer {
@@ -955,6 +1026,17 @@ import SpriteKit
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "The Flower Lantern found a new branch."
+
+        case "lumiLivingBloom":
+            guard state.hasStoryReward(.lumiLivingBloom) else { return }
+            selectionFeedback()
+            _ = state.cycleStoryRewardPlacement(
+                .lumiLivingBloom, slotCount: lumiBloomSlots.count
+            )
+            renderLumiGardenBloom()
+            state.audio.play("success")
+            valkyrie.pose(.interact)
+            instruction.text = "Lumi's living flower found a new place to grow."
 
         case "starlightBridgeCharm":
             guard state.hasStoryReward(.starlightBridgeCharm) else { return }
