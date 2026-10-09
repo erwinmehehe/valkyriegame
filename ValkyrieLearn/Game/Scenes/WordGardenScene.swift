@@ -21,6 +21,19 @@ import LearningCore
     private var targetRune: SKNode?
     private var lastKineticReducedMotion: Bool?
     private var lastKineticCompletionKey = ""
+    private var livingGardenMode = false
+    private var livingGardenStage: SKNode?
+    private var gardenSelectedSeed: LumiSeed?
+    private var gardenSelectedCare: LumiGardenCare?
+    private let gardenPlotPoints = [
+        CGPoint(x: 550, y: 360), CGPoint(x: 775, y: 360), CGPoint(x: 1000, y: 360)
+    ]
+    private let gardenSeedPoints = [
+        CGPoint(x: 485, y: 535), CGPoint(x: 705, y: 535), CGPoint(x: 925, y: 535)
+    ]
+    private let gardenToolPoints = [
+        CGPoint(x: 495, y: 160), CGPoint(x: 705, y: 160), CGPoint(x: 915, y: 160)
+    ]
 
     private let flowerPoints = [
         CGPoint(x: 505, y: 245), CGPoint(x: 675, y: 280),
@@ -267,6 +280,7 @@ import LearningCore
         case .flowerGate:
             buildFlowerGateLandmark()
             buildSoundFlowers()
+            buildLivingGardenBeacon()
         case .sunmillCrossing:
             buildSunmillLandmark()
             let back = worldControl(
