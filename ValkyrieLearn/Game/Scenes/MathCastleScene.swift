@@ -44,11 +44,13 @@ import LearningCore
         CGPoint(x: 905, y: 184),
         CGPoint(x: 1050, y: 184)
     ]
+    // The rescued firefly and supply cart stand on existing stone plinths,
+    // and the lever is mounted at the bridge's foot, not floating in the sky.
     private let bridgeLoadChoicePoints = [
-        CGPoint(x: 435, y: 512), // light firefly
-        CGPoint(x: 590, y: 512)  // heavier supply cart
+        CGPoint(x: 468, y: 306), // light firefly on middle courtyard plinth
+        CGPoint(x: 605, y: 306)  // supply cart on right courtyard plinth
     ]
-    private let bridgeTestLeverPoint = CGPoint(x: 1150, y: 513)
+    private let bridgeTestLeverPoint = CGPoint(x: 1150, y: 270)
 
     private var activeTouch: UITouch?
     private var dragOrigin: String?
