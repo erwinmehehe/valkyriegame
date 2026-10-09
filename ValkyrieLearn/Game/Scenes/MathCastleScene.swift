@@ -12,20 +12,22 @@ import LearningCore
     private var bridgeQuestSelectedCrystal: Int?
     private var bridgeQuestDraggedCrystal: Int?
     private var bridgeQuestStage: SKNode?
+    // Ground the collectibles on plinths beside the broken span. The earlier
+    // version floated circular quiz-looking inputs over the castle skyline.
     private let bridgeCrystalPoints = [
-        CGPoint(x: 475, y: 465),
-        CGPoint(x: 635, y: 455),
-        CGPoint(x: 795, y: 465)
+        CGPoint(x: 330, y: 306),
+        CGPoint(x: 468, y: 306),
+        CGPoint(x: 605, y: 306)
     ]
     private let bridgeInventoryPoints = [
-        CGPoint(x: 500, y: 145),
-        CGPoint(x: 640, y: 145),
-        CGPoint(x: 780, y: 145)
+        CGPoint(x: 360, y: 130),
+        CGPoint(x: 490, y: 130),
+        CGPoint(x: 620, y: 130)
     ]
     private let bridgeSocketPoints = [
-        CGPoint(x: 695, y: 330),
-        CGPoint(x: 850, y: 330),
-        CGPoint(x: 1005, y: 330)
+        CGPoint(x: 760, y: 302),
+        CGPoint(x: 905, y: 302),
+        CGPoint(x: 1050, y: 302)
     ]
     private let bridgeCrystalTints: [UIColor] = [
         UIColor(red: 0.46, green: 0.86, blue: 1.0, alpha: 1),
@@ -957,9 +959,9 @@ import LearningCore
         setBridgeQuestControlsHidden(true)
         rebuildBridgeQuestStage()
         if state.starlightBridgeQuest.isComplete {
-            instruction.text = "Look what you built! Your bridge charm is waiting at Story Tree."
+            instruction.text = "The firefly is safe. Visit Story Tree to move your bridge charm."
         } else {
-            instruction.text = "A tiny firefly is stranded! Find three crystals to build a bridge home."
+            instruction.text = "A firefly is stranded! Find crystals to repair its bridge."
         }
     }
 
@@ -1042,7 +1044,7 @@ import LearningCore
                                              at: .zero, radius: 26)
                 socketNode.addChild(gem)
             } else {
-                let glyph = ArtSystem.label("+", size: 32)
+                let glyph = ArtSystem.label("◇", size: 34)
                 glyph.name = socketNode.name
                 glyph.fontColor = UIColor(red: 0.78, green: 0.92, blue: 1, alpha: 1)
                 socketNode.addChild(glyph)
@@ -1078,22 +1080,33 @@ import LearningCore
         exit.fillColor = UIColor(red: 0.09, green: 0.13, blue: 0.23, alpha: 0.96)
         exit.strokeColor = UIColor(red: 0.87, green: 0.73, blue: 0.42, alpha: 1)
         exit.lineWidth = 3
-        let back = ArtSystem.label("↩", size: 26)
+        let back = ArtSystem.label("‹", size: 32)
         back.name = "bridgeQuestExit"
         exit.addChild(back)
         makeAccessible(exit, label: "Return to Pip's workshop")
         stage.addChild(exit)
 
+        // A compact engraved counter is part of the bridge machinery,
+        // not another floating quiz panel covering the scenery.
+        let sign = ArtSystem.plaque(
+            CGSize(width: 215, height: 43),
+            fill: UIColor(red: 0.09, green: 0.13, blue: 0.23, alpha: 0.92),
+            stroke: UIColor(red: 0.90, green: 0.72, blue: 0.37, alpha: 0.91),
+            radius: 11
+        )
+        sign.name = "bridgeQuestProgressSign"
+        sign.position = CGPoint(x: 902, y: 408)
+        stage.addChild(sign)
+
         let status = ArtSystem.label(
-            quest.isComplete ? "THE BRIDGE SHINES AGAIN" :
-                "BRIDGE CRYSTALS  \(quest.installedCount) / \(StarlightBridgeQuest.crystalCount)",
-            size: 20
+            quest.isComplete ? "BRIDGE RESTORED" :
+                "BRIDGE LIGHT   \(quest.installedCount) / \(StarlightBridgeQuest.crystalCount)",
+            size: 16
         )
         status.name = "bridgeQuestStatus"
-        status.position = CGPoint(x: 865, y: 560)
         status.fontName = "Georgia-Bold"
         status.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.78, alpha: 1)
-        stage.addChild(status)
+        sign.addChild(status)
 
         addBridgeFirefly(to: stage, rescued: quest.isComplete)
 
@@ -1124,7 +1137,7 @@ import LearningCore
         let root = SKNode()
         root.name = "bridgeQuestFirefly"
         root.position = rescued
-            ? CGPoint(x: 530, y: 455) : CGPoint(x: 1140, y: 445)
+            ? CGPoint(x: 350, y: 383) : CGPoint(x: 1150, y: 368)
         root.zPosition = 16
 
         let glow = SKShapeNode(circleOfRadius: 20)
@@ -1176,7 +1189,7 @@ import LearningCore
         guard !bridgeQuestBusy else { return }
         let quest = state.starlightBridgeQuest
         if !quest.isComplete,
-           hypot(point.x - 1140, point.y - 445) < 43 {
+           hypot(point.x - 1150, point.y - 368) < 43 {
             pip.pose(.react)
             instruction.text = "That little firefly is stranded! Three crystals will build a way home."
             return
