@@ -331,6 +331,8 @@ Prefer rewards the child can use or place. Avoid badge clutter.
 
 ## 15. Art direction
 
+**One-time design and review contract:** Follow `docs/PRODUCTION_VISUAL_GAMEPLAY_CONTRACT.md` for the common style, physical cause-and-effect affordances, full Puzzle Palace room plan, and golden-master gate. Do not redesign features ad hoc, claim unapproved concept art as production artwork, or infer the exact Steam inspiration until the owner supplies/approves its title. Preserve existing approved art until signed off.
+
 The production visual target is a high-quality illustrated adventure, not a UI pasted on top of backgrounds.
 
 Valkyrie must be a real protagonist, roughly 15–20% of the scene when appropriate.
