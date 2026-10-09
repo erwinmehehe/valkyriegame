@@ -864,4 +864,42 @@ final class StarlightBridgeQuestTests: XCTestCase {
         ).isComplete)
         XCTAssertTrue(resumed.skills.isEmpty)
     }
+
+    func testHiddenStarIsOptionalPersistentAndAvailableOnReturnVisits() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertFalse(quest.hasFoundHiddenStar)
+        XCTAssertFalse(quest.discoverHiddenStar())
+        XCTAssertTrue(quest.discover())
+        XCTAssertTrue(quest.collect(0))
+        XCTAssertFalse(quest.discoverHiddenStar(), "One gem must not reveal the secret.")
+        XCTAssertTrue(quest.collect(1))
+        XCTAssertTrue(quest.discoverHiddenStar())
+        XCTAssertFalse(quest.discoverHiddenStar(), "One hidden star cannot be collected twice.")
+        XCTAssertEqual(quest.installedCount, 0, "Secret play must not repair sockets.")
+        let restored = try JSONDecoder().decode(StarlightBridgeQuest.self,
+                                                from: JSONEncoder().encode(quest))
+        XCTAssertTrue(restored.hasFoundHiddenStar)
+
+        var replayQuest = StarlightBridgeQuest()
+        XCTAssertTrue(replayQuest.discover())
+        for index in 0..<StarlightBridgeQuest.crystalCount {
+            XCTAssertTrue(replayQuest.collect(index))
+            XCTAssertTrue(replayQuest.install(index, into: index))
+        }
+        XCTAssertTrue(replayQuest.isComplete)
+        XCTAssertTrue(replayQuest.discoverHiddenStar(),
+                      "Finding the secret later must not require restarting the main rescue.")
+        XCTAssertTrue(replayQuest.isComplete)
+
+        // A save from the earlier, secret-less bridge implementation still decodes.
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(replayQuest)) as? [String: Any])
+        payload.removeValue(forKey: "hiddenStarFound")
+        let older = try JSONSerialization.data(withJSONObject: payload)
+        let migrated = try JSONDecoder().decode(StarlightBridgeQuest.self, from: older)
+        XCTAssertTrue(migrated.isComplete)
+        XCTAssertFalse(migrated.hasFoundHiddenStar)
+        XCTAssertTrue(migrated.availableCrystals.isEmpty)
+    }
+
 }
