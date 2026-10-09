@@ -2867,6 +2867,12 @@ import LearningCore
         XCTAssertNil(restoredRepairLab.childNode(withName: "repairReset"))
         XCTAssertNotNil(restoredRepairLab.childNode(withName: "repairHome"))
         XCTAssertNotNil(restoredRepairLab.childNode(withName: "//repairMachineRotor"))
+        for index in 0..<4 {
+            XCTAssertNotNil(
+                restoredRepairLab.childNode(withName: "//repairCompletedGear\(index)"),
+                "Each machine socket must be visibly repaired after restoring saved progress."
+            )
+        }
         try await capture(restoredRepairLab, in: view, name: "Puzzle-Palace-native-repair-clockwork-powered")
         restoredRepairLab.willLeave()
 
@@ -3042,7 +3048,12 @@ import LearningCore
             }
             if world == .puzzlePalace {
                 let gate = try XCTUnwrap(scene.childNode(withName: "puzzleGate") as? SKShapeNode)
-                XCTAssertEqual(gate.position.x, 931, accuracy: 1)
+                let paintingScale = max(1, scene.size.height / 720)
+                XCTAssertEqual(
+                    gate.position.x,
+                    640 + (949 - 640) * paintingScale,
+                    accuracy: 1
+                )
                 XCTAssertEqual(gate.fillColor.cgColor.alpha, 0, accuracy: 0.001)
                 XCTAssertNotNil(scene.childNode(withName: "//puzzleGateLock"))
                 XCTAssertNotNil(scene.childNode(withName: "//puzzleGateOpening"))
