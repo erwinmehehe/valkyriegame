@@ -63,6 +63,11 @@ import LearningCore
             }
         }
         XCTAssertEqual(state.starlightBridgeQuest.availableCrystals, [0, 1, 2])
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestSecret"))
+        castle.handleTap(at: CGPoint(x: 1055, y: 460))
+        XCTAssertTrue(state.starlightBridgeQuest.hasFoundHiddenStar)
+        XCTAssertEqual(state.profile.skills, initialMathEvidence,
+                       "The optional hidden star cannot award mathematical mastery.")
 
         let inventory: [CGPoint] = [
             CGPoint(x: 360, y: 130), CGPoint(x: 490, y: 130), CGPoint(x: 620, y: 130)
@@ -91,6 +96,7 @@ import LearningCore
 
         let restored = try AppState(context: ModelContext(container))
         XCTAssertTrue(restored.starlightBridgeQuest.isComplete)
+        XCTAssertTrue(restored.starlightBridgeQuest.hasFoundHiddenStar)
         XCTAssertTrue(restored.hasStoryReward(.starlightBridgeCharm))
         XCTAssertEqual(restored.profile.skills, initialMathEvidence)
 
@@ -100,6 +106,9 @@ import LearningCore
         view.presentScene(tree)
         let charm = try XCTUnwrap(tree.childNode(withName: "starlightBridgeCharm"))
         XCTAssertTrue(charm.isAccessibilityElement)
+        XCTAssertNotNil(tree.childNode(withName: "//starlightBridgeSecretStar"),
+                        "The optional secret should visibly persist on the earned charm.")
+        XCTAssertTrue((charm.accessibilityLabel ?? "").contains("hidden star"))
         XCTAssertEqual(restored.storyRewardPlacement(.starlightBridgeCharm), 0)
         try await capture(tree, in: view, name: "Story-Tree-Starlight-Bridge-Charm")
         tree.handleTap(at: charm.position)
