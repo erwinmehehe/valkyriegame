@@ -1005,6 +1005,52 @@ import LearningCore
         addChild(stage)
         bridgeQuestStage = stage
 
+        // These are physical objects sitting on the courtyard and the bridge,
+        // not translucent quiz buttons floating in front of the painted sky.
+        for (index, point) in bridgeCrystalPoints.enumerated() {
+            let foot = SKShapeNode(ellipseOf: CGSize(width: 107, height: 19))
+            foot.position = CGPoint(x: point.x, y: point.y - 86)
+            foot.fillColor = UIColor(red: 0.04, green: 0.07, blue: 0.14, alpha: 0.43)
+            foot.strokeColor = .clear
+            foot.name = "decorativeCrystalPedestalFoot\(index)"
+            stage.addChild(foot)
+
+            let plinth = ArtSystem.box(
+                CGSize(width: 82, height: 44),
+                color: UIColor(red: 0.32, green: 0.29, blue: 0.42, alpha: 0.95),
+                radius: 12
+            )
+            plinth.position = CGPoint(x: point.x, y: point.y - 63)
+            plinth.strokeColor = bridgeCrystalTints[index].withAlphaComponent(0.72)
+            plinth.lineWidth = 3
+            plinth.name = "decorativeCrystalPedestal\(index)"
+            stage.addChild(plinth)
+
+            let rim = ArtSystem.box(
+                CGSize(width: 100, height: 10),
+                color: UIColor(red: 0.85, green: 0.72, blue: 0.46, alpha: 0.96),
+                radius: 4
+            )
+            rim.position = CGPoint(x: point.x, y: point.y - 40)
+            rim.strokeColor = .clear
+            rim.name = "decorativeCrystalPedestalRim\(index)"
+            stage.addChild(rim)
+        }
+
+        // Short supports keep the sockets rooted to the damaged physical span.
+        for (index, point) in bridgeSocketPoints.enumerated() {
+            let support = ArtSystem.box(
+                CGSize(width: 16, height: 77),
+                color: UIColor(red: 0.28, green: 0.22, blue: 0.18, alpha: 0.94),
+                radius: 5
+            )
+            support.position = CGPoint(x: point.x, y: point.y - 74)
+            support.strokeColor = UIColor(red: 0.84, green: 0.67, blue: 0.39, alpha: 0.83)
+            support.lineWidth = 2
+            support.name = "decorativeBridgeSocketSupport\(index)"
+            stage.addChild(support)
+        }
+
         // Native bridge spans, visibly separated into three broken sections.
         for (socket, location) in bridgeSocketPoints.enumerated() {
             let installed = quest.installedCrystals[socket]
@@ -1089,13 +1135,23 @@ import LearningCore
         // A compact engraved counter is part of the bridge machinery,
         // not another floating quiz panel covering the scenery.
         let sign = ArtSystem.plaque(
-            CGSize(width: 215, height: 43),
+            CGSize(width: 260, height: 43),
             fill: UIColor(red: 0.09, green: 0.13, blue: 0.23, alpha: 0.92),
             stroke: UIColor(red: 0.90, green: 0.72, blue: 0.37, alpha: 0.91),
             radius: 11
         )
         sign.name = "bridgeQuestProgressSign"
         sign.position = CGPoint(x: 902, y: 408)
+
+        let stand = ArtSystem.box(
+            CGSize(width: 12, height: 65),
+            color: UIColor(red: 0.46, green: 0.31, blue: 0.17, alpha: 1),
+            radius: 3
+        )
+        stand.name = "decorativeBridgeQuestSignPost"
+        stand.position = CGPoint(x: 902, y: 366)
+        stand.strokeColor = .clear
+        stage.addChild(stand)
         stage.addChild(sign)
 
         let status = ArtSystem.label(
