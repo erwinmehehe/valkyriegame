@@ -794,10 +794,24 @@ import LearningCore
                     XCTAssertNotNil(scene.childNode(withName: "storyHollowDoorGlow"))
                 }
             } else {
-                XCTAssertNotNil(
+                XCTAssertNil(
                     scene.childNode(withName: "//questionPromptBackdrop"),
-                    "Flower Gate still needs a contrast surface over the bright painting."
+                    "Flower Gate must not duplicate its readable lower prompt with a giant top panel."
                 )
+                XCTAssertNotNil(scene.childNode(withName: "instructionBackdrop"),
+                                "Child-facing guidance retains its contrast surface.")
+                let rune = try XCTUnwrap(scene.childNode(withName: "targetRune"))
+                let glyph = try XCTUnwrap(rune.children.compactMap { $0 as? SKLabelNode }.first)
+                let runeInk = try XCTUnwrap(glyph.fontColor)
+                var red: CGFloat = 0
+                var green: CGFloat = 0
+                var blue: CGFloat = 0
+                var alpha: CGFloat = 0
+                XCTAssertTrue(runeInk.getRed(&red, green: &green, blue: &blue, alpha: &alpha))
+                XCTAssertEqual(red, 0.24, accuracy: 0.005)
+                XCTAssertEqual(green, 0.13, accuracy: 0.005)
+                XCTAssertEqual(blue, 0.18, accuracy: 0.005)
+                XCTAssertEqual(alpha, 1, accuracy: 0.005)
             }
             XCTAssertFalse(
                 backdrop.isHidden,
@@ -1190,7 +1204,8 @@ import LearningCore
         let flower = WordGardenScene(state: state)
         flower.didMove(to: SKView())
         XCTAssertNotNil(flower.childNode(withName: "flowerGate"))
-        XCTAssertNotNil(flower.childNode(withName: "questionPrompt"))
+        XCTAssertNil(flower.childNode(withName: "questionPrompt"))
+        XCTAssertEqual(flower.instruction.text, state.nextLiteracyEncounter().prompt)
         XCTAssertNotNil(flower.childNode(withName: "targetRune"))
         XCTAssertEqual(flower.children.filter { $0.name == "flowerChoice" }.count, 4)
         XCTAssertEqual(flower.children.filter { $0.name == "soundFlower" }.count, 3)

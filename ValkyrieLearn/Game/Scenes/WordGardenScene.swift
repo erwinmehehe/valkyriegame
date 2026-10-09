@@ -994,8 +994,9 @@ import LearningCore
         guard let encounter else { return }
         resetAttemptState()
         clearQuestionAndChoices()
+        // One readable guidance surface, like the Sunmill and Story Hollow:
+        // never repeat the same paragraph in a second 900-point floating panel.
         instruction.text = encounter.prompt
-        addPrompt(encounter.prompt)
 
         for (index, choice) in encounter.choices.enumerated() {
             let flower = flowerNode(letter: choice, index: index)
@@ -1095,31 +1096,6 @@ import LearningCore
         removeAction(forKey: "wordGardenPreview")
     }
 
-    private func addPrompt(_ text: String) {
-        childNode(withName: "questionPrompt")?.removeFromParent()
-        let prompt = ArtSystem.label(text, size: 25)
-        prompt.name = "questionPrompt"
-        prompt.position = CGPoint(x: 660, y: 610)
-        prompt.preferredMaxLayoutWidth = 820
-        prompt.numberOfLines = 2
-        prompt.fontColor = UIColor(red: 1.0, green: 0.98, blue: 0.91, alpha: 1)
-        prompt.zPosition = 2000
-
-        let plate = ArtSystem.panel(
-            CGSize(width: 900, height: 76),
-            fill: UIColor(red: 0.035, green: 0.045, blue: 0.075, alpha: 0.68),
-            stroke: UIColor(white: 1.0, alpha: 0.12),
-            radius: 24,
-            lineWidth: 1.5,
-            shadowAlpha: 0.24
-        )
-        plate.name = "questionPromptBackdrop"
-        plate.zPosition = -2
-        prompt.addChild(plate)
-
-        addChild(prompt)
-    }
-
     private func showTargetRune(retryMessage: String? = nil) {
         guard let encounter else { return }
         acceptingChoices = false
@@ -1156,8 +1132,10 @@ import LearningCore
         rune.name = "targetRune"
 
         let glyph = ArtSystem.label(encounter.answer, size: glyphSize)
+        // Dark engraved ink against the pale work-order parchment. Previously
+        // the near-white glyph could disappear into the paper in bright scenes.
         glyph.fontColor = place == .flowerGate
-            ? UIColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1)
+            ? UIColor(red: 0.24, green: 0.13, blue: 0.18, alpha: 1)
             : UIColor(red: 0.32, green: 0.18, blue: 0.08, alpha: 1)
         rune.addChild(glyph)
         if place == .flowerGate {
