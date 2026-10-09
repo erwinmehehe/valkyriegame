@@ -1547,6 +1547,10 @@ import LearningCore
     private func memoryPad(_ symbol: String, index: Int) -> SKNode {
         let root = SKNode()
         root.name = "memoryPad"
+        // These physical rune controls must render above the newly raised
+        // 3D bridge deck and chasm. Otherwise SpriteKit hit-testing selects
+        // the stone scenery and a child's input is silently ignored.
+        root.zPosition = 900
         root.userData = NSMutableDictionary(dictionary: ["symbol": symbol])
 
         let stone = ArtSystem.medallion(
@@ -3924,7 +3928,7 @@ import LearningCore
             slate.addChild(engravedArrow)
         }
 
-        makeAccessible(root, label: "Try stone trail \(index + 1)")
+        makeAccessible(root, label: "Route option \(index + 1): try stone trail")
         addChild(root)
         registerInteraction(root, clearance: 16)
         return root
