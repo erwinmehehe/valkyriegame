@@ -1552,6 +1552,9 @@ import LearningCore
         // the stone scenery and a child's input is silently ignored.
         root.zPosition = 900
         root.userData = NSMutableDictionary(dictionary: ["symbol": symbol])
+        let runeName = ["★": "star", "☾": "moon", "◆": "diamond", "●": "circle"][symbol]
+            ?? "symbol"
+        makeAccessible(root, label: "Memory rune: \(runeName)")
 
         let stone = ArtSystem.medallion(
             radius: 47,
