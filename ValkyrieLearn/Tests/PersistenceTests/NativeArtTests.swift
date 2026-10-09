@@ -16,6 +16,89 @@ import LearningCore
         XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
     }
 
+    func testWeatherTowerWindKiteRescueIsPhysicalRepeatableAndRestores() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let store = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(store))
+        state.travel(to: .scienceWeatherTower)
+        let originalSkills = state.profile.skills
+        let originalScience = state.scienceAdventure
+
+        let tower = WeatherTowerScene(state: state)
+        tower.reducedMotion = true
+        view.presentScene(tower)
+        let beacon = try XCTUnwrap(tower.childNode(withName: "windRescueBeacon"))
+        XCTAssertTrue(beacon.isAccessibilityElement)
+        tower.handleTap(at: beacon.position)
+
+        XCTAssertTrue(state.miloWindKiteRescue.explored)
+        XCTAssertNotNil(tower.childNode(withName: "windRescueStage"))
+        XCTAssertNotNil(tower.childNode(withName: "//windFan"))
+        XCTAssertNotNil(tower.childNode(withName: "//windTrialCraft"))
+        XCTAssertNotNil(tower.childNode(withName: "//windLostKite"))
+        XCTAssertNotNil(tower.childNode(withName: "//windSail0"))
+        XCTAssertNotNil(tower.childNode(withName: "//windPower2"))
+        XCTAssertNotNil(tower.childNode(withName: "//windLaunchLever"))
+
+        // Leaf with a gust travels partway; it doesn't free the kite.
+        tower.handleTap(at: CGPoint(x: 880, y: 540))
+        XCTAssertEqual(state.miloWindKiteRescue.strength, .gust)
+        tower.handleTap(at: CGPoint(x: 1095, y: 195))
+        XCTAssertEqual(state.miloWindKiteRescue.lastTrial?.travel, 122)
+        XCTAssertFalse(state.miloWindKiteRescue.kiteRescued)
+        let firstCraft = try XCTUnwrap(tower.childNode(withName: "//windTrialCraft"))
+        XCTAssertEqual(firstCraft.position.x, 560 + CGFloat(122) * 2.55, accuracy: 0.5)
+        XCTAssertEqual(state.profile.skills, originalSkills)
+        XCTAssertEqual(state.scienceAdventure, originalScience)
+        try await capture(tower, in: view, name: "Weather-Tower-Kite-Leaf-Gust-Test")
+
+        // Changing only the sail to cloth carries the craft far enough.
+        tower.handleTap(at: CGPoint(x: 405, y: 164))
+        XCTAssertEqual(state.miloWindKiteRescue.sail, .cloth)
+        XCTAssertNil(state.miloWindKiteRescue.lastTrial)
+        tower.handleTap(at: CGPoint(x: 1095, y: 195))
+        XCTAssertEqual(state.miloWindKiteRescue.lastTrial?.travel, 175)
+        XCTAssertTrue(state.miloWindKiteRescue.kiteRescued)
+        XCTAssertNotNil(tower.childNode(withName: "//windTrialReadout"))
+        XCTAssertEqual(state.profile.skills, originalSkills)
+        XCTAssertEqual(state.scienceAdventure, originalScience)
+        try await capture(tower, in: view, name: "Weather-Tower-Rescued-Wind-Kite")
+
+        // A calm second try remains meaningful and cannot undo the rescue.
+        tower.handleTap(at: CGPoint(x: 420, y: 540))
+        XCTAssertNil(state.miloWindKiteRescue.lastTrial)
+        tower.handleTap(at: CGPoint(x: 1095, y: 195))
+        XCTAssertEqual(state.miloWindKiteRescue.lastTrial?.travel, 0)
+        XCTAssertTrue(state.miloWindKiteRescue.kiteRescued)
+
+        tower.handleTap(at: CGPoint(x: 1160, y: 622))
+        XCTAssertNil(tower.childNode(withName: "windRescueStage"))
+        XCTAssertNotNil(tower.childNode(withName: "windRescueBeacon"))
+        XCTAssertNotNil(tower.childNode(withName: "//windRescueBeacon"))
+        let sign = try XCTUnwrap(
+            tower.childNode(withName: "//windRescueBeacon")?
+                .children.compactMap { $0 as? SKLabelNode }
+                .first(where: { $0.text == "KITE HOME" })
+        )
+        XCTAssertEqual(sign.text, "KITE HOME")
+        try await capture(tower, in: view, name: "Weather-Tower-Rescued-Kite-Courtyard")
+        tower.willLeave()
+
+        let restored = try AppState(context: ModelContext(store))
+        XCTAssertEqual(restored.miloWindKiteRescue.trialsCompleted, 3)
+        XCTAssertTrue(restored.miloWindKiteRescue.kiteRescued)
+        XCTAssertEqual(restored.miloWindKiteRescue.sail, .cloth)
+        XCTAssertEqual(restored.profile.skills, originalSkills)
+        XCTAssertEqual(restored.scienceAdventure, originalScience)
+    }
+
     func testMiloShadowWorkshopChangesProjectionAndSavesRescuedMoth() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let controller = UIViewController()

@@ -24,6 +24,19 @@ import LearningCore
     private var touchStart = CGPoint.zero
     private var moved = false
     private var lastScienceKineticReducedMotion: Bool?
+    private var windRescueMode = false
+    private var windRescueStage: SKNode?
+    private var windDraggingSail: MiloWindSail?
+    private var windDragGhost: SKNode?
+    private let windSailPoints = [
+        CGPoint(x: 405, y: 164), CGPoint(x: 620, y: 164), CGPoint(x: 835, y: 164)
+    ]
+    private let windPowerPoints = [
+        CGPoint(x: 420, y: 540), CGPoint(x: 650, y: 540), CGPoint(x: 880, y: 540)
+    ]
+    private let windLaunchPoint = CGPoint(x: 1095, y: 195)
+    private let windExitPoint = CGPoint(x: 1160, y: 622)
+    private let windAssemblyPoint = CGPoint(x: 576, y: 371)
 
     override func didMove(to view: SKView) {
         prepareAdaptiveLandscapeCanvas(for: view)
@@ -38,6 +51,7 @@ import LearningCore
         milo.reducedMotion = reducedMotion
         milo.setScale(0.82)
         addChild(milo)
+        buildWindRescueBeacon()
 
         if weatherStage == .complete && !creatureRouteOpen,
            let challenge = state.scienceNextFieldStudy(in: .weatherTower) {
@@ -673,6 +687,12 @@ import LearningCore
         activeTouch = touch
         touchStart = touch.location(in: self)
         moved = false
+        if windRescueMode {
+            windDraggingSail = windSailPoints.indices.first(where: {
+                hypot(touchStart.x - windSailPoints[$0].x,
+                      touchStart.y - windSailPoints[$0].y) <= 70
+            }).flatMap { MiloWindSail(rawValue: $0) }
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -681,12 +701,28 @@ import LearningCore
         if hypot(point.x - touchStart.x, point.y - touchStart.y) > 12 {
             moved = true
         }
+        if windRescueMode, moved, windDraggingSail != nil {
+            if windDragGhost == nil {
+                let ghost = SKShapeNode(circleOfRadius: 27)
+                ghost.name = "windSailDragGhost"
+                ghost.fillColor = UIColor(red: 0.92, green: 0.87, blue: 0.62, alpha: 0.63)
+                ghost.strokeColor = .white
+                ghost.lineWidth = 3
+                ghost.zPosition = 1850
+                addChild(ghost)
+                windDragGhost = ghost
+            }
+            windDragGhost?.position = point
+        }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = activeTouch, touches.contains(touch) {
             activeTouch = nil
             moved = false
+            windDraggingSail = nil
+            windDragGhost?.removeFromParent()
+            windDragGhost = nil
         }
     }
 
@@ -695,8 +731,22 @@ import LearningCore
         defer {
             activeTouch = nil
             moved = false
+            windDraggingSail = nil
+            windDragGhost?.removeFromParent()
+            windDragGhost = nil
         }
         let point = touch.location(in: self)
+        if windRescueMode, moved {
+            if let dragged = windDraggingSail,
+               abs(point.x - windAssemblyPoint.x) <= 90,
+               abs(point.y - windAssemblyPoint.y) <= 85 {
+                _ = state.chooseMiloWindSail(dragged)
+                state.audio.play("crystal")
+                renderWindRescue()
+                instruction.text = "That sail is attached! Try a gust and launch the wind craft."
+            }
+            return
+        }
         guard !moved, hypot(point.x - touchStart.x, point.y - touchStart.y) <= 12 else { return }
         handleTap(at: point)
     }
@@ -728,12 +778,31 @@ import LearningCore
 
     override func willLeave() {
         activeTouch = nil
+        windDraggingSail = nil
+        windDragGhost?.removeFromParent()
+        windDragGhost = nil
+        windRescueMode = false
+        windRescueStage?.removeFromParent()
+        windRescueStage = nil
         milo.cancelTravel()
         super.willLeave()
     }
 
     func handleTap(at point: CGPoint) {
         let target = targetName(at: point)
+        if windRescueMode {
+            if target == "scienceWeatherHome" {
+                willLeave()
+                state.travel(to: .storyTree)
+            } else {
+                handleWindRescueTap(at: point)
+            }
+            return
+        }
+        if target == "windRescueBeacon" {
+            enterWindRescue()
+            return
+        }
 
         if weatherStage == .complete,
            !creatureRouteOpen,
@@ -818,6 +887,406 @@ import LearningCore
         default:
             walkIfValid(point)
         }
+    }
+
+
+    // MARK: - Milo's Wind Kite Rescue
+
+    private func kiteShape(scale: CGFloat, tint: UIColor) -> SKNode {
+        let root = SKNode()
+        let diamond = CGMutablePath()
+        diamond.move(to: CGPoint(x: 0, y: 39))
+        diamond.addLine(to: CGPoint(x: 33, y: 0))
+        diamond.addLine(to: CGPoint(x: 0, y: -36))
+        diamond.addLine(to: CGPoint(x: -33, y: 0))
+        diamond.closeSubpath()
+        let cloth = SKShapeNode(path: diamond)
+        cloth.fillColor = tint
+        cloth.strokeColor = .white
+        cloth.lineWidth = 3
+        root.addChild(cloth)
+
+        let bracing = CGMutablePath()
+        bracing.move(to: CGPoint(x: 0, y: 39))
+        bracing.addLine(to: CGPoint(x: 0, y: -36))
+        bracing.move(to: CGPoint(x: -33, y: 0))
+        bracing.addLine(to: CGPoint(x: 33, y: 0))
+        let sticks = SKShapeNode(path: bracing)
+        sticks.strokeColor = UIColor(red: 0.49, green: 0.29, blue: 0.18, alpha: 0.90)
+        sticks.lineWidth = 3
+        root.addChild(sticks)
+
+        let tailPath = CGMutablePath()
+        tailPath.move(to: CGPoint(x: 0, y: -36))
+        tailPath.addCurve(
+            to: CGPoint(x: 11, y: -95),
+            control1: CGPoint(x: -20, y: -52),
+            control2: CGPoint(x: 26, y: -74)
+        )
+        let tail = SKShapeNode(path: tailPath)
+        tail.strokeColor = tint
+        tail.lineWidth = 5
+        root.addChild(tail)
+        root.setScale(scale)
+        return root
+    }
+
+    private func buildWindRescueBeacon() {
+        childNode(withName: "windRescueBeacon")?.removeFromParent()
+        let rescued = state.miloWindKiteRescue.kiteRescued
+        let root = SKNode()
+        root.name = "windRescueBeacon"
+        root.position = CGPoint(x: 1040, y: 497)
+        root.zPosition = 960
+
+        let stand = ArtSystem.box(
+            CGSize(width: 138, height: 62),
+            color: UIColor(red: 0.30, green: 0.28, blue: 0.17, alpha: 0.98),
+            radius: 12
+        )
+        stand.name = root.name
+        stand.strokeColor = UIColor(red: 0.96, green: 0.81, blue: 0.46, alpha: 1)
+        stand.lineWidth = 3
+        root.addChild(stand)
+
+        let icon = kiteShape(
+            scale: 0.29,
+            tint: rescued
+                ? UIColor(red: 0.95, green: 0.72, blue: 0.39, alpha: 1)
+                : UIColor(red: 0.58, green: 0.86, blue: 0.94, alpha: 1)
+        )
+        icon.name = root.name
+        icon.position.y = 8
+        root.addChild(icon)
+
+        let sign = ArtSystem.label(rescued ? "KITE HOME" : "WIND RESCUE", size: 12)
+        sign.name = root.name
+        sign.fontColor = .white
+        sign.position.y = -20
+        root.addChild(sign)
+
+        makeAccessible(
+            root,
+            label: rescued ? "Return to the wind workshop and your rescued kite"
+                : "Milo's wind-powered kite rescue",
+            hint: "Test different sails and breezes to move a little wind craft."
+        )
+        addChild(root)
+    }
+
+    private func enterWindRescue() {
+        guard !windRescueMode else { return }
+        _ = state.exploreMiloWindKiteRescue()
+        windRescueMode = true
+        windDraggingSail = nil
+        renderWindRescue()
+        instruction.text = state.miloWindKiteRescue.kiteRescued
+            ? "The kite is home! Try a different sail or breeze to compare."
+            : "A kite is stranded. Build a wind craft and send it across the tower!"
+    }
+
+    private func leaveWindRescue() {
+        guard windRescueMode else { return }
+        windRescueMode = false
+        windDraggingSail = nil
+        windDragGhost?.removeFromParent()
+        windDragGhost = nil
+        windRescueStage?.removeAllActions()
+        windRescueStage?.removeFromParent()
+        windRescueStage = nil
+        buildWindRescueBeacon()
+        if weatherStage == .complete && !creatureRouteOpen,
+           let challenge = state.scienceNextFieldStudy(in: .weatherTower) {
+            instruction.text = challenge.prompt
+        } else if creatureRouteOpen {
+            instruction.text = "The Creature Grove route is open. Explore whenever you're ready."
+        } else {
+            instruction.text = "The wind kite is safe. You can still investigate the weather flags."
+        }
+    }
+
+    private func renderWindRescue() {
+        guard windRescueMode else { return }
+        windRescueStage?.removeFromParent()
+        let root = SKNode()
+        root.name = "windRescueStage"
+        root.zPosition = 1400
+        addChild(root)
+        windRescueStage = root
+        let play = state.miloWindKiteRescue
+
+        // A timber launch platform with a physical rail, not a quiz overlay.
+        let platform = ArtSystem.box(
+            CGSize(width: 647, height: 27),
+            color: UIColor(red: 0.41, green: 0.30, blue: 0.18, alpha: 1),
+            radius: 8
+        )
+        platform.name = "windCraftRail"
+        platform.position = CGPoint(x: 790, y: 307)
+        platform.strokeColor = UIColor(red: 0.94, green: 0.74, blue: 0.37, alpha: 1)
+        platform.lineWidth = 3
+        root.addChild(platform)
+
+        let vane = SKShapeNode(circleOfRadius: 62)
+        vane.name = "windFan"
+        vane.position = CGPoint(x: 400, y: 383)
+        vane.fillColor = UIColor(red: 0.22, green: 0.39, blue: 0.42, alpha: 0.93)
+        vane.strokeColor = UIColor(red: 0.69, green: 0.89, blue: 0.89, alpha: 1)
+        vane.lineWidth = 5
+        root.addChild(vane)
+        for index in 0..<3 {
+            let blade = SKShapeNode(ellipseOf: CGSize(width: 20, height: 67))
+            blade.fillColor = UIColor(red: 0.87, green: 0.94, blue: 0.81, alpha: 0.95)
+            blade.strokeColor = UIColor(red: 0.23, green: 0.51, blue: 0.52, alpha: 1)
+            blade.lineWidth = 2
+            blade.position = CGPoint(x: 400, y: 403)
+            blade.zRotation = CGFloat(index) * (.pi * 2 / 3)
+            blade.name = "decorativeWindFanBlade\(index)"
+            root.addChild(blade)
+        }
+
+        // The far perch holds the stranded kite until a sufficient wind test.
+        let farPost = ArtSystem.box(
+            CGSize(width: 15, height: 115),
+            color: UIColor(red: 0.46, green: 0.33, blue: 0.19, alpha: 1),
+            radius: 4
+        )
+        farPost.name = "decorativeWindKitePost"
+        farPost.position = CGPoint(x: 1036, y: 373)
+        farPost.strokeColor = UIColor(red: 0.88, green: 0.65, blue: 0.32, alpha: 1)
+        farPost.lineWidth = 2
+        root.addChild(farPost)
+        let rescuedKite = kiteShape(
+            scale: 0.51,
+            tint: play.kiteRescued
+                ? UIColor(red: 1.0, green: 0.84, blue: 0.40, alpha: 1)
+                : UIColor(red: 0.83, green: 0.53, blue: 0.44, alpha: 1)
+        )
+        rescuedKite.name = "windLostKite"
+        rescuedKite.position = play.kiteRescued
+            ? CGPoint(x: 1070, y: 465) : CGPoint(x: 1033, y: 469)
+        root.addChild(rescuedKite)
+        makeAccessible(rescuedKite, label: play.kiteRescued
+            ? "The kite has been rescued from the tower"
+            : "A small kite is stranded across the windy platform")
+
+        // The chosen sail is installed on a small cart. Every trial physically
+        // moves it a different distance; the launch is repeatable after rescue.
+        let startX: CGFloat = 560
+        let travel = CGFloat(play.lastTrial?.travel ?? 0)
+        let craft = SKNode()
+        craft.name = "windTrialCraft"
+        craft.position = CGPoint(x: startX + travel * 2.55, y: 353)
+        let wheels = SKShapeNode(circleOfRadius: 18)
+        wheels.name = craft.name
+        wheels.fillColor = UIColor(red: 0.55, green: 0.39, blue: 0.23, alpha: 1)
+        wheels.strokeColor = UIColor(red: 0.96, green: 0.81, blue: 0.46, alpha: 1)
+        wheels.lineWidth = 4
+        craft.addChild(wheels)
+
+        let sail = SKShapeNode(path: {
+            let path = CGMutablePath()
+            switch play.sail {
+            case .cloth:
+                path.move(to: CGPoint(x: -20, y: 14))
+                path.addLine(to: CGPoint(x: 19, y: 14))
+                path.addLine(to: CGPoint(x: 0, y: 100))
+            case .leaf:
+                path.move(to: CGPoint(x: 0, y: 14))
+                path.addQuadCurve(to: CGPoint(x: 0, y: 104),
+                                  control: CGPoint(x: 50, y: 60))
+                path.addQuadCurve(to: CGPoint(x: 0, y: 14),
+                                  control: CGPoint(x: -50, y: 60))
+            case .wood:
+                path.move(to: CGPoint(x: -12, y: 16))
+                path.addLine(to: CGPoint(x: 12, y: 16))
+                path.addLine(to: CGPoint(x: 12, y: 87))
+                path.addLine(to: CGPoint(x: -12, y: 87))
+            }
+            path.closeSubpath()
+            return path
+        }())
+        sail.name = craft.name
+        sail.fillColor = play.sail == .cloth
+            ? UIColor(red: 0.68, green: 0.90, blue: 0.98, alpha: 1)
+            : play.sail == .leaf
+                ? UIColor(red: 0.48, green: 0.81, blue: 0.47, alpha: 1)
+                : UIColor(red: 0.75, green: 0.54, blue: 0.29, alpha: 1)
+        sail.strokeColor = .white
+        sail.lineWidth = 3
+        craft.addChild(sail)
+        makeAccessible(craft, label: "Wind cart with \(play.sail) sail",
+                       hint: "Change the sail and wind, then test how far the cart rolls.")
+        root.addChild(craft)
+
+        // Real tray choices with wide iPad touch areas. The selected part
+        // can also be dragged onto the wind cart.
+        let sailNames = ["CLOTH", "LEAF", "WOOD"]
+        let marks = ["◭", "❧", "▣"]
+        for (index, point) in windSailPoints.enumerated() {
+            let tray = ArtSystem.box(
+                CGSize(width: 143, height: 70),
+                color: UIColor(red: 0.41, green: 0.30, blue: 0.20, alpha: 1),
+                radius: 13
+            )
+            tray.name = "windSail\(index)"
+            tray.position = point
+            tray.strokeColor = index == play.sail.rawValue
+                ? UIColor(red: 0.98, green: 0.90, blue: 0.53, alpha: 1)
+                : UIColor(red: 0.70, green: 0.82, blue: 0.73, alpha: 0.84)
+            tray.lineWidth = index == play.sail.rawValue ? 6 : 2
+            root.addChild(tray)
+
+            let mark = ArtSystem.label(marks[index], size: 26)
+            mark.name = tray.name
+            mark.position = CGPoint(x: point.x, y: point.y + 12)
+            mark.fontColor = .white
+            root.addChild(mark)
+
+            let label = ArtSystem.label(sailNames[index], size: 13)
+            label.name = tray.name
+            label.position = CGPoint(x: point.x, y: point.y - 21)
+            label.fontColor = .white
+            root.addChild(label)
+            makeAccessible(tray, label: "Use \(sailNames[index].lowercased()) sail",
+                           hint: "Tap or drag this sail onto the wind cart.")
+        }
+
+        // Wind dials affect strength, not correctness. Even no movement is a
+        // useful observation a child can repeat.
+        let powerNames = ["CALM", "BREEZE", "GUST"]
+        let powerMarks = ["○", "≋", "➜"]
+        for (index, point) in windPowerPoints.enumerated() {
+            let control = SKShapeNode(circleOfRadius: 44)
+            control.name = "windPower\(index)"
+            control.position = point
+            control.fillColor = UIColor(red: 0.24, green: 0.44, blue: 0.50, alpha: 0.97)
+            control.strokeColor = index == play.strength.rawValue
+                ? UIColor(red: 1.0, green: 0.93, blue: 0.56, alpha: 1)
+                : UIColor(red: 0.71, green: 0.87, blue: 0.89, alpha: 1)
+            control.lineWidth = index == play.strength.rawValue ? 6 : 3
+            root.addChild(control)
+
+            let mark = ArtSystem.label(powerMarks[index], size: 31)
+            mark.name = control.name
+            mark.fontColor = .white
+            control.addChild(mark)
+            let label = ArtSystem.label(powerNames[index], size: 12)
+            label.name = control.name
+            label.position = CGPoint(x: point.x, y: point.y - 55)
+            label.fontColor = .white
+            root.addChild(label)
+            makeAccessible(control, label: "Set wind to \(powerNames[index].lowercased())")
+        }
+
+        let launch = SKShapeNode(circleOfRadius: 39)
+        launch.name = "windLaunchLever"
+        launch.position = windLaunchPoint
+        launch.fillColor = UIColor(red: 0.35, green: 0.61, blue: 0.36, alpha: 1)
+        launch.strokeColor = UIColor(red: 0.97, green: 0.90, blue: 0.51, alpha: 1)
+        launch.lineWidth = 4
+        root.addChild(launch)
+        let arrow = ArtSystem.label("➜", size: 27)
+        arrow.name = launch.name
+        arrow.fontColor = .white
+        launch.addChild(arrow)
+        let word = ArtSystem.label("TEST", size: 13)
+        word.name = launch.name
+        word.position = CGPoint(x: windLaunchPoint.x, y: windLaunchPoint.y - 54)
+        word.fontColor = .white
+        root.addChild(word)
+        makeAccessible(launch, label: "Test this wind and sail",
+                       hint: "Watch the craft travel and compare its distance.")
+
+        if let trial = play.lastTrial {
+            let readout = ArtSystem.plaque(
+                CGSize(width: 248, height: 39),
+                fill: UIColor(red: 0.18, green: 0.29, blue: 0.27, alpha: 0.94),
+                stroke: UIColor(red: 0.83, green: 0.86, blue: 0.54, alpha: 1),
+                radius: 10
+            )
+            readout.name = "windTrialReadout"
+            readout.position = CGPoint(x: 807, y: 431)
+            root.addChild(readout)
+            let feedback = ArtSystem.label(
+                trial.rescued ? "THE KITE IS FREE!" :
+                    trial.travel == 0 ? "THE CRAFT STAYED STILL" :
+                        "THE CRAFT MOVED \(trial.travel) STEPS",
+                size: 15
+            )
+            feedback.name = readout.name
+            feedback.fontColor = .white
+            readout.addChild(feedback)
+        }
+
+        let exit = SKShapeNode(circleOfRadius: 34)
+        exit.name = "windRescueExit"
+        exit.position = windExitPoint
+        exit.fillColor = UIColor(red: 0.32, green: 0.28, blue: 0.19, alpha: 1)
+        exit.strokeColor = UIColor(red: 0.96, green: 0.81, blue: 0.45, alpha: 1)
+        exit.lineWidth = 3
+        let back = ArtSystem.label("‹", size: 31)
+        back.name = exit.name
+        back.fontColor = .white
+        exit.addChild(back)
+        makeAccessible(exit, label: "Return to the Weather Tower")
+        root.addChild(exit)
+    }
+
+    private func handleWindRescueTap(at point: CGPoint) {
+        guard windRescueMode else { return }
+        if hypot(point.x - windExitPoint.x, point.y - windExitPoint.y) <= 49 {
+            leaveWindRescue()
+            return
+        }
+        if let index = windSailPoints.indices.first(where: {
+            hypot(point.x - windSailPoints[$0].x,
+                  point.y - windSailPoints[$0].y) <= 73
+        }), let sail = MiloWindSail(rawValue: index) {
+            _ = state.chooseMiloWindSail(sail)
+            renderWindRescue()
+            milo.inspect(reducedMotion: reducedMotion)
+            instruction.text = "Sail attached. Choose the wind, then test how far it moves!"
+            return
+        }
+        if let index = windPowerPoints.indices.first(where: {
+            hypot(point.x - windPowerPoints[$0].x,
+                  point.y - windPowerPoints[$0].y) <= 56
+        }), let power = MiloWindStrength(rawValue: index) {
+            _ = state.chooseMiloWindStrength(power)
+            renderWindRescue()
+            instruction.text = "Wind changed. What do you predict the craft will do?"
+            return
+        }
+        if hypot(point.x - windLaunchPoint.x, point.y - windLaunchPoint.y) <= 53 {
+            let wasRescued = state.miloWindKiteRescue.kiteRescued
+            guard let trial = state.testMiloWindKite() else { return }
+            renderWindRescue()
+            milo.inspect(reducedMotion: reducedMotion)
+            valkyrie.pose(trial.rescued ? .celebrate : .interact)
+            state.audio.play(trial.rescued ? "success" : "gear")
+
+            let endX = 560 + CGFloat(trial.travel) * 2.55
+            if !reducedMotion, let craft = childNode(withName: "//windTrialCraft") {
+                craft.position.x = 560
+                craft.run(.moveTo(x: endX, duration: 0.65), withKey: "windCraftRoll")
+            }
+            if trial.rescued {
+                if !wasRescued {
+                    successFeedback(at: CGPoint(x: 1040, y: 455))
+                    buildWindRescueBeacon()
+                }
+                instruction.text = wasRescued
+                    ? "The kite is safe! You can keep changing your wind experiments."
+                    : "Your gust freed the kite! You can keep testing new sails."
+            } else if trial.travel == 0 {
+                instruction.text = "The cart stayed still. Would a breeze make it move?"
+            } else {
+                instruction.text = "It rolled partway! Try another sail or a stronger wind."
+            }
+            return
+        }
+        instruction.text = "Choose a sail and wind, then pull TEST. Or drag a sail onto the cart."
     }
 
     private func observeMorning() {

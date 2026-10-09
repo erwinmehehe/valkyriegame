@@ -1142,3 +1142,71 @@ final class MiloShadowWorkshopTests: XCTestCase {
     }
 }
 
+final class MiloWindKiteRescueTests: XCTestCase {
+    func testWindStrengthAndMaterialChangeDistanceWithoutPunishingExperimentation() throws {
+        var play = MiloWindKiteRescue()
+        XCTAssertNil(play.launch())
+        XCTAssertFalse(play.choose(.cloth))
+        XCTAssertFalse(play.setStrength(.gust))
+        XCTAssertEqual(play.trialsCompleted, 0)
+        XCTAssertTrue(play.explore())
+        XCTAssertFalse(play.explore())
+        XCTAssertEqual(play.sail, .leaf)
+        XCTAssertEqual(play.strength, .breeze)
+        XCTAssertEqual(play.predictedTravel, 66)
+        XCTAssertTrue(play.setStrength(.calm))
+        let still = try XCTUnwrap(play.launch())
+        XCTAssertEqual(still.travel, 0)
+        XCTAssertFalse(still.rescued)
+        XCTAssertTrue(play.setStrength(.gust))
+        let leaf = try XCTUnwrap(play.launch())
+        XCTAssertEqual(leaf.travel, 122)
+        XCTAssertFalse(play.kiteRescued)
+
+        XCTAssertTrue(play.choose(.wood))
+        XCTAssertEqual(play.predictedTravel, 52)
+        XCTAssertTrue(play.choose(.cloth))
+        XCTAssertEqual(play.predictedTravel, 175)
+        XCTAssertTrue(play.launch()?.rescued == true)
+        XCTAssertTrue(play.kiteRescued)
+        XCTAssertEqual(play.trialsCompleted, 3)
+
+        // On future visits, any wind or material can be tested. The kite
+        // stays safe and the outcomes continue to obey the changed input.
+        XCTAssertTrue(play.setStrength(.breeze))
+        XCTAssertFalse(play.choose(.cloth))
+        XCTAssertEqual(play.predictedTravel, 95)
+        XCTAssertFalse(try XCTUnwrap(play.launch()).rescued)
+        XCTAssertTrue(play.kiteRescued)
+        XCTAssertEqual(play.trialsCompleted, 4)
+        XCTAssertEqual(play.experiments.count, 4)
+        XCTAssertFalse(play.setStrength(.breeze))
+        let originalCount = play.experiments.count
+        XCTAssertFalse(try XCTUnwrap(play.launch()).rescued)
+        XCTAssertEqual(play.experiments.count, originalCount,
+                       "Repeating a trial doesn't manufacture a new observation.")
+        XCTAssertEqual(play.trialsCompleted, 5)
+        XCTAssertTrue(play.kiteRescued)
+    }
+
+    func testKiteRescueRestoresWithoutMutatingScienceOrLegacyProfiles() throws {
+        let oldProfile = LearnerProfile()
+        let legacyData = try JSONEncoder().encode(oldProfile)
+        var profile = try JSONDecoder().decode(LearnerProfile.self, from: legacyData)
+        XCTAssertNil(profile.miloWindKiteRescue)
+        XCTAssertTrue(profile.skills.isEmpty)
+
+        var play = MiloWindKiteRescue()
+        XCTAssertTrue(play.explore())
+        XCTAssertTrue(play.choose(.cloth))
+        XCTAssertTrue(play.setStrength(.gust))
+        XCTAssertTrue(play.launch()?.rescued == true)
+        profile.miloWindKiteRescue = play
+        let restored = try JSONDecoder().decode(LearnerProfile.self,
+                                                from: JSONEncoder().encode(profile))
+        XCTAssertEqual(restored.miloWindKiteRescue, play)
+        XCTAssertTrue(restored.miloWindKiteRescue?.kiteRescued == true)
+        XCTAssertTrue(restored.skills.isEmpty,
+                      "Optional wind play cannot award Science mastery.")
+    }
+}

@@ -98,6 +98,94 @@ public struct MiloShadowWorkshop: Codable, Equatable, Sendable {
     }
 }
 
+/// Milo's open-ended wind test: change a physical sail and the strength of
+/// the fan, then launch and compare how far the little lost kite can travel.
+/// No observation here creates learning-engine mastery evidence.
+public enum MiloWindSail: Int, CaseIterable, Codable, Hashable, Sendable {
+    case cloth, leaf, wood
+}
+
+public enum MiloWindStrength: Int, CaseIterable, Codable, Hashable, Sendable {
+    case calm, breeze, gust
+}
+
+public struct MiloWindTrial: Codable, Equatable, Hashable, Sendable {
+    public let sail: MiloWindSail
+    public let strength: MiloWindStrength
+    public let travel: Int
+
+    public var rescued: Bool { travel >= 160 }
+}
+
+public struct MiloWindKiteRescue: Codable, Equatable, Sendable {
+    public private(set) var explored = false
+    public private(set) var sail: MiloWindSail = .leaf
+    public private(set) var strength: MiloWindStrength = .breeze
+    public private(set) var experiments: Set<MiloWindTrial> = []
+    public private(set) var lastTrial: MiloWindTrial?
+    public private(set) var trialsCompleted = 0
+    public private(set) var kiteRescued = false
+
+    public init() {}
+
+    @discardableResult
+    public mutating func explore() -> Bool {
+        guard !explored else { return false }
+        explored = true
+        return true
+    }
+
+    @discardableResult
+    public mutating func choose(_ next: MiloWindSail) -> Bool {
+        guard explored, sail != next else { return false }
+        sail = next
+        // The old test is no longer the configuration on the table.
+        lastTrial = nil
+        return true
+    }
+
+    @discardableResult
+    public mutating func setStrength(_ next: MiloWindStrength) -> Bool {
+        guard explored, strength != next else { return false }
+        strength = next
+        lastTrial = nil
+        return true
+    }
+
+    /// Discrete distances reflect sail area and wind strength qualitatively,
+    /// not a claim of real aerodynamic units or a physics measurement.
+    public var predictedTravel: Int {
+        let wind: Int
+        switch strength {
+        case .calm: wind = 0
+        case .breeze: wind = 95
+        case .gust: wind = 175
+        }
+        let catchPercent: Int
+        switch sail {
+        case .cloth: catchPercent = 100
+        case .leaf: catchPercent = 70
+        case .wood: catchPercent = 30
+        }
+        return wind * catchPercent / 100
+    }
+
+    /// Re-testing is allowed; the rescue is permanent even when the next
+    /// experiment stops short. A failed trial is still a valid observation.
+    @discardableResult
+    public mutating func launch() -> MiloWindTrial? {
+        guard explored else { return nil }
+        let result = MiloWindTrial(
+            sail: sail, strength: strength, travel: predictedTravel
+        )
+        lastTrial = result
+        experiments.insert(result)
+        trialsCompleted += 1
+        if result.rescued { kiteRescued = true }
+        return result
+    }
+}
+
 public enum ScienceGreenhouseStage: String, Codable, Equatable, Sendable {
     case arrive, inspected, watered, lit
 }

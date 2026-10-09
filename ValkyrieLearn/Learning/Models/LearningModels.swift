@@ -299,6 +299,8 @@ public struct LearnerProfile: Identifiable, Codable, Equatable, Sendable {
     public var lumiLivingGarden: LumiLivingGarden?
     /// Optional to preserve compatibility with older SwiftData profile saves.
     public var miloShadowWorkshop: MiloShadowWorkshop?
+    /// Optional for saves created before the Weather Tower wind rescue.
+    public var miloWindKiteRescue: MiloWindKiteRescue?
 
     public init(id: UUID = UUID()) { self.id = id }
     public func progress(for skill: SkillID) -> SkillProgress { skills[skill.rawValue] ?? SkillProgress() }
