@@ -1009,3 +1009,69 @@ final class StarlightBridgeQuestTests: XCTestCase {
     }
 
 }
+
+final class LumiLivingGardenTests: XCTestCase {
+    func testThreeSeedsReactDifferentlyToWaterSunAndShade() throws {
+        var garden = LumiLivingGarden()
+        XCTAssertEqual(garden.bloomingCount, 0)
+        XCTAssertFalse(garden.tend(.water, at: 0))
+        XCTAssertFalse(garden.plant(.starflower, at: -1))
+        XCTAssertFalse(garden.plant(.starflower, at: 3))
+
+        XCTAssertTrue(garden.plant(.starflower, at: 0))
+        XCTAssertFalse(garden.plant(.starflower, at: 0))
+        XCTAssertTrue(garden.tend(.water, at: 0))
+        XCTAssertFalse(try XCTUnwrap(garden.plot(at: 0)).isBlooming)
+        XCTAssertTrue(garden.tend(.sun, at: 0))
+        XCTAssertTrue(try XCTUnwrap(garden.plot(at: 0)).isBlooming)
+        XCTAssertEqual(garden.bloomingCount, 1)
+        XCTAssertTrue(garden.tend(.shade, at: 0))
+        XCTAssertFalse(try XCTUnwrap(garden.plot(at: 0)).isBlooming)
+        XCTAssertTrue(garden.tend(.sun, at: 0))
+
+        XCTAssertTrue(garden.plant(.rainvine, at: 1))
+        XCTAssertTrue(garden.tend(.sun, at: 1))
+        XCTAssertTrue(garden.tend(.water, at: 1))
+        XCTAssertFalse(try XCTUnwrap(garden.plot(at: 1)).isBlooming)
+        XCTAssertTrue(garden.tend(.water, at: 1))
+        XCTAssertTrue(try XCTUnwrap(garden.plot(at: 1)).isBlooming)
+        XCTAssertFalse(garden.tend(.water, at: 1), "Water is capped, never endlessly rewarded.")
+
+        XCTAssertTrue(garden.plant(.shadefern, at: 2))
+        XCTAssertTrue(garden.tend(.sun, at: 2))
+        XCTAssertTrue(garden.tend(.water, at: 2))
+        XCTAssertFalse(try XCTUnwrap(garden.plot(at: 2)).isBlooming)
+        XCTAssertTrue(garden.tend(.shade, at: 2))
+        XCTAssertTrue(try XCTUnwrap(garden.plot(at: 2)).isBlooming)
+        XCTAssertEqual(garden.bloomingCount, 3)
+    }
+
+    func testReplantingAndOldProfilesRemainSafeWithoutFakeLiteracyMastery() throws {
+        var garden = LumiLivingGarden()
+        XCTAssertTrue(garden.plant(.starflower, at: 1))
+        XCTAssertTrue(garden.tend(.sun, at: 1))
+        XCTAssertTrue(garden.tend(.water, at: 1))
+        XCTAssertEqual(garden.bloomingCount, 1)
+        XCTAssertTrue(garden.plant(.shadefern, at: 1))
+        XCTAssertEqual(garden.bloomingCount, 0)
+        XCTAssertEqual(try XCTUnwrap(garden.plot(at: 1)).water, 0)
+        XCTAssertEqual(try XCTUnwrap(garden.plot(at: 1)).sunlight, false)
+        XCTAssertTrue(garden.tend(.water, at: 1))
+        XCTAssertEqual(garden.bloomingCount, 1)
+
+        let oldProfile = LearnerProfile()
+        let legacy = try JSONDecoder().decode(LearnerProfile.self,
+                                              from: JSONEncoder().encode(oldProfile))
+        XCTAssertNil(legacy.lumiLivingGarden)
+        var newProfile = legacy
+        newProfile.lumiLivingGarden = garden
+        let restored = try JSONDecoder().decode(LearnerProfile.self,
+                                                from: JSONEncoder().encode(newProfile))
+        XCTAssertEqual(restored.lumiLivingGarden, garden)
+        XCTAssertTrue(restored.skills.isEmpty,
+                      "Creative weather experiments cannot invent phonics evidence.")
+        XCTAssertFalse(restored.hasStoryReward(.lumiLivingBloom),
+                       "A world reward must be granted by AppState after an actual bloom.")
+    }
+}
+

@@ -413,6 +413,33 @@ import LearningCore
         return result
     }
 
+    /// A free-form gardening activity, not a literacy encounter. Weather
+    /// experiments never create evidence or modify any skill state.
+    var lumiLivingGarden: LumiLivingGarden {
+        profile.lumiLivingGarden ?? LumiLivingGarden()
+    }
+
+    @discardableResult
+    func plantLumiSeed(_ seed: LumiSeed, at plot: Int) -> Bool {
+        var garden = lumiLivingGarden
+        guard garden.plant(seed, at: plot) else { return false }
+        profile.lumiLivingGarden = garden
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func tendLumiGarden(_ care: LumiGardenCare, at plot: Int) -> Bool {
+        var garden = lumiLivingGarden
+        guard garden.tend(care, at: plot) else { return false }
+        profile.lumiLivingGarden = garden
+        if garden.bloomingCount > 0 {
+            _ = profile.unlockStoryReward(.lumiLivingBloom)
+        }
+        persist()
+        return true
+    }
+
     func hasStoryReward(_ reward: StoryRewardID) -> Bool {
         profile.hasStoryReward(reward)
     }
