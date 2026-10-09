@@ -156,9 +156,17 @@ import LearningCore
         XCTAssertNotNil(scene.childNode(withName: "//bridgeTestLoad0"))
         XCTAssertNotNil(scene.childNode(withName: "//bridgeTestLoad1"))
         XCTAssertNotNil(scene.childNode(withName: "//bridgeTestLever"))
+        XCTAssertEqual(try XCTUnwrap(scene.childNode(withName: "//bridgeTestLoad0")).position,
+                       CGPoint(x: 468, y: 306),
+                       "Experiment traveler must stand on the existing courtyard plinth.")
+        XCTAssertEqual(try XCTUnwrap(scene.childNode(withName: "//bridgeTestLoad1")).position,
+                       CGPoint(x: 605, y: 306))
+        XCTAssertEqual(try XCTUnwrap(scene.childNode(withName: "//bridgeTestLever")).position,
+                       CGPoint(x: 1150, y: 270),
+                       "Bridge test lever must sit beside the physical span, not the skyline.")
 
         // The heavier cart tests the physical bridge, revealing the weakest span.
-        scene.handleTap(at: CGPoint(x: 1150, y: 513))
+        scene.handleTap(at: CGPoint(x: 1150, y: 270))
         XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 1)
         XCTAssertFalse(state.starlightBridgeQuest.hasDeliveredSupplies)
         XCTAssertNotNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
@@ -174,7 +182,7 @@ import LearningCore
         XCTAssertEqual(state.starlightBridgeQuest.braces, Set([0, 2]),
                        "No extra support is created from an invalid third tap.")
 
-        scene.handleTap(at: CGPoint(x: 1150, y: 513))
+        scene.handleTap(at: CGPoint(x: 1150, y: 270))
         XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 2)
         XCTAssertTrue(state.starlightBridgeQuest.hasDeliveredSupplies)
         XCTAssertNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
@@ -186,8 +194,8 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 760, y: 184))
         scene.handleTap(at: CGPoint(x: 1050, y: 184))
         XCTAssertTrue(state.starlightBridgeQuest.braces.isEmpty)
-        scene.handleTap(at: CGPoint(x: 435, y: 512))
-        scene.handleTap(at: CGPoint(x: 1150, y: 513))
+        scene.handleTap(at: CGPoint(x: 468, y: 306))
+        scene.handleTap(at: CGPoint(x: 1150, y: 270))
         XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 3)
         XCTAssertNotNil(scene.childNode(withName: "//bridgeTestTraveler"))
         XCTAssertNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
