@@ -406,6 +406,27 @@ import LearningCore
         XCTAssertEqual(finale.alpha, 1.0, accuracy: 0.001)
     }
 
+    func testGameContainerUsesFullFourByThreeIPadViewport() throws {
+        // Verify the exact layout dimensions supplied by GameContainerView
+        // without assuming SwiftUI exposes its private SpriteView internals.
+        let viewport = GameViewportLayout.size(for: CGSize(width: 1024, height: 768))
+        XCTAssertEqual(viewport, CGSize(width: 1024, height: 768))
+        XCTAssertNotEqual(viewport.height, viewport.width * 9 / 16)
+
+        let state = try makeState()
+        state.reducedMotion = true
+        state.travel(to: .scienceWeatherTower)
+        let view = SKView(frame: CGRect(origin: .zero, size: viewport))
+        let scene = WeatherTowerScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: view)
+        defer { scene.willLeave() }
+
+        XCTAssertEqual(scene.size, CGSize(width: 1280, height: 960),
+                       "Weather Tower must adapt its scene to the full 4:3 SKView.")
+        XCTAssertEqual(scene.verticalViewportInset, 120, accuracy: 0.001)
+    }
+
     func testPuzzleAndScienceUseExtraVerticalSpaceOnFourByThreeIPad() throws {
         let state = try makeState()
         let view = SKView(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))

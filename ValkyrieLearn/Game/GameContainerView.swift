@@ -1,6 +1,15 @@
 import SwiftUI
 import SpriteKit
 
+/// SpriteKit owns the aspect-fit behavior of legacy 16:9 scenes and the
+/// adaptive sizing of Palace/Science scenes. An outer 16:9 SwiftUI wrapper
+/// must never shrink the real landscape touch viewport.
+enum GameViewportLayout {
+    static func size(for container: CGSize) -> CGSize {
+        CGSize(width: max(0, container.width), height: max(0, container.height))
+    }
+}
+
 @MainActor struct GameContainerView: View {
     @ObservedObject var state: AppState
     @State private var scene: AdventureScene?
@@ -13,14 +22,17 @@ import SpriteKit
     var body: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width >= geometry.size.height
+            let viewport = GameViewportLayout.size(for: geometry.size)
 
             ZStack(alignment: .topTrailing) {
                 Color(red: 0.08, green: 0.09, blue: 0.16)
 
                 if let scene {
+                    // Let SpriteKit use the actual landscape viewport. Adaptive scenes
+                    // grow to 4:3 on iPad instead of being squeezed into a 16:9 strip.
+                    // Legacy 16:9 scenes retain their own aspectFit canvas.
                     SpriteView(scene: scene, isPaused: settings || !isLandscape || scenePhase != .active)
-                        .aspectRatio(16 / 9, contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(width: viewport.width, height: viewport.height)
                         .allowsHitTesting(isLandscape && !settings && scenePhase == .active)
                         .accessibilityHidden(!isLandscape)
                 }
