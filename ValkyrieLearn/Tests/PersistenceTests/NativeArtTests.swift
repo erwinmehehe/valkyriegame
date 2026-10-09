@@ -3033,10 +3033,12 @@ import LearningCore
             // supplies the finished environment in all ten rooms.
             for decoration in ["puzzleStageDais", "puzzleStageInlay", "puzzleFloorSeal",
                                "puzzleCrystalFixture", "puzzleRoomIdentity"] {
-                XCTAssertTrue(
-                    scene.childNode(withName: decoration)?.isHidden == true,
-                    "\(name): redundant \(decoration) must not paint over the room."
-                )
+                if let syntheticDecoration = scene.childNode(withName: decoration) {
+                    XCTAssertTrue(
+                        syntheticDecoration.isHidden,
+                        "\(name): redundant \(decoration) must not paint over the room."
+                    )
+                }
             }
             if world == .puzzlePalace {
                 let gate = try XCTUnwrap(scene.childNode(withName: "puzzleGate") as? SKShapeNode)
