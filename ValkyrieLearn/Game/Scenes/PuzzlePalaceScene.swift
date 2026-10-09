@@ -4778,19 +4778,31 @@ import LearningCore
 
         let xs: [CGFloat] = [555, 760, 965]
         for (index, step) in bugEncounter.shown.enumerated() {
+            // Each command is a bolted machine cassette seated in the
+            // clockwork rail, not a floating dark quiz card.
             let plate = ArtSystem.panel(
                 CGSize(width: 154, height: 120),
-                fill: UIColor(red: 0.10, green: 0.13, blue: 0.22, alpha: 0.97),
-                stroke: UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.76),
-                radius: 28,
+                fill: UIColor(red: 0.30, green: 0.23, blue: 0.26, alpha: 0.98),
+                stroke: UIColor(red: 0.92, green: 0.74, blue: 0.45, alpha: 0.98),
+                radius: 15,
                 lineWidth: 4,
-                shadowAlpha: 0.28,
-                innerHighlight: UIColor(red: 0.66, green: 0.82, blue: 0.94, alpha: 0.10)
+                shadowAlpha: 0.26,
+                innerHighlight: UIColor(red: 0.91, green: 0.77, blue: 0.51, alpha: 0.10)
             )
             plate.position = CGPoint(x: xs[index], y: 355)
             plate.name = "bugStep\(index)"
             plate.zPosition = 850
             plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
+
+            for x in [CGFloat(-61), 61] {
+                let fastener = SKShapeNode(circleOfRadius: 5)
+                fastener.position = CGPoint(x: x, y: -50)
+                fastener.fillColor = UIColor(red: 0.96, green: 0.77, blue: 0.48, alpha: 1)
+                fastener.strokeColor = UIColor(red: 0.25, green: 0.19, blue: 0.19, alpha: 1)
+                fastener.lineWidth = 1.5
+                fastener.name = "decorativeBugCassetteBolt"
+                plate.addChild(fastener)
+            }
 
             let number = ArtSystem.label("\(index + 1)", size: 13)
             number.fontColor = UIColor(white: 1, alpha: 0.40)
@@ -4837,6 +4849,41 @@ import LearningCore
         tiko.pose(.interact)
     }
 
+    private func markBugMachineInspection(step index: Int, confirmedBreak: Bool) {
+        // Show which physical cassette Tiko is inspecting. This runs only
+        // AFTER a child makes a choice, so diagnosis is never leaked beforehand.
+        // The selected cassette either sinks into a jammed rail or lifts back
+        // out for another look; the lamp changes even in Reduced Motion.
+        for step in 0..<3 {
+            if let socket = childNode(withName: "bugStepSocket\(step)") as? SKShapeNode {
+                let visited = step <= index
+                socket.strokeColor = visited
+                    ? UIColor(red: 0.95, green: 0.75, blue: 0.44, alpha: 1)
+                    : UIColor(red: 0.48, green: 0.42, blue: 0.53, alpha: 0.6)
+            }
+            if step < 2 {
+                childNode(withName: "bugFlowArrow\(step)")?.alpha = step < index ? 1 : 0.35
+            }
+        }
+
+        if let cassette = childNode(withName: "bugStep\(index)") {
+            cassette.removeAction(forKey: "bugCassetteInspection")
+            let destination: CGFloat = confirmedBreak ? 341 : 367
+            if reducedMotion {
+                cassette.position.y = destination
+            } else {
+                cassette.run(.moveTo(y: destination, duration: 0.18),
+                             withKey: "bugCassetteInspection")
+            }
+        }
+        if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
+            core.fillColor = confirmedBreak
+                ? UIColor(red: 0.70, green: 0.29, blue: 0.23, alpha: 1)
+                : UIColor(red: 0.39, green: 0.24, blue: 0.29, alpha: 1)
+            core.glowWidth = confirmedBreak && !reducedMotion ? 5 : 0
+        }
+    }
+
     private func resolveBugStep(_ index: Int) {
         guard place == .bugLantern, bugAcceptingInput, !solved,
               let activeEncounter = bugEncounter,
@@ -4847,6 +4894,7 @@ import LearningCore
         attempts += 1
         let attemptSupport = support
         let correct = activeEncounter.isBrokenStep(index)
+        markBugMachineInspection(step: index, confirmedBreak: correct)
 
         guard correct else {
             _ = state.recordPuzzle(
@@ -4965,7 +5013,9 @@ import LearningCore
               let brokenPlate = childNode(withName: "bugStep\(index)") else { return }
 
         bugRepairReady = false
-        let targetPosition = brokenPlate.position
+        // Installing the replacement restores the cassette to its original
+        // rail height after the jammed component has visibly sunk.
+        let targetPosition = CGPoint(x: brokenPlate.position.x, y: 355)
         let externalLabel = childNode(withName: "bugStepLabel\(index)")
         let attemptSupport = support
 
