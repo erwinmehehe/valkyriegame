@@ -39,11 +39,22 @@ import LearningCore
         XCTAssertTrue(state.starlightBridgeQuest.discovered)
         XCTAssertNotNil(castle.childNode(withName: "starlightQuestStage"))
         XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestCache0"))
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestFirefly"))
+        XCTAssertNotNil(castle.childNode(withName: "//bridgeQuestProgressSign"))
+        for index in 0..<StarlightBridgeQuest.crystalCount {
+            let cache = try XCTUnwrap(castle.childNode(withName: "//bridgeQuestCache\(index)"))
+            let pedestal = try XCTUnwrap(castle.childNode(
+                withName: "//decorativeCrystalPedestal\(index)"
+            ))
+            XCTAssertEqual(cache.position.x, pedestal.position.x, accuracy: 0.001)
+            XCTAssertGreaterThan(cache.position.y, pedestal.position.y,
+                                 "Crystal should sit on a physical pedestal, not in the sky.")
+        }
         XCTAssertEqual(state.profile.skills, initialMathEvidence)
         try await capture(castle, in: view, name: "Math-Castle-Starlight-Bridge-Discovery")
 
         let caches: [CGPoint] = [
-            CGPoint(x: 475, y: 465), CGPoint(x: 635, y: 455), CGPoint(x: 795, y: 465)
+            CGPoint(x: 330, y: 306), CGPoint(x: 468, y: 306), CGPoint(x: 605, y: 306)
         ]
         for (index, point) in caches.enumerated() {
             castle.handleTap(at: point)
@@ -54,10 +65,10 @@ import LearningCore
         XCTAssertEqual(state.starlightBridgeQuest.availableCrystals, [0, 1, 2])
 
         let inventory: [CGPoint] = [
-            CGPoint(x: 500, y: 145), CGPoint(x: 640, y: 145), CGPoint(x: 780, y: 145)
+            CGPoint(x: 360, y: 130), CGPoint(x: 490, y: 130), CGPoint(x: 620, y: 130)
         ]
         let sockets: [CGPoint] = [
-            CGPoint(x: 695, y: 330), CGPoint(x: 850, y: 330), CGPoint(x: 1005, y: 330)
+            CGPoint(x: 760, y: 302), CGPoint(x: 905, y: 302), CGPoint(x: 1050, y: 302)
         ]
         for index in 0..<3 {
             castle.handleTap(at: inventory[index])
