@@ -864,16 +864,24 @@ import LearningCore
 
         // Illustration supplies masonry and depth. Native lights and physical
         // puzzle mechanics remain separate so they can react to the child.
-        let quietScenery: Set<String> = [
+        // The approved painting already contains the complete room. Legacy
+        // synthetic architecture and floating crystal decorations made a second,
+        // visibly disconnected room above it. Retain nodes for older native
+        // structure/regression checks, but never draw the duplicate decoration.
+        let paintedScenery: Set<String> = [
             "puzzleArchitecture", "puzzleUpperVault", "puzzleVaultCornice",
             "puzzleFloor", "puzzleFloorTexture", "puzzlePillar",
-            "decorativePuzzlePillarCap", "puzzleRoomIdentity"
+            "decorativePuzzlePillarCap", "puzzleRoomIdentity",
+            "puzzleStageDais", "puzzleStageInlay", "puzzleFloorSeal",
+            "puzzleCrystalFixture", "decorativePuzzleCrystalHalo",
+            "decorativePuzzleVaultGem", "decorativePuzzleKeystone"
         ]
         for node in children {
             guard let name = node.name else { continue }
-            if quietScenery.contains(name) || name.hasPrefix("puzzleAlcove")
-                || name.hasPrefix("puzzleVaultRib") {
-                node.alpha = min(node.alpha, 0.10)
+            if paintedScenery.contains(name) || name.hasPrefix("puzzleAlcove")
+                || name.hasPrefix("puzzleVaultRib")
+                || name.hasPrefix("puzzleCrystalSconce") {
+                node.isHidden = true
             }
         }
     }
@@ -1099,46 +1107,131 @@ import LearningCore
         addChild(root)
     }
 
+    // One set of stone-and-brass tools is reused across the palace. These are
+    // physical SpriteKit shapes, not text-only UI floating above the paintings.
+    private func palaceCog(
+        radius: CGFloat,
+        teeth: Int,
+        fill: UIColor,
+        stroke: UIColor
+    ) -> SKShapeNode {
+        let path = CGMutablePath()
+        for index in 0..<(teeth * 4) {
+            let angle = CGFloat(index) * .pi / CGFloat(teeth * 2)
+            let outer = index % 4 == 0 || index % 4 == 1
+            let distance = outer ? radius : radius * 0.87
+            let point = CGPoint(x: cos(angle) * distance, y: sin(angle) * distance)
+            if index == 0 {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
+        }
+        path.closeSubpath()
+        let cog = SKShapeNode(path: path)
+        cog.fillColor = fill
+        cog.strokeColor = stroke
+        cog.lineWidth = 3
+        return cog
+    }
+
     private func buildRuneGate() {
-        let arch = SKShapeNode(rectOf: CGSize(width: 154, height: 232), cornerRadius: 70)
-        arch.fillColor = UIColor(red: 0.10, green: 0.09, blue: 0.23, alpha: 0.72)
-        arch.strokeColor = UIColor(red: 0.69, green: 0.58, blue: 0.95, alpha: 0.86)
+        // Follow the doorway in the painted background instead of drawing a
+        // second, oversized purple cartoon portal to its right.
+        let arch = SKShapeNode(
+            rectOf: CGSize(width: 218, height: 320),
+            cornerRadius: 102
+        )
+        arch.fillColor = .clear
+        arch.strokeColor = UIColor(red: 0.88, green: 0.70, blue: 0.37, alpha: 0.14)
         arch.lineWidth = 5
-        arch.position = CGPoint(x: 1090, y: 376)
+        arch.position = CGPoint(x: 931, y: 398)
         arch.name = "puzzleGate"
         arch.zPosition = 360
         addChild(arch)
 
-        let door = SKShapeNode(rectOf: CGSize(width: 102, height: 160), cornerRadius: 46)
-        door.fillColor = UIColor(red: 0.055, green: 0.05, blue: 0.14, alpha: 0.94)
-        door.strokeColor = UIColor(red: 0.46, green: 0.55, blue: 0.86, alpha: 0.64)
-        door.lineWidth = 3
-        door.position.y = -18
+        // An actual opening is revealed on solving the final lock. The
+        // illustrated (closed) door underneath is then occluded by the passage.
+        let passage = SKShapeNode(
+            rectOf: CGSize(width: 168, height: 264),
+            cornerRadius: 78
+        )
+        passage.position.y = -15
+        passage.fillColor = UIColor(red: 0.075, green: 0.067, blue: 0.20, alpha: 0.97)
+        passage.strokeColor = UIColor(red: 0.98, green: 0.77, blue: 0.42, alpha: 1)
+        passage.lineWidth = 4
+        passage.alpha = 0
+        passage.name = "puzzleGateOpening"
+        passage.zPosition = -2
+        arch.addChild(passage)
+
+        let openingLight = SKShapeNode(ellipseOf: CGSize(width: 90, height: 184))
+        openingLight.fillColor = UIColor(red: 0.41, green: 0.27, blue: 0.62, alpha: 0.45)
+        openingLight.strokeColor = UIColor(red: 0.96, green: 0.78, blue: 0.43, alpha: 0.65)
+        openingLight.lineWidth = 2
+        openingLight.name = "puzzleGateOpeningLight"
+        passage.addChild(openingLight)
+
+        let door = SKShapeNode(
+            rectOf: CGSize(width: 164, height: 262),
+            cornerRadius: 76
+        )
+        door.fillColor = .clear
+        door.strokeColor = UIColor(red: 0.84, green: 0.62, blue: 0.37, alpha: 0.18)
+        door.lineWidth = 2
+        door.position.y = -15
         door.name = "puzzleGateDoor"
         arch.addChild(door)
 
+        // Brass hinges and the actual lock make the affordance part of the
+        // illustrated door. These pieces retreat with the door when it opens.
+        for y in [CGFloat(-76), 72] {
+            let hinge = SKShapeNode(rectOf: CGSize(width: 170, height: 9), cornerRadius: 3)
+            hinge.fillColor = UIColor(red: 0.48, green: 0.34, blue: 0.20, alpha: 0.72)
+            hinge.strokeColor = UIColor(red: 0.83, green: 0.66, blue: 0.37, alpha: 0.86)
+            hinge.lineWidth = 1.5
+            hinge.position.y = y
+            hinge.name = "decorativeRuneDoorHinge"
+            door.addChild(hinge)
+        }
+
+        let lock = palaceCog(
+            radius: 30, teeth: 8,
+            fill: UIColor(red: 0.29, green: 0.21, blue: 0.24, alpha: 0.96),
+            stroke: UIColor(red: 0.86, green: 0.70, blue: 0.43, alpha: 1)
+        )
+        lock.name = "puzzleGateLock"
+        lock.zPosition = 3
+        door.addChild(lock)
+
+        let keyhole = SKShapeNode(circleOfRadius: 10)
+        keyhole.fillColor = UIColor(red: 0.10, green: 0.075, blue: 0.14, alpha: 1)
+        keyhole.strokeColor = UIColor(red: 0.98, green: 0.81, blue: 0.48, alpha: 0.82)
+        keyhole.lineWidth = 2
+        keyhole.name = "puzzleGateKeyhole"
+        lock.addChild(keyhole)
+
         let crown = SKShapeNode(path: {
-            let p = CGMutablePath()
-            p.move(to: CGPoint(x: 0, y: 18))
-            p.addLine(to: CGPoint(x: -15, y: 0))
-            p.addLine(to: CGPoint(x: 0, y: -18))
-            p.addLine(to: CGPoint(x: 15, y: 0))
-            p.closeSubpath()
-            return p
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: 15))
+            path.addLine(to: CGPoint(x: -12, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -15))
+            path.addLine(to: CGPoint(x: 12, y: 0))
+            path.closeSubpath()
+            return path
         }())
-        crown.position.y = 86
-        crown.fillColor = UIColor(red: 0.42, green: 0.72, blue: 1.0, alpha: 0.76)
-        crown.strokeColor = UIColor(red: 0.93, green: 0.72, blue: 0.34, alpha: 0.92)
-        crown.lineWidth = 3
-        crown.glowWidth = reducedMotion ? 0 : 4
+        crown.position.y = 132
+        crown.fillColor = UIColor(red: 0.78, green: 0.57, blue: 0.26, alpha: 0.98)
+        crown.strokeColor = UIColor(red: 0.98, green: 0.85, blue: 0.51, alpha: 0.98)
+        crown.lineWidth = 2
         crown.name = "puzzleGateCrest"
         arch.addChild(crown)
 
-        let threshold = SKShapeNode(ellipseOf: CGSize(width: 150, height: 28))
-        threshold.fillColor = UIColor(red: 0.16, green: 0.12, blue: 0.26, alpha: 0.78)
-        threshold.strokeColor = UIColor(red: 0.77, green: 0.58, blue: 0.28, alpha: 0.54)
+        let threshold = SKShapeNode(ellipseOf: CGSize(width: 190, height: 22))
+        threshold.fillColor = UIColor(red: 0.24, green: 0.16, blue: 0.17, alpha: 0.54)
+        threshold.strokeColor = UIColor(red: 0.87, green: 0.69, blue: 0.39, alpha: 0.65)
         threshold.lineWidth = 2
-        threshold.position = CGPoint(x: 1090, y: 246)
+        threshold.position = CGPoint(x: 931, y: 235)
         threshold.name = "decorativeRuneGateThreshold"
         threshold.zPosition = 345
         addChild(threshold)
@@ -1193,31 +1286,53 @@ import LearningCore
 
         let board = SKNode()
         board.name = "runeBoard"
-        board.position = CGPoint(x: 710, y: 430)
+        board.position = CGPoint(x: 831, y: 402)
         board.zPosition = 720
         addChild(board)
 
-        let threadPath = CGMutablePath()
-        threadPath.move(to: CGPoint(x: -220, y: -10))
-        threadPath.addCurve(
-            to: CGPoint(x: 220, y: -10),
-            control1: CGPoint(x: -80, y: -34),
-            control2: CGPoint(x: 80, y: -34)
+        // Four carved sockets share one grounded lockwork rather than
+        // reading as a multiple-choice row suspended in mid-air.
+        let housing = SKShapeNode(
+            rectOf: CGSize(width: 440, height: 118),
+            cornerRadius: 24
         )
-        let thread = SKShapeNode(path: threadPath)
-        thread.strokeColor = UIColor(red: 0.58, green: 0.72, blue: 1.0, alpha: 0.22)
-        thread.lineWidth = 3
-        thread.name = "decorativeRuneThread"
-        board.addChild(thread)
+        housing.fillColor = UIColor(red: 0.22, green: 0.16, blue: 0.19, alpha: 0.94)
+        housing.strokeColor = UIColor(red: 0.82, green: 0.64, blue: 0.37, alpha: 0.97)
+        housing.lineWidth = 5
+        housing.name = "runeLockHousing"
+        housing.zPosition = -3
+        board.addChild(housing)
+
+        let inset = SKShapeNode(
+            rectOf: CGSize(width: 411, height: 96),
+            cornerRadius: 18
+        )
+        inset.fillColor = UIColor(red: 0.13, green: 0.095, blue: 0.16, alpha: 0.94)
+        inset.strokeColor = UIColor(red: 0.54, green: 0.42, blue: 0.31, alpha: 0.90)
+        inset.lineWidth = 2
+        inset.name = "runeLockInlay"
+        inset.zPosition = -2
+        board.addChild(inset)
+
+        for x in [CGFloat(-182), 182] {
+            let foot = SKShapeNode(rectOf: CGSize(width: 24, height: 84), cornerRadius: 6)
+            foot.fillColor = UIColor(red: 0.37, green: 0.26, blue: 0.21, alpha: 0.92)
+            foot.strokeColor = UIColor(red: 0.75, green: 0.57, blue: 0.33, alpha: 0.86)
+            foot.lineWidth = 2
+            foot.position = CGPoint(x: x, y: -92)
+            foot.zPosition = -4
+            foot.name = "runeLockFoot"
+            board.addChild(foot)
+        }
 
         for (index, rune) in encounter.fixedRunes.enumerated() {
             let stone = runeStone(rune, name: "fixedRune")
-            stone.position = CGPoint(x: CGFloat(index - 1) * 108 - 58, y: 0)
+            stone.position = CGPoint(x: CGFloat(index) * 94 - 142, y: 0)
             board.addChild(stone)
         }
 
         let socket = runeSocket()
-        socket.position = CGPoint(x: 166, y: 0)
+        socket.position = CGPoint(x: 140, y: 0)
         socket.name = "runeSocket"
         board.addChild(socket)
 
@@ -1236,72 +1351,87 @@ import LearningCore
         )
     }
 
-    private func runeStone(_ rune: String, name: String) -> SKNode {
-        let stone = ArtSystem.medallion(
-            radius: 38,
-            fill: UIColor(red: 0.19, green: 0.15, blue: 0.31, alpha: 0.94),
-            stroke: UIColor(red: 0.73, green: 0.61, blue: 0.94, alpha: 0.72),
-            glow: reducedMotion ? 0 : 2
+    private func runeStone(_ rune: String, name: String) -> SKShapeNode {
+        let stone = SKShapeNode(
+            rectOf: CGSize(width: 79, height: 86),
+            cornerRadius: 16
         )
+        stone.fillColor = UIColor(red: 0.39, green: 0.29, blue: 0.29, alpha: 1)
+        stone.strokeColor = UIColor(red: 0.91, green: 0.75, blue: 0.48, alpha: 0.94)
+        stone.lineWidth = 3
         stone.name = name
 
-        let glyph = ArtSystem.label(rune, size: 35)
-        glyph.fontColor = UIColor(red: 1.0, green: 0.89, blue: 0.49, alpha: 1)
+        let inset = SKShapeNode(
+            rectOf: CGSize(width: 61, height: 67),
+            cornerRadius: 12
+        )
+        inset.fillColor = UIColor(red: 0.21, green: 0.155, blue: 0.21, alpha: 1)
+        inset.strokeColor = UIColor(red: 0.64, green: 0.48, blue: 0.35, alpha: 0.87)
+        inset.lineWidth = 2
+        inset.name = name
+        stone.addChild(inset)
+
+        let glyph = ArtSystem.label(rune, size: 34)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.85, blue: 0.52, alpha: 1)
         glyph.name = name
         stone.addChild(glyph)
-
-        let foot = SKShapeNode(ellipseOf: CGSize(width: 72, height: 16))
-        foot.fillColor = UIColor(red: 0.13, green: 0.10, blue: 0.22, alpha: 0.74)
-        foot.strokeColor = UIColor(red: 0.75, green: 0.57, blue: 0.27, alpha: 0.32)
-        foot.lineWidth = 1.5
-        foot.position.y = -46
-        foot.name = name
-        stone.addChild(foot)
         return stone
     }
 
-    private func runeSocket() -> SKNode {
-        let socket = ArtSystem.medallion(
-            radius: 38,
-            fill: UIColor(red: 0.055, green: 0.045, blue: 0.12, alpha: 0.94),
-            stroke: UIColor(red: 0.66, green: 0.59, blue: 0.88, alpha: 0.70),
-            glow: reducedMotion ? 0 : 3
+    private func runeSocket() -> SKShapeNode {
+        let socket = SKShapeNode(
+            rectOf: CGSize(width: 79, height: 86),
+            cornerRadius: 16
         )
+        socket.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.14, alpha: 1)
+        socket.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.40, alpha: 0.96)
+        socket.lineWidth = 4
         socket.name = "runeSocket"
 
+        let inlay = SKShapeNode(
+            rectOf: CGSize(width: 59, height: 65),
+            cornerRadius: 11
+        )
+        inlay.fillColor = UIColor(red: 0.075, green: 0.055, blue: 0.10, alpha: 1)
+        inlay.strokeColor = UIColor(red: 0.48, green: 0.34, blue: 0.28, alpha: 0.86)
+        inlay.lineWidth = 2
+        inlay.name = "runeSocketInlay"
+        socket.addChild(inlay)
+
         let mark = ArtSystem.label("?", size: 32)
-        mark.fontColor = UIColor(red: 0.84, green: 0.79, blue: 0.95, alpha: 0.92)
+        mark.fontColor = UIColor(red: 0.99, green: 0.83, blue: 0.54, alpha: 1)
         mark.name = "runeSocketMark"
         socket.addChild(mark)
         return socket
     }
 
-    private func runeChoice(_ rune: String, index: Int) -> SKNode {
-        let node = ArtSystem.medallion(
-            radius: 45,
-            fill: UIColor(
-                red: 0.18 + CGFloat(index) * 0.015,
-                green: 0.13,
-                blue: 0.30,
-                alpha: 0.94
-            ),
-            stroke: UIColor(red: 0.73, green: 0.61, blue: 0.94, alpha: 0.72),
-            glow: reducedMotion ? 0 : 2
+    private func runeChoice(_ rune: String, index: Int) -> SKShapeNode {
+        let stone = runeStone(rune, name: "runeChoice")
+        stone.fillColor = UIColor(red: 0.43, green: 0.31, blue: 0.23, alpha: 1)
+
+        // The selectable piece rests on a low stone plinth at floor level.
+        let ledge = SKShapeNode(
+            rectOf: CGSize(width: 94, height: 21),
+            cornerRadius: 7
         )
-        node.name = "runeChoice"
+        ledge.position.y = -50
+        ledge.fillColor = UIColor(red: 0.29, green: 0.22, blue: 0.22, alpha: 0.98)
+        ledge.strokeColor = UIColor(red: 0.88, green: 0.70, blue: 0.44, alpha: 0.85)
+        ledge.lineWidth = 2
+        ledge.name = "runeChoice"
+        stone.addChild(ledge)
 
-        let glyph = ArtSystem.label(rune, size: 37)
-        glyph.fontColor = UIColor(red: 1.0, green: 0.89, blue: 0.49, alpha: 1)
-        glyph.name = "runeChoice"
-        node.addChild(glyph)
-
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: 92, height: 18))
-        shadow.fillColor = UIColor(red: 0.04, green: 0.03, blue: 0.09, alpha: 0.26)
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 114, height: 22))
+        shadow.fillColor = UIColor(red: 0.13, green: 0.075, blue: 0.11, alpha: 0.31)
         shadow.strokeColor = .clear
-        shadow.position.y = -52
+        shadow.position.y = -66
+        shadow.zPosition = -2
         shadow.name = "runeChoice"
-        node.addChild(shadow)
-        return node
+        stone.addChild(shadow)
+
+        makeAccessible(stone, label: "Place the \(rune) rune in the palace lock")
+        registerInteraction(stone, clearance: 12)
+        return stone
     }
 
     private func clearRuneObjects() {
@@ -5468,7 +5598,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             refreshRuneGateProgress(animated: true)
-            successFeedback(at: CGPoint(x: 875, y: 455))
+            successFeedback(at: CGPoint(x: 970, y: 405))
             valkyrie.pose(.celebrate)
 
             if state.puzzleRuneGateComplete {
@@ -5518,8 +5648,9 @@ import LearningCore
         glyph.fontColor = UIColor(red: 1.0, green: 0.90, blue: 0.50, alpha: 1)
         glyph.name = "runeSocketMark"
         socket.addChild(glyph)
-        socket.strokeColor = .systemGreen
-        socket.glowWidth = 12
+        socket.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.43, alpha: 1)
+        socket.fillColor = UIColor(red: 0.42, green: 0.29, blue: 0.18, alpha: 1)
+        socket.glowWidth = reducedMotion ? 0 : 8
     }
 
     private func showPatternHint() {
@@ -5572,6 +5703,10 @@ import LearningCore
         if let gate = childNode(withName: "puzzleGate") as? SKShapeNode {
             gate.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 1)
             gate.glowWidth = 16
+        }
+        if let passage = childNode(withName: "//puzzleGateOpening") as? SKShapeNode {
+            passage.alpha = 1
+            passage.glowWidth = reducedMotion ? 0 : 14
         }
         if let door = childNode(withName: "//puzzleGateDoor") as? SKShapeNode {
             door.run(
