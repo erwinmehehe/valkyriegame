@@ -1,0 +1,6 @@
+room=rune-gate-open
+painting=present
+door-passage=present
+open-interior=visible
+next-route=present
+duplicate-room-hidden=true
