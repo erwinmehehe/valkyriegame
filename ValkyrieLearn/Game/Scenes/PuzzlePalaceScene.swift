@@ -1876,8 +1876,8 @@ import LearningCore
     private func buildStopGoWorld() {
         let upperRail = ArtSystem.panel(
             CGSize(width: 560, height: 20),
-            fill: UIColor(red: 0.16, green: 0.11, blue: 0.25, alpha: 0.84),
-            stroke: UIColor(red: 0.58, green: 0.47, blue: 0.82, alpha: 0.66),
+            fill: UIColor(red: 0.38, green: 0.27, blue: 0.23, alpha: 0.83),
+            stroke: UIColor(red: 0.89, green: 0.69, blue: 0.45, alpha: 0.82),
             radius: 9,
             lineWidth: 2,
             shadowAlpha: 0.18
@@ -1889,8 +1889,8 @@ import LearningCore
 
         let lowerRail = ArtSystem.panel(
             CGSize(width: 560, height: 20),
-            fill: UIColor(red: 0.11, green: 0.08, blue: 0.20, alpha: 0.84),
-            stroke: UIColor(red: 0.48, green: 0.39, blue: 0.72, alpha: 0.56),
+            fill: UIColor(red: 0.31, green: 0.22, blue: 0.25, alpha: 0.86),
+            stroke: UIColor(red: 0.76, green: 0.57, blue: 0.40, alpha: 0.78),
             radius: 9,
             lineWidth: 2,
             shadowAlpha: 0.14
@@ -1923,35 +1923,62 @@ import LearningCore
         orbRoot.position = CGPoint(x: 755, y: 365)
         orbRoot.zPosition = 620
 
-        let halo = SKShapeNode(circleOfRadius: 104)
-        halo.fillColor = UIColor(red: 0.19, green: 0.16, blue: 0.34, alpha: 0.08)
-        halo.strokeColor = UIColor(red: 0.70, green: 0.58, blue: 0.96, alpha: 0.24)
+        let halo = SKShapeNode(circleOfRadius: 85)
+        halo.fillColor = UIColor(red: 0.25, green: 0.15, blue: 0.31, alpha: 0.12)
+        halo.strokeColor = UIColor(red: 0.89, green: 0.68, blue: 0.48, alpha: 0.40)
         halo.lineWidth = 2
         halo.name = "stopGoOrbHalo"
         halo.zPosition = -2
         orbRoot.addChild(halo)
 
+        // The active signal is a mounted brass-and-glass lantern mechanism,
+        // not a giant purple tap button pasted on the background.
         let ring = ArtSystem.medallion(
-            radius: 83,
-            fill: UIColor(red: 0.17, green: 0.12, blue: 0.30, alpha: 0.96),
-            stroke: UIColor(red: 0.70, green: 0.58, blue: 0.96, alpha: 0.94),
-            glow: reducedMotion ? 0 : 3
+            radius: 70,
+            fill: UIColor(red: 0.37, green: 0.25, blue: 0.29, alpha: 0.92),
+            stroke: UIColor(red: 0.96, green: 0.77, blue: 0.49, alpha: 0.96),
+            glow: reducedMotion ? 0 : 2
         )
         ring.name = "stopGoOrb"
         orbRoot.addChild(ring)
 
         let core = ArtSystem.medallion(
-            radius: 49,
-            fill: UIColor(red: 0.30, green: 0.22, blue: 0.44, alpha: 1),
-            stroke: UIColor(red: 0.92, green: 0.82, blue: 1.0, alpha: 0.94)
+            radius: 46,
+            fill: UIColor(red: 0.63, green: 0.48, blue: 0.70, alpha: 0.95),
+            stroke: UIColor(red: 1.0, green: 0.90, blue: 0.68, alpha: 0.96)
         )
         core.name = "stopGoOrbCore"
         orbRoot.addChild(core)
 
-        let glyph = ArtSystem.label("Ⅱ", size: 43)
+        // Small captive brass studs give the mechanism a raised frame, while
+        // the lock bar makes HOLD vs GO a physical state even without color
+        // and with accessibility Reduced Motion enabled.
+        for angle in stride(from: 0, through: 300, by: 60) {
+            let radians = CGFloat(angle) * .pi / 180
+            let stud = SKShapeNode(circleOfRadius: 5)
+            stud.position = CGPoint(x: cos(radians) * 60, y: sin(radians) * 60)
+            stud.fillColor = UIColor(red: 0.96, green: 0.78, blue: 0.49, alpha: 1)
+            stud.strokeColor = UIColor(red: 0.36, green: 0.25, blue: 0.24, alpha: 1)
+            stud.lineWidth = 1.5
+            stud.name = "decorativeStopGoStud"
+            stud.zPosition = 2
+            orbRoot.addChild(stud)
+        }
+
+        let glyph = ArtSystem.label("Ⅱ", size: 42)
         glyph.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.58, alpha: 1)
         glyph.name = "stopGoOrbGlyph"
+        glyph.zPosition = 3
         orbRoot.addChild(glyph)
+
+        let shutter = SKShapeNode(rectOf: CGSize(width: 102, height: 13), cornerRadius: 6)
+        shutter.fillColor = UIColor(red: 0.72, green: 0.48, blue: 0.29, alpha: 1)
+        shutter.strokeColor = UIColor(red: 1, green: 0.86, blue: 0.58, alpha: 1)
+        shutter.lineWidth = 2
+        shutter.position = CGPoint(x: 0, y: -23)
+        shutter.name = "decorativeStopGoShutter"
+        shutter.zPosition = 4
+        orbRoot.addChild(shutter)
         addChild(orbRoot)
 
         let barrier = SKShapeNode(rectOf: CGSize(width: 82, height: 204), cornerRadius: 38)
@@ -1982,12 +2009,8 @@ import LearningCore
             addChild(light)
         }
 
-        let legend = ArtSystem.label("Ⅱ  WAIT      ✦  TAP", size: 14)
-        legend.position = CGPoint(x: 755, y: 228)
-        legend.fontColor = UIColor(red: 0.94, green: 0.86, blue: 0.67, alpha: 0.86)
-        legend.name = "stopGoLegend"
-        legend.zPosition = 132
-        addChild(legend)
+        // The single lower guidance plaque provides the spoken/visual cue.
+        // Avoid duplicate tiny text floating on the painted Palace floor.
 
         let back = worldControl("‹", name: "memoryBridgeBack",
                                 at: CGPoint(x: 1180, y: 665), radius: 30,
@@ -2076,6 +2099,27 @@ import LearningCore
               let glyph = root.childNode(withName: "stopGoOrbGlyph") as? SKLabelNode,
               let halo = root.childNode(withName: "stopGoOrbHalo") as? SKShapeNode else {
             return
+        }
+
+        if let shutter = root.childNode(withName: "decorativeStopGoShutter") as? SKShapeNode {
+            shutter.removeAction(forKey: "shutterSlide")
+            let isHeld = signal == .hold
+            let scale: CGFloat = isHeld ? 1.0 : 0.12
+            let x: CGFloat = isHeld ? 0 : 53
+            if reducedMotion {
+                shutter.xScale = scale
+                shutter.position.x = x
+            } else {
+                shutter.run(.group([
+                    .scaleX(to: scale, duration: 0.22),
+                    .moveTo(x: x, duration: 0.22)
+                ]), withKey: "shutterSlide")
+            }
+        }
+        if let barrier = childNode(withName: "stopGoBarrier") as? SKShapeNode {
+            barrier.strokeColor = signal == .hold
+                ? UIColor(red: 0.91, green: 0.54, blue: 0.65, alpha: 0.90)
+                : UIColor(red: 0.66, green: 0.94, blue: 0.74, alpha: 0.95)
         }
 
         switch signal {
@@ -2231,6 +2275,11 @@ import LearningCore
             core.strokeColor = UIColor(red: 0.75, green: 1.0, blue: 0.78, alpha: 1)
             core.glowWidth = 15
             glyph.text = "✦"
+            if let shutter = root.childNode(withName: "decorativeStopGoShutter") as? SKShapeNode {
+                shutter.removeAction(forKey: "shutterSlide")
+                shutter.xScale = 0.12
+                shutter.position.x = 53
+            }
         }
 
         if let barrier = childNode(withName: "stopGoBarrier") as? SKShapeNode {
