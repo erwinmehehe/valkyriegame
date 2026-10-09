@@ -1259,9 +1259,8 @@ import LearningCore
             return
         }
         if hypot(point.x - windLaunchPoint.x, point.y - windLaunchPoint.y) <= 53 {
+            let wasRescued = state.miloWindKiteRescue.kiteRescued
             guard let trial = state.testMiloWindKite() else { return }
-            let firstRescue = state.miloWindKiteRescue.kiteRescued
-                && state.miloWindKiteRescue.trialsCompleted == 1
             renderWindRescue()
             milo.inspect(reducedMotion: reducedMotion)
             valkyrie.pose(trial.rescued ? .celebrate : .interact)
@@ -1273,15 +1272,18 @@ import LearningCore
                 craft.run(.moveTo(x: endX, duration: 0.65), withKey: "windCraftRoll")
             }
             if trial.rescued {
-                successFeedback(at: CGPoint(x: 1040, y: 455))
-                buildWindRescueBeacon()
-                instruction.text = "Your gust freed the kite! You can keep testing new sails."
+                if !wasRescued {
+                    successFeedback(at: CGPoint(x: 1040, y: 455))
+                    buildWindRescueBeacon()
+                }
+                instruction.text = wasRescued
+                    ? "The kite is safe! You can keep changing your wind experiments."
+                    : "Your gust freed the kite! You can keep testing new sails."
             } else if trial.travel == 0 {
                 instruction.text = "The cart stayed still. Would a breeze make it move?"
             } else {
                 instruction.text = "It rolled partway! Try another sail or a stronger wind."
             }
-            _ = firstRescue
             return
         }
         instruction.text = "Choose a sail and wind, then pull TEST. Or drag a sail onto the cart."
