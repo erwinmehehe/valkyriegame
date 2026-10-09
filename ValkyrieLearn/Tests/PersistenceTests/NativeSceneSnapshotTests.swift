@@ -212,6 +212,101 @@ import LearningCore
         }
     }
 
+    func testStopGoUsesMountedShutterAndKeepsItsNativeTouchTarget() throws {
+        let (window, view) = makeView()
+        let state = try freshState()
+        state.reducedMotion = true
+        unlockRuneGate(in: state)
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = state.recordPuzzle(
+                encounter, outcome: .correct, support: .independent,
+                attempts: 1, responseTime: 1
+            )
+        }
+        state.travel(to: .stopGoOrbs)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let root = try XCTUnwrap(scene.childNode(withName: "stopGoOrb"))
+        let shutter = try XCTUnwrap(
+            root.childNode(withName: "decorativeStopGoShutter") as? SKShapeNode
+        )
+        let ring = try XCTUnwrap(
+            root.children.first { $0.name == "stopGoOrb" } as? SKShapeNode
+        )
+        XCTAssertEqual(shutter.xScale, 1, accuracy: 0.001)
+        XCTAssertGreaterThanOrEqual(ring.frame.width, 130,
+                                    "Five-year-olds need a generous physical tap target.")
+        XCTAssertLessThan(ring.frame.width, 160,
+                          "The signal should not dominate the illustrated room.")
+        XCTAssertNil(scene.childNode(withName: "stopGoLegend"),
+                     "Redundant miniature floor legends compete with the physical signal.")
+        XCTAssertNotNil(scene.childNode(withName: "stopGoBarrier"))
+
+        for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            _ = state.recordPuzzle(
+                encounter, outcome: .correct, support: .independent,
+                attempts: 1, responseTime: 1
+            )
+        }
+        scene.willLeave()
+        let restored = PuzzlePalaceScene(state: state)
+        restored.reducedMotion = true
+        view.presentScene(restored)
+        defer { restored.willLeave() }
+
+        let openShutter = try XCTUnwrap(
+            restored.childNode(withName: "//decorativeStopGoShutter")
+        )
+        XCTAssertEqual(openShutter.xScale, 0.12, accuracy: 0.001,
+                       "A saved finished chamber must render with its shutter open.")
+        XCTAssertNotNil(restored.childNode(withName: "stopGoBarrierOpen"))
+    }
+
+    func testSortingRoomsHaveGroundedStoneAlcovesInsteadOfPurpleButtons() throws {
+        let (window, view) = makeView()
+        let state = try freshState()
+        state.reducedMotion = true
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let cases: [(AppState.World, [String], String)] = [
+            (.sortingPedestal, ["sortLeftPedestal", "sortRightPedestal"], "sortingRuleDial"),
+            (.resortVault, ["resortLeftPedestal", "resortRightPedestal"], "resortRuleDial")
+        ]
+        for (world, names, dialName) in cases {
+            state.travel(to: world)
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            view.presentScene(scene)
+
+            for name in names {
+                let alcove = try XCTUnwrap(scene.childNode(withName: name))
+                XCTAssertTrue(alcove.isAccessibilityElement,
+                              "Grounded alcoves must retain child-accessible touch labels.")
+                let masonry = alcove.children.compactMap { $0 as? SKShapeNode }
+                    .filter { $0.name == name && $0.fillTexture != nil }
+                XCTAssertGreaterThanOrEqual(masonry.count, 3,
+                             "A physical bowl, connected pillar and foot must share carved materials.")
+                XCTAssertNotNil(alcove.childNode(withName: name + "Glyph"),
+                                "The sort rule must still identify each receiving alcove.")
+            }
+
+            let dial = try XCTUnwrap(
+                scene.childNode(withName: dialName) as? SKShapeNode
+            )
+            XCTAssertNotNil(dial.fillTexture)
+            XCTAssertLessThan(dial.frame.height, 90,
+                              "The rule should be a compact stone plaque, not a giant floating disk.")
+            scene.willLeave()
+        }
+    }
+
     func testOptionalPixelGoldenMasterRecording() throws {
         // Never accept machine-generated visual goldens without owner review.
         // Enable for a *local*, deliberate golden-master recording session:
