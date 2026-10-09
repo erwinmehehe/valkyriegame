@@ -16,6 +16,92 @@ import LearningCore
         XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
     }
 
+    func testMiloShadowWorkshopChangesProjectionAndSavesRescuedMoth() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { view.presentScene(nil); window.isHidden = true }
+
+        let store = try LearningStore.container(inMemory: true)
+        let state = try AppState(context: ModelContext(store))
+        state.travel(to: .scienceLab)
+        let evidence = state.profile.skills
+        let scienceBefore = state.scienceAdventure
+
+        let scene = ScienceLabScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        let beacon = try XCTUnwrap(scene.childNode(withName: "shadowWorkshopBeacon"))
+        XCTAssertTrue(beacon.isAccessibilityElement)
+        scene.handleTap(at: beacon.position)
+        XCTAssertTrue(state.miloShadowWorkshop.explored)
+        XCTAssertNotNil(scene.childNode(withName: "shadowWorkshopStage"))
+        XCTAssertNotNil(scene.childNode(withName: "//shadowWorkshopWall"))
+        XCTAssertNotNil(scene.childNode(withName: "//shadowWorkshopPhysicalProp"))
+        XCTAssertNotNil(scene.childNode(withName: "//shadowWorkshopProjection"))
+        XCTAssertNotNil(scene.childNode(withName: "//shadowLampRail"))
+        XCTAssertNotNil(scene.childNode(withName: "//shadowHeightLever"))
+        XCTAssertNotNil(scene.childNode(withName: "//shadowTestLever"))
+        XCTAssertEqual(state.profile.skills, evidence)
+
+        // Touch the rail: lamp left means its shadow moves right.
+        scene.handleTap(at: CGPoint(x: 420, y: 603))
+        XCTAssertEqual(state.miloShadowWorkshop.lampNotch, 0)
+        XCTAssertEqual(state.miloShadowWorkshop.projection.direction, .right)
+        let highShadow = state.miloShadowWorkshop.projection.scale
+        try await capture(scene, in: view, name: "Science-Lab-Milo-Shadow-High-Light")
+
+        // Lower the lamp: a larger silhouette appears on the physical wall.
+        scene.handleTap(at: CGPoint(x: 1088, y: 535))
+        XCTAssertEqual(state.miloShadowWorkshop.height, .low)
+        XCTAssertGreaterThan(state.miloShadowWorkshop.projection.scale, highShadow)
+        scene.handleTap(at: CGPoint(x: 1095, y: 262))
+        XCTAssertEqual(state.miloShadowWorkshop.observations.count, 1)
+        XCTAssertFalse(state.hasStoryReward(.miloShadowMoth))
+
+        // Switch the actual cutout, raise the lamp and compare again.
+        scene.handleTap(at: CGPoint(x: 808, y: 158))
+        XCTAssertEqual(state.miloShadowWorkshop.prop, .star)
+        scene.handleTap(at: CGPoint(x: 1088, y: 535))
+        XCTAssertEqual(state.miloShadowWorkshop.height, .high)
+        scene.handleTap(at: CGPoint(x: 1095, y: 262))
+        XCTAssertTrue(state.miloShadowWorkshop.hasFoundMoth)
+        XCTAssertTrue(state.hasStoryReward(.miloShadowMoth))
+        XCTAssertNotNil(scene.childNode(withName: "//shadowWorkshopMoth"))
+        XCTAssertEqual(state.profile.skills, evidence)
+        XCTAssertEqual(state.scienceAdventure, scienceBefore)
+        try await capture(scene, in: view, name: "Science-Lab-Milo-Shadow-Moth-Discovery")
+
+        scene.handleTap(at: CGPoint(x: 1160, y: 622))
+        XCTAssertNil(scene.childNode(withName: "shadowWorkshopStage"))
+        XCTAssertNotNil(scene.childNode(withName: "shadowWorkshopBeacon"))
+        scene.willLeave()
+
+        let restored = try AppState(context: ModelContext(store))
+        XCTAssertTrue(restored.hasStoryReward(.miloShadowMoth))
+        XCTAssertEqual(restored.miloShadowWorkshop.observations.count, 2)
+        XCTAssertEqual(restored.profile.skills, evidence)
+        XCTAssertEqual(restored.scienceAdventure, scienceBefore)
+
+        restored.travel(to: .storyTree)
+        let tree = StoryTreeScene(state: restored)
+        tree.reducedMotion = true
+        view.presentScene(tree)
+        let moth = try XCTUnwrap(tree.childNode(withName: "miloShadowMoth"))
+        XCTAssertTrue(moth.isAccessibilityElement)
+        XCTAssertEqual(moth.position, CGPoint(x: 350, y: 615),
+                       "The rescued moth belongs in the canopy, not over the Science Lab button.")
+        try await capture(tree, in: view, name: "Story-Tree-Milo-Shadow-Moth")
+        tree.handleTap(at: moth.position)
+        XCTAssertEqual(restored.storyRewardPlacement(.miloShadowMoth), 1)
+        tree.willLeave()
+        let saved = try AppState(context: ModelContext(store))
+        XCTAssertEqual(saved.storyRewardPlacement(.miloShadowMoth), 1)
+    }
+
     func testBridgeRescueExplorationRestoresAcrossLaunchAndPlacesTreeCharm() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let controller = UIViewController()

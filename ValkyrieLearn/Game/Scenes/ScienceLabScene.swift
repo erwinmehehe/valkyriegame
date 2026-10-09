@@ -22,6 +22,20 @@ import LearningCore
     private var touchStart = CGPoint.zero
     private var moved = false
     private var lastScienceKineticReducedMotion: Bool?
+    private var shadowWorkshopMode = false
+    private var shadowDraggingLamp = false
+    private var shadowWorkshopStage: SKNode?
+    private let shadowPropTrayPoints = [
+        CGPoint(x: 412, y: 158), CGPoint(x: 610, y: 158), CGPoint(x: 808, y: 158)
+    ]
+    private let shadowHeightLeverPoint = CGPoint(x: 1088, y: 535)
+    private let shadowTestLeverPoint = CGPoint(x: 1095, y: 262)
+    private let shadowExitPoint = CGPoint(x: 1160, y: 622)
+
+    private func shadowLampPoint(_ play: MiloShadowWorkshop) -> CGPoint {
+        CGPoint(x: 420 + CGFloat(play.lampNotch) * 125,
+                y: play.height == .high ? 571 : 504)
+    }
 
     override func didMove(to view: SKView) {
         prepareAdaptiveLandscapeCanvas(for: view)
@@ -39,6 +53,7 @@ import LearningCore
         valkyrie.setScale(0.5)
         renderPlant()
         renderGate()
+        buildShadowWorkshopBeacon()
 
         if greenhouseStage == .lit && !greenhouseComplete,
            let challenge = state.scienceNextFieldStudy(in: .greenhouse) {
@@ -879,6 +894,12 @@ import LearningCore
         activeTouch = touch
         touchStart = touch.location(in: self)
         moved = false
+        if shadowWorkshopMode {
+            shadowDraggingLamp = hypot(
+                touchStart.x - shadowLampPoint(state.miloShadowWorkshop).x,
+                touchStart.y - shadowLampPoint(state.miloShadowWorkshop).y
+            ) <= 55
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -887,12 +908,19 @@ import LearningCore
         if hypot(point.x - touchStart.x, point.y - touchStart.y) > 12 {
             moved = true
         }
+        if shadowWorkshopMode && shadowDraggingLamp {
+            let notch = min(4, max(0, Int(((point.x - 420) / 125).rounded())))
+            if state.setMiloShadowLampNotch(notch) {
+                renderShadowWorkshop()
+            }
+        }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = activeTouch, touches.contains(touch) {
             activeTouch = nil
             moved = false
+            shadowDraggingLamp = false
         }
     }
 
@@ -904,6 +932,14 @@ import LearningCore
         }
 
         let point = touch.location(in: self)
+        if shadowDraggingLamp {
+            shadowDraggingLamp = false
+            let notch = min(4, max(0, Int(((point.x - 420) / 125).rounded())))
+            _ = state.setMiloShadowLampNotch(notch)
+            renderShadowWorkshop()
+            instruction.text = "Watch the shadow shift opposite the moving lamp. Try SHINE."
+            return
+        }
         guard !moved, hypot(point.x - touchStart.x, point.y - touchStart.y) <= 12 else { return }
         handleTap(at: point)
     }
@@ -935,12 +971,29 @@ import LearningCore
 
     override func willLeave() {
         activeTouch = nil
+        shadowDraggingLamp = false
+        shadowWorkshopMode = false
+        shadowWorkshopStage?.removeFromParent()
+        shadowWorkshopStage = nil
         milo.cancelTravel()
         super.willLeave()
     }
 
     func handleTap(at point: CGPoint) {
         let target = targetName(at: point)
+        if shadowWorkshopMode {
+            if target == "scienceHome" {
+                willLeave()
+                state.travel(to: .storyTree)
+            } else {
+                handleShadowWorkshopTap(at: point)
+            }
+            return
+        }
+        if target == "shadowWorkshopBeacon" {
+            enterShadowWorkshop()
+            return
+        }
 
         if greenhouseStage == .lit,
            !greenhouseComplete,
@@ -1019,6 +1072,395 @@ import LearningCore
         default:
             walkIfValid(point)
         }
+    }
+
+
+    // MARK: - Milo's Light & Shadow Workshop
+
+    private func buildShadowWorkshopBeacon() {
+        childNode(withName: "shadowWorkshopBeacon")?.removeFromParent()
+        let root = SKNode()
+        root.name = "shadowWorkshopBeacon"
+        root.position = CGPoint(x: 1070, y: 515)
+        root.zPosition = 940
+        let stand = ArtSystem.box(
+            CGSize(width: 132, height: 52),
+            color: UIColor(red: 0.29, green: 0.22, blue: 0.18, alpha: 0.96),
+            radius: 13
+        )
+        stand.name = root.name
+        stand.strokeColor = UIColor(red: 0.93, green: 0.75, blue: 0.37, alpha: 1)
+        stand.lineWidth = 3
+        root.addChild(stand)
+
+        let lantern = ArtSystem.label(
+            state.miloShadowWorkshop.hasFoundMoth ? "✺" : "◉", size: 32
+        )
+        lantern.name = root.name
+        lantern.fontColor = UIColor(red: 1, green: 0.92, blue: 0.53, alpha: 1)
+        lantern.position.y = 11
+        root.addChild(lantern)
+        let sign = ArtSystem.label("SHADOW LAB", size: 12)
+        sign.name = root.name
+        sign.fontColor = .white
+        sign.position.y = -17
+        root.addChild(sign)
+        makeAccessible(root, label: "Milo's light and shadow workshop",
+                       hint: "Tap to make and change the shadows of physical objects.")
+        addChild(root)
+    }
+
+    private func enterShadowWorkshop() {
+        guard !shadowWorkshopMode else { return }
+        _ = state.exploreMiloShadowWorkshop()
+        shadowWorkshopMode = true
+        shadowDraggingLamp = false
+        renderShadowWorkshop()
+        instruction.text = "Move the lamp and try different cutouts. Watch their shadows!"
+    }
+
+    private func leaveShadowWorkshop() {
+        guard shadowWorkshopMode else { return }
+        shadowWorkshopMode = false
+        shadowDraggingLamp = false
+        shadowWorkshopStage?.removeFromParent()
+        shadowWorkshopStage = nil
+        buildShadowWorkshopBeacon()
+        if greenhouseStage == .lit, !greenhouseComplete,
+           let next = state.scienceNextFieldStudy(in: .greenhouse) {
+            instruction.text = next.prompt
+        } else if greenhouseComplete {
+            instruction.text = "The greenhouse is alive. Follow Milo to the Weather Tower."
+        } else {
+            instruction.text = "Milo can inspect the seed bench, or return to the shadow workshop."
+        }
+    }
+
+    private func shadowCutout(for prop: MiloShadowProp) -> SKShapeNode {
+        switch prop {
+        case .leaf:
+            let leaf = SKShapeNode(ellipseOf: CGSize(width: 58, height: 89))
+            leaf.zRotation = -0.28
+            return leaf
+        case .gear:
+            let path = CGMutablePath()
+            for index in 0..<16 {
+                let angle = CGFloat(index) * (.pi * 2 / 16) - (.pi / 2)
+                let radius: CGFloat = index.isMultiple(of: 2) ? 47 : 34
+                let pt = CGPoint(x: cos(angle) * radius, y: sin(angle) * radius)
+                if index == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            path.closeSubpath()
+            return SKShapeNode(path: path)
+        case .star:
+            let path = CGMutablePath()
+            for index in 0..<10 {
+                let angle = CGFloat(index) * (.pi / 5) - (.pi / 2)
+                let radius: CGFloat = index.isMultiple(of: 2) ? 49 : 20
+                let pt = CGPoint(x: cos(angle) * radius, y: sin(angle) * radius)
+                if index == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            path.closeSubpath()
+            return SKShapeNode(path: path)
+        }
+    }
+
+    private func renderShadowWorkshop() {
+        guard shadowWorkshopMode else { return }
+        shadowWorkshopStage?.removeFromParent()
+        let stage = SKNode()
+        stage.name = "shadowWorkshopStage"
+        stage.zPosition = 1400
+        addChild(stage)
+        shadowWorkshopStage = stage
+        let play = state.miloShadowWorkshop
+        let projection = play.projection
+        let lamp = shadowLampPoint(play)
+
+        // An authored stone projection wall and actual wooden stage, rather
+        // than a multiple-choice panel floating in the greenhouse.
+        let wall = ArtSystem.box(
+            CGSize(width: 560, height: 205),
+            color: UIColor(red: 0.77, green: 0.79, blue: 0.66, alpha: 0.96),
+            radius: 19
+        )
+        wall.position = CGPoint(x: 786, y: 432)
+        wall.strokeColor = UIColor(red: 0.45, green: 0.37, blue: 0.25, alpha: 1)
+        wall.lineWidth = 8
+        wall.name = "shadowWorkshopWall"
+        stage.addChild(wall)
+        let foot = ArtSystem.box(
+            CGSize(width: 590, height: 21),
+            color: UIColor(red: 0.42, green: 0.28, blue: 0.18, alpha: 1),
+            radius: 7
+        )
+        foot.position = CGPoint(x: 786, y: 318)
+        foot.strokeColor = UIColor(red: 0.92, green: 0.71, blue: 0.39, alpha: 0.9)
+        foot.lineWidth = 3
+        foot.name = "decorativeShadowWallFoot"
+        stage.addChild(foot)
+
+        let beam = CGMutablePath()
+        beam.move(to: lamp)
+        beam.addLine(to: CGPoint(x: 718, y: 323))
+        let ray = SKShapeNode(path: beam)
+        ray.name = "shadowWorkshopBeam"
+        ray.strokeColor = UIColor(red: 1, green: 0.94, blue: 0.53, alpha: 0.35)
+        ray.lineWidth = 23
+        ray.glowWidth = reducedMotion ? 0 : 6
+        stage.addChild(ray)
+
+        let shadow = shadowCutout(for: play.prop)
+        shadow.name = "shadowWorkshopProjection"
+        shadow.position = CGPoint(x: 786 + CGFloat(projection.horizontalOffset), y: 443)
+        shadow.setScale(CGFloat(projection.scale))
+        shadow.fillColor = UIColor(red: 0.15, green: 0.20, blue: 0.14, alpha: 0.79)
+        shadow.strokeColor = UIColor(red: 0.31, green: 0.36, blue: 0.28, alpha: 0.40)
+        shadow.lineWidth = 2
+        stage.addChild(shadow)
+        makeAccessible(shadow,
+                       label: "\(play.prop) casts a \(play.height == .low ? "large" : "small") shadow to the \(projection.direction)")
+
+        // The lamp travels along a timber rail; dragging or tapping notches
+        // changes the projection before the child even uses the test lever.
+        let track = ArtSystem.box(
+            CGSize(width: 550, height: 15),
+            color: UIColor(red: 0.49, green: 0.33, blue: 0.17, alpha: 1),
+            radius: 5
+        )
+        track.position = CGPoint(x: 670, y: 603)
+        track.strokeColor = UIColor(red: 0.94, green: 0.77, blue: 0.42, alpha: 1)
+        track.lineWidth = 3
+        track.name = "shadowLampRail"
+        stage.addChild(track)
+        for notch in 0...4 {
+            let tick = ArtSystem.box(
+                CGSize(width: 9, height: 24),
+                color: UIColor(red: 0.94, green: 0.77, blue: 0.42, alpha: 1),
+                radius: 3
+            )
+            tick.position = CGPoint(x: 420 + CGFloat(notch) * 125, y: 603)
+            tick.strokeColor = .clear
+            tick.name = "shadowLampNotch\(notch)"
+            stage.addChild(tick)
+        }
+        let arm = ArtSystem.box(
+            CGSize(width: 8, height: 603 - lamp.y),
+            color: UIColor(red: 0.69, green: 0.55, blue: 0.28, alpha: 1),
+            radius: 4
+        )
+        arm.position = CGPoint(x: lamp.x, y: (603 + lamp.y) / 2)
+        arm.strokeColor = .clear
+        arm.name = "shadowLampArm"
+        stage.addChild(arm)
+
+        let bulb = SKShapeNode(circleOfRadius: 32)
+        bulb.name = "shadowWorkshopLamp"
+        bulb.position = lamp
+        bulb.fillColor = UIColor(red: 1, green: 0.89, blue: 0.49, alpha: 1)
+        bulb.strokeColor = .white
+        bulb.lineWidth = 4
+        bulb.glowWidth = reducedMotion ? 0 : 12
+        stage.addChild(bulb)
+        let lampStar = ArtSystem.label("✦", size: 28)
+        lampStar.name = bulb.name
+        lampStar.fontColor = UIColor(red: 0.50, green: 0.32, blue: 0.10, alpha: 1)
+        bulb.addChild(lampStar)
+        makeAccessible(bulb, label: "Movable lamp at position \(play.lampNotch + 1)",
+                       hint: "Drag left or right, or tap a notch on the brass rail.")
+
+        let plinth = ArtSystem.box(
+            CGSize(width: 105, height: 46),
+            color: UIColor(red: 0.52, green: 0.32, blue: 0.18, alpha: 1),
+            radius: 8
+        )
+        plinth.name = "shadowPropPedestal"
+        plinth.position = CGPoint(x: 700, y: 287)
+        plinth.strokeColor = UIColor(red: 0.95, green: 0.77, blue: 0.42, alpha: 1)
+        plinth.lineWidth = 3
+        stage.addChild(plinth)
+        let object = shadowCutout(for: play.prop)
+        object.name = "shadowWorkshopPhysicalProp"
+        object.position = CGPoint(x: 700, y: 340)
+        object.setScale(0.48)
+        object.fillColor = UIColor(red: 0.54, green: 0.80, blue: 0.54, alpha: 1)
+        object.strokeColor = UIColor(red: 0.96, green: 0.89, blue: 0.65, alpha: 1)
+        object.lineWidth = 4
+        stage.addChild(object)
+
+        let swatches: [UIColor] = [
+            UIColor(red: 0.42, green: 0.82, blue: 0.46, alpha: 1),
+            UIColor(red: 0.83, green: 0.67, blue: 0.34, alpha: 1),
+            UIColor(red: 0.83, green: 0.68, blue: 0.96, alpha: 1)
+        ]
+        let labels = ["LEAF", "GEAR", "STAR"]
+        for (index, point) in shadowPropTrayPoints.enumerated() {
+            let tray = ArtSystem.box(
+                CGSize(width: 119, height: 57),
+                color: UIColor(red: 0.37, green: 0.25, blue: 0.16, alpha: 0.98),
+                radius: 10
+            )
+            tray.position = point
+            tray.name = "shadowPropChoice\(index)"
+            tray.strokeColor = swatches[index]
+            tray.lineWidth = play.prop.rawValue == index ? 6 : 2
+            stage.addChild(tray)
+            let cutout = shadowCutout(for: MiloShadowProp(rawValue: index)!)
+            cutout.name = tray.name
+            cutout.position = CGPoint(x: point.x, y: point.y + 13)
+            cutout.setScale(0.23)
+            cutout.fillColor = swatches[index]
+            cutout.strokeColor = .white
+            cutout.lineWidth = 3
+            stage.addChild(cutout)
+            let name = ArtSystem.label(labels[index], size: 13)
+            name.position = CGPoint(x: point.x, y: point.y - 17)
+            name.fontColor = .white
+            name.name = tray.name
+            stage.addChild(name)
+            makeAccessible(tray, label: "Place \(labels[index].lowercased()) cutout on the shadow stage")
+        }
+
+        let heightLever = SKShapeNode(circleOfRadius: 37)
+        heightLever.name = "shadowHeightLever"
+        heightLever.position = shadowHeightLeverPoint
+        heightLever.fillColor = UIColor(red: 0.27, green: 0.27, blue: 0.22, alpha: 1)
+        heightLever.strokeColor = UIColor(red: 0.94, green: 0.82, blue: 0.49, alpha: 1)
+        heightLever.lineWidth = 4
+        stage.addChild(heightLever)
+        let heightLabel = ArtSystem.label(play.height == .high ? "↑" : "↓", size: 31)
+        heightLabel.name = heightLever.name
+        heightLabel.fontColor = .white
+        heightLever.addChild(heightLabel)
+        let heightSign = ArtSystem.label(play.height == .high ? "LOWER" : "RAISE", size: 13)
+        heightSign.name = heightLever.name
+        heightSign.position = CGPoint(x: shadowHeightLeverPoint.x,
+                                      y: shadowHeightLeverPoint.y - 54)
+        heightSign.fontColor = .white
+        stage.addChild(heightSign)
+        makeAccessible(heightLever, label: "Change lamp height",
+                       hint: "A lowered light makes a larger shadow; tap to compare.")
+
+        let test = SKShapeNode(circleOfRadius: 38)
+        test.name = "shadowTestLever"
+        test.position = shadowTestLeverPoint
+        test.fillColor = UIColor(red: 0.31, green: 0.58, blue: 0.38, alpha: 1)
+        test.strokeColor = UIColor(red: 0.96, green: 0.91, blue: 0.53, alpha: 1)
+        test.lineWidth = 4
+        stage.addChild(test)
+        let testGlyph = ArtSystem.label("✧", size: 28)
+        testGlyph.name = test.name
+        testGlyph.fontColor = .white
+        test.addChild(testGlyph)
+        let testLabel = ArtSystem.label("SHINE", size: 13)
+        testLabel.name = test.name
+        testLabel.position = CGPoint(x: test.position.x, y: test.position.y - 54)
+        testLabel.fontColor = .white
+        stage.addChild(testLabel)
+        makeAccessible(test, label: "Shine and observe the current shadow",
+                       hint: "Use different lamp heights and cutouts to discover a surprise.")
+
+        if play.hasFoundMoth {
+            let moth = SKNode()
+            moth.name = "shadowWorkshopMoth"
+            moth.position = CGPoint(x: 1062, y: 442)
+            for side in [-1.0, 1.0] {
+                let wing = SKShapeNode(ellipseOf: CGSize(width: 30, height: 50))
+                wing.position.x = CGFloat(side) * 20
+                wing.zRotation = CGFloat(side) * 0.37
+                wing.fillColor = UIColor(red: 1, green: 0.91, blue: 0.54, alpha: 0.95)
+                wing.strokeColor = .white
+                wing.lineWidth = 2
+                moth.addChild(wing)
+            }
+            let body = ArtSystem.label("✦", size: 26)
+            body.fontColor = UIColor(red: 0.36, green: 0.27, blue: 0.20, alpha: 1)
+            moth.addChild(body)
+            makeAccessible(moth, label: "The rescued shadow moth")
+            stage.addChild(moth)
+            if !reducedMotion {
+                moth.run(.repeatForever(.sequence([
+                    .moveBy(x: 0, y: 9, duration: 0.8),
+                    .moveBy(x: 0, y: -9, duration: 0.8)
+                ])), withKey: "mothHover")
+            }
+        }
+
+        let exit = SKShapeNode(circleOfRadius: 33)
+        exit.name = "shadowWorkshopExit"
+        exit.position = shadowExitPoint
+        exit.fillColor = UIColor(red: 0.29, green: 0.21, blue: 0.16, alpha: 0.96)
+        exit.strokeColor = UIColor(red: 0.93, green: 0.78, blue: 0.46, alpha: 1)
+        exit.lineWidth = 3
+        let arrow = ArtSystem.label("‹", size: 30)
+        arrow.name = exit.name
+        exit.addChild(arrow)
+        makeAccessible(exit, label: "Return to the Greenhouse")
+        stage.addChild(exit)
+    }
+
+    private func handleShadowWorkshopTap(at point: CGPoint) {
+        guard shadowWorkshopMode else { return }
+        if hypot(point.x - shadowExitPoint.x, point.y - shadowExitPoint.y) <= 48 {
+            leaveShadowWorkshop()
+            return
+        }
+        if hypot(point.x - shadowHeightLeverPoint.x,
+                 point.y - shadowHeightLeverPoint.y) <= 49 {
+            let next: MiloShadowHeight = state.miloShadowWorkshop.height == .high
+                ? .low : .high
+            _ = state.setMiloShadowLampHeight(next)
+            milo.inspect(reducedMotion: reducedMotion)
+            state.audio.play("gear")
+            renderShadowWorkshop()
+            instruction.text = next == .low
+                ? "The lamp came closer. What happened to the shadow?"
+                : "The lamp moved higher. How did the shadow change?"
+            return
+        }
+        if hypot(point.x - shadowTestLeverPoint.x,
+                 point.y - shadowTestLeverPoint.y) <= 52 {
+            let wasFound = state.miloShadowWorkshop.hasFoundMoth
+            let isNew = state.observeMiloShadow()
+            let discovered = state.miloShadowWorkshop.hasFoundMoth
+            milo.inspect(reducedMotion: reducedMotion)
+            valkyrie.pose(.react)
+            if discovered && !wasFound {
+                state.audio.play("success")
+                valkyrie.pose(.celebrate)
+                successFeedback(at: CGPoint(x: 1045, y: 440))
+                instruction.text = "A moth was hiding in the shadows! Its charm is home at Story Tree."
+                buildShadowWorkshopBeacon()
+            } else {
+                state.audio.play("crystal")
+                instruction.text = !isNew
+                    ? "You tried this shadow before. Move the lamp or try another cutout!"
+                    : "Look at the shadow! What changes with a different height or shape?"
+            }
+            renderShadowWorkshop()
+            return
+        }
+        if let choice = shadowPropTrayPoints.indices.first(where: {
+            hypot(point.x - shadowPropTrayPoints[$0].x,
+                  point.y - shadowPropTrayPoints[$0].y) <= 66
+        }), let prop = MiloShadowProp(rawValue: choice) {
+            _ = state.chooseMiloShadowProp(prop)
+            milo.inspect(reducedMotion: reducedMotion)
+            renderShadowWorkshop()
+            instruction.text = "A different shape makes a different shadow. Try SHINE!"
+            return
+        }
+        if point.x >= 390, point.x <= 960,
+           (abs(point.y - 603) <= 45
+             || hypot(point.x - shadowLampPoint(state.miloShadowWorkshop).x,
+                      point.y - shadowLampPoint(state.miloShadowWorkshop).y) <= 51) {
+            let notch = min(4, max(0, Int(((point.x - 420) / 125).rounded())))
+            _ = state.setMiloShadowLampNotch(notch)
+            renderShadowWorkshop()
+            instruction.text = "The light moved! Watch which way the shadow goes."
+            return
+        }
+        instruction.text = "Drag the lamp, choose an object, or pull SHINE to observe."
     }
 
     private func inspectSeedBench() {

@@ -1,5 +1,103 @@
 import Foundation
 
+/// Free-play science experiment: a lamp and real cutout props cast a
+/// changing shadow. It has no quiz answers or academic mastery evidence.
+public enum MiloShadowProp: Int, CaseIterable, Codable, Hashable, Sendable {
+    case leaf, gear, star
+}
+
+public enum MiloShadowHeight: String, CaseIterable, Codable, Hashable, Sendable {
+    case high, low
+}
+
+public enum MiloShadowDirection: String, Equatable, Sendable {
+    case left, middle, right
+}
+
+public struct MiloShadowProjection: Equatable, Sendable {
+    public let horizontalOffset: Double
+    public let scale: Double
+    public let direction: MiloShadowDirection
+}
+
+public struct MiloShadowTrial: Codable, Hashable, Sendable {
+    public let prop: MiloShadowProp
+    public let height: MiloShadowHeight
+    public let lampNotch: Int
+
+    public init(prop: MiloShadowProp, height: MiloShadowHeight, lampNotch: Int) {
+        self.prop = prop
+        self.height = height
+        self.lampNotch = lampNotch
+    }
+}
+
+/// Stored on the learner profile, with no learning evidence recorded.
+/// Testing different silhouettes at different lamp heights reveals a hidden
+/// glowing moth. Subsequent movement and tests remain completely replayable.
+public struct MiloShadowWorkshop: Codable, Equatable, Sendable {
+    public private(set) var explored = false
+    public private(set) var prop: MiloShadowProp = .leaf
+    public private(set) var height: MiloShadowHeight = .high
+    public private(set) var lampNotch = 2
+    public private(set) var observations: Set<MiloShadowTrial> = []
+
+    public init() {}
+
+    @discardableResult
+    public mutating func explore() -> Bool {
+        guard !explored else { return false }
+        explored = true
+        return true
+    }
+
+    @discardableResult
+    public mutating func choose(_ newProp: MiloShadowProp) -> Bool {
+        guard explored, prop != newProp else { return false }
+        prop = newProp
+        return true
+    }
+
+    @discardableResult
+    public mutating func moveLamp(to notch: Int) -> Bool {
+        guard explored, (0...4).contains(notch), lampNotch != notch else { return false }
+        lampNotch = notch
+        return true
+    }
+
+    @discardableResult
+    public mutating func setHeight(_ newHeight: MiloShadowHeight) -> Bool {
+        guard explored, height != newHeight else { return false }
+        height = newHeight
+        return true
+    }
+
+    /// Moving the source changes the *opposite* side of the cast shadow.
+    /// Lowering the source makes it larger, making the cause/effect visible.
+    public var projection: MiloShadowProjection {
+        let offset = Double(2 - lampNotch) * 44
+        let base = height == .low ? 1.42 : 0.77
+        let scale = base + Double(abs(lampNotch - 2)) * 0.055
+        let direction: MiloShadowDirection = lampNotch < 2 ? .right :
+            lampNotch > 2 ? .left : .middle
+        return MiloShadowProjection(horizontalOffset: offset, scale: scale,
+                                    direction: direction)
+    }
+
+    @discardableResult
+    public mutating func observe() -> Bool {
+        guard explored else { return false }
+        return observations.insert(
+            MiloShadowTrial(prop: prop, height: height, lampNotch: lampNotch)
+        ).inserted
+    }
+
+    public var hasFoundMoth: Bool {
+        Set(observations.map(\.height)).count == MiloShadowHeight.allCases.count
+            && Set(observations.map(\.prop)).count >= 2
+    }
+}
+
 public enum ScienceGreenhouseStage: String, Codable, Equatable, Sendable {
     case arrive, inspected, watered, lit
 }
