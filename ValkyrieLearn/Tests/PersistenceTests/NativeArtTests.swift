@@ -1707,6 +1707,15 @@ import LearningCore
         try await Task.sleep(nanoseconds: 2_400_000_000)
         let pads = scene.children.filter { $0.name == "memoryPad" }
         XCTAssertEqual(pads.count, encounter.choices.count)
+        let bridge = try XCTUnwrap(scene.childNode(withName: "memoryChasm"))
+        for pad in pads {
+            XCTAssertGreaterThan(
+                pad.zPosition, bridge.zPosition,
+                "Interactive runes must be in front of the bridge masonry."
+            )
+            XCTAssertTrue(pad.isAccessibilityElement)
+            XCTAssertTrue((pad.accessibilityLabel ?? "").hasPrefix("Memory rune:"))
+        }
         for symbol in encounter.sequence {
             let pad = try XCTUnwrap(
                 pads.first {
