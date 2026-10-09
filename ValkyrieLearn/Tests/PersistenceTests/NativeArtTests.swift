@@ -109,6 +109,8 @@ import LearningCore
         XCTAssertNotNil(tree.childNode(withName: "//starlightBridgeSecretStar"),
                         "The optional secret should visibly persist on the earned charm.")
         XCTAssertTrue((charm.accessibilityLabel ?? "").contains("hidden star"))
+        XCTAssertEqual(charm.position, CGPoint(x: 240, y: 585),
+                       "The reward should hang in the Story Tree canopy, not over distant Math Castle.")
         XCTAssertEqual(restored.storyRewardPlacement(.starlightBridgeCharm), 0)
         try await capture(tree, in: view, name: "Story-Tree-Starlight-Bridge-Charm")
         tree.handleTap(at: charm.position)
