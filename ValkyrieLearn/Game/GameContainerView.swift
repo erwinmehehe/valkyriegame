@@ -18,9 +18,11 @@ import SpriteKit
                 Color(red: 0.08, green: 0.09, blue: 0.16)
 
                 if let scene {
+                    // Let SpriteKit use the actual landscape viewport. Adaptive scenes
+                    // grow to 4:3 on iPad instead of being squeezed into a 16:9 strip.
+                    // Legacy 16:9 scenes retain their own aspectFit canvas.
                     SpriteView(scene: scene, isPaused: settings || !isLandscape || scenePhase != .active)
-                        .aspectRatio(16 / 9, contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
                         .allowsHitTesting(isLandscape && !settings && scenePhase == .active)
                         .accessibilityHidden(!isLandscape)
                 }
