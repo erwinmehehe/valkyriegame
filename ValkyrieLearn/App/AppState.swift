@@ -431,6 +431,60 @@ import LearningCore
         return true
     }
 
+    /// Science free-play state is saved offline and never produces academic
+    /// evidence. Reward is unlocked only after actual contrasting observations.
+    var miloShadowWorkshop: MiloShadowWorkshop {
+        profile.miloShadowWorkshop ?? MiloShadowWorkshop()
+    }
+
+    @discardableResult
+    func exploreMiloShadowWorkshop() -> Bool {
+        var play = miloShadowWorkshop
+        guard play.explore() else { return false }
+        profile.miloShadowWorkshop = play
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func chooseMiloShadowProp(_ prop: MiloShadowProp) -> Bool {
+        var play = miloShadowWorkshop
+        guard play.choose(prop) else { return false }
+        profile.miloShadowWorkshop = play
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func setMiloShadowLampNotch(_ notch: Int) -> Bool {
+        var play = miloShadowWorkshop
+        guard play.moveLamp(to: notch) else { return false }
+        profile.miloShadowWorkshop = play
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func setMiloShadowLampHeight(_ height: MiloShadowHeight) -> Bool {
+        var play = miloShadowWorkshop
+        guard play.setHeight(height) else { return false }
+        profile.miloShadowWorkshop = play
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func observeMiloShadow() -> Bool {
+        var play = miloShadowWorkshop
+        guard play.observe() else { return false }
+        profile.miloShadowWorkshop = play
+        if play.hasFoundMoth {
+            _ = profile.unlockStoryReward(.miloShadowMoth)
+        }
+        persist()
+        return true
+    }
+
     func hasStoryReward(_ reward: StoryRewardID) -> Bool {
         profile.hasStoryReward(reward)
     }
