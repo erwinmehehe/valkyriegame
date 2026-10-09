@@ -1,0 +1,8 @@
+room=memory-bridge
+painting=present
+chasm=present
+pad-count=4
+star: front=true, tap=true, accessible=true
+moon: front=true, tap=true, accessible=true
+diamond: front=true, tap=true, accessible=true
+circle: front=true, tap=true, accessible=true
