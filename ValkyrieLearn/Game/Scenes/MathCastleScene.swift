@@ -1178,12 +1178,19 @@ import LearningCore
                     .scale(to: 1, duration: 0.75)
                 ])), withKey: "bridgeVictoryPulse")
             }
-        } else if quest.collectedCrystals.count >= 2 {
-            let surprise = ArtSystem.label("✧", size: 39)
+        }
+        // A second, optional discovery survives the rescue. It can also be
+        // found when a child revisits the repaired bridge on another day.
+        if quest.collectedCrystals.count >= 2 {
+            let surprise = ArtSystem.label(quest.hasFoundHiddenStar ? "✦" : "✧", size: 39)
             surprise.position = CGPoint(x: 1055, y: 460)
             surprise.name = "bridgeQuestSecret"
-            surprise.fontColor = UIColor(red: 0.93, green: 0.94, blue: 1, alpha: 1)
+            surprise.fontColor = quest.hasFoundHiddenStar
+                ? UIColor(red: 1.0, green: 0.83, blue: 0.38, alpha: 1)
+                : UIColor(red: 0.93, green: 0.94, blue: 1, alpha: 1)
             stage.addChild(surprise)
+            makeAccessible(surprise, label: quest.hasFoundHiddenStar
+                ? "Discovered hidden star" : "A secret star, not needed to rescue the firefly")
         }
     }
 
@@ -1297,9 +1304,16 @@ import LearningCore
         }
         if quest.collectedCrystals.count >= 2,
            hypot(point.x - 1055, point.y - 460) < 48 {
-            self.pip.pose(.celebrate)
-            playStarlightBurst(at: CGPoint(x: 1055, y: 460))
-            instruction.text = "Pip found a little star hiding in the bridge! Keep exploring."
+            if state.discoverHiddenStarlightStar() {
+                pip.pose(.celebrate)
+                valkyrie.pose(.react)
+                state.audio.play("success")
+                playStarlightBurst(at: CGPoint(x: 1055, y: 460))
+                rebuildBridgeQuestStage()
+                instruction.text = "You found a secret! It will shine beside your Story Tree charm."
+            } else {
+                instruction.text = "You already found Pip's hidden star. Look what you built!"
+            }
             return
         }
         instruction.text = "Explore the glowing crystals, or tap the return arrow at the top right."
@@ -1323,7 +1337,7 @@ import LearningCore
             let quest = self.state.starlightBridgeQuest
             if quest.isComplete {
                 self.successFeedback(at: CGPoint(x: 850, y: 395))
-                self.instruction.text = "The firefly is safe! Your bridge charm is now at Story Tree. Tap ↩ to continue."
+                self.instruction.text = "Firefly rescued! Your bridge charm waits at Story Tree."
             } else {
                 self.instruction.text = "A new part of the bridge shines! \(StarlightBridgeQuest.crystalCount - quest.installedCount) to go."
             }
