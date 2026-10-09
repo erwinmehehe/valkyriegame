@@ -1173,8 +1173,9 @@ import LearningCore
         stage.addChild(sign)
 
         let status = ArtSystem.label(
-            quest.isComplete ? "BRIDGE RESTORED" :
-                "BRIDGE LIGHT   \(quest.installedCount) / \(StarlightBridgeQuest.crystalCount)",
+            quest.hasDeliveredSupplies ? "CART DELIVERED" :
+                quest.isComplete ? "BRIDGE RESTORED" :
+                    "BRIDGE LIGHT   \(quest.installedCount) / \(StarlightBridgeQuest.crystalCount)",
             size: 16
         )
         status.name = "bridgeQuestStatus"
@@ -1271,13 +1272,26 @@ import LearningCore
             support.position = position
             support.zPosition = 16
 
+            let woodenFoot = ArtSystem.box(
+                CGSize(width: 82, height: 15),
+                color: UIColor(red: 0.39, green: 0.27, blue: 0.18, alpha: 0.95),
+                radius: 4
+            )
+            woodenFoot.name = support.name
+            woodenFoot.position.y = -19
+            woodenFoot.strokeColor = braced
+                ? UIColor(red: 1, green: 0.81, blue: 0.38, alpha: 1)
+                : UIColor(red: 0.66, green: 0.58, blue: 0.46, alpha: 0.56)
+            woodenFoot.lineWidth = 2
+            support.addChild(woodenFoot)
+
+            // Keep a generous touch surface without painting a quiz-like
+            // circular button over the castle floor.
             let hit = SKShapeNode(circleOfRadius: 37)
             hit.name = support.name
-            hit.fillColor = UIColor(red: 0.08, green: 0.10, blue: 0.17, alpha: 0.53)
-            hit.strokeColor = braced
-                ? UIColor(red: 1, green: 0.86, blue: 0.48, alpha: 1)
-                : UIColor(red: 0.65, green: 0.59, blue: 0.48, alpha: 0.79)
-            hit.lineWidth = 3
+            hit.fillColor = .clear
+            hit.strokeColor = .clear
+            hit.zPosition = 3
             support.addChild(hit)
 
             let beamPath = CGMutablePath()
@@ -1289,7 +1303,7 @@ import LearningCore
             beams.lineWidth = braced ? 9 : 3
             beams.strokeColor = braced
                 ? UIColor(red: 0.89, green: 0.66, blue: 0.33, alpha: 1)
-                : UIColor(red: 0.58, green: 0.56, blue: 0.54, alpha: 0.86)
+                : UIColor(red: 0.69, green: 0.65, blue: 0.60, alpha: 0.40)
             beams.glowWidth = braced && !reducedMotion ? 5 : 0
             support.addChild(beams)
 
@@ -1310,29 +1324,35 @@ import LearningCore
             choice.position = bridgeLoadChoicePoints[index]
             choice.zPosition = 18
 
-            let cradle = ArtSystem.box(
-                CGSize(width: 120, height: 20),
-                color: UIColor(red: 0.35, green: 0.25, blue: 0.16, alpha: 0.98),
-                radius: 6
-            )
-            cradle.position.y = -34
-            cradle.name = choice.name
-            choice.addChild(cradle)
-
-            let highlight = SKShapeNode(circleOfRadius: 39)
-            highlight.fillColor = UIColor(red: 0.10, green: 0.17, blue: 0.22, alpha: 0.74)
-            highlight.strokeColor = bridgeSelectedLoad == load
-                ? UIColor(red: 1, green: 0.87, blue: 0.47, alpha: 1)
-                : UIColor(red: 0.58, green: 0.73, blue: 0.78, alpha: 0.72)
-            highlight.lineWidth = bridgeSelectedLoad == load ? 5 : 2
-            highlight.name = choice.name
-            choice.addChild(highlight)
+            // The load stands on the *existing* plinth. A narrow glimmer on
+            // its base indicates selection; no floating option card or circle.
+            let illuminatedBase = SKShapeNode(ellipseOf: CGSize(width: 94, height: 16))
+            illuminatedBase.position.y = -31
+            illuminatedBase.name = choice.name
+            illuminatedBase.fillColor = bridgeSelectedLoad == load
+                ? UIColor(red: 1, green: 0.78, blue: 0.34, alpha: 0.42)
+                : UIColor(red: 0.25, green: 0.23, blue: 0.29, alpha: 0.40)
+            illuminatedBase.strokeColor = bridgeSelectedLoad == load
+                ? UIColor(red: 1, green: 0.92, blue: 0.55, alpha: 0.95)
+                : UIColor(red: 0.63, green: 0.62, blue: 0.65, alpha: 0.40)
+            illuminatedBase.lineWidth = bridgeSelectedLoad == load ? 4 : 2
+            choice.addChild(illuminatedBase)
 
             if load == .firefly {
-                let wing = ArtSystem.label("✦", size: 36)
-                wing.name = choice.name
-                wing.fontColor = UIColor(red: 1, green: 0.94, blue: 0.56, alpha: 1)
-                choice.addChild(wing)
+                for side: CGFloat in [-1, 1] {
+                    let wing = SKShapeNode(ellipseOf: CGSize(width: 20, height: 32))
+                    wing.name = choice.name
+                    wing.position = CGPoint(x: side * 18, y: 13)
+                    wing.zRotation = side * 0.41
+                    wing.fillColor = UIColor(red: 0.86, green: 0.97, blue: 1, alpha: 0.58)
+                    wing.strokeColor = .white.withAlphaComponent(0.8)
+                    choice.addChild(wing)
+                }
+                let light = ArtSystem.label("✦", size: 35)
+                light.name = choice.name
+                light.fontColor = UIColor(red: 1, green: 0.94, blue: 0.56, alpha: 1)
+                light.position.y = 7
+                choice.addChild(light)
             } else {
                 let cargo = ArtSystem.box(
                     CGSize(width: 48, height: 26),
@@ -1416,10 +1436,12 @@ import LearningCore
         stage.addChild(braces)
 
         if quest.hasDeliveredSupplies {
-            let delivered = ArtSystem.label("✦  SUPPLIES DELIVERED", size: 16)
+            // Small brass gear mounted on the bridge's existing status plaque
+            // rather than gold lettering floating on the bright sky.
+            let delivered = ArtSystem.label("⚙", size: 24)
             delivered.name = "bridgeTestSuppliesDelivered"
-            delivered.position = CGPoint(x: 900, y: 542)
-            delivered.fontColor = UIColor(red: 1, green: 0.88, blue: 0.43, alpha: 1)
+            delivered.position = CGPoint(x: 1009, y: 408)
+            delivered.fontColor = UIColor(red: 1, green: 0.85, blue: 0.38, alpha: 1)
             stage.addChild(delivered)
         }
 
@@ -1429,13 +1451,29 @@ import LearningCore
             let traveler = SKNode()
             traveler.name = "bridgeTestTraveler"
             traveler.zPosition = 36
-            let loadSymbol = ArtSystem.label(
-                bridgeSelectedLoad == .firefly ? "✦" : "▰", size: 39
-            )
-            loadSymbol.fontColor = bridgeSelectedLoad == .firefly
-                ? UIColor(red: 1, green: 0.97, blue: 0.49, alpha: 1)
-                : UIColor(red: 0.90, green: 0.63, blue: 0.29, alpha: 1)
-            traveler.addChild(loadSymbol)
+            if bridgeSelectedLoad == .firefly {
+                let spark = ArtSystem.label("✦", size: 38)
+                spark.fontColor = UIColor(red: 1, green: 0.97, blue: 0.49, alpha: 1)
+                traveler.addChild(spark)
+            } else {
+                let cargo = ArtSystem.box(
+                    CGSize(width: 56, height: 29),
+                    color: UIColor(red: 0.64, green: 0.41, blue: 0.19, alpha: 1),
+                    radius: 6
+                )
+                cargo.position.y = 8
+                cargo.strokeColor = UIColor(red: 0.94, green: 0.81, blue: 0.44, alpha: 1)
+                cargo.lineWidth = 3
+                traveler.addChild(cargo)
+                for x in [-21.0, 21.0] {
+                    let wheel = SKShapeNode(circleOfRadius: 8)
+                    wheel.position = CGPoint(x: x, y: -15)
+                    wheel.fillColor = UIColor(red: 0.14, green: 0.15, blue: 0.20, alpha: 1)
+                    wheel.strokeColor = .white
+                    wheel.lineWidth = 2
+                    traveler.addChild(wheel)
+                }
+            }
 
             let endX: CGFloat
             switch result {
@@ -1443,19 +1481,27 @@ import LearningCore
                 endX = 1150
             case .stoppedAt(let weak):
                 endX = bridgeSocketPoints[weak].x
-                let bent = SKShapeNode(circleOfRadius: 40)
+                // Crack the actual timber at the stressed section instead
+                // of displaying a round red wrong-answer marker.
+                let crack = CGMutablePath()
+                crack.move(to: CGPoint(x: -33, y: -5))
+                crack.addLine(to: CGPoint(x: -14, y: 8))
+                crack.addLine(to: CGPoint(x: -3, y: -9))
+                crack.addLine(to: CGPoint(x: 15, y: 10))
+                crack.addLine(to: CGPoint(x: 32, y: -6))
+                let bent = SKShapeNode(path: crack)
                 bent.name = "bridgeTestWeakSpan\(weak)"
-                bent.position = bridgeBracePoints[weak]
-                bent.strokeColor = UIColor(red: 1, green: 0.56, blue: 0.24, alpha: 1)
-                bent.fillColor = UIColor(red: 1, green: 0.41, blue: 0.21, alpha: 0.18)
-                bent.lineWidth = 5
+                bent.position = CGPoint(x: bridgeSocketPoints[weak].x, y: 240)
+                bent.strokeColor = UIColor(red: 1, green: 0.52, blue: 0.24, alpha: 1)
+                bent.lineWidth = 7
+                bent.glowWidth = reducedMotion ? 0 : 10
                 stage.addChild(bent)
                 if !reducedMotion {
-                    bent.run(.repeatForever(.sequence([
-                        .rotate(toAngle: -0.10, duration: 0.13),
-                        .rotate(toAngle: 0.10, duration: 0.20),
-                        .rotate(toAngle: 0, duration: 0.13)
-                    ])), withKey: "bridgeBend")
+                    bent.run(.sequence([
+                        .moveBy(x: -4, y: -5, duration: 0.11),
+                        .moveBy(x: 7, y: 8, duration: 0.17),
+                        .moveBy(x: -3, y: -3, duration: 0.13)
+                    ]), withKey: "bridgeBend")
                 }
             }
             let dest = CGPoint(x: endX, y: 356)
