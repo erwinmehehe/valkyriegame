@@ -794,9 +794,18 @@ import LearningCore
                     XCTAssertNotNil(scene.childNode(withName: "storyHollowDoorGlow"))
                 }
             } else {
-                XCTAssertNotNil(
+                XCTAssertNil(
                     scene.childNode(withName: "//questionPromptBackdrop"),
-                    "Flower Gate still needs a contrast surface over the bright painting."
+                    "Flower Gate must not duplicate its readable lower prompt with a giant top panel."
+                )
+                XCTAssertNotNil(scene.childNode(withName: "instructionBackdrop"),
+                                "Child-facing guidance retains its contrast surface.")
+                let rune = try XCTUnwrap(scene.childNode(withName: "targetRune"))
+                let glyph = try XCTUnwrap(rune.children.compactMap { $0 as? SKLabelNode }.first)
+                XCTAssertEqual(
+                    glyph.fontColor,
+                    UIColor(red: 0.24, green: 0.13, blue: 0.18, alpha: 1),
+                    "Parchment rune must be dark enough to read over bright Word Garden art."
                 )
             }
             XCTAssertFalse(
@@ -1190,7 +1199,8 @@ import LearningCore
         let flower = WordGardenScene(state: state)
         flower.didMove(to: SKView())
         XCTAssertNotNil(flower.childNode(withName: "flowerGate"))
-        XCTAssertNotNil(flower.childNode(withName: "questionPrompt"))
+        XCTAssertNil(flower.childNode(withName: "questionPrompt"))
+        XCTAssertEqual(flower.instruction.text, state.nextLiteracyEncounter().prompt)
         XCTAssertNotNil(flower.childNode(withName: "targetRune"))
         XCTAssertEqual(flower.children.filter { $0.name == "flowerChoice" }.count, 4)
         XCTAssertEqual(flower.children.filter { $0.name == "soundFlower" }.count, 3)
