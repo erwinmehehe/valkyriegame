@@ -5307,6 +5307,31 @@ import LearningCore
         }
     }
 
+    private func installCompletedRepairGears() {
+        // The final restored machine should not display four empty sockets.
+        // Leave stable in-world gears installed on every revisit.
+        for index in 0..<4 {
+            guard let socket = childNode(withName: "repairSocketBase\(index)") as? SKShapeNode,
+                  socket.childNode(withName: "repairCompletedGear\(index)") == nil else { continue }
+
+            let installed = palaceCog(
+                radius: 40, teeth: 10,
+                fill: UIColor(red: 0.66, green: 0.45, blue: 0.27, alpha: 1),
+                stroke: UIColor(red: 0.99, green: 0.82, blue: 0.50, alpha: 1)
+            )
+            installed.name = "repairCompletedGear\(index)"
+            installed.zPosition = 3
+            socket.addChild(installed)
+
+            let rivet = SKShapeNode(circleOfRadius: 13)
+            rivet.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.17, alpha: 1)
+            rivet.strokeColor = UIColor(red: 0.97, green: 0.78, blue: 0.44, alpha: 1)
+            rivet.lineWidth = 3
+            rivet.name = "repairCompletedRivet"
+            installed.addChild(rivet)
+        }
+    }
+
     private func finishBugRepair() {
         repairAcceptingInput = false
         repairSelection.removeAll()
@@ -5322,6 +5347,7 @@ import LearningCore
             cue.text = "All three plans are repaired."
         }
         setRepairMachinePowered(true)
+        installCompletedRepairGears()
         if childNode(withName: "repairHome") == nil {
             let home = worldControl("⌂", name: "repairHome",
                                     at: CGPoint(x: 1110, y: 175), radius: 31,
