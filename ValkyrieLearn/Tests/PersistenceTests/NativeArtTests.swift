@@ -92,7 +92,8 @@ import LearningCore
         view.presentScene(tree)
         let moth = try XCTUnwrap(tree.childNode(withName: "miloShadowMoth"))
         XCTAssertTrue(moth.isAccessibilityElement)
-        XCTAssertEqual(moth.position, CGPoint(x: 745, y: 575))
+        XCTAssertEqual(moth.position, CGPoint(x: 350, y: 615),
+                       "The rescued moth belongs in the canopy, not over the Science Lab button.")
         try await capture(tree, in: view, name: "Story-Tree-Milo-Shadow-Moth")
         tree.handleTap(at: moth.position)
         XCTAssertEqual(restored.storyRewardPlacement(.miloShadowMoth), 1)
