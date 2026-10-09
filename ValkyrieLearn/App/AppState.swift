@@ -365,6 +365,15 @@ import LearningCore
     }
 
     @discardableResult
+    func discoverHiddenStarlightStar() -> Bool {
+        var quest = starlightBridgeQuest
+        guard quest.discoverHiddenStar() else { return false }
+        profile.starlightBridgeQuest = quest
+        persist()
+        return true
+    }
+
+    @discardableResult
     func installStarlightCrystal(_ index: Int, into socket: Int) -> Bool {
         var quest = starlightBridgeQuest
         guard quest.install(index, into: socket) else { return false }
