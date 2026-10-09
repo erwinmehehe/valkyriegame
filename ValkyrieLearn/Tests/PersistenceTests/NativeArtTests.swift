@@ -2924,6 +2924,13 @@ import LearningCore
         )
         let debugEvidenceBeforeRepair = state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count
         bugLantern.handleTap(at: brokenNode.position)
+        XCTAssertEqual(brokenNode.position.y, 341, accuracy: 0.001,
+                       "Confirmed broken cassette must physically sink in its socket.")
+        let inspectedSocket = try XCTUnwrap(
+            bugLantern.childNode(withName: "bugStepSocket\(bugEncounter.brokenIndex)") as? SKShapeNode
+        )
+        XCTAssertEqual(inspectedSocket.strokeColor,
+                       UIColor(red: 0.95, green: 0.75, blue: 0.44, alpha: 1))
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count,
             debugEvidenceBeforeRepair,
@@ -2943,6 +2950,8 @@ import LearningCore
             "Replacement command: \(bugEncounter.intended[bugEncounter.brokenIndex].title). Install it in step \(bugEncounter.brokenIndex + 1)."
         )
         bugLantern.handleTap(at: replacement.position)
+        XCTAssertEqual(replacement.position.y, 355, accuracy: 0.001,
+                       "Repaired cassette must seat flush with the drive rail.")
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.last?.outcome,
             .correct
