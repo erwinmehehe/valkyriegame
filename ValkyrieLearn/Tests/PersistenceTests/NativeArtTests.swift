@@ -1145,8 +1145,10 @@ import LearningCore
         let stones = runePath.children.compactMap { $0 as? SKShapeNode }
         XCTAssertEqual(stones.count, 4)
         XCTAssertTrue(stones.allSatisfy {
-            $0.fillColor == UIColor(red: 0.56, green: 0.38, blue: 0.18, alpha: 0.85)
-        }, "Opening the gate must light the actual path stones, not cast the container as a shape")
+            ($0.userData?["runePathPowered"] as? Bool) == true
+                && $0.fillColor.cgColor.alpha > 0.75
+                && $0.strokeColor.cgColor.alpha > 0.94
+        }, "Opening the gate must power and brighten all four actual path stones")
         XCTAssertNotNil(openPalace.childNode(withName: "memoryBridgeRoute"))
         openPalace.valkyrie.position = CGPoint(x: 1005, y: 175)
         openPalace.handleTap(at: CGPoint(x: 1005, y: 165))
