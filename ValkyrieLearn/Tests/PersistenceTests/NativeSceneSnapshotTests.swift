@@ -113,6 +113,63 @@ import LearningCore
         assertSnapshot(of: signature.joined(separator: "\n"), as: .lines, named: "rune-pads")
     }
 
+    func testStopGoUsesMountedShutterAndKeepsItsNativeTouchTarget() throws {
+        let (window, view) = makeView()
+        let state = try freshState()
+        state.reducedMotion = true
+        unlockRuneGate(in: state)
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = state.recordPuzzle(
+                encounter, outcome: .correct, support: .independent,
+                attempts: 1, responseTime: 1
+            )
+        }
+        state.travel(to: .stopGoOrbs)
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer {
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+
+        let root = try XCTUnwrap(scene.childNode(withName: "stopGoOrb"))
+        let shutter = try XCTUnwrap(
+            root.childNode(withName: "decorativeStopGoShutter") as? SKShapeNode
+        )
+        let ring = try XCTUnwrap(
+            root.children.first { $0.name == "stopGoOrb" } as? SKShapeNode
+        )
+        XCTAssertEqual(shutter.xScale, 1, accuracy: 0.001)
+        XCTAssertGreaterThanOrEqual(ring.frame.width, 130,
+                                    "Five-year-olds need a generous physical tap target.")
+        XCTAssertLessThan(ring.frame.width, 160,
+                          "The signal should not dominate the illustrated room.")
+        XCTAssertNil(scene.childNode(withName: "stopGoLegend"),
+                     "Redundant miniature floor legends compete with the physical signal.")
+        XCTAssertNotNil(scene.childNode(withName: "stopGoBarrier"))
+
+        for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            _ = state.recordPuzzle(
+                encounter, outcome: .correct, support: .independent,
+                attempts: 1, responseTime: 1
+            )
+        }
+        scene.willLeave()
+        let restored = PuzzlePalaceScene(state: state)
+        restored.reducedMotion = true
+        view.presentScene(restored)
+        defer { restored.willLeave() }
+
+        let openShutter = try XCTUnwrap(
+            restored.childNode(withName: "//decorativeStopGoShutter")
+        )
+        XCTAssertEqual(openShutter.xScale, 0.12, accuracy: 0.001,
+                       "A saved finished chamber must render with its shutter open.")
+        XCTAssertNotNil(restored.childNode(withName: "stopGoBarrierOpen"))
+    }
+
     func testOptionalPixelGoldenMasterRecording() throws {
         // Never accept machine-generated visual goldens without owner review.
         // Enable for a *local*, deliberate golden-master recording session:
