@@ -5,6 +5,34 @@ import LearningCore
     private var mechanic: SKNode?
     private var renderedEncounterID: String?
     private let station = CGPoint(x: 490, y: 175)
+    // Optional, unscored physical adventure. The learned math encounter stays in
+    // LearningCore; this separate world state lives in the saved learner profile.
+    private var bridgeQuestMode = false
+    private var bridgeQuestBusy = false
+    private var bridgeQuestSelectedCrystal: Int?
+    private var bridgeQuestDraggedCrystal: Int?
+    private var bridgeQuestStage: SKNode?
+    private let bridgeCrystalPoints = [
+        CGPoint(x: 475, y: 465),
+        CGPoint(x: 635, y: 455),
+        CGPoint(x: 795, y: 465)
+    ]
+    private let bridgeInventoryPoints = [
+        CGPoint(x: 500, y: 145),
+        CGPoint(x: 640, y: 145),
+        CGPoint(x: 780, y: 145)
+    ]
+    private let bridgeSocketPoints = [
+        CGPoint(x: 695, y: 330),
+        CGPoint(x: 850, y: 330),
+        CGPoint(x: 1005, y: 330)
+    ]
+    private let bridgeCrystalTints: [UIColor] = [
+        UIColor(red: 0.46, green: 0.86, blue: 1.0, alpha: 1),
+        UIColor(red: 0.97, green: 0.79, blue: 0.43, alpha: 1),
+        UIColor(red: 0.79, green: 0.62, blue: 1.0, alpha: 1)
+    ]
+
     private var activeTouch: UITouch?
     private var dragOrigin: String?
     private var startPoint = CGPoint.zero
@@ -403,6 +431,12 @@ import LearningCore
         buildPhysicalProgression()
         updateChallengeGateAppearance()
         openOrder()
+        buildBridgeQuestBeacon()
+        if state.starlightBridgeQuest.discovered && !state.starlightBridgeQuest.isComplete {
+            instruction.text = "The bridge needs starlight. Tap the blue beacon to continue the rescue."
+        } else if !state.starlightBridgeQuest.discovered {
+            instruction.text = "Pip heard the bridge crack! Tap the blue beacon to investigate."
+        }
     }
 
     /// Use the detailed versioned painting; cached compositing does not add source detail.
@@ -793,6 +827,367 @@ import LearningCore
             } else {
                 self.mechanic?.isHidden = false; self.mechanic?.alpha = 1
                 self.instruction.text = "Back in the courtyard. You can explore or cross the repaired bridge again."
+            }
+        }
+    }
+
+
+    // MARK: - The Broken Starlight Bridge: non-academic adventure gameplay
+
+    private func bridgeQuestCrystal(
+        _ id: Int, name: String, at point: CGPoint, radius: CGFloat = 35
+    ) -> SKNode {
+        let node = SKNode()
+        node.name = name
+        node.position = point
+        let tint = bridgeCrystalTints[id]
+        let halo = SKShapeNode(circleOfRadius: radius)
+        halo.name = name
+        halo.fillColor = tint.withAlphaComponent(0.13)
+        halo.strokeColor = tint.withAlphaComponent(0.88)
+        halo.lineWidth = 3
+        halo.glowWidth = reducedMotion ? 0 : 6
+        node.addChild(halo)
+
+        let diamond = CGMutablePath()
+        diamond.move(to: CGPoint(x: 0, y: radius * 0.70))
+        diamond.addLine(to: CGPoint(x: radius * 0.53, y: 0))
+        diamond.addLine(to: CGPoint(x: 0, y: -radius * 0.70))
+        diamond.addLine(to: CGPoint(x: -radius * 0.53, y: 0))
+        diamond.closeSubpath()
+        let crystal = SKShapeNode(path: diamond)
+        crystal.name = name
+        crystal.fillColor = tint
+        crystal.strokeColor = .white
+        crystal.lineWidth = 2
+        crystal.glowWidth = reducedMotion ? 0 : 5
+        node.addChild(crystal)
+
+        // At least a 68pt interactive surface even for an inventory token.
+        let hit = SKShapeNode(circleOfRadius: max(34, radius))
+        hit.name = name
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 3
+        node.addChild(hit)
+        return node
+    }
+
+    private func buildBridgeQuestBeacon() {
+        childNode(withName: "starlightQuestBeacon")?.removeFromParent()
+        let finished = state.starlightBridgeQuest.isComplete
+        let root = SKNode()
+        root.name = "starlightQuestBeacon"
+        root.position = CGPoint(x: 555, y: 460)
+        root.zPosition = 1250
+
+        let ring = SKShapeNode(circleOfRadius: 40)
+        ring.name = root.name
+        ring.fillColor = UIColor(red: 0.06, green: 0.18, blue: 0.30, alpha: 0.93)
+        ring.strokeColor = UIColor(red: 0.58, green: 0.89, blue: 1, alpha: 1)
+        ring.lineWidth = 4
+        ring.glowWidth = reducedMotion ? 0 : 11
+        root.addChild(ring)
+
+        let star = ArtSystem.label(finished ? "✦" : "✧", size: 37)
+        star.name = root.name
+        star.fontColor = .white
+        root.addChild(star)
+
+        let sign = ArtSystem.plaque(
+            CGSize(width: 146, height: 30),
+            fill: UIColor(red: 0.05, green: 0.10, blue: 0.20, alpha: 0.96),
+            stroke: UIColor(red: 0.58, green: 0.89, blue: 1, alpha: 0.92),
+            radius: 10
+        )
+        sign.position.y = -58
+        sign.name = root.name
+        root.addChild(sign)
+        let title = ArtSystem.label(finished ? "BRIDGE STAR" : "SAVE THE BRIDGE", size: 13)
+        title.name = root.name
+        title.fontColor = .white
+        sign.addChild(title)
+
+        makeAccessible(root, label: finished ? "Explore the restored bridge" : "Rescue the broken Starlight Bridge",
+                       hint: "Tap to explore, collect crystals, and restore the bridge.")
+        addChild(root)
+    }
+
+    private func setBridgeQuestControlsHidden(_ hidden: Bool) {
+        mechanic?.isHidden = hidden
+        lever?.isHidden = hidden
+        nextGear?.isHidden = hidden
+        gate?.isHidden = hidden
+        questionPlate.isHidden = hidden
+        questionHeading.isHidden = hidden
+        questionLabel.isHidden = hidden
+        for node in children where
+            (node.name?.hasPrefix("workshop") == true)
+            || node.name == "wind"
+            || node.name == "workOrderFlow"
+            || node.name == "questionPromptHanger" {
+            node.isHidden = hidden
+        }
+        childNode(withName: "starlightQuestBeacon")?.isHidden = hidden
+    }
+
+    private func enterBridgeQuest() {
+        guard !crossingBridge, !hasLeftScene else { return }
+        _ = state.discoverStarlightBridge()
+        bridgeQuestMode = true
+        bridgeQuestBusy = false
+        bridgeQuestSelectedCrystal = nil
+        clearDrag()
+        engaged = false
+        setActiveMachineKinetics(false)
+        showQuestion(nil)
+        setBridgeQuestControlsHidden(true)
+        rebuildBridgeQuestStage()
+        if state.starlightBridgeQuest.isComplete {
+            instruction.text = "Look what you built! Your bridge charm is waiting at Story Tree."
+        } else {
+            instruction.text = "Find three lost crystals. Tap a glowing cache; Pip will carry each one."
+        }
+    }
+
+    private func leaveBridgeQuest() {
+        guard bridgeQuestMode else { return }
+        bridgeQuestMode = false
+        bridgeQuestBusy = false
+        bridgeQuestSelectedCrystal = nil
+        bridgeQuestDraggedCrystal = nil
+        clearDrag()
+        bridgeQuestStage?.removeAllActions()
+        bridgeQuestStage?.removeFromParent()
+        bridgeQuestStage = nil
+        setBridgeQuestControlsHidden(false)
+        refresh()
+        buildBridgeQuestBeacon()
+        if state.starlightBridgeQuest.isComplete {
+            if state.runtime?.completed == true && !routeReady {
+                openPhysicalProgression(animated: true)
+                bridgeRouteNode.isHidden = false
+            }
+            instruction.text = state.runtime?.completed == true
+                ? "The bridge is alive! Cross it, or visit Story Tree to move your new charm."
+                : "Your crystals are connected! Help Pip power the bridge, or visit Story Tree."
+        } else {
+            instruction.text = "Your crystal progress is safe. Tap the blue star whenever you're ready."
+        }
+    }
+
+    private func rebuildBridgeQuestStage() {
+        bridgeQuestStage?.removeFromParent()
+        let quest = state.starlightBridgeQuest
+        let stage = SKNode()
+        stage.name = "starlightQuestStage"
+        stage.zPosition = 1350
+        addChild(stage)
+        bridgeQuestStage = stage
+
+        // Native bridge spans, visibly separated into three broken sections.
+        for (socket, location) in bridgeSocketPoints.enumerated() {
+            let installed = quest.installedCrystals[socket]
+            let plank = ArtSystem.box(
+                CGSize(width: 118, height: 18),
+                color: installed == nil
+                    ? UIColor(red: 0.18, green: 0.22, blue: 0.32, alpha: 0.88)
+                    : UIColor(red: 0.72, green: 0.53, blue: 0.27, alpha: 0.96),
+                radius: 5
+            )
+            plank.position = CGPoint(x: location.x, y: 240)
+            plank.strokeColor = installed == nil
+                ? UIColor(red: 0.73, green: 0.44, blue: 0.37, alpha: 1)
+                : UIColor(red: 0.88, green: 0.95, blue: 1, alpha: 1)
+            plank.lineWidth = 3
+            plank.glowWidth = installed == nil || reducedMotion ? 0 : 8
+            plank.name = "decorativeBridgeQuestPlank"
+            stage.addChild(plank)
+
+            let socketNode = SKShapeNode(circleOfRadius: 42)
+            socketNode.name = "bridgeQuestSocket\(socket)"
+            socketNode.position = location
+            socketNode.fillColor = installed == nil
+                ? UIColor(red: 0.08, green: 0.13, blue: 0.24, alpha: 0.94)
+                : bridgeCrystalTints[installed!].withAlphaComponent(0.22)
+            socketNode.strokeColor = installed == nil
+                ? UIColor(red: 0.69, green: 0.78, blue: 0.89, alpha: 0.94)
+                : bridgeCrystalTints[installed!]
+            socketNode.lineWidth = 4
+            socketNode.glowWidth = installed == nil || reducedMotion ? 0 : 8
+            stage.addChild(socketNode)
+            makeAccessible(socketNode, label: installed == nil
+                ? "Empty bridge socket \(socket + 1)"
+                : "Powered bridge socket \(socket + 1)")
+            if let installed {
+                let gem = bridgeQuestCrystal(installed, name: socketNode.name!,
+                                             at: .zero, radius: 26)
+                socketNode.addChild(gem)
+            } else {
+                let glyph = ArtSystem.label("+", size: 32)
+                glyph.name = socketNode.name
+                glyph.fontColor = UIColor(red: 0.78, green: 0.92, blue: 1, alpha: 1)
+                socketNode.addChild(glyph)
+            }
+        }
+
+        for id in 0..<StarlightBridgeQuest.crystalCount where
+            !quest.collectedCrystals.contains(id) {
+            let node = bridgeQuestCrystal(id, name: "bridgeQuestCache\(id)",
+                                          at: bridgeCrystalPoints[id])
+            makeAccessible(node, label: "Hidden starlight crystal \(id + 1)",
+                           hint: "Tap to let Valkyrie and Pip collect this crystal.")
+            stage.addChild(node)
+        }
+
+        for id in quest.availableCrystals {
+            let node = bridgeQuestCrystal(id, name: "bridgeQuestInventory\(id)",
+                                          at: bridgeInventoryPoints[id], radius: 31)
+            if bridgeQuestSelectedCrystal == id,
+               let halo = node.children.first as? SKShapeNode {
+                halo.lineWidth = 6
+                halo.glowWidth = reducedMotion ? 0 : 18
+            }
+            makeAccessible(node, label: "Carried crystal \(id + 1)",
+                           hint: "Tap to select, then tap any empty socket, or drag into a socket.")
+            stage.addChild(node)
+        }
+
+        let exit = SKShapeNode(circleOfRadius: 34)
+        exit.name = "bridgeQuestExit"
+        exit.position = CGPoint(x: 1170, y: 625)
+        exit.zPosition = 6
+        exit.fillColor = UIColor(red: 0.09, green: 0.13, blue: 0.23, alpha: 0.96)
+        exit.strokeColor = UIColor(red: 0.87, green: 0.73, blue: 0.42, alpha: 1)
+        exit.lineWidth = 3
+        let back = ArtSystem.label("↩", size: 26)
+        back.name = "bridgeQuestExit"
+        exit.addChild(back)
+        makeAccessible(exit, label: "Return to Pip's workshop")
+        stage.addChild(exit)
+
+        let status = ArtSystem.label(
+            quest.isComplete ? "THE BRIDGE SHINES AGAIN" :
+                "BRIDGE CRYSTALS  \(quest.installedCount) / \(StarlightBridgeQuest.crystalCount)",
+            size: 20
+        )
+        status.name = "bridgeQuestStatus"
+        status.position = CGPoint(x: 865, y: 560)
+        status.fontName = "Georgia-Bold"
+        status.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.78, alpha: 1)
+        stage.addChild(status)
+
+        if quest.isComplete {
+            let star = ArtSystem.label("✦", size: 70)
+            star.name = "bridgeQuestVictory"
+            star.fontColor = UIColor(red: 0.92, green: 0.98, blue: 1.0, alpha: 1)
+            star.position = CGPoint(x: 850, y: 450)
+            stage.addChild(star)
+            if !reducedMotion {
+                star.run(.repeatForever(.sequence([
+                    .scale(to: 1.16, duration: 0.75),
+                    .scale(to: 1, duration: 0.75)
+                ])), withKey: "bridgeVictoryPulse")
+            }
+        } else if quest.collectedCrystals.count >= 2 {
+            let surprise = ArtSystem.label("✧", size: 39)
+            surprise.position = CGPoint(x: 1055, y: 460)
+            surprise.name = "bridgeQuestSecret"
+            surprise.fontColor = UIColor(red: 0.93, green: 0.94, blue: 1, alpha: 1)
+            stage.addChild(surprise)
+        }
+    }
+
+    private func bridgeQuestIndex(near point: CGPoint, points: [CGPoint]) -> Int? {
+        points.indices.first {
+            hypot(point.x - points[$0].x, point.y - points[$0].y) <= 51
+        }
+    }
+
+    private func handleBridgeQuestTap(at point: CGPoint) {
+        guard !bridgeQuestBusy else { return }
+        if hypot(point.x - 1170, point.y - 625) <= 43 {
+            leaveBridgeQuest()
+            return
+        }
+        let quest = state.starlightBridgeQuest
+        if let source = bridgeQuestIndex(near: point, points: bridgeCrystalPoints),
+           !quest.collectedCrystals.contains(source) {
+            bridgeQuestBusy = true
+            instruction.text = "Valkyrie and Pip are hunting for the lost crystal..."
+            let target = CGPoint(x: bridgeCrystalPoints[source].x - 48, y: 175)
+            travel(to: target) { [weak self] in
+                guard let self, self.bridgeQuestMode, !self.hasLeftScene else { return }
+                self.bridgeQuestBusy = false
+                guard self.state.collectStarlightCrystal(source) else { return }
+                self.bridgeQuestSelectedCrystal = source
+                self.state.audio.play("crystal")
+                self.selectionFeedback()
+                self.valkyrie.pose(.interact)
+                self.pip.operate(reducedMotion: self.reducedMotion)
+                self.rebuildBridgeQuestStage()
+                let count = self.state.starlightBridgeQuest.collectedCrystals.count
+                self.instruction.text = count == 1
+                    ? "Found one! Look around for more light, or place this crystal into a socket."
+                    : count == 2
+                        ? "A tiny hidden star woke up! You can choose where the crystals go."
+                        : "All three are safe. Tap a crystal below, then choose its bridge socket."
+                self.playStarlightBurst(at: self.bridgeCrystalPoints[source])
+            }
+            return
+        }
+        if let inventory = bridgeQuestIndex(near: point, points: bridgeInventoryPoints),
+           quest.availableCrystals.contains(inventory) {
+            bridgeQuestSelectedCrystal = inventory
+            selectionFeedback()
+            rebuildBridgeQuestStage()
+            instruction.text = "Choose any empty socket to power a part of the bridge."
+            return
+        }
+        if let socket = bridgeQuestIndex(near: point, points: bridgeSocketPoints) {
+            guard quest.installedCrystals[socket] == nil else {
+                instruction.text = "That bridge section already glows. Choose an empty one."
+                return
+            }
+            guard let crystal = bridgeQuestSelectedCrystal ?? quest.availableCrystals.first else {
+                instruction.text = "Find a glowing crystal first. Search the three stone caches."
+                return
+            }
+            installBridgeQuestCrystal(crystal, socket: socket)
+            return
+        }
+        if quest.collectedCrystals.count >= 2,
+           hypot(point.x - 1055, point.y - 460) < 48 {
+            self.pip.pose(.celebrate)
+            playStarlightBurst(at: CGPoint(x: 1055, y: 460))
+            instruction.text = "Pip found a little star hiding in the bridge! Keep exploring."
+            return
+        }
+        instruction.text = "Explore the glowing crystals, or tap the return arrow at the top right."
+    }
+
+    private func installBridgeQuestCrystal(_ crystal: Int, socket: Int) {
+        guard bridgeQuestMode, !bridgeQuestBusy else { return }
+        bridgeQuestBusy = true
+        let target = CGPoint(x: bridgeSocketPoints[socket].x - 60, y: 175)
+        instruction.text = "Watch this crystal wake a piece of the bridge!"
+        travel(to: target) { [weak self] in
+            guard let self, self.bridgeQuestMode, !self.hasLeftScene else { return }
+            self.bridgeQuestBusy = false
+            guard self.state.installStarlightCrystal(crystal, into: socket) else { return }
+            self.bridgeQuestSelectedCrystal = self.state.starlightBridgeQuest.availableCrystals.first
+            self.selectionFeedback()
+            self.state.audio.play("gear")
+            self.playStarlightBurst(at: self.bridgeSocketPoints[socket])
+            self.pip.pose(.celebrate)
+            self.rebuildBridgeQuestStage()
+            let quest = self.state.starlightBridgeQuest
+            if quest.isComplete {
+                self.successFeedback(at: CGPoint(x: 850, y: 395))
+                self.instruction.text = "You rebuilt the bridge! Your charm is now at Story Tree. Tap ↩ to continue."
+                self.buildBridgeQuestBeacon()
+            } else {
+                self.instruction.text = "A new part of the bridge shines! \(StarlightBridgeQuest.crystalCount - quest.installedCount) to go."
             }
         }
     }
