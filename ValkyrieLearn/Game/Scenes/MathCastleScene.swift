@@ -11,6 +11,7 @@ import LearningCore
     private var bridgeQuestBusy = false
     private var bridgeQuestSelectedCrystal: Int?
     private var bridgeQuestDraggedCrystal: Int?
+    private var bridgeQuestSelectedSocket: Int?
     private var bridgeQuestStage: SKNode?
     // Ground the collectibles on plinths beside the broken span. The earlier
     // version floated circular quiz-looking inputs over the castle skyline.
@@ -952,6 +953,7 @@ import LearningCore
         bridgeQuestMode = true
         bridgeQuestBusy = false
         bridgeQuestSelectedCrystal = nil
+        bridgeQuestSelectedSocket = nil
         clearDrag()
         engaged = false
         setActiveMachineKinetics(false)
@@ -959,7 +961,7 @@ import LearningCore
         setBridgeQuestControlsHidden(true)
         rebuildBridgeQuestStage()
         if state.starlightBridgeQuest.isComplete {
-            instruction.text = "The firefly is safe. Visit Story Tree to move your bridge charm."
+            instruction.text = "Firefly rescued! Tap two bridge crystals to try new light patterns."
         } else {
             instruction.text = "A firefly is stranded! Find crystals to repair its bridge."
         }
@@ -974,6 +976,7 @@ import LearningCore
         }
         bridgeQuestBusy = false
         bridgeQuestSelectedCrystal = nil
+        bridgeQuestSelectedSocket = nil
         bridgeQuestDraggedCrystal = nil
         clearDrag()
         bridgeQuestStage?.removeAllActions()
@@ -1079,8 +1082,9 @@ import LearningCore
             socketNode.strokeColor = installed == nil
                 ? UIColor(red: 0.69, green: 0.78, blue: 0.89, alpha: 0.94)
                 : bridgeCrystalTints[installed!]
-            socketNode.lineWidth = 4
-            socketNode.glowWidth = installed == nil || reducedMotion ? 0 : 8
+            socketNode.lineWidth = bridgeQuestSelectedSocket == socket ? 8 : 4
+            socketNode.glowWidth = installed == nil || reducedMotion ? 0
+                : bridgeQuestSelectedSocket == socket ? 18 : 8
             stage.addChild(socketNode)
             makeAccessible(socketNode, label: installed == nil
                 ? "Empty bridge socket \(socket + 1)"
@@ -1291,6 +1295,24 @@ import LearningCore
             return
         }
         if let socket = bridgeQuestIndex(near: point, points: bridgeSocketPoints) {
+            if quest.isComplete {
+                if let first = bridgeQuestSelectedSocket {
+                    bridgeQuestSelectedSocket = nil
+                    if state.swapStarlightBridgeCrystals(first, socket) {
+                        state.audio.play("crystal")
+                        playStarlightBurst(at: bridgeSocketPoints[socket])
+                        pip.pose(.celebrate)
+                        instruction.text = "You changed the bridge lights! Try another combination."
+                    } else {
+                        instruction.text = "Choose two different crystals to swap their light."
+                    }
+                } else {
+                    bridgeQuestSelectedSocket = socket
+                    instruction.text = "Choose another bridge crystal to swap their colors."
+                }
+                rebuildBridgeQuestStage()
+                return
+            }
             guard quest.installedCrystals[socket] == nil else {
                 instruction.text = "That bridge section already glows. Choose an empty one."
                 return
