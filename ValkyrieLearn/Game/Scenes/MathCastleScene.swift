@@ -1339,7 +1339,7 @@ import LearningCore
             choice.addChild(illuminatedBase)
 
             if load == .firefly {
-                for side: CGFloat in [-1, 1] {
+                for side in [CGFloat(-1), CGFloat(1)] {
                     let wing = SKShapeNode(ellipseOf: CGSize(width: 20, height: 32))
                     wing.name = choice.name
                     wing.position = CGPoint(x: side * 18, y: 13)
@@ -1465,7 +1465,7 @@ import LearningCore
                 cargo.strokeColor = UIColor(red: 0.94, green: 0.81, blue: 0.44, alpha: 1)
                 cargo.lineWidth = 3
                 traveler.addChild(cargo)
-                for x in [-21.0, 21.0] {
+                for x in [CGFloat(-21), CGFloat(21)] {
                     let wheel = SKShapeNode(circleOfRadius: 8)
                     wheel.position = CGPoint(x: x, y: -15)
                     wheel.fillColor = UIColor(red: 0.14, green: 0.15, blue: 0.20, alpha: 1)
