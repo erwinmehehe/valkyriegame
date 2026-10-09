@@ -341,6 +341,41 @@ import LearningCore
         return began
     }
 
+    /// World interactions save independently of skill evidence or encounter state.
+    var starlightBridgeQuest: StarlightBridgeQuest {
+        profile.starlightBridgeQuest ?? StarlightBridgeQuest()
+    }
+
+    @discardableResult
+    func discoverStarlightBridge() -> Bool {
+        var quest = starlightBridgeQuest
+        guard quest.discover() else { return false }
+        profile.starlightBridgeQuest = quest
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func collectStarlightCrystal(_ index: Int) -> Bool {
+        var quest = starlightBridgeQuest
+        guard quest.collect(index) else { return false }
+        profile.starlightBridgeQuest = quest
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func installStarlightCrystal(_ index: Int, into socket: Int) -> Bool {
+        var quest = starlightBridgeQuest
+        guard quest.install(index, into: socket) else { return false }
+        profile.starlightBridgeQuest = quest
+        if quest.isComplete {
+            _ = profile.unlockStoryReward(.starlightBridgeCharm)
+        }
+        persist()
+        return true
+    }
+
     func hasStoryReward(_ reward: StoryRewardID) -> Bool {
         profile.hasStoryReward(reward)
     }
