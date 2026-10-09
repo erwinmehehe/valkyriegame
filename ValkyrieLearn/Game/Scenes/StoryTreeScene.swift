@@ -29,6 +29,7 @@ import SpriteKit
     private var puzzlePalaceLanternNode: SKNode?
     private var bridgeCharmNode: SKNode?
     private var lumiGardenBloomNode: SKNode?
+    private var miloShadowMothNode: SKNode?
     private var lastKineticReducedMotion: Bool?
     private let moonLanternSlots = [
         CGPoint(x: 295, y: 500),
@@ -56,6 +57,11 @@ import SpriteKit
         CGPoint(x: 200, y: 390),
         CGPoint(x: 305, y: 420),
         CGPoint(x: 420, y: 400)
+    ]
+    private let miloShadowMothSlots = [
+        CGPoint(x: 745, y: 575),
+        CGPoint(x: 560, y: 595),
+        CGPoint(x: 350, y: 610)
     ]
 
     override func didMove(to view: SKView) {
@@ -216,16 +222,20 @@ import SpriteKit
         renderPuzzlePalaceLantern()
         renderBridgeCharm()
         renderLumiGardenBloom()
+        renderMiloShadowMoth()
 
         let rewardCount = [
             state.hasStoryReward(.moonLantern),
             state.hasStoryReward(.wordGardenLantern),
             state.hasStoryReward(.puzzlePalaceLantern),
             state.hasStoryReward(.starlightBridgeCharm),
-            state.hasStoryReward(.lumiLivingBloom)
+            state.hasStoryReward(.lumiLivingBloom),
+            state.hasStoryReward(.miloShadowMoth)
         ].filter { $0 }.count
         if rewardCount >= 2 {
             instruction.text = "Your lanterns are glowing. Choose where Valkyrie explores next."
+        } else if state.hasStoryReward(.miloShadowMoth) {
+            instruction.text = "Milo's glowing moth is home. Tap it to choose another branch."
         } else if state.hasStoryReward(.lumiLivingBloom) {
             instruction.text = "Lumi's living flower is growing here. Tap its pot to move it."
         } else if state.hasStoryReward(.starlightBridgeCharm) {
@@ -831,6 +841,61 @@ import SpriteKit
         lumiGardenBloomNode = root
     }
 
+    /// After trying contrasting shadows, the hidden moth can choose which
+    /// branch of Story Tree to brighten. It is not an academic progress badge.
+    private func renderMiloShadowMoth() {
+        miloShadowMothNode?.removeFromParent()
+        miloShadowMothNode = nil
+        guard state.hasStoryReward(.miloShadowMoth) else { return }
+        let slot = state.storyRewardPlacement(.miloShadowMoth) % miloShadowMothSlots.count
+        let root = SKNode()
+        root.name = "miloShadowMoth"
+        root.position = miloShadowMothSlots[slot]
+        root.zPosition = 945
+
+        let halo = SKShapeNode(circleOfRadius: 33)
+        halo.name = root.name
+        halo.fillColor = UIColor(red: 1, green: 0.89, blue: 0.42, alpha: 0.14)
+        halo.strokeColor = UIColor(red: 0.96, green: 0.85, blue: 0.50, alpha: 0.68)
+        halo.lineWidth = 2
+        halo.glowWidth = reducedMotion ? 0 : 9
+        root.addChild(halo)
+
+        for side in [-1.0, 1.0] {
+            let wing = SKShapeNode(ellipseOf: CGSize(width: 25, height: 38))
+            wing.name = root.name
+            wing.position = CGPoint(x: CGFloat(side) * 16, y: 8)
+            wing.zRotation = CGFloat(side) * 0.37
+            wing.fillColor = UIColor(red: 0.95, green: 0.86, blue: 0.56, alpha: 1)
+            wing.strokeColor = UIColor(red: 1, green: 0.97, blue: 0.85, alpha: 1)
+            wing.lineWidth = 2
+            root.addChild(wing)
+        }
+
+        let body = ArtSystem.label("✦", size: 22)
+        body.name = root.name
+        body.fontColor = UIColor(red: 0.43, green: 0.27, blue: 0.19, alpha: 1)
+        root.addChild(body)
+
+        let hit = SKShapeNode(circleOfRadius: 41)
+        hit.name = root.name
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.zPosition = 2
+        root.addChild(hit)
+
+        makeAccessible(root, label: "Milo's rescued shadow moth",
+                       hint: "Tap to help the moth flutter to a different branch.")
+        addChild(root)
+        miloShadowMothNode = root
+        if !reducedMotion {
+            root.run(.repeatForever(.sequence([
+                .moveBy(x: 0, y: 7, duration: 0.9),
+                .moveBy(x: 0, y: -7, duration: 0.9)
+            ])), withKey: "shadowMothFlutter")
+        }
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = activeTouch, touches.contains(touch) else { return }
         defer {
@@ -1026,6 +1091,17 @@ import SpriteKit
             state.audio.play("success")
             valkyrie.pose(.interact)
             instruction.text = "The Flower Lantern found a new branch."
+
+        case "miloShadowMoth":
+            guard state.hasStoryReward(.miloShadowMoth) else { return }
+            selectionFeedback()
+            _ = state.cycleStoryRewardPlacement(
+                .miloShadowMoth, slotCount: miloShadowMothSlots.count
+            )
+            renderMiloShadowMoth()
+            state.audio.play("success")
+            valkyrie.pose(.interact)
+            instruction.text = "Milo's shadow moth has found a new Story Tree branch."
 
         case "lumiLivingBloom":
             guard state.hasStoryReward(.lumiLivingBloom) else { return }
