@@ -959,7 +959,7 @@ import LearningCore
         if state.starlightBridgeQuest.isComplete {
             instruction.text = "Look what you built! Your bridge charm is waiting at Story Tree."
         } else {
-            instruction.text = "Find three lost crystals. Tap a glowing cache; Pip will carry each one."
+            instruction.text = "A tiny firefly is stranded! Find three crystals to build a bridge home."
         }
     }
 
@@ -1095,6 +1095,8 @@ import LearningCore
         status.fontColor = UIColor(red: 1.0, green: 0.95, blue: 0.78, alpha: 1)
         stage.addChild(status)
 
+        addBridgeFirefly(to: stage, rescued: quest.isComplete)
+
         if quest.isComplete {
             let star = ArtSystem.label("✦", size: 70)
             star.name = "bridgeQuestVictory"
@@ -1116,6 +1118,50 @@ import LearningCore
         }
     }
 
+    private func addBridgeFirefly(to stage: SKNode, rescued: Bool) {
+        // A small animated light creature gives the repair a purpose beyond
+        // filling three sockets. It is scenery, not a replacement for Pip.
+        let root = SKNode()
+        root.name = "bridgeQuestFirefly"
+        root.position = rescued
+            ? CGPoint(x: 530, y: 455) : CGPoint(x: 1140, y: 445)
+        root.zPosition = 16
+
+        let glow = SKShapeNode(circleOfRadius: 20)
+        glow.name = root.name
+        glow.fillColor = UIColor(red: 1, green: 0.90, blue: 0.43, alpha: 0.30)
+        glow.strokeColor = UIColor(red: 1, green: 0.95, blue: 0.68, alpha: 1)
+        glow.lineWidth = 2
+        glow.glowWidth = reducedMotion ? 0 : 18
+        root.addChild(glow)
+
+        for direction in [-1.0, 1.0] {
+            let wing = SKShapeNode(ellipseOf: CGSize(width: 19, height: 35))
+            wing.position = CGPoint(x: direction * 18, y: 12)
+            wing.zRotation = direction * 0.48
+            wing.fillColor = UIColor(red: 0.83, green: 0.97, blue: 1, alpha: 0.50)
+            wing.strokeColor = .white
+            wing.lineWidth = 1
+            wing.name = root.name
+            root.addChild(wing)
+        }
+
+        let spark = ArtSystem.label("✦", size: 24)
+        spark.fontColor = UIColor(red: 1.0, green: 0.99, blue: 0.76, alpha: 1)
+        spark.name = root.name
+        root.addChild(spark)
+
+        makeAccessible(root, label: rescued ? "Rescued firefly" : "A firefly stranded across the bridge",
+                       hint: "The bridge crystals can make a path for this little light.")
+        stage.addChild(root)
+        if !reducedMotion {
+            root.run(.repeatForever(.sequence([
+                .moveBy(x: 0, y: 11, duration: 0.8),
+                .moveBy(x: 0, y: -11, duration: 0.8)
+            ])), withKey: "fireflyHover")
+        }
+    }
+
     private func bridgeQuestIndex(near point: CGPoint, points: [CGPoint]) -> Int? {
         points.indices.first {
             hypot(point.x - points[$0].x, point.y - points[$0].y) <= 51
@@ -1129,6 +1175,12 @@ import LearningCore
         }
         guard !bridgeQuestBusy else { return }
         let quest = state.starlightBridgeQuest
+        if !quest.isComplete,
+           hypot(point.x - 1140, point.y - 445) < 43 {
+            pip.pose(.react)
+            instruction.text = "That little firefly is stranded! Three crystals will build a way home."
+            return
+        }
         if let source = bridgeQuestIndex(near: point, points: bridgeCrystalPoints),
            !quest.collectedCrystals.contains(source) {
             bridgeQuestBusy = true
@@ -1202,7 +1254,7 @@ import LearningCore
             let quest = self.state.starlightBridgeQuest
             if quest.isComplete {
                 self.successFeedback(at: CGPoint(x: 850, y: 395))
-                self.instruction.text = "You rebuilt the bridge! Your charm is now at Story Tree. Tap ↩ to continue."
+                self.instruction.text = "The firefly is safe! Your bridge charm is now at Story Tree. Tap ↩ to continue."
             } else {
                 self.instruction.text = "A new part of the bridge shines! \(StarlightBridgeQuest.crystalCount - quest.installedCount) to go."
             }
