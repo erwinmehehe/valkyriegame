@@ -2939,6 +2939,24 @@ import LearningCore
         )
         let debugEvidenceBeforeRepair = state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count
         bugLantern.handleTap(at: brokenNode.position)
+        XCTAssertEqual(brokenNode.position.y, 341, accuracy: 0.001,
+                       "Confirmed broken cassette must physically sink in its socket.")
+        let inspectedSocket = try XCTUnwrap(
+            bugLantern.childNode(withName: "bugStepSocket\(bugEncounter.brokenIndex)") as? SKShapeNode
+        )
+        // UIColor instances may compare unequal even when their extended-sRGB
+        // components match. Compare actual rendered channel values instead.
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        XCTAssertTrue(inspectedSocket.strokeColor.getRed(
+            &red, green: &green, blue: &blue, alpha: &alpha
+        ))
+        XCTAssertEqual(red, 0.95, accuracy: 0.002)
+        XCTAssertEqual(green, 0.75, accuracy: 0.002)
+        XCTAssertEqual(blue, 0.44, accuracy: 0.002)
+        XCTAssertEqual(alpha, 1, accuracy: 0.002)
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count,
             debugEvidenceBeforeRepair,
@@ -2958,6 +2976,8 @@ import LearningCore
             "Replacement command: \(bugEncounter.intended[bugEncounter.brokenIndex].title). Install it in step \(bugEncounter.brokenIndex + 1)."
         )
         bugLantern.handleTap(at: replacement.position)
+        XCTAssertEqual(replacement.position.y, 355, accuracy: 0.001,
+                       "Repaired cassette must seat flush with the drive rail.")
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.last?.outcome,
             .correct
