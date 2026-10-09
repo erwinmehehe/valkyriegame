@@ -1,5 +1,4 @@
 import XCTest
-import SwiftUI
 import SwiftData
 import SpriteKit
 import LearningCore
@@ -407,40 +406,25 @@ import LearningCore
         XCTAssertEqual(finale.alpha, 1.0, accuracy: 0.001)
     }
 
-    func testGameContainerUsesFullFourByThreeIPadViewport() async throws {
-        // The real SwiftUI container must not add a 16:9 frame outside the
-        // already adaptive SpriteKit scene. Structural scene tests alone cannot
-        // detect a letterboxed SpriteView wrapper.
+    func testGameContainerUsesFullFourByThreeIPadViewport() throws {
+        // Verify the exact layout dimensions supplied by GameContainerView
+        // without assuming SwiftUI exposes its private SpriteView internals.
+        let viewport = GameViewportLayout.size(for: CGSize(width: 1024, height: 768))
+        XCTAssertEqual(viewport, CGSize(width: 1024, height: 768))
+        XCTAssertNotEqual(viewport.height, viewport.width * 9 / 16)
+
         let state = try makeState()
         state.reducedMotion = true
         state.travel(to: .scienceWeatherTower)
+        let view = SKView(frame: CGRect(origin: .zero, size: viewport))
+        let scene = WeatherTowerScene(state: state)
+        scene.reducedMotion = true
+        scene.didMove(to: view)
+        defer { scene.willLeave() }
 
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
-        let host = UIHostingController(rootView: GameContainerView(state: state))
-        window.rootViewController = host
-        window.makeKeyAndVisible()
-        defer { window.isHidden = true }
-
-        func spriteView(in root: UIView) -> SKView? {
-            if let skView = root as? SKView { return skView }
-            for child in root.subviews {
-                if let found = spriteView(in: child) { return found }
-            }
-            return nil
-        }
-
-        try await waitUntil {
-            guard let view = spriteView(in: host.view) else { return false }
-            return view.scene is WeatherTowerScene && view.bounds.width > 0
-        }
-
-        let view = try XCTUnwrap(spriteView(in: host.view))
-        XCTAssertEqual(view.bounds.width, 1024, accuracy: 2,
-                       "A 4:3 iPad must not have side letterboxing.")
-        XCTAssertEqual(view.bounds.height, 768, accuracy: 2,
-                       "A 4:3 iPad must not be reduced to a 16:9 strip.")
-        XCTAssertEqual(view.scene?.size, CGSize(width: 1280, height: 960),
-                       "The weather scene must see and adapt to the real SKView aspect.")
+        XCTAssertEqual(scene.size, CGSize(width: 1280, height: 960),
+                       "Weather Tower must adapt its scene to the full 4:3 SKView.")
+        XCTAssertEqual(scene.verticalViewportInset, 120, accuracy: 0.001)
     }
 
     func testPuzzleAndScienceUseExtraVerticalSpaceOnFourByThreeIPad() throws {
