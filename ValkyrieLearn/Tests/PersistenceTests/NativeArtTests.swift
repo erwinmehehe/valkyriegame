@@ -169,7 +169,12 @@ import LearningCore
         scene.handleTap(at: CGPoint(x: 1150, y: 270))
         XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 1)
         XCTAssertFalse(state.starlightBridgeQuest.hasDeliveredSupplies)
-        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
+        let crackedPlank = try XCTUnwrap(
+            scene.childNode(withName: "//bridgeTestWeakSpan0") as? SKShapeNode
+        )
+        XCTAssertNotNil(crackedPlank.path,
+                        "The cart should crack a real timber span instead of showing a UI error circle.")
+        XCTAssertEqual(crackedPlank.position, CGPoint(x: 760, y: 240))
         XCTAssertNotNil(scene.childNode(withName: "//bridgeTestTraveler"))
         XCTAssertEqual(state.profile.skills, originalSkills)
         try await capture(scene, in: view, name: "Math-Castle-Bridge-Load-Trial-Bends")
@@ -186,7 +191,15 @@ import LearningCore
         XCTAssertEqual(state.starlightBridgeQuest.trialsCompleted, 2)
         XCTAssertTrue(state.starlightBridgeQuest.hasDeliveredSupplies)
         XCTAssertNil(scene.childNode(withName: "//bridgeTestWeakSpan0"))
-        XCTAssertNotNil(scene.childNode(withName: "//bridgeTestSuppliesDelivered"))
+        let deliveredGear = try XCTUnwrap(
+            scene.childNode(withName: "//bridgeTestSuppliesDelivered")
+        )
+        XCTAssertEqual(deliveredGear.position, CGPoint(x: 1009, y: 408),
+                       "Reward feedback belongs on the bridge sign, not floating in the sky.")
+        XCTAssertEqual(
+            (scene.childNode(withName: "//bridgeQuestStatus") as? SKLabelNode)?.text,
+            "CART DELIVERED"
+        )
         try await capture(scene, in: view, name: "Math-Castle-Bridge-Load-Trial-Supplies-Delivered")
 
         // A light firefly crosses without the braces, and experiments can
