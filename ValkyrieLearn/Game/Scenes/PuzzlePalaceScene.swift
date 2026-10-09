@@ -5299,8 +5299,20 @@ import LearningCore
             plate.strokeColor = selected
                 ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
                 : UIColor(red: 0.90, green: 0.70, blue: 0.41, alpha: 1)
-            plate.glowWidth = selected && !reducedMotion ? 6 : 0
-            plate.setScale(selected ? 1.05 : 1)
+            plate.glowWidth = selected && !reducedMotion ? 4 : 0
+            // Lift a selected gear out of its socket. A physical displacement
+            // communicates selection without relying on a neon halo or scale.
+            // Reset from the authored rail position, not the last animation,
+            // so rapid taps and Reduced Motion remain deterministic.
+            let restingY: CGFloat = 355
+            let targetY = restingY + (selected ? 18 : 0)
+            plate.removeAction(forKey: "repairGearLift")
+            if reducedMotion {
+                plate.position.y = targetY
+            } else {
+                plate.run(.moveTo(y: targetY, duration: 0.14), withKey: "repairGearLift")
+            }
+            plate.setScale(1)
             if let socket = childNode(withName: "repairSocketBase\(index)") as? SKShapeNode {
                 socket.strokeColor = selected
                     ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
