@@ -494,6 +494,47 @@ import LearningCore
         return true
     }
 
+    /// Weather Tower play is saved separately from academic science work.
+    var miloWindKiteRescue: MiloWindKiteRescue {
+        profile.miloWindKiteRescue ?? MiloWindKiteRescue()
+    }
+
+    @discardableResult
+    func exploreMiloWindKiteRescue() -> Bool {
+        var play = miloWindKiteRescue
+        guard play.explore() else { return false }
+        profile.miloWindKiteRescue = play
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func chooseMiloWindSail(_ sail: MiloWindSail) -> Bool {
+        var play = miloWindKiteRescue
+        guard play.choose(sail) else { return false }
+        profile.miloWindKiteRescue = play
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func chooseMiloWindStrength(_ strength: MiloWindStrength) -> Bool {
+        var play = miloWindKiteRescue
+        guard play.setStrength(strength) else { return false }
+        profile.miloWindKiteRescue = play
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func testMiloWindKite() -> MiloWindTrial? {
+        var play = miloWindKiteRescue
+        guard let trial = play.launch() else { return nil }
+        profile.miloWindKiteRescue = play
+        persist()
+        return trial
+    }
+
     func hasStoryReward(_ reward: StoryRewardID) -> Bool {
         profile.hasStoryReward(reward)
     }
