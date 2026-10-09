@@ -865,6 +865,81 @@ final class StarlightBridgeQuestTests: XCTestCase {
         XCTAssertTrue(resumed.skills.isEmpty)
     }
 
+    func testLoadTrialModelsTwoDifferentWeightsAndLetsChildExperiment() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertNil(quest.testBridge(with: .firefly), "An unrepaired bridge cannot be tested.")
+        XCTAssertFalse(quest.toggleBrace(at: 0))
+        XCTAssertTrue(quest.discover())
+        for index in 0..<StarlightBridgeQuest.crystalCount {
+            XCTAssertTrue(quest.collect(index))
+            XCTAssertTrue(quest.install(index, into: index))
+        }
+        XCTAssertTrue(quest.isComplete)
+        XCTAssertFalse(quest.hasDeliveredSupplies)
+        XCTAssertFalse(quest.toggleBrace(at: -1))
+        XCTAssertFalse(quest.toggleBrace(at: 3))
+        XCTAssertEqual(quest.testBridge(with: .firefly), .crossed,
+                       "The small rescued firefly needs no structural reinforcement.")
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .stoppedAt(0))
+        XCTAssertTrue(quest.toggleBrace(at: 2))
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .stoppedAt(0),
+                       "An unsupported left span is still weak.")
+        XCTAssertTrue(quest.toggleBrace(at: 0))
+        XCTAssertEqual(quest.braces, Set([0, 2]))
+        XCTAssertFalse(quest.toggleBrace(at: 1),
+                       "The child has only two braces; a third requires moving one.")
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .crossed)
+        XCTAssertTrue(quest.hasDeliveredSupplies)
+        XCTAssertTrue(quest.toggleBrace(at: 0))
+        XCTAssertTrue(quest.toggleBrace(at: 1))
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .stoppedAt(0))
+        XCTAssertEqual(quest.braces, Set([1, 2]))
+        XCTAssertTrue(quest.hasDeliveredSupplies,
+                      "Achievement should remain even when replaying experiments.")
+        XCTAssertEqual(quest.trialsCompleted, 5)
+    }
+
+    func testLoadExperimentRestoresLegacySavesAndNeverGeneratesMathEvidence() throws {
+        var quest = StarlightBridgeQuest()
+        XCTAssertTrue(quest.discover())
+        for index in 0..<StarlightBridgeQuest.crystalCount {
+            XCTAssertTrue(quest.collect(index))
+            XCTAssertTrue(quest.install(index, into: index))
+        }
+        XCTAssertTrue(quest.toggleBrace(at: 0))
+        XCTAssertTrue(quest.toggleBrace(at: 2))
+        XCTAssertEqual(quest.testBridge(with: .supplyCart), .crossed)
+        let restored = try JSONDecoder().decode(
+            StarlightBridgeQuest.self, from: JSONEncoder().encode(quest)
+        )
+        XCTAssertEqual(restored.braces, Set([0, 2]))
+        XCTAssertEqual(restored.trialsCompleted, 1)
+        XCTAssertTrue(restored.hasDeliveredSupplies)
+
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(quest)) as? [String: Any])
+        for key in ["reinforcedSpans", "successfulSupplyDelivery", "trialCount"] {
+            legacy.removeValue(forKey: key)
+        }
+        let oldBytes = try JSONSerialization.data(withJSONObject: legacy)
+        var upgraded = try JSONDecoder().decode(StarlightBridgeQuest.self, from: oldBytes)
+        XCTAssertTrue(upgraded.isComplete, "Older crystal placement must remain completed.")
+        XCTAssertTrue(upgraded.braces.isEmpty)
+        XCTAssertFalse(upgraded.hasDeliveredSupplies)
+        XCTAssertEqual(upgraded.trialsCompleted, 0)
+        XCTAssertEqual(upgraded.testBridge(with: .supplyCart), .stoppedAt(0))
+        XCTAssertEqual(upgraded.trialsCompleted, 1)
+
+        var learner = LearnerProfile()
+        learner.starlightBridgeQuest = quest
+        let snapshot = try JSONDecoder().decode(
+            LearnerProfile.self, from: JSONEncoder().encode(learner)
+        )
+        XCTAssertTrue(snapshot.skills.isEmpty,
+                      "Engineering sandbox must never fabricate academic mastery.")
+        XCTAssertEqual(snapshot.starlightBridgeQuest, quest)
+    }
+
     func testHiddenStarIsOptionalPersistentAndAvailableOnReturnVisits() throws {
         var quest = StarlightBridgeQuest()
         XCTAssertFalse(quest.hasFoundHiddenStar)
