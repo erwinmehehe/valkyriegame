@@ -4195,6 +4195,21 @@ import LearningCore
                                 "Saved safe route must remain visibly connected.")
                 XCTAssertNil(restored.childNode(withName: "pathChoice0"),
                              "Completed room cannot reopen answer workbenches.")
+                let completedPassage = try XCTUnwrap(
+                    restored.childNode(withName: "decorativePathRestoredPassage")
+                )
+                XCTAssertNotNil(completedPassage.childNode(
+                    withName: "decorativePathRestoredArch"
+                ), "Returning to Path Tiles should show a physical exit into Command Gears.")
+                XCTAssertNotNil(completedPassage.childNode(
+                    withName: "decorativePathRestoredThreshold"
+                ))
+                XCTAssertNotNil(restored.childNode(withName: "decorativePathRestoredFloorLink"))
+                let routeHeader = try XCTUnwrap(restored.childNode(
+                    withName: "pathTrailHeader"
+                ) as? SKLabelNode)
+                XCTAssertEqual(routeHeader.text, "PASSAGE OPEN",
+                               "After completion, do not tell a child to pick a route that is gone.")
             }
             if world == .mirrorHall {
                 for index in 0..<3 {
