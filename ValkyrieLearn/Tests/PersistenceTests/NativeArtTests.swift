@@ -1480,6 +1480,10 @@ import LearningCore
             try await waitUntil(timeout: 3) {
                 abs(pistons[wrongIndex].position.y - 450) < 0.5
             }
+            for index in 0..<3 where index != wrongIndex {
+                XCTAssertEqual(pistons[index].position.y, 438, accuracy: 0.5,
+                               "Inspecting one working part cannot imply power passed an unknown fault.")
+            }
             var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
             XCTAssertTrue(working.strokeColor.getRed(
                 &red, green: &green, blue: &blue, alpha: &alpha
