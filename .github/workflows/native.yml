@@ -45,6 +45,13 @@ jobs:
         run: python3 scripts/verify_math_teacher_matrix.py
       - name: Test teacher review index guard
         run: python3 -m unittest discover -s scripts -p 'test_verify_math_teacher_matrix.py'
+      - name: Export unapproved 76-skill teacher worksheet
+        run: python3 scripts/verify_math_teacher_matrix.py --export-csv math-teacher-review-unapproved.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: math-76-skill-review-unapproved
+          path: math-teacher-review-unapproved.csv
+          if-no-files-found: error
       - name: Reject missing native SpriteKit image references
         run: python3 scripts/verify_spritekit_assets.py
       - name: Test image reference scanner
