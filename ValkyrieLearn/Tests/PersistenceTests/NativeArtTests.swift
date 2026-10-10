@@ -13,7 +13,7 @@ import LearningCore
         while !condition(), Date() < deadline {
             try await Task.sleep(nanoseconds: 25_000_000)
         }
-        XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
+        _ = try XCTUnwrap(condition() ? true : nil, "Timed out waiting for a live SpriteKit result; do not label this frame as successful.")
     }
 
     func testWeatherTowerWindKiteRescueIsPhysicalRepeatableAndRestores() async throws {
@@ -3327,7 +3327,7 @@ import LearningCore
                         && (scene.instruction.text ?? "").hasPrefix("HOLD")
                 }
                 scene.handleTap(at: CGPoint(x: 755, y: 365))
-                scene.speed = 1 // Resume the timed replay after evidence is recorded.
+                // Keep the failed HOLD and closed barrier frozen until the incorrect frame is captured.
             }
 
         case .sortingPedestal:
@@ -3437,6 +3437,11 @@ import LearningCore
         try await waitUntil(timeout: 10) {
             state.profile.progress(for: skill).evidence.last?.outcome == result
         }
+        // Correct Rune/Stop-Go mechanics immediately update their physical state,
+        // but their next-challenge timers can replace the result during screenshot export.
+        if correct && (world == .puzzlePalace || world == .stopGoOrbs) {
+            scene.speed = 0
+        }
     }
 
     func testIllustratedPalaceRoomsOnFourByThreeIPad() async throws {
@@ -3540,6 +3545,7 @@ import LearningCore
             )
             try await capture(scene, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Incorrect")
+            if world == .stopGoOrbs { scene.speed = 1 }
             try await exercisePalaceVisualReview(
                 world, scene: scene, state: state, correct: true,
                 frozenEncounter: frozenEncounter
