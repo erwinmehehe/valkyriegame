@@ -3223,6 +3223,27 @@ import LearningCore
         mirror.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.30, alpha: 0.90)
         mirror.lineWidth = 5
 
+        // An axle ties each choice mirror to its floor pedestal. The mirror,
+        // arrow, shape, and accessible hit target remain the same live node.
+        let pivotShaft = SKShapeNode(
+            rectOf: CGSize(width: 18, height: 60), cornerRadius: 7
+        )
+        pivotShaft.position = CGPoint(x: 0, y: -108)
+        pivotShaft.fillColor = UIColor(red: 0.49, green: 0.34, blue: 0.25, alpha: 1)
+        pivotShaft.strokeColor = UIColor(red: 0.95, green: 0.76, blue: 0.45, alpha: 1)
+        pivotShaft.lineWidth = 2
+        pivotShaft.name = "decorativeMirrorPivotShaft"
+        pivotShaft.zPosition = -3
+        mirror.addChild(pivotShaft)
+
+        let pivot = SKShapeNode(circleOfRadius: 11)
+        pivot.position = CGPoint(x: 0, y: -85)
+        pivot.fillColor = UIColor(red: 0.25, green: 0.23, blue: 0.33, alpha: 1)
+        pivot.strokeColor = UIColor(red: 1.0, green: 0.82, blue: 0.51, alpha: 1)
+        pivot.lineWidth = 3
+        pivot.name = "decorativeMirrorPivotAxle"
+        mirror.addChild(pivot)
+
         let innerGlass = SKShapeNode(ellipseOf: CGSize(width: 116, height: 148))
         innerGlass.fillColor = UIColor(red: 0.38, green: 0.69, blue: 0.92, alpha: 0.11)
         innerGlass.strokeColor = UIColor(white: 1.0, alpha: 0.24)
@@ -3501,9 +3522,9 @@ import LearningCore
     private func buildMirrorHallWorld() {
         // Keep the source palace artwork visible. The live objects are architectural
         // fixtures layered into the room, not a modal card floating over it.
-        let floorRail = SKShapeNode(rectOf: CGSize(width: 780, height: 18), cornerRadius: 9)
-        floorRail.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.34, alpha: 0.78)
-        floorRail.strokeColor = UIColor(red: 0.61, green: 0.52, blue: 0.86, alpha: 0.60)
+        let floorRail = SKShapeNode(rectOf: CGSize(width: 720, height: 14), cornerRadius: 7)
+        floorRail.fillColor = UIColor(red: 0.37, green: 0.26, blue: 0.25, alpha: 0.78)
+        floorRail.strokeColor = UIColor(red: 0.84, green: 0.66, blue: 0.43, alpha: 0.72)
         floorRail.lineWidth = 2
         floorRail.position = CGPoint(x: 765, y: 282)
         floorRail.zPosition = 115
@@ -3513,18 +3534,38 @@ import LearningCore
         buildMirrorHallConceptAccents()
         buildMirrorMachinery()
 
-        let beacon = SKShapeNode(circleOfRadius: 58)
-        beacon.fillColor = UIColor(red: 0.14, green: 0.18, blue: 0.31, alpha: 0.96)
-        beacon.strokeColor = UIColor(red: 0.64, green: 0.82, blue: 1.0, alpha: 1)
-        beacon.lineWidth = 6
+        // The source lens is suspended from the painted central arch,
+        // replacing an oversized floating quiz disk.
+        let suspension = SKShapeNode(
+            rectOf: CGSize(width: 12, height: 70), cornerRadius: 6
+        )
+        suspension.position = CGPoint(x: 765, y: 639)
+        suspension.fillColor = UIColor(red: 0.52, green: 0.37, blue: 0.29, alpha: 0.95)
+        suspension.strokeColor = UIColor(red: 0.95, green: 0.77, blue: 0.48, alpha: 0.92)
+        suspension.lineWidth = 2
+        suspension.zPosition = 592
+        suspension.name = "mirrorBeaconMount"
+        addChild(suspension)
+
+        let beacon = SKShapeNode(circleOfRadius: 38)
+        beacon.fillColor = UIColor(red: 0.31, green: 0.25, blue: 0.30, alpha: 0.98)
+        beacon.strokeColor = UIColor(red: 0.94, green: 0.74, blue: 0.47, alpha: 1)
+        beacon.lineWidth = 5
         beacon.position = CGPoint(x: 765, y: 565)
         beacon.name = "mirrorBeacon"
         beacon.zPosition = 600
         addChild(beacon)
 
-        let glyph = ArtSystem.label("↑", size: 54)
+        let glass = SKShapeNode(circleOfRadius: 27)
+        glass.fillColor = UIColor(red: 0.31, green: 0.53, blue: 0.70, alpha: 0.88)
+        glass.strokeColor = UIColor(red: 0.73, green: 0.86, blue: 1, alpha: 0.95)
+        glass.lineWidth = 2
+        glass.name = "decorativeMirrorSourceLens"
+        beacon.addChild(glass)
+
+        let glyph = ArtSystem.label("↑", size: 38)
         glyph.name = "mirrorBeaconGlyph"
-        glyph.fontColor = UIColor(red: 0.92, green: 0.97, blue: 1.0, alpha: 1)
+        glyph.fontColor = UIColor(red: 0.98, green: 0.96, blue: 0.78, alpha: 1)
         beacon.addChild(glyph)
 
         let titlePlate = ArtSystem.plaque(
@@ -3589,8 +3630,8 @@ import LearningCore
 
         for (index, direction) in orientationEncounter.choices.enumerated() {
             let focusPool = SKShapeNode(ellipseOf: CGSize(width: 172, height: 34))
-            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.26)
-            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.42)
+            focusPool.fillColor = UIColor(red: 0.31, green: 0.24, blue: 0.27, alpha: 0.18)
+            focusPool.strokeColor = UIColor(red: 0.84, green: 0.69, blue: 0.48, alpha: 0.28)
             focusPool.lineWidth = 2
             focusPool.position = CGPoint(
                 x: mirrorChoicePoints[index].x,
@@ -3627,7 +3668,63 @@ import LearningCore
         tiko.pose(.interact)
     }
 
+    private func reflectChosenMirror(_ mirror: SKShapeNode, aligned: Bool) {
+        // A reflection appears only AFTER the child's answer is scored.
+        // No ray reveals which mirror matches the target in advance.
+        childNode(withName: "mirrorActiveRay")?.removeFromParent()
+        childNode(withName: "mirrorActiveImpact")?.removeFromParent()
+
+        let impactPoint = aligned
+            ? CGPoint(x: mirror.position.x, y: 252)
+            : CGPoint(
+                x: mirror.position.x + (mirror.position.x < 765 ? -75 : 75),
+                y: 306
+            )
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: 765, y: 528))
+        path.addLine(to: CGPoint(x: mirror.position.x, y: mirror.position.y + 77))
+        path.addLine(to: impactPoint)
+
+        let reflectedRay = SKShapeNode(path: path)
+        reflectedRay.name = "mirrorActiveRay"
+        reflectedRay.strokeColor = aligned
+            ? UIColor(red: 0.78, green: 0.94, blue: 1, alpha: 1)
+            : UIColor(red: 0.94, green: 0.57, blue: 0.40, alpha: 1)
+        reflectedRay.lineWidth = 8
+        reflectedRay.glowWidth = reducedMotion ? 0 : 4
+        reflectedRay.zPosition = 638
+        reflectedRay.alpha = reducedMotion ? 1 : 0
+        addChild(reflectedRay)
+
+        let impact = SKShapeNode(circleOfRadius: aligned ? 17 : 11)
+        impact.name = "mirrorActiveImpact"
+        impact.position = impactPoint
+        impact.fillColor = aligned
+            ? UIColor(red: 0.32, green: 0.82, blue: 0.78, alpha: 1)
+            : UIColor(red: 0.78, green: 0.34, blue: 0.30, alpha: 1)
+        impact.strokeColor = UIColor(red: 0.97, green: 0.83, blue: 0.55, alpha: 1)
+        impact.lineWidth = 3
+        impact.zPosition = 639
+        impact.alpha = reducedMotion ? 1 : 0
+        addChild(impact)
+
+        if !reducedMotion {
+            reflectedRay.run(.fadeIn(withDuration: 0.22))
+            impact.run(.fadeIn(withDuration: 0.22))
+        }
+        if aligned,
+           let index = mirrorChoicePoints.firstIndex(where: {
+               abs($0.x - mirror.position.x) < 1
+           }),
+           let receiver = childNode(withName: "mirrorReceiver\(index)") as? SKShapeNode {
+            receiver.fillColor = UIColor(red: 0.32, green: 0.82, blue: 0.78, alpha: 1)
+            receiver.glowWidth = reducedMotion ? 0 : 9
+        }
+    }
+
     private func clearMirrorChoices() {
+        childNode(withName: "mirrorActiveRay")?.removeFromParent()
+        childNode(withName: "mirrorActiveImpact")?.removeFromParent()
         children.filter {
             $0.name == "mirrorOrientationChoice"
                 || $0.name == "mirrorRotationChoice"
@@ -3669,6 +3766,7 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            reflectChosenMirror(node, aligned: false)
             node.strokeColor = .systemRed
             errorFeedback()
             nudge(node)
@@ -3694,6 +3792,7 @@ import LearningCore
             attempts: attempts,
             responseTime: Date().timeIntervalSince(startedAt)
         )
+        reflectChosenMirror(node, aligned: true)
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorHallProgress(animated: true)
@@ -3817,8 +3916,8 @@ import LearningCore
         // badges or labels that compete with the actual spatial reasoning task.
         for (index, shape) in rotationEncounter.choices.enumerated() {
             let focusPool = SKShapeNode(ellipseOf: CGSize(width: 172, height: 34))
-            focusPool.fillColor = UIColor(red: 0.20, green: 0.29, blue: 0.48, alpha: 0.26)
-            focusPool.strokeColor = UIColor(red: 0.66, green: 0.73, blue: 0.98, alpha: 0.42)
+            focusPool.fillColor = UIColor(red: 0.31, green: 0.24, blue: 0.27, alpha: 0.18)
+            focusPool.strokeColor = UIColor(red: 0.84, green: 0.69, blue: 0.48, alpha: 0.28)
             focusPool.lineWidth = 2
             focusPool.position = CGPoint(
                 x: mirrorChoicePoints[index].x,
@@ -3864,6 +3963,7 @@ import LearningCore
                                support: attemptSupport, attempts: attempts,
                                responseTime: Date().timeIntervalSince(startedAt))
         guard correct else {
+            reflectChosenMirror(node, aligned: false)
             support = support == .independent ? .lightHint : .demonstration
             node.strokeColor = .systemRed
             nudge(node)
@@ -3889,6 +3989,9 @@ import LearningCore
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorRotationProgress()
+        // Restoration updates all receiver lamps. Apply the current successful
+        // reflection *afterwards*, including for a correct hinted attempt.
+        reflectChosenMirror(node, aligned: true)
         successFeedback()
         focusMoment(on: node.position)
         valkyrie.pose(.celebrate)
@@ -4778,19 +4881,31 @@ import LearningCore
 
         let xs: [CGFloat] = [555, 760, 965]
         for (index, step) in bugEncounter.shown.enumerated() {
+            // Each command is a bolted machine cassette seated in the
+            // clockwork rail, not a floating dark quiz card.
             let plate = ArtSystem.panel(
                 CGSize(width: 154, height: 120),
-                fill: UIColor(red: 0.10, green: 0.13, blue: 0.22, alpha: 0.97),
-                stroke: UIColor(red: 0.52, green: 0.70, blue: 0.82, alpha: 0.76),
-                radius: 28,
+                fill: UIColor(red: 0.30, green: 0.23, blue: 0.26, alpha: 0.98),
+                stroke: UIColor(red: 0.92, green: 0.74, blue: 0.45, alpha: 0.98),
+                radius: 15,
                 lineWidth: 4,
-                shadowAlpha: 0.28,
-                innerHighlight: UIColor(red: 0.66, green: 0.82, blue: 0.94, alpha: 0.10)
+                shadowAlpha: 0.26,
+                innerHighlight: UIColor(red: 0.91, green: 0.77, blue: 0.51, alpha: 0.10)
             )
             plate.position = CGPoint(x: xs[index], y: 355)
             plate.name = "bugStep\(index)"
             plate.zPosition = 850
             plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
+
+            for x in [CGFloat(-61), 61] {
+                let fastener = SKShapeNode(circleOfRadius: 5)
+                fastener.position = CGPoint(x: x, y: -50)
+                fastener.fillColor = UIColor(red: 0.96, green: 0.77, blue: 0.48, alpha: 1)
+                fastener.strokeColor = UIColor(red: 0.25, green: 0.19, blue: 0.19, alpha: 1)
+                fastener.lineWidth = 1.5
+                fastener.name = "decorativeBugCassetteBolt"
+                plate.addChild(fastener)
+            }
 
             let number = ArtSystem.label("\(index + 1)", size: 13)
             number.fontColor = UIColor(white: 1, alpha: 0.40)
@@ -4837,6 +4952,41 @@ import LearningCore
         tiko.pose(.interact)
     }
 
+    private func markBugMachineInspection(step index: Int, confirmedBreak: Bool) {
+        // Show which physical cassette Tiko is inspecting. This runs only
+        // AFTER a child makes a choice, so diagnosis is never leaked beforehand.
+        // The selected cassette either sinks into a jammed rail or lifts back
+        // out for another look; the lamp changes even in Reduced Motion.
+        for step in 0..<3 {
+            if let socket = childNode(withName: "bugStepSocket\(step)") as? SKShapeNode {
+                let visited = step <= index
+                socket.strokeColor = visited
+                    ? UIColor(red: 0.95, green: 0.75, blue: 0.44, alpha: 1)
+                    : UIColor(red: 0.48, green: 0.42, blue: 0.53, alpha: 0.6)
+            }
+            if step < 2 {
+                childNode(withName: "bugFlowArrow\(step)")?.alpha = step < index ? 1 : 0.35
+            }
+        }
+
+        if let cassette = childNode(withName: "bugStep\(index)") {
+            cassette.removeAction(forKey: "bugCassetteInspection")
+            let destination: CGFloat = confirmedBreak ? 341 : 367
+            if reducedMotion {
+                cassette.position.y = destination
+            } else {
+                cassette.run(.moveTo(y: destination, duration: 0.18),
+                             withKey: "bugCassetteInspection")
+            }
+        }
+        if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
+            core.fillColor = confirmedBreak
+                ? UIColor(red: 0.70, green: 0.29, blue: 0.23, alpha: 1)
+                : UIColor(red: 0.39, green: 0.24, blue: 0.29, alpha: 1)
+            core.glowWidth = confirmedBreak && !reducedMotion ? 5 : 0
+        }
+    }
+
     private func resolveBugStep(_ index: Int) {
         guard place == .bugLantern, bugAcceptingInput, !solved,
               let activeEncounter = bugEncounter,
@@ -4847,6 +4997,7 @@ import LearningCore
         attempts += 1
         let attemptSupport = support
         let correct = activeEncounter.isBrokenStep(index)
+        markBugMachineInspection(step: index, confirmedBreak: correct)
 
         guard correct else {
             _ = state.recordPuzzle(
@@ -4965,7 +5116,9 @@ import LearningCore
               let brokenPlate = childNode(withName: "bugStep\(index)") else { return }
 
         bugRepairReady = false
-        let targetPosition = brokenPlate.position
+        // Installing the replacement restores the cassette to its original
+        // rail height after the jammed component has visibly sunk.
+        let targetPosition = CGPoint(x: brokenPlate.position.x, y: 355)
         let externalLabel = childNode(withName: "bugStepLabel\(index)")
         let attemptSupport = support
 

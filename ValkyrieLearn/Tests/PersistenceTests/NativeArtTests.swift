@@ -2111,6 +2111,13 @@ import LearningCore
         }
 
         let encounter = try XCTUnwrap(state.nextPuzzleMirrorHallEncounter())
+        let source = try XCTUnwrap(scene.childNode(withName: "mirrorBeacon") as? SKShapeNode)
+        XCTAssertLessThan(source.frame.width, 100,
+                          "The light source must be a mounted lens, not a huge floating quiz disk.")
+        XCTAssertNotNil(scene.childNode(withName: "mirrorBeaconMount"))
+        XCTAssertNotNil(source.childNode(withName: "decorativeMirrorSourceLens"))
+        XCTAssertNil(scene.childNode(withName: "mirrorActiveRay"),
+                     "No reflection may reveal the right choice before the child responds.")
         let choice = try XCTUnwrap(
             scene.children
                 .compactMap { $0 as? SKShapeNode }
@@ -2119,11 +2126,22 @@ import LearningCore
                         && ($0.userData?["direction"] as? String) == encounter.target.rawValue
                 }
         )
+        XCTAssertNotNil(choice.childNode(withName: "decorativeMirrorPivotShaft"),
+                        "The scored mirror must be physically connected to its floor pedestal.")
         scene.valkyrie.position = CGPoint(x: choice.position.x - 180, y: 175)
         scene.handleTap(at: choice.position)
         try await waitUntil {
             state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count == 1
         }
+        let ray = try XCTUnwrap(scene.childNode(withName: "mirrorActiveRay") as? SKShapeNode)
+        let impact = try XCTUnwrap(scene.childNode(withName: "mirrorActiveImpact"))
+        XCTAssertEqual(ray.lineWidth, 8, accuracy: 0.001)
+        XCTAssertEqual(ray.alpha, 1, accuracy: 0.001,
+                       "Reduced Motion still needs an immediately visible physical reflection.")
+        XCTAssertEqual(impact.position.x, choice.position.x, accuracy: 0.001)
+        XCTAssertEqual(impact.position.y, 252, accuracy: 0.001,
+                       "A correct reflection should reach its actual floor receiver.")
+        try await capture(scene, in: view, name: "Puzzle-Palace-Mirror-Hall-Reflected-Receiver")
 
         let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
         XCTAssertEqual(evidence.count, 1)
@@ -2266,6 +2284,11 @@ import LearningCore
         try await waitUntil {
             state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 1
         }
+        let missImpact = try XCTUnwrap(scene.childNode(withName: "mirrorActiveImpact"))
+        XCTAssertEqual(missImpact.position.y, 306, accuracy: 0.001,
+                       "A wrong turn must cast a missed beam, not light the receiver.")
+        XCTAssertEqual(missImpact.alpha, 1, accuracy: 0.001)
+        try await capture(scene, in: view, name: "Puzzle-Palace-Mirror-Hall-Missed-Reflection")
         scene.valkyrie.position = CGPoint(x: wrong.position.x - 180, y: 175)
         scene.handleTap(at: wrong.position)
         try await waitUntil {
@@ -2277,6 +2300,8 @@ import LearningCore
         try await waitUntil {
             state.profile.progress(for: PuzzleSkills.mentalRotation).evidence.count == 3
         }
+        let repairedImpact = try XCTUnwrap(scene.childNode(withName: "mirrorActiveImpact"))
+        XCTAssertEqual(repairedImpact.position.y, 252, accuracy: 0.001)
         let evidence = state.profile.progress(for: PuzzleSkills.mentalRotation).evidence
         XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .incorrect, .correct])
         XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint, .demonstration])
@@ -2939,6 +2964,24 @@ import LearningCore
         )
         let debugEvidenceBeforeRepair = state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count
         bugLantern.handleTap(at: brokenNode.position)
+        XCTAssertEqual(brokenNode.position.y, 341, accuracy: 0.001,
+                       "Confirmed broken cassette must physically sink in its socket.")
+        let inspectedSocket = try XCTUnwrap(
+            bugLantern.childNode(withName: "bugStepSocket\(bugEncounter.brokenIndex)") as? SKShapeNode
+        )
+        // UIColor instances may compare unequal even when their extended-sRGB
+        // components match. Compare actual rendered channel values instead.
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        XCTAssertTrue(inspectedSocket.strokeColor.getRed(
+            &red, green: &green, blue: &blue, alpha: &alpha
+        ))
+        XCTAssertEqual(red, 0.95, accuracy: 0.002)
+        XCTAssertEqual(green, 0.75, accuracy: 0.002)
+        XCTAssertEqual(blue, 0.44, accuracy: 0.002)
+        XCTAssertEqual(alpha, 1, accuracy: 0.002)
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count,
             debugEvidenceBeforeRepair,
@@ -2958,6 +3001,8 @@ import LearningCore
             "Replacement command: \(bugEncounter.intended[bugEncounter.brokenIndex].title). Install it in step \(bugEncounter.brokenIndex + 1)."
         )
         bugLantern.handleTap(at: replacement.position)
+        XCTAssertEqual(replacement.position.y, 355, accuracy: 0.001,
+                       "Repaired cassette must seat flush with the drive rail.")
         XCTAssertEqual(
             state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.last?.outcome,
             .correct
