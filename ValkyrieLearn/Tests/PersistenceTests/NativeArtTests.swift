@@ -3797,6 +3797,264 @@ import LearningCore
         }
     }
 
+    func testRepairLabPolishedWorkbenchStagesClutchAndAssistedRetry() async throws {
+        // Inspect actual SpriteKit in 4:3; moving brass is functional visual
+        // feedback, never a newly scored or answer-revealing control.
+        for reduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = reduced
+            for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzleBugRepairAvailable)
+            state.travel(to: .bugLanternRepair)
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = reduced
+            view.presentScene(scene)
+            let encounter = try XCTUnwrap(
+                scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter
+            )
+            let machine = try XCTUnwrap(
+                scene.childNode(withName: "repairLanternFixture") as? SKShapeNode
+            )
+            XCTAssertNotNil(machine.path)
+            XCTAssertNotNil(machine.fillTexture,
+                            "The open workshop frame must source its texture from the approved room.")
+            XCTAssertNotNil(machine.childNode(withName: "decorativeRepairFlywheelBezel"))
+            let clutch = try XCTUnwrap(
+                machine.childNode(withName: "decorativeRepairClutch") as? SKShapeNode
+            )
+            XCTAssertEqual(clutch.position.x, 76, accuracy: 0.01)
+            XCTAssertNotNil(scene.childNode(withName: "decorativeRepairBenchFoot"))
+            XCTAssertNotNil(scene.childNode(withName: "decorativeRepairPowerBus"))
+            XCTAssertNotNil(scene.childNode(withName: "repairRail"))
+            XCTAssertNotNil(scene.childNode(withName: "repairDriveShaft"))
+            XCTAssertNotNil(scene.childNode(withName: "decorativeRepairWorkshopPlaque"))
+            XCTAssertNotNil(scene.childNode(withName: "decorativeRepairCuePlate"))
+            let grip = try XCTUnwrap(
+                scene.childNode(withName: "//decorativeRepairLeverGrip")
+            )
+            XCTAssertEqual(grip.position.y, 32, accuracy: 0.01)
+            for index in 0..<4 {
+                let gear = try XCTUnwrap(
+                    scene.childNode(withName: "repairStep\(index)") as? SKShapeNode
+                )
+                XCTAssertGreaterThanOrEqual(gear.calculateAccumulatedFrame().width, 110)
+                XCTAssertGreaterThanOrEqual(gear.calculateAccumulatedFrame().height, 110)
+                XCTAssertTrue(gear.isAccessibilityElement)
+                XCTAssertEqual(scene.targetName(at: gear.position),
+                               "repairStep\(index)",
+                               "Decorative spokes must not steal scored gear touches.")
+                XCTAssertNotNil(gear.childNode(withName: "decorativeRepairGearDepth"))
+                XCTAssertNotNil(gear.childNode(withName: "decorativeRepairGearSpokes"))
+                XCTAssertNotNil(gear.childNode(withName: "decorativeRepairGearInnerRim"))
+                XCTAssertNotNil(scene.childNode(withName: "decorativeRepairSocketPost\(index)"))
+                XCTAssertNotNil(scene.childNode(withName: "decorativeRepairSocketFoot\(index)"))
+                let mount = try XCTUnwrap(
+                    scene.childNode(withName: "decorativeRepairStageMount\(index)")
+                )
+                let lamp = try XCTUnwrap(
+                    mount.childNode(withName: "decorativeRepairStageLens\(index)")
+                        as? SKShapeNode
+                )
+                XCTAssertEqual(lamp.glowWidth, 0, accuracy: 0.01,
+                               "No stage can signal a correct answer before TEST.")
+            }
+            XCTAssertTrue(state.profile.progress(
+                for: PuzzleSkills.debugSequence
+            ).evidence.isEmpty)
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-RepairLab-Polished-Initial")
+            }
+
+            let candidates = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]
+            let wrongPair = try XCTUnwrap(
+                candidates.first { !encounter.isCorrectSwap($0) }
+            )
+            let initialFirst = scene.childNode(withName: "repairStep0")
+            let first = try XCTUnwrap(
+                scene.childNode(withName: "repairStep\(wrongPair[0])")
+            )
+            scene.handleTap(at: first.position)
+            let housing = try XCTUnwrap(
+                scene.childNode(withName: "repairSocketBase\(wrongPair[0])")
+            )
+            let clasp = try XCTUnwrap(
+                housing.childNode(withName: "decorativeRepairSocketClaspRight")
+            )
+            try await waitUntil(timeout: 2) { abs(clasp.position.x - 67) < 0.5 }
+            let second = try XCTUnwrap(
+                scene.childNode(withName: "repairStep\(wrongPair[1])")
+            )
+            scene.handleTap(at: second.position)
+            let lever = try XCTUnwrap(scene.childNode(withName: "repairFix"))
+            XCTAssertTrue(lever.isAccessibilityElement)
+            XCTAssertGreaterThanOrEqual(lever.calculateAccumulatedFrame().width, 80)
+            scene.handleTap(at: lever.position)
+            try await waitUntil(timeout: 4) {
+                state.profile.progress(for: PuzzleSkills.debugSequence).evidence.count == 1
+                    && abs(clutch.position.x - 45) < 0.8
+                    && abs(grip.position.y - 6) < 0.8
+            }
+            let evidenceAfterWrong = state.profile.progress(
+                for: PuzzleSkills.debugSequence
+            ).evidence
+            XCTAssertEqual(evidenceAfterWrong.last?.outcome, .incorrect)
+            XCTAssertEqual(evidenceAfterWrong.last?.supportLevel, .independent)
+            XCTAssertFalse(state.puzzleBugRepairComplete)
+            let rotor = try XCTUnwrap(
+                scene.childNode(withName: "//repairMachineRotor")
+            )
+            if reduced {
+                XCTAssertEqual(rotor.zRotation, -.pi / 10, accuracy: 0.01)
+                scene.speed = 0
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-RepairLab-Polished-Jammed")
+                scene.speed = 1
+            }
+
+            try await waitUntil(timeout: 6) {
+                scene.childNode(withName: "repairStep0") != nil
+                    && scene.childNode(withName: "repairStep0") !== initialFirst
+                    && (scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter)?.id
+                        != encounter.id
+            }
+            XCTAssertEqual(clutch.position.x, 76, accuracy: 0.8,
+                           "Every fresh retry must clear the previous blocked flywheel.")
+            XCTAssertEqual(grip.position.y, 32, accuracy: 0.01,
+                           "Every fresh challenge must reset the physical TEST lever.")
+            XCTAssertEqual(state.profile.progress(
+                for: PuzzleSkills.debugSequence
+            ).evidence.count, 1)
+
+            let retry = try XCTUnwrap(
+                scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter
+            )
+            for index in retry.swapIndices {
+                let gear = try XCTUnwrap(scene.childNode(withName: "repairStep\(index)"))
+                scene.handleTap(at: gear.position)
+            }
+            scene.handleTap(at: lever.position)
+            try await waitUntil(timeout: 6) {
+                state.profile.progress(for: PuzzleSkills.debugSequence).evidence.count == 2
+                    && abs(clutch.position.x - 86) < 0.8
+            }
+            for index in 0..<4 {
+                let lamp = try XCTUnwrap(
+                    scene.childNode(withName: "//decorativeRepairStageLens\(index)")
+                        as? SKShapeNode
+                )
+                var red: CGFloat = 0, green: CGFloat = 0
+                var blue: CGFloat = 0, alpha: CGFloat = 0
+                XCTAssertTrue(lamp.fillColor.getRed(
+                    &red, green: &green, blue: &blue, alpha: &alpha
+                ))
+                XCTAssertGreaterThan(green, red,
+                                     "Every linked stage must have physical restored power.")
+            }
+            let evidence = state.profile.progress(for: PuzzleSkills.debugSequence).evidence
+            XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint])
+            XCTAssertEqual(evidence.last?.encounterID, retry.id)
+            XCTAssertFalse(state.puzzleBugRepairComplete,
+                           "One assisted correction cannot complete the full repair catalog.")
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-RepairLab-Polished-Repaired")
+            }
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
+    func testRepairLabRestoredClockworkKeepsPoweredClutchWithoutNewEvidence() async throws {
+        let state = try AppState(context: ModelContext(
+            try LearningStore.container(inMemory: true)
+        ))
+        state.reducedMotion = true
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            _ = state.recordPuzzle(family[0], outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            _ = state.recordPuzzle(family[0], outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            _ = state.recordPuzzle(family[0], outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        for family in PuzzlePalaceEncounterCatalog.bugRepairFamilies {
+            _ = state.recordPuzzle(family[0], outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzleBugRepairComplete)
+        let before = state.profile.progress(for: PuzzleSkills.debugSequence).evidence.count
+        state.travel(to: .bugLanternRepair)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        let machine = try XCTUnwrap(
+            scene.childNode(withName: "repairLanternFixture")
+        )
+        let clutch = try XCTUnwrap(machine.childNode(
+            withName: "decorativeRepairClutch"
+        ))
+        XCTAssertEqual(clutch.position.x, 86, accuracy: 0.01)
+        for index in 0..<4 {
+            let base = try XCTUnwrap(
+                scene.childNode(withName: "repairSocketBase\(index)")
+            )
+            XCTAssertNotNil(base.childNode(withName: "repairCompletedGear\(index)"))
+            let lamp = try XCTUnwrap(
+                scene.childNode(withName: "//decorativeRepairStageLens\(index)")
+                    as? SKShapeNode
+            )
+            var red: CGFloat = 0, green: CGFloat = 0
+            var blue: CGFloat = 0, alpha: CGFloat = 0
+            XCTAssertTrue(lamp.fillColor.getRed(
+                &red, green: &green, blue: &blue, alpha: &alpha
+            ))
+            XCTAssertGreaterThan(green, red)
+        }
+        XCTAssertNil(scene.childNode(withName: "repairFix"))
+        XCTAssertNil(scene.childNode(withName: "repairReset"))
+        XCTAssertNotNil(scene.childNode(withName: "repairHome"))
+        XCTAssertEqual(state.profile.progress(
+            for: PuzzleSkills.debugSequence
+        ).evidence.count, before, "Restored room appearance cannot earn fresh learning evidence.")
+        try await capture(scene, in: view,
+                          name: "Puzzle-Palace-4x3-RepairLab-Polished-Restored")
+        scene.willLeave()
+        view.presentScene(nil)
+        window.isHidden = true
+    }
+
     func testRepairLabWrongSwapPhysicallyStallsAndRetryRemainsAssisted() async throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
