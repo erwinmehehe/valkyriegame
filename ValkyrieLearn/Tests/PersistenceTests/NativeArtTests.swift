@@ -1480,6 +1480,15 @@ import LearningCore
                 XCTAssertEqual(scene.targetName(at: source.position), source.name)
                 scene.handleTap(at: source.position)
             }
+            if reduced {
+                XCTAssertFalse(scene.children.contains {
+                    $0.name == "decorativeCommandGearTransfer"
+                }, "Reduced Motion uses an immediate, stable socket state.")
+            } else {
+                XCTAssertTrue(scene.children.contains {
+                    $0.name == "decorativeCommandGearTransfer"
+                }, "Source gears must visibly feed their assigned sockets.")
+            }
             scene.handleTap(at: CGPoint(x: 1100, y: 295))
             try await waitUntil(timeout: 4) {
                 let red = firstRelay.fillColor.cgColor.components?.first ?? 0
@@ -4064,6 +4073,28 @@ import LearningCore
                 }
                 XCTAssertNotNil(restored.childNode(withName: "mirrorActiveRay"),
                                 "Restored light should still reach its receiver.")
+            }
+            if world == .commandGears {
+                let output = try XCTUnwrap(
+                    restored.childNode(withName: "decorativeCommandOutputMachine")
+                )
+                let gate = try XCTUnwrap(output.childNode(
+                    withName: "decorativeCommandGateShutter"
+                ))
+                XCTAssertEqual(gate.position.y, 25, accuracy: 0.01,
+                               "On revisit, the restored engine must keep its physical gate open.")
+                for index in 0..<3 {
+                    let relay = try XCTUnwrap(output.childNode(
+                        withName: "decorativeCommandRelay\(index)"
+                    ) as? SKShapeNode)
+                    var red: CGFloat = 0, green: CGFloat = 0
+                    var blue: CGFloat = 0, alpha: CGFloat = 0
+                    XCTAssertTrue(relay.fillColor.getRed(
+                        &red, green: &green, blue: &blue, alpha: &alpha
+                    ))
+                    XCTAssertGreaterThan(green, red,
+                                         "All three command stages must remain powered on revisit.")
+                }
             }
             try await capture(restored, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Restored")
