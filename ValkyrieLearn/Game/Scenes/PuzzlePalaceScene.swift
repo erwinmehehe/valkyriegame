@@ -3419,7 +3419,10 @@ import LearningCore
         innerGlass.fillColor = UIColor(red: 0.38, green: 0.69, blue: 0.92, alpha: 0.11)
         innerGlass.strokeColor = UIColor(white: 1.0, alpha: 0.24)
         innerGlass.lineWidth = 2
-        innerGlass.name = "decorativeMirrorStationGlass"
+        // The captive reflective pane pivots inside the stationary brass frame.
+        // Keep the scored arrow/shape fixed so a tilt never gives away or
+        // changes the underlying orientation/rotation answer.
+        innerGlass.name = "decorativeMirrorTurningPane"
         mirror.addChild(innerGlass)
 
         let shine = SKShapeNode(rectOf: CGSize(width: 10, height: 92), cornerRadius: 5)
@@ -3865,7 +3868,55 @@ import LearningCore
         tiko.pose(.interact)
     }
 
+    private func resetRejectedMirrorFeedback(except selected: SKShapeNode) {
+        // A retry should not leave an unrelated mirror marked red after the
+        // child repairs the light route. The glass and stationary frame reset,
+        // but the previously recorded incorrect/assisted evidence does not.
+        for node in children {
+            guard node !== selected,
+                  let mirror = node as? SKShapeNode,
+                  mirror.name == "mirrorOrientationChoice" || mirror.name == "mirrorRotationChoice" else {
+                continue
+            }
+            mirror.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.30, alpha: 0.90)
+            mirror.glowWidth = 0
+            guard let pane = mirror.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode else {
+                continue
+            }
+            pane.removeAction(forKey: "mirrorPanePivot")
+            pane.strokeColor = UIColor(white: 1.0, alpha: 0.24)
+            if reducedMotion {
+                pane.xScale = 1
+                pane.zRotation = 0
+            } else {
+                pane.run(.group([
+                    .scaleX(to: 1, duration: 0.22),
+                    .rotate(toAngle: 0, duration: 0.22)
+                ]), withKey: "mirrorPanePivot")
+            }
+        }
+    }
+
     private func reflectChosenMirror(_ mirror: SKShapeNode, aligned: Bool) {
+        // Move only the captive glass: the outer fixture, scored direction,
+        // accessible hit frame and character path remain anchored.
+        if let pane = mirror.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode {
+            pane.removeAction(forKey: "mirrorPanePivot")
+            pane.strokeColor = aligned
+                ? UIColor(red: 0.45, green: 0.94, blue: 0.83, alpha: 1)
+                : UIColor(red: 1.0, green: 0.58, blue: 0.44, alpha: 1)
+            let tilt: CGFloat = aligned ? -.pi / 18 : .pi / 10
+            let facing: CGFloat = aligned ? 0.92 : 0.62
+            if reducedMotion {
+                pane.xScale = facing
+                pane.zRotation = tilt
+            } else {
+                pane.run(.group([
+                    .scaleX(to: facing, duration: 0.22),
+                    .rotate(toAngle: tilt, duration: 0.22)
+                ]), withKey: "mirrorPanePivot")
+            }
+        }
         // A reflection appears only AFTER the child's answer is scored.
         // No ray reveals which mirror matches the target in advance.
         childNode(withName: "mirrorActiveRay")?.removeFromParent()
@@ -3989,6 +4040,7 @@ import LearningCore
             attempts: attempts,
             responseTime: Date().timeIntervalSince(startedAt)
         )
+        resetRejectedMirrorFeedback(except: node)
         reflectChosenMirror(node, aligned: true)
         node.strokeColor = .systemGreen
         node.glowWidth = 16
@@ -4183,6 +4235,7 @@ import LearningCore
         }
         solved = true
         clearAttentionCue()
+        resetRejectedMirrorFeedback(except: node)
         node.strokeColor = .systemGreen
         node.glowWidth = 16
         refreshMirrorRotationProgress()
@@ -4368,7 +4421,10 @@ import LearningCore
         // companion to the walkable lane before a new map becomes tappable,
         // otherwise he obscures the next challenge's actual tiles.
         let companionStart = CGPoint(x: 305, y: 190)
-        if tiko.position.y > walkable.maxY {
+        // A failed safe-prefix scout can stop on the lower row (inside the
+        // actor-lane Y range) but still be over the stone puzzle. Return Tiko
+        // whenever he left his companion station, not only above the lane.
+        if tiko.position.y > walkable.maxY || tiko.position.x > 420 {
             pathAcceptingInput = false
             if reducedMotion {
                 tiko.position = companionStart
@@ -4376,9 +4432,15 @@ import LearningCore
             } else {
                 tiko.run(.sequence([
                     .fadeOut(withDuration: 0.12),
-                    .run { [weak self] in self?.tiko.position = companionStart },
-                    .fadeIn(withDuration: 0.12),
-                    .run { [weak self] in self?.pathAcceptingInput = true }
+                    .run { [weak self] in
+                        guard let self else { return }
+                        self.tiko.position = companionStart
+                        // The new map is safe to tap as soon as Tiko has left
+                        // the floor stones. Do not reject a fast child's next
+                        // choice while an unrelated fade-in finishes.
+                        self.pathAcceptingInput = true
+                    },
+                    .fadeIn(withDuration: 0.12)
                 ]), withKey: "pathCompanionReset")
             }
         } else {
@@ -4521,6 +4583,57 @@ import LearningCore
         grid.addChild(trace)
     }
 
+    private func animateStoppedPathScout(
+        along safeTiles: [PuzzleTile],
+        encounter: PuzzlePathEncounter,
+        hint: String,
+        completion: @escaping () -> Void
+    ) {
+        let tileSize: CGFloat = 66
+        let originX = 760 - CGFloat(encounter.gridWidth - 1) * tileSize / 2
+        let originY = 294 - CGFloat(encounter.gridHeight - 1) * tileSize / 2
+        // Walk only the unique, in-bounds, unbroken prefix. Tiko cannot
+        // advance onto a wrong route's cracked stone or step off the board.
+        let steps: [SKAction] = safeTiles.enumerated().map { index, tile in
+            .move(
+                to: CGPoint(x: originX + CGFloat(tile.x) * tileSize,
+                            y: originY + CGFloat(tile.y) * tileSize),
+                duration: reducedMotion ? 0 : (index == 0 ? 0.23 : 0.18)
+            )
+        }
+        tiko.removeAction(forKey: "pathFailedScout")
+        tiko.run(.sequence(steps + [
+            .run { [weak self] in
+                guard let self else { return }
+                self.tiko.pose(.react)
+                self.instruction.text = hint
+                if let grid = self.childNode(withName: "pathGrid"),
+                   let lastSafe = safeTiles.last {
+                    grid.childNode(withName: "pathSafeStopMarker")?.removeFromParent()
+                    let marker = SKShapeNode(circleOfRadius: 19)
+                    marker.name = "pathSafeStopMarker"
+                    marker.fillColor = UIColor(red: 0.40, green: 0.24, blue: 0.18, alpha: 1)
+                    marker.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.52, alpha: 1)
+                    marker.lineWidth = 4
+                    marker.position = CGPoint(
+                        x: originX + CGFloat(lastSafe.x) * tileSize - grid.position.x,
+                        y: originY + CGFloat(lastSafe.y) * tileSize - grid.position.y + 32
+                    )
+                    marker.zPosition = 22
+                    let stopGlyph = ArtSystem.label("Ⅱ", size: 22)
+                    stopGlyph.name = "pathSafeStopGlyph"
+                    stopGlyph.fontColor = UIColor(red: 1, green: 0.92, blue: 0.67, alpha: 1)
+                    marker.addChild(stopGlyph)
+                    grid.addChild(marker)
+                }
+            },
+            // The failed plan stays visible long enough to understand before
+            // the new map replaces it; neither mode grants success evidence.
+            .wait(forDuration: reducedMotion ? 0.72 : 0.88),
+            .run(completion)
+        ]), withKey: "pathFailedScout")
+    }
+
     private func resolvePathChoice(_ index: Int) {
         guard place == .pathTiles, pathAcceptingInput, let activeEncounter = pathEncounter,
               activeEncounter.choices.indices.contains(index) else { return }
@@ -4537,16 +4650,28 @@ import LearningCore
 
         guard correct else {
             support = support == .independent ? .lightHint : .strongHint
-            instruction.text = support == .lightHint
-                ? "That trail reaches a broken stone. Look for a different way."
-                : "Trace from the round start stone to the star. Keep off the cracked stones."
-            tiko.pose(.react)
+            let safeTiles = activeEncounter.traversablePrefix(for: index)
+            let firstUnsafe = attemptedRoute.dropFirst(safeTiles.count).first
+            let hint: String
+            if let firstUnsafe, activeEncounter.blocked.contains(firstUnsafe) {
+                hint = support == .lightHint
+                    ? "Tiko stopped before a cracked stone. Find another path."
+                    : "Follow each step from the round stone. Keep clear of cracked stones."
+            } else if let firstUnsafe, !activeEncounter.isInBounds(firstUnsafe) {
+                hint = "That trail leaves the floor. Find a path that stays on the stones."
+            } else if firstUnsafe != nil {
+                hint = "That trail doubles back. Try a route with no repeated stones."
+            } else {
+                hint = "Tiko stopped short of the star. Find a trail that reaches the goal."
+            }
             valkyrie.pose(.react)
+            // Wait for Tiko's physical stop and the visible stop marker
+            // before showing another map. Wrong attempts remain incorrect,
+            // and the next attempt remains assisted.
             pathEncounter = state.nextPuzzlePathTilesEncounter()
-            run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.65 : 0.85),
-                .run { [weak self] in self?.buildPathTilesEncounter(resetSupport: false) }
-            ]))
+            animateStoppedPathScout(along: safeTiles, encounter: activeEncounter, hint: hint) { [weak self] in
+                self?.buildPathTilesEncounter(resetSupport: false)
+            }
             return
         }
 

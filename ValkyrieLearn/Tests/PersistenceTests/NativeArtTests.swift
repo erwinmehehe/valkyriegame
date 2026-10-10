@@ -1425,6 +1425,115 @@ import LearningCore
     }
 
 
+    func testPathTilesWrongPlanMakesTikoStopSafelyBeforeAssistedRetry() async throws {
+        for motionReduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = motionReduced
+            for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzlePathTilesAvailable)
+            state.travel(to: .pathTiles)
+
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = motionReduced
+            view.presentScene(scene)
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzlePathEncounter)
+            let wrong = try XCTUnwrap(active.choices.indices.first {
+                !active.isValidChoice($0)
+                    && active.traversablePrefix(for: $0).count > 1
+                    && active.traversablePrefix(for: $0).count < active.route(for: $0).count
+            })
+            let safe = active.traversablePrefix(for: wrong)
+            let lastSafe = try XCTUnwrap(safe.last)
+            let firstUnsafe = try XCTUnwrap(active.route(for: wrong).dropFirst(safe.count).first)
+            XCTAssertFalse(active.blocked.contains(lastSafe))
+            XCTAssertTrue(active.blocked.contains(firstUnsafe) || !active.isInBounds(firstUnsafe))
+            let initialGrid = try XCTUnwrap(scene.childNode(withName: "pathGrid"))
+            let lastStone = try XCTUnwrap(
+                initialGrid.childNode(withName: "pathStone\(lastSafe.x)_\(lastSafe.y)")
+            )
+            let ys: [CGFloat] = [325, 245, 165]
+            scene.handleTap(at: CGPoint(x: 1100, y: ys[wrong]))
+            try await waitUntil(timeout: 6) {
+                initialGrid.childNode(withName: "pathSafeStopMarker") != nil
+            }
+
+            XCTAssertEqual(scene.tiko.position.x, initialGrid.position.x + lastStone.position.x,
+                           accuracy: 1)
+            XCTAssertEqual(scene.tiko.position.y, initialGrid.position.y + lastStone.position.y,
+                           accuracy: 1,
+                           "Tiko must stop on the last walkable stone, not the blocked tile.")
+            XCTAssertNotNil(initialGrid.childNode(withName: "pathRouteTrace"))
+            XCTAssertNotNil(initialGrid.childNode(withName: "pathSafeStopMarker"))
+            XCTAssertNil(scene.childNode(withName: "pathNext"))
+            XCTAssertFalse(state.puzzlePathTilesComplete)
+            let wrongEvidence = state.profile.progress(for: PuzzleSkills.pathPlanning).evidence
+            XCTAssertEqual(wrongEvidence.count, 1)
+            XCTAssertEqual(wrongEvidence.first?.outcome, .incorrect)
+            XCTAssertEqual(wrongEvidence.first?.supportLevel, .independent)
+
+            // Freeze the actual SpriteKit stopped state before its planned
+            // auto-reset; this is an authentic native 4:3 screenshot.
+            scene.speed = 0
+            try await capture(
+                scene, in: view,
+                name: motionReduced
+                    ? "Puzzle-Palace-4x3-PathTiles-UnsafeStop-ReducedMotion"
+                    : "Puzzle-Palace-4x3-PathTiles-UnsafeStop-Animated"
+            )
+            scene.speed = 1
+
+            try await waitUntil(timeout: 6) {
+                guard let nextGrid = scene.childNode(withName: "pathGrid") else { return false }
+                return nextGrid !== initialGrid
+            }
+            XCTAssertNil(scene.childNode(withName: "//pathSafeStopMarker"),
+                         "A new map must not inherit a rejected route's stop marker.")
+            try await waitUntil(timeout: 3) { scene.tiko.position.x <= 420 }
+            XCTAssertLessThanOrEqual(scene.tiko.position.x, 420,
+                                     "Tiko must leave the floor map before the next planning choice.")
+            XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).evidence.count, 1)
+            let retry = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzlePathEncounter)
+            XCTAssertNotEqual(retry.id, active.id)
+            let answer = try XCTUnwrap(retry.choices.indices.first(where: retry.isValidChoice))
+            scene.handleTap(at: CGPoint(x: 1100, y: ys[answer]))
+            try await waitUntil(timeout: 4) {
+                state.profile.progress(for: PuzzleSkills.pathPlanning).evidence.count == 2
+            }
+            let evidence = state.profile.progress(for: PuzzleSkills.pathPlanning).evidence
+            XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(evidence.last?.supportLevel, .lightHint,
+                           "Retry after a failed route must never award independent mastery.")
+            XCTAssertFalse(state.puzzlePathTilesComplete)
+
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
     func testCommandGearsPhysicalRunStallsOnFirstWrongStepThenOpensGate() async throws {
         // End-to-end real SpriteKit 4:3 regression: a failed plan cannot
         // open a gate, and a later assisted plan cannot earn independence.
@@ -2432,6 +2541,98 @@ import LearningCore
         XCTAssertEqual(switchEvidence.count, 1)
         XCTAssertEqual(switchEvidence.first?.encounterID, switchEncounter.id)
         XCTAssertEqual(switchEvidence.first?.supportLevel, .independent)
+    }
+
+    func testMirrorHallRejectedGlassPivotsThenClearsOnAssistedRepair() async throws {
+        for motionReduced in [true, false] {
+            let state = try AppState(
+                context: ModelContext(try LearningStore.container(inMemory: true))
+            )
+            state.reducedMotion = motionReduced
+            for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzleMirrorHallAvailable)
+            state.travel(to: .mirrorHall)
+
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = motionReduced
+            view.presentScene(scene)
+
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleOrientationEncounter)
+            let mirrors = scene.children.compactMap { $0 as? SKShapeNode }
+                .filter { $0.name == "mirrorOrientationChoice" }
+            let wrong = try XCTUnwrap(mirrors.first {
+                ($0.userData?["direction"] as? String) != active.target.rawValue
+            })
+            let correct = try XCTUnwrap(mirrors.first {
+                ($0.userData?["direction"] as? String) == active.target.rawValue
+            })
+            let wrongGlass = try XCTUnwrap(
+                wrong.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode
+            )
+            let correctGlass = try XCTUnwrap(
+                correct.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode
+            )
+            XCTAssertNil(scene.childNode(withName: "mirrorActiveRay"),
+                         "An untouched mirror must not reveal the right answer.")
+            XCTAssertEqual(wrongGlass.xScale, 1, accuracy: 0.01)
+            XCTAssertEqual(scene.targetName(at: wrong.position), "mirrorOrientationChoice")
+
+            scene.valkyrie.position = CGPoint(x: wrong.position.x - 235, y: 175)
+            scene.handleTap(at: wrong.position)
+            try await waitUntil(timeout: 5) {
+                state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count == 1
+            }
+            try await waitUntil(timeout: 3) {
+                abs(wrongGlass.xScale - 0.62) < 0.02
+            }
+            XCTAssertEqual(wrongGlass.zRotation, .pi / 10, accuracy: 0.02)
+            let missedImpact = try XCTUnwrap(scene.childNode(withName: "mirrorActiveImpact"))
+            XCTAssertEqual(missedImpact.position.y, 306, accuracy: 0.01)
+            XCTAssertEqual(
+                state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.first?.outcome,
+                .incorrect
+            )
+
+            scene.valkyrie.position = CGPoint(x: correct.position.x - 235, y: 175)
+            scene.handleTap(at: correct.position)
+            try await waitUntil(timeout: 5) {
+                state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count == 2
+            }
+            try await waitUntil(timeout: 3) {
+                abs(wrongGlass.xScale - 1) < 0.02 && abs(correctGlass.xScale - 0.92) < 0.02
+            }
+            XCTAssertEqual(wrongGlass.zRotation, 0, accuracy: 0.02)
+            XCTAssertNotEqual(wrong.strokeColor, .systemRed,
+                              "A solved room cannot leave the earlier mirror falsely rejected.")
+            XCTAssertEqual(correctGlass.zRotation, -.pi / 18, accuracy: 0.02)
+            let repairedImpact = try XCTUnwrap(scene.childNode(withName: "mirrorActiveImpact"))
+            XCTAssertEqual(repairedImpact.position.y, 252, accuracy: 0.01)
+            XCTAssertEqual(repairedImpact.position.x, correct.position.x, accuracy: 0.01)
+            XCTAssertNotNil(scene.childNode(withName: "mirrorActiveRay"))
+            let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
+            XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint])
+            XCTAssertEqual(evidence.last?.encounterID, active.id)
+            XCTAssertFalse(state.puzzleMirrorHallComplete,
+                           "Assisted recovery cannot bypass the independent progression gate.")
+            if motionReduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-Mirror-Hall-Physical-Assisted-Repair")
+            }
+
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
     }
 
     func testMirrorHallRecordsSpatialOrientationThroughLiveMirrorChoice() async throws {
