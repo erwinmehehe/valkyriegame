@@ -93,6 +93,8 @@ To create an editable, 76-row CSV for a human teacher review, run:
 python3 scripts/verify_math_teacher_matrix.py --export-csv math-teacher-review.csv
 ```
 
+The GitHub **native-validation** job also publishes a downloadable artifact called `math-76-skill-review-unapproved`, containing the fresh CSV for educator handoff. It is intentionally an unsigned starter worksheet, not a reviewed curriculum report.
+
 The export includes actual Swift symbols/IDs and the **existing** worksheet verdicts. It leaves independent human evidence fields blank for: official classification and sources (DepEd/Singapore/internal), competency excerpts, observed child actions and pre-reader language, untouched/incomplete/wrong/correct/hinted evidence, immutability and offline restore, native screenshot+commit SHA, reviewer identity, review date and pedagogical decision. The command refuses to overwrite an existing CSV so it cannot accidentally erase signed teacher notes. Store completed evidence and sign-offs separately from the generated starter worksheet.
 
 **Important:** A green CI result means only that the unreviewed inventory matches code. It does not mean 76 skills have passed pedagogy review, that there is authoritative competency alignment, that a physical iPad has passed, or that the artwork is approved.
