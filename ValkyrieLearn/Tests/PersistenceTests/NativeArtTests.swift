@@ -1534,6 +1534,137 @@ import LearningCore
         }
     }
 
+    func testBugLanternMachineShowsWorkingInspectionJamAndAssistedRepair() async throws {
+        // The actual 4:3 native scene must tell a true physical story while
+        // preserving the single-step debugging assessment and hint evidence.
+        for reduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = reduced
+            for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzleBugLanternAvailable)
+            state.travel(to: .bugLantern)
+
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = reduced
+            view.presentScene(scene)
+            let drive = try XCTUnwrap(
+                scene.childNode(withName: "decorativeBugLanternDrive") as? SKShapeNode
+            )
+            XCTAssertNotNil(drive.path, "The machine must connect physically to its lantern.")
+            let pistons = try (0..<3).map { index in
+                try XCTUnwrap(scene.childNode(
+                    withName: "decorativeBugPowerPiston\(index)"
+                ) as? SKShapeNode)
+            }
+            XCTAssertEqual(pistons.count, 3)
+            for piston in pistons {
+                XCTAssertEqual(piston.position.y, 438, accuracy: 0.01)
+                XCTAssertNotNil(piston.childNode(withName: "decorativeBugPowerGlass"))
+            }
+            let firstEncounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleBugEncounter)
+            let wrongIndex = try XCTUnwrap(firstEncounter.shown.indices.first {
+                !firstEncounter.isBrokenStep($0)
+            })
+            let working = try XCTUnwrap(
+                scene.childNode(withName: "bugStep\(wrongIndex)") as? SKShapeNode
+            )
+            let originalFirst = scene.childNode(withName: "bugStep0")
+            XCTAssertEqual(scene.targetName(at: working.position), working.name)
+            scene.handleTap(at: working.position)
+            try await waitUntil(timeout: 3) {
+                abs(pistons[wrongIndex].position.y - 450) < 0.5
+            }
+            for index in 0..<3 where index != wrongIndex {
+                XCTAssertEqual(pistons[index].position.y, 438, accuracy: 0.5,
+                               "Inspecting one working part cannot imply power passed an unknown fault.")
+            }
+            var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+            XCTAssertTrue(working.strokeColor.getRed(
+                &red, green: &green, blue: &blue, alpha: &alpha
+            ))
+            XCTAssertGreaterThan(green, 0.75,
+                                 "A working cassette must not be falsely painted as broken.")
+            XCTAssertNil(scene.childNode(withName: "bugReplacement"))
+            let wrongEvidence = state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence
+            XCTAssertEqual(wrongEvidence.count, 1)
+            XCTAssertEqual(wrongEvidence.first?.outcome, .incorrect)
+            XCTAssertEqual(wrongEvidence.first?.supportLevel, .independent)
+            XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+            if reduced {
+                scene.speed = 0
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-BugLantern-Working-Inspection")
+                scene.speed = 1
+            }
+
+            try await waitUntil(timeout: 5) {
+                let replacementFirst = scene.childNode(withName: "bugStep0")
+                return replacementFirst != nil && replacementFirst !== originalFirst
+            }
+            for piston in pistons {
+                XCTAssertEqual(piston.position.y, 438, accuracy: 1,
+                               "Retry starts with neutral machinery, not a leaked prior answer.")
+            }
+            let retry = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleBugEncounter)
+            XCTAssertNotEqual(retry.id, firstEncounter.id)
+            let broken = try XCTUnwrap(
+                scene.childNode(withName: "bugStep\(retry.brokenIndex)")
+            )
+            scene.handleTap(at: broken.position)
+            try await waitUntil(timeout: 6) {
+                scene.childNode(withName: "bugReplacement") != nil
+                    && abs(pistons[retry.brokenIndex].position.y - 424) < 0.5
+            }
+            XCTAssertEqual(broken.position.y, 341, accuracy: 1)
+            XCTAssertNil(scene.childNode(withName: "bugNext"))
+            XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count,
+                           1, "Finding a fault without replacing it is not a completed answer.")
+            if reduced {
+                scene.speed = 0
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-BugLantern-Cassette-Jammed")
+                scene.speed = 1
+            }
+            let replacement = try XCTUnwrap(scene.childNode(withName: "bugReplacement"))
+            scene.handleTap(at: replacement.position)
+            try await waitUntil(timeout: 5) {
+                state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence.count == 2
+            }
+            try await waitUntil(timeout: 3) {
+                pistons.allSatisfy { abs($0.position.y - 450) < 0.5 }
+            }
+            let evidence = state.profile.progress(for: PuzzleSkills.debugSingleStep).evidence
+            XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint])
+            XCTAssertEqual(evidence.last?.encounterID, retry.id)
+            XCTAssertFalse(state.puzzleBugLanternComplete,
+                           "Assisted repair cannot confer independent mastery.")
+            XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-BugLantern-Chain-Repaired")
+            }
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
     func testTikoReturnsToTheWalkableLaneBetweenPathTileMaps() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let view = SKView(frame: window.bounds)
@@ -4066,6 +4197,20 @@ import LearningCore
                 }
                 XCTAssertNotNil(restored.childNode(withName: "mirrorActiveRay"),
                                 "Restored light should still reach its receiver.")
+            }
+            if world == .bugLantern {
+                let drive = try XCTUnwrap(
+                    restored.childNode(withName: "decorativeBugLanternDrive") as? SKShapeNode
+                )
+                XCTAssertNotNil(drive.path,
+                                "Restored Bug Lantern must remain wired to its live sockets.")
+                for index in 0..<3 {
+                    let piston = try XCTUnwrap(restored.childNode(
+                        withName: "decorativeBugPowerPiston\(index)"
+                    ) as? SKShapeNode)
+                    XCTAssertEqual(piston.position.y, 450, accuracy: 0.01,
+                                   "Completed Bug Lantern must keep all three machine pistons raised.")
+                }
             }
             try await capture(restored, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Restored")
