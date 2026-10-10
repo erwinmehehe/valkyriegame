@@ -2033,6 +2033,126 @@ import LearningCore
         }
     }
 
+    func testResortVaultPhysicallyChangesReceiversAndKeepsTwoPassEvidence() async throws {
+        // Cover shape -> marks and marks -> shape using the actual room, not a
+        // second encounter selection that might disagree with visible tokens.
+        for reverse in [false, true] {
+            let state = try AppState(
+                context: ModelContext(try LearningStore.container(inMemory: true))
+            )
+            state.reducedMotion = true
+            for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                       attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                       attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                       attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                       attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.ruleSwitching {
+                _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent,
+                                       attempts: 1, responseTime: 1)
+            }
+            if reverse {
+                _ = state.recordPuzzle(
+                    PuzzlePalaceEncounterCatalog.changedRuleResort[0],
+                    outcome: .correct, support: .independent,
+                    attempts: 1, responseTime: 1
+                )
+            }
+            XCTAssertTrue(state.puzzleResortAvailable)
+            state.travel(to: .resortVault)
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = true
+            view.presentScene(scene)
+
+            let encounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleResortEncounter)
+            XCTAssertNotEqual(encounter.initialRule, encounter.changedRule)
+            let originalEvidenceCount = state.profile.progress(for: encounter.skillID).evidence.count
+            let console = try XCTUnwrap(scene.childNode(withName: "resortRuleDial"))
+            XCTAssertEqual(console.position.y, 277, accuracy: 0.01,
+                           "The rule machine must be on the floor, not covering the painted vault door.")
+            XCTAssertNotNil(scene.childNode(withName: "resortRuleConsoleBase"))
+
+            let left = try XCTUnwrap(scene.childNode(withName: "resortLeftPedestal"))
+            let right = try XCTUnwrap(scene.childNode(withName: "resortRightPedestal"))
+            let leftGate = try XCTUnwrap(
+                left.childNode(withName: "resortLeftPedestalRuleGateLeft")
+            )
+            let rightGate = try XCTUnwrap(
+                right.childNode(withName: "resortRightPedestalRuleGateRight")
+            )
+            let originalDetent: CGFloat = encounter.initialRule == .shape ? 83 : 61
+            let changedDetent: CGFloat = encounter.changedRule == .shape ? 83 : 61
+            XCTAssertEqual(leftGate.position.x, -originalDetent, accuracy: 0.01)
+            XCTAssertEqual(rightGate.position.x, originalDetent, accuracy: 0.01)
+
+            for stone in encounter.objects {
+                let bucket = stone.bucket(for: encounter.initialRule)
+                scene.handleTap(at: CGPoint(x: bucket == .left ? 475 : 1035, y: 300))
+                try await Task.sleep(nanoseconds: 670_000_000)
+            }
+            try await waitUntil(timeout: 3) {
+                (scene.childNode(withName: "resortPassLabel") as? SKLabelNode)?.text
+                    == "SAME SET · NEW RULE"
+            }
+            XCTAssertEqual(leftGate.position.x, -changedDetent, accuracy: 0.01)
+            XCTAssertEqual(rightGate.position.x, changedDetent, accuracy: 0.01)
+            XCTAssertNotEqual(originalDetent, changedDetent,
+                              "Both rule systems must move the receiver shutters.")
+            XCTAssertEqual(
+                left.accessibilityLabel,
+                encounter.changedRule == .shape
+                    ? "Left alcove: round stones" : "Left alcove: one mark"
+            )
+            XCTAssertEqual(
+                right.accessibilityLabel,
+                encounter.changedRule == .shape
+                    ? "Right alcove: pointed stones" : "Right alcove: two marks"
+            )
+            XCTAssertEqual(state.profile.progress(for: encounter.skillID).evidence.count,
+                           originalEvidenceCount,
+                           "Only completing both sorts can record a correct encounter.")
+            try await capture(
+                scene, in: view,
+                name: reverse
+                    ? "Puzzle-Palace-4x3-ResortVault-RuleSwitched-MarksToShape"
+                    : "Puzzle-Palace-4x3-ResortVault-RuleSwitched-ShapeToMarks"
+            )
+            for stone in encounter.objects {
+                let bucket = stone.bucket(for: encounter.changedRule)
+                scene.handleTap(at: CGPoint(x: bucket == .left ? 475 : 1035, y: 300))
+                try await Task.sleep(nanoseconds: 670_000_000)
+            }
+            try await waitUntil(timeout: 3) {
+                state.profile.progress(for: encounter.skillID).evidence.count
+                    == originalEvidenceCount + 1
+            }
+            let evidence = state.profile.progress(for: encounter.skillID).evidence
+            XCTAssertEqual(evidence.last?.encounterID, encounter.id)
+            XCTAssertEqual(evidence.last?.outcome, .correct)
+            XCTAssertEqual(evidence.last?.supportLevel, .independent)
+
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
     func testSortingPedestalRunsStableAndSwitchingRulesThroughLivePedestals() async throws {
         func prepareState(includeFoundation: Bool) throws -> AppState {
             let state = try AppState(

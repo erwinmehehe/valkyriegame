@@ -2642,10 +2642,14 @@ import LearningCore
             dialGlyph.text = "●  ▲"
             leftGlyph.text = "●"
             rightGlyph.text = "▲"
+            left.accessibilityLabel = "Left alcove: round stones"
+            right.accessibilityLabel = "Right alcove: pointed stones"
         case .marks:
             dialGlyph.text = "•  ••"
             leftGlyph.text = "•"
             rightGlyph.text = "••"
+            left.accessibilityLabel = "Left alcove: one mark"
+            right.accessibilityLabel = "Right alcove: two marks"
         }
 
         if !reducedMotion {
@@ -2927,10 +2931,46 @@ import LearningCore
         buildSortPedestal(at: CGPoint(x: 475, y: 300), name: "resortLeftPedestal")
         buildSortPedestal(at: CGPoint(x: 1035, y: 300), name: "resortRightPedestal")
 
+        // The rule machine is floor-anchored between its two receiving alcoves.
+        // It must not float over the approved painted vault door.
+        for receiverX in [CGFloat(475), 1035] {
+            let trackPath = CGMutablePath()
+            trackPath.move(to: CGPoint(x: 755, y: 258))
+            trackPath.addLine(to: CGPoint(x: (755 + receiverX) / 2, y: 240))
+            trackPath.addLine(to: CGPoint(x: receiverX, y: 295))
+            let track = SKShapeNode(path: trackPath)
+            track.name = "decorativeResortDriveTrack"
+            track.strokeColor = UIColor(red: 0.74, green: 0.60, blue: 0.42, alpha: 0.82)
+            track.lineWidth = 10
+            track.lineCap = .round
+            track.zPosition = 365
+            addChild(track)
+        }
+        let consoleBase = sortingCarvedSlab(CGSize(width: 236, height: 100), radius: 28)
+        consoleBase.position = CGPoint(x: 755, y: 255)
+        consoleBase.name = "resortRuleConsoleBase"
+        consoleBase.zPosition = 405
+        addChild(consoleBase)
+
+        // Each alcove has captive sliding brass shutters. They physically
+        // reconfigure when the rule changes; the symbols remain the child's
+        // category guide, rather than decorative answer hints.
+        for name in ["resortLeftPedestal", "resortRightPedestal"] {
+            guard let pedestal = childNode(withName: name) else { continue }
+            for (side, sign) in [("Left", CGFloat(-1)), ("Right", CGFloat(1))] {
+                let shutter = sortingCarvedSlab(CGSize(width: 15, height: 65), radius: 6)
+                shutter.fillColor = UIColor(red: 0.79, green: 0.65, blue: 0.42, alpha: 1)
+                shutter.position = CGPoint(x: sign * 83, y: 12)
+                shutter.name = name + "RuleGate" + side
+                shutter.zPosition = 3
+                pedestal.addChild(shutter)
+            }
+        }
+
         let dial = sortingCarvedSlab(CGSize(width: 186, height: 64), radius: 20)
         dial.fillColor = UIColor(red: 0.54, green: 0.62, blue: 0.69, alpha: 1)
         dial.lineWidth = 4
-        dial.position = CGPoint(x: 755, y: 535)
+        dial.position = CGPoint(x: 755, y: 277)
         dial.name = "resortRuleDial"
         dial.zPosition = 580
         addChild(dial)
@@ -2942,7 +2982,7 @@ import LearningCore
 
         let passLabel = ArtSystem.label("FIRST SORT", size: 19)
         passLabel.fontColor = UIColor(red: 0.88, green: 0.81, blue: 1.0, alpha: 1)
-        passLabel.position = CGPoint(x: 755, y: 615)
+        passLabel.position = CGPoint(x: 755, y: 187)
         passLabel.name = "resortPassLabel"
         passLabel.zPosition = 590
         addChild(passLabel)
@@ -3029,10 +3069,35 @@ import LearningCore
             dialGlyph.text = "●  ▲"
             leftGlyph.text = "●"
             rightGlyph.text = "▲"
+            left.accessibilityLabel = "Left alcove: round stones"
+            right.accessibilityLabel = "Right alcove: pointed stones"
         case .marks:
             dialGlyph.text = "•  ••"
             leftGlyph.text = "•"
             rightGlyph.text = "••"
+            left.accessibilityLabel = "Left alcove: one mark"
+            right.accessibilityLabel = "Right alcove: two marks"
+        }
+
+        // Move the actual receiver shutters into different mechanical detents
+        // on a rule switch. Reduced Motion presents the same stable states
+        // instantly, never hiding the changed sorting criterion.
+        let shutterOffset: CGFloat = rule == .shape ? 83 : 61
+        for name in ["resortLeftPedestal", "resortRightPedestal"] {
+            guard let pedestal = childNode(withName: name) else { continue }
+            for (side, sign) in [("Left", CGFloat(-1)), ("Right", CGFloat(1))] {
+                guard let shutter = pedestal.childNode(withName: name + "RuleGate" + side) else {
+                    continue
+                }
+                shutter.removeAction(forKey: "resortRuleShift")
+                let destination = sign * shutterOffset
+                if reducedMotion {
+                    shutter.position.x = destination
+                } else {
+                    shutter.run(.moveTo(x: destination, duration: 0.32),
+                                withKey: "resortRuleShift")
+                }
+            }
         }
 
         if let label = childNode(withName: "resortPassLabel") as? SKLabelNode {
