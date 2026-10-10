@@ -1539,6 +1539,34 @@ import LearningCore
         depth.zPosition = 237
         addChild(depth)
 
+        // A real masonry cut and a few subdued reflected glints keep the
+        // deep void legible without painting a giant generic black rectangle
+        // over the approved illustrated palace hall.
+        for (index, y) in [CGFloat(370), 220].enumerated() {
+            let rimPath = CGMutablePath()
+            rimPath.move(to: CGPoint(x: 472, y: y))
+            rimPath.addLine(to: CGPoint(x: 1052, y: y))
+            let rim = SKShapeNode(path: rimPath)
+            rim.name = "decorativeMemoryChasmStoneRim\(index)"
+            rim.strokeColor = UIColor(
+                red: 0.85, green: 0.72, blue: 0.59, alpha: index == 0 ? 0.70 : 0.43
+            )
+            rim.lineWidth = index == 0 ? 5 : 3
+            rim.zPosition = 240
+            addChild(rim)
+        }
+        for index in 0..<3 {
+            let glint = SKShapeNode(
+                ellipseOf: CGSize(width: 155, height: 12)
+            )
+            glint.name = "decorativeMemoryChasmGlint"
+            glint.position = CGPoint(x: 592 + CGFloat(index) * 161, y: 244)
+            glint.fillColor = UIColor(red: 0.60, green: 0.61, blue: 0.81, alpha: 0.13)
+            glint.strokeColor = .clear
+            glint.zPosition = 241
+            addChild(glint)
+        }
+
         // Four individually suspended, faceted bridge stones. Their centers
         // stay exactly where the authored memory challenge expects them.
         // Before an answer the lowered slabs remain visibly incomplete.
@@ -1656,15 +1684,41 @@ import LearningCore
 
         for x in [CGFloat(420), CGFloat(1100)] {
             let bank = SKShapeNode(
-                rectOf: CGSize(width: 76, height: 131), cornerRadius: 13
+                path: memoryBridgeStonePath(width: 81, height: 139)
             )
-            bank.fillColor = UIColor(red: 0.62, green: 0.56, blue: 0.67, alpha: 0.98)
-            bank.fillTexture = palaceStoneTexture
-            bank.strokeColor = UIColor(red: 0.92, green: 0.76, blue: 0.48, alpha: 1)
+            bank.name = "memoryBridgeBank"
+            bank.fillColor = UIColor(red: 0.63, green: 0.57, blue: 0.69, alpha: 1)
+            bank.fillTexture = memoryBridgeStoneTexture
+            bank.strokeColor = UIColor(red: 0.94, green: 0.78, blue: 0.51, alpha: 1)
             bank.lineWidth = 4
             bank.position = CGPoint(x: x, y: 289)
             bank.zPosition = 265
-            bank.name = "memoryBridgeBank"
+
+            let inner = SKShapeNode(
+                path: memoryBridgeStonePath(width: 65, height: 122)
+            )
+            inner.name = "decorativeMemoryBankRelief"
+            inner.fillColor = UIColor(red: 0.31, green: 0.25, blue: 0.42, alpha: 0.35)
+            inner.strokeColor = UIColor(red: 0.96, green: 0.79, blue: 0.53, alpha: 0.67)
+            inner.lineWidth = 2
+            bank.addChild(inner)
+
+            let sigil = ArtSystem.label("◇", size: 29)
+            sigil.name = "decorativeMemoryBankAnchor"
+            sigil.fontColor = UIColor(red: 0.97, green: 0.84, blue: 0.61, alpha: 1)
+            sigil.zPosition = 2
+            bank.addChild(sigil)
+
+            for boltY in [CGFloat(-54), 54] {
+                let bolt = SKShapeNode(circleOfRadius: 5)
+                bolt.name = "decorativeMemoryBankBolt"
+                bolt.position.y = boltY
+                bolt.fillColor = UIColor(red: 0.93, green: 0.74, blue: 0.45, alpha: 1)
+                bolt.strokeColor = UIColor(red: 0.31, green: 0.22, blue: 0.25, alpha: 1)
+                bolt.lineWidth = 1.5
+                bolt.zPosition = 3
+                bank.addChild(bolt)
+            }
             addChild(bank)
         }
 
@@ -2229,17 +2283,31 @@ import LearningCore
             let joined = SKNode()
             joined.name = "memoryBridgeJoinedRail"
             joined.zPosition = 281
-            for y in [CGFloat(352), 231] {
-                let rail = SKShapeNode(
-                    rectOf: CGSize(width: 605, height: 10),
-                    cornerRadius: 5
-                )
-                rail.fillColor = UIColor(red: 0.68, green: 0.48, blue: 0.27, alpha: 1)
-                rail.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.46, alpha: 1)
-                rail.lineWidth = 2
-                rail.position = CGPoint(x: 758, y: y)
+            for y in [CGFloat(352), 233] {
+                let railPath = CGMutablePath()
+                railPath.move(to: CGPoint(x: 454, y: y))
+                railPath.addLine(to: CGPoint(x: 1060, y: y))
+                let rail = SKShapeNode(path: railPath)
                 rail.name = "memoryDeckRailing"
+                rail.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.43, alpha: 1)
+                rail.lineWidth = 7
+                rail.lineCap = .round
                 joined.addChild(rail)
+                for index in 0..<5 {
+                    let post = SKShapeNode(
+                        path: memoryBridgeStonePath(width: 16, height: 22)
+                    )
+                    post.name = "decorativeMemoryJoinedRailPost"
+                    post.position = CGPoint(
+                        x: 454 + CGFloat(index) * 151, y: y
+                    )
+                    post.fillColor = UIColor(red: 0.53, green: 0.39, blue: 0.37, alpha: 1)
+                    post.fillTexture = memoryBridgeStoneTexture
+                    post.strokeColor = UIColor(red: 1, green: 0.83, blue: 0.53, alpha: 1)
+                    post.lineWidth = 2
+                    post.zPosition = 3
+                    joined.addChild(post)
+                }
             }
             addChild(joined)
         }
