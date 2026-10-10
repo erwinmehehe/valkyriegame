@@ -3522,6 +3522,9 @@ import LearningCore
                 frozenEncounter = name
             }
             if world == .stopGoOrbs {
+                let signal = try XCTUnwrap(scene.childNode(withName: "stopGoOrb"))
+                XCTAssertTrue(signal.isAccessibilityElement)
+                XCTAssertFalse((signal.accessibilityLabel ?? "").isEmpty)
                 // The timed HOLD phase is intentionally shorter than the
                 // screenshot exporter. Freeze the live SpriteKit signal while
                 // capturing the initial frame and the deliberate wrong tap.
