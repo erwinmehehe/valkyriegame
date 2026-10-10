@@ -4521,6 +4521,57 @@ import LearningCore
         grid.addChild(trace)
     }
 
+    private func animateStoppedPathScout(
+        along safeTiles: [PuzzleTile],
+        encounter: PuzzlePathEncounter,
+        hint: String,
+        completion: @escaping () -> Void
+    ) {
+        let tileSize: CGFloat = 66
+        let originX = 760 - CGFloat(encounter.gridWidth - 1) * tileSize / 2
+        let originY = 294 - CGFloat(encounter.gridHeight - 1) * tileSize / 2
+        // Walk only the unique, in-bounds, unbroken prefix. Tiko cannot
+        // advance onto a wrong route's cracked stone or step off the board.
+        let steps: [SKAction] = safeTiles.enumerated().map { index, tile in
+            .move(
+                to: CGPoint(x: originX + CGFloat(tile.x) * tileSize,
+                            y: originY + CGFloat(tile.y) * tileSize),
+                duration: reducedMotion ? 0 : (index == 0 ? 0.23 : 0.18)
+            )
+        }
+        tiko.removeAction(forKey: "pathFailedScout")
+        tiko.run(.sequence(steps + [
+            .run { [weak self] in
+                guard let self else { return }
+                self.tiko.pose(.react)
+                self.instruction.text = hint
+                if let grid = self.childNode(withName: "pathGrid"),
+                   let lastSafe = safeTiles.last {
+                    grid.childNode(withName: "pathSafeStopMarker")?.removeFromParent()
+                    let marker = SKShapeNode(circleOfRadius: 19)
+                    marker.name = "pathSafeStopMarker"
+                    marker.fillColor = UIColor(red: 0.40, green: 0.24, blue: 0.18, alpha: 1)
+                    marker.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.52, alpha: 1)
+                    marker.lineWidth = 4
+                    marker.position = CGPoint(
+                        x: originX + CGFloat(lastSafe.x) * tileSize - grid.position.x,
+                        y: originY + CGFloat(lastSafe.y) * tileSize - grid.position.y + 32
+                    )
+                    marker.zPosition = 22
+                    let stopGlyph = ArtSystem.label("Ⅱ", size: 22)
+                    stopGlyph.name = "pathSafeStopGlyph"
+                    stopGlyph.fontColor = UIColor(red: 1, green: 0.92, blue: 0.67, alpha: 1)
+                    marker.addChild(stopGlyph)
+                    grid.addChild(marker)
+                }
+            },
+            // The failed plan stays visible long enough to understand before
+            // the new map replaces it; neither mode grants success evidence.
+            .wait(forDuration: reducedMotion ? 0.72 : 0.88),
+            .run(completion)
+        ]), withKey: "pathFailedScout")
+    }
+
     private func resolvePathChoice(_ index: Int) {
         guard place == .pathTiles, pathAcceptingInput, let activeEncounter = pathEncounter,
               activeEncounter.choices.indices.contains(index) else { return }
@@ -4537,16 +4588,28 @@ import LearningCore
 
         guard correct else {
             support = support == .independent ? .lightHint : .strongHint
-            instruction.text = support == .lightHint
-                ? "That trail reaches a broken stone. Look for a different way."
-                : "Trace from the round start stone to the star. Keep off the cracked stones."
-            tiko.pose(.react)
+            let safeTiles = activeEncounter.traversablePrefix(for: index)
+            let firstUnsafe = attemptedRoute.dropFirst(safeTiles.count).first
+            let hint: String
+            if let firstUnsafe, activeEncounter.blocked.contains(firstUnsafe) {
+                hint = support == .lightHint
+                    ? "Tiko stopped before a cracked stone. Find another path."
+                    : "Follow each step from the round stone. Keep clear of cracked stones."
+            } else if let firstUnsafe, !activeEncounter.isInBounds(firstUnsafe) {
+                hint = "That trail leaves the floor. Find a path that stays on the stones."
+            } else if firstUnsafe != nil {
+                hint = "That trail doubles back. Try a route with no repeated stones."
+            } else {
+                hint = "Tiko stopped short of the star. Find a trail that reaches the goal."
+            }
             valkyrie.pose(.react)
+            // Wait for Tiko's physical stop and the visible stop marker
+            // before showing another map. Wrong attempts remain incorrect,
+            // and the next attempt remains assisted.
             pathEncounter = state.nextPuzzlePathTilesEncounter()
-            run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.65 : 0.85),
-                .run { [weak self] in self?.buildPathTilesEncounter(resetSupport: false) }
-            ]))
+            animateStoppedPathScout(along: safeTiles, encounter: activeEncounter, hint: hint) { [weak self] in
+                self?.buildPathTilesEncounter(resetSupport: false)
+            }
             return
         }
 
