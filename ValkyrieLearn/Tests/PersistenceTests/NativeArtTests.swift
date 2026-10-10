@@ -1466,9 +1466,6 @@ import LearningCore
             for piston in pistons {
                 XCTAssertEqual(piston.position.y, 438, accuracy: 0.01)
                 XCTAssertNotNil(piston.childNode(withName: "decorativeBugPowerGlass"))
-                XCTAssertEqual(scene.targetName(at: piston.position),
-                               "decorativeBugPowerPiston", // Tested below via cassette tap.
-                               "Detached piston must never replace a command target.")
             }
             let firstEncounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleBugEncounter)
             let wrongIndex = try XCTUnwrap(firstEncounter.shown.indices.first {
@@ -3995,6 +3992,20 @@ import LearningCore
                 }
                 XCTAssertNotNil(restored.childNode(withName: "mirrorActiveRay"),
                                 "Restored light should still reach its receiver.")
+            }
+            if world == .bugLantern {
+                let drive = try XCTUnwrap(
+                    restored.childNode(withName: "decorativeBugLanternDrive") as? SKShapeNode
+                )
+                XCTAssertNotNil(drive.path,
+                                "Restored Bug Lantern must remain wired to its live sockets.")
+                for index in 0..<3 {
+                    let piston = try XCTUnwrap(restored.childNode(
+                        withName: "decorativeBugPowerPiston\(index)"
+                    ) as? SKShapeNode)
+                    XCTAssertEqual(piston.position.y, 450, accuracy: 0.01,
+                                   "Completed Bug Lantern must keep all three machine pistons raised.")
+                }
             }
             try await capture(restored, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Restored")
