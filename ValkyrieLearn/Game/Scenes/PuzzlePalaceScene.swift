@@ -5926,19 +5926,19 @@ import LearningCore
             rectOf: CGSize(width: 14, height: 43),
             cornerRadius: 7
         )
+        leverStem.name = "decorativeRepairLeverStem"
         leverStem.position.y = 12
         leverStem.fillColor = UIColor(red: 0.76, green: 0.54, blue: 0.30, alpha: 1)
         leverStem.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.43, alpha: 1)
         leverStem.lineWidth = 2
-        leverStem.name = "repairFix"
         lever.addChild(leverStem)
 
         let handle = SKShapeNode(circleOfRadius: 17)
+        handle.name = "decorativeRepairLeverGrip"
         handle.position.y = 32
         handle.fillColor = UIColor(red: 0.94, green: 0.71, blue: 0.38, alpha: 1)
         handle.strokeColor = UIColor(red: 1, green: 0.91, blue: 0.67, alpha: 1)
         handle.lineWidth = 3
-        handle.name = "repairFix"
         lever.addChild(handle)
 
         let leverLabel = ArtSystem.label("TEST", size: 16)
@@ -6038,38 +6038,80 @@ import LearningCore
             // at the supported 4:3 / 16:9 landscape scales).
             let plate = palaceCog(
                 radius: 57, teeth: 11,
-                fill: UIColor(red: 0.61, green: 0.44, blue: 0.29, alpha: 1),
-                stroke: UIColor(red: 0.96, green: 0.77, blue: 0.48, alpha: 1)
+                fill: UIColor(red: 0.62, green: 0.49, blue: 0.38, alpha: 1),
+                stroke: UIColor(red: 0.96, green: 0.78, blue: 0.49, alpha: 1)
             )
+            plate.fillTexture = repairWorkshopStoneTexture
             plate.position = CGPoint(x: xs[index], y: 355)
             plate.name = "repairStep\(index)"
             plate.zPosition = 850
             plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
 
-            let bezel = SKShapeNode(circleOfRadius: 45)
-            bezel.fillColor = UIColor(red: 0.56, green: 0.40, blue: 0.26, alpha: 1)
+            // Twin concentric machined rings and radial spokes replace
+            // the single solid black command icon disk, without shrinking
+            // the original >110pt scored gear or obscuring the actual glyph.
+            let shadowLip = palaceCog(
+                radius: 55, teeth: 11,
+                fill: UIColor(red: 0.16, green: 0.12, blue: 0.21, alpha: 0.96),
+                stroke: UIColor(red: 0.41, green: 0.28, blue: 0.27, alpha: 1)
+            )
+            shadowLip.name = "decorativeRepairGearDepth"
+            shadowLip.fillTexture = nil
+            shadowLip.position = CGPoint(x: 3, y: -7)
+            shadowLip.zPosition = -2
+            plate.addChild(shadowLip)
+
+            let bezel = SKShapeNode(circleOfRadius: 44)
+            bezel.fillColor = UIColor(red: 0.58, green: 0.43, blue: 0.35, alpha: 1)
+            bezel.fillTexture = repairWorkshopStoneTexture
             bezel.strokeColor = UIColor(red: 0.99, green: 0.83, blue: 0.55, alpha: 1)
             bezel.lineWidth = 4
             bezel.name = plate.name
+            bezel.zPosition = 1
             plate.addChild(bezel)
 
-            let center = SKShapeNode(circleOfRadius: 35)
-            center.fillColor = UIColor(red: 0.30, green: 0.23, blue: 0.22, alpha: 1)
-            center.strokeColor = UIColor(red: 0.90, green: 0.70, blue: 0.44, alpha: 1)
-            center.lineWidth = 3
+            let innerRim = SKShapeNode(circleOfRadius: 37)
+            innerRim.name = "decorativeRepairGearInnerRim"
+            innerRim.fillColor = UIColor(red: 0.25, green: 0.18, blue: 0.24, alpha: 1)
+            innerRim.strokeColor = UIColor(red: 0.91, green: 0.71, blue: 0.45, alpha: 1)
+            innerRim.lineWidth = 2
+            innerRim.zPosition = 2
+            plate.addChild(innerRim)
+
+            let spokePath = CGMutablePath()
+            for spoke in 0..<6 {
+                let a = CGFloat(spoke) * .pi / 3
+                spokePath.move(to: CGPoint(x: cos(a) * 19, y: sin(a) * 19))
+                spokePath.addLine(to: CGPoint(x: cos(a) * 35, y: sin(a) * 35))
+            }
+            let spokes = SKShapeNode(path: spokePath)
+            spokes.name = "decorativeRepairGearSpokes"
+            spokes.strokeColor = UIColor(red: 0.94, green: 0.73, blue: 0.47, alpha: 0.83)
+            spokes.lineWidth = 4
+            spokes.lineCap = .round
+            spokes.zPosition = 3
+            plate.addChild(spokes)
+
+            let center = SKShapeNode(circleOfRadius: 24)
+            center.fillColor = UIColor(red: 0.39, green: 0.26, blue: 0.29, alpha: 1)
+            center.strokeColor = UIColor(red: 0.97, green: 0.79, blue: 0.49, alpha: 1)
+            center.lineWidth = 2.5
             center.name = plate.name
+            center.zPosition = 4
             plate.addChild(center)
 
             let number = ArtSystem.label("\(index + 1)", size: 15)
             number.fontName = "AvenirNext-DemiBold"
-            number.fontColor = UIColor(red: 0.97, green: 0.77, blue: 0.47, alpha: 1)
-            number.position = CGPoint(x: -28, y: 31)
+            number.fontColor = UIColor(red: 0.99, green: 0.82, blue: 0.51, alpha: 1)
+            number.position = CGPoint(x: -28, y: 33)
+            number.zPosition = 5
             number.name = plate.name
             plate.addChild(number)
 
-            let commandGlyph = ArtSystem.label(step.glyph, size: 31)
-            commandGlyph.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.77, alpha: 1)
+            let commandGlyph = ArtSystem.label(step.glyph, size: 32)
+            commandGlyph.fontColor = UIColor(red: 1.0, green: 0.94, blue: 0.79, alpha: 1)
             commandGlyph.position.y = 2
+            commandGlyph.zPosition = 5
             commandGlyph.name = plate.name
             plate.addChild(commandGlyph)
 
@@ -6140,6 +6182,18 @@ import LearningCore
                 socket.strokeColor = selected
                     ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
                     : UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+                for (suffix, sign) in [("Left", CGFloat(-1)), ("Right", CGFloat(1))] {
+                    guard let clasp = socket.childNode(
+                        withName: "decorativeRepairSocketClasp\(suffix)"
+                    ) else { continue }
+                    let x = sign * (selected ? CGFloat(67) : 55)
+                    clasp.removeAction(forKey: "repairClaspLift")
+                    if reducedMotion {
+                        clasp.position.x = x
+                    } else {
+                        clasp.run(.moveTo(x: x, duration: 0.14), withKey: "repairClaspLift")
+                    }
+                }
             }
         }
     }
