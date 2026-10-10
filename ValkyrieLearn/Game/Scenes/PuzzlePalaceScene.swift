@@ -4959,6 +4959,21 @@ import LearningCore
         machine.strokeColor = UIColor(red: 0.85, green: 0.65, blue: 0.42, alpha: 0.95)
         machine.glowWidth = 0
 
+        // The room artwork and output machine are built before the next
+        // assessment is selected. Reconfigure the physical output on every
+        // fresh encounter, including bridge transfers and wrong-plan retries.
+        let bridgeMode = sequenceEncounter?.correctOrder.contains {
+            $0.id == "lowerBridge"
+        } ?? false
+        machine.childNode(withName: "decorativeCommandGateShutter")?
+            .isHidden = bridgeMode
+        machine.childNode(withName: "decorativeCommandOutputLatch")?
+            .isHidden = bridgeMode
+        machine.childNode(withName: "decorativeCommandBridgeDeck")?
+            .isHidden = !bridgeMode
+        machine.childNode(withName: "decorativeCommandOutputTraveler")?
+            .isHidden = !bridgeMode
+
         for index in 0..<3 {
             guard let relay = machine.childNode(
                 withName: "decorativeCommandRelay\(index)"
