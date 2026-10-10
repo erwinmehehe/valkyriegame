@@ -51,6 +51,10 @@ import LearningCore
     private var sortEncounter: PuzzleSortEncounter?
     private var sortTrialIndex = 0
     private var sortAcceptingInput = false
+    // Retained stones represent only the ACTIVE sorting rule. When the
+    // criterion changes, clear the bowls so older stones cannot teach the
+    // child an inconsistent shape-versus-marks classification.
+    private var sortVisibleRule: PuzzleSortRule?
     private var resortEncounter: PuzzleResortEncounter?
     private var resortPass = 0
     private var resortObjectIndex = 0
@@ -2575,14 +2579,76 @@ import LearningCore
         glyph.zPosition = 2
         root.addChild(glyph)
 
+        // Accepted stones remain on the forward lip of the carved alcove.
+        // These are decorative, compact physical results; the existing
+        // 60+ point named bowl remains the only scored hit target.
+        let retained = SKNode()
+        retained.name = "decorativeSortingAcceptedStones"
+        retained.zPosition = 4
+        root.addChild(retained)
+
         let side = name.contains("Left") ? "left" : "right"
         makeAccessible(root, label: "Place the sorting stone in the \(side) alcove")
         addChild(root)
         registerInteraction(root, clearance: 12)
     }
 
+    private func clearSortingAcceptedStones() {
+        for name in ["sortLeftPedestal", "sortRightPedestal"] {
+            childNode(withName: name)?
+                .childNode(withName: "decorativeSortingAcceptedStones")?
+                .removeAllChildren()
+        }
+    }
+
+    private func depositSortingStone(
+        _ object: PuzzleSortObject, into bucket: PuzzleSortBucket, at index: Int
+    ) {
+        let pedestalName = bucket == .left ? "sortLeftPedestal" : "sortRightPedestal"
+        guard let tray = childNode(withName: pedestalName)?
+                .childNode(withName: "decorativeSortingAcceptedStones") else {
+            return
+        }
+        // Repeated objects are still individually observable placements.
+        // The front lip is wide enough for the largest authored five-stone
+        // encounter, without covering the active category symbols above.
+        let slot = tray.children.count
+        guard slot < 5 else { return }
+        let stone = sortingCarvedSlab(CGSize(width: 30, height: 29), radius: 10)
+        stone.name = "decorativeSortingAcceptedStone\(index)"
+        stone.fillColor = UIColor(red: 0.66, green: 0.72, blue: 0.72, alpha: 1)
+        stone.lineWidth = 2
+        stone.position = CGPoint(x: CGFloat(slot - 2) * 29, y: -29)
+        stone.zPosition = 2
+
+        let symbol = ArtSystem.label(object.glyph, size: 14)
+        symbol.name = "decorativeSortingAcceptedGlyph"
+        symbol.fontColor = UIColor(red: 0.19, green: 0.25, blue: 0.30, alpha: 1)
+        symbol.position.y = 5
+        stone.addChild(symbol)
+
+        let marks = ArtSystem.label(object.marks, size: 11)
+        marks.name = "decorativeSortingAcceptedMarks"
+        marks.fontColor = UIColor(red: 0.25, green: 0.30, blue: 0.39, alpha: 1)
+        marks.position.y = -9
+        stone.addChild(marks)
+
+        if !reducedMotion {
+            stone.alpha = 0.35
+            stone.setScale(0.72)
+            stone.run(.group([
+                .fadeIn(withDuration: 0.16),
+                .scale(to: 1, duration: 0.16)
+            ]))
+        }
+        tray.addChild(stone)
+    }
+
     private func buildSortingEncounter() {
         guard let sortEncounter else { return }
+        removeAction(forKey: "sortDeposit")
+        clearSortingAcceptedStones()
+        sortVisibleRule = nil
         attempts = 0
         support = .independent
         startedAt = Date()
@@ -2628,6 +2694,12 @@ import LearningCore
     }
 
     private func updateSortingRule(_ rule: PuzzleSortRule) {
+        if let previousRule = sortVisibleRule, previousRule != rule {
+            // Shape-classified stones should never remain beneath MARKS
+            // labels (or the reverse). Reconfigure the physical bowls first.
+            clearSortingAcceptedStones()
+        }
+        sortVisibleRule = rule
         guard let left = childNode(withName: "sortLeftPedestal"),
               let right = childNode(withName: "sortRightPedestal"),
               let dial = childNode(withName: "sortingRuleDial"),
@@ -2772,6 +2844,13 @@ import LearningCore
                 .fadeAlpha(to: 0.35, duration: reducedMotion ? 0 : 0.24)
             ]))
         }
+        let placementIndex = sortTrialIndex
+        run(.sequence([
+            .wait(forDuration: reducedMotion ? 0 : 0.25),
+            .run { [weak self] in
+                self?.depositSortingStone(object, into: bucket, at: placementIndex)
+            }
+        ]), withKey: "sortDeposit")
 
         sortTrialIndex += 1
         run(.sequence([
@@ -2892,6 +2971,21 @@ import LearningCore
         sortAcceptingInput = false
         childNode(withName: "sortingObject")?.removeFromParent()
         refreshSortingProgress(animated: true)
+
+        let leftAccepted = childNode(withName: "sortLeftPedestal")?
+            .childNode(withName: "decorativeSortingAcceptedStones")?.children.count ?? 0
+        let rightAccepted = childNode(withName: "sortRightPedestal")?
+            .childNode(withName: "decorativeSortingAcceptedStones")?.children.count ?? 0
+        if leftAccepted + rightAccepted == 0,
+           let exhibit = PuzzlePalaceEncounterCatalog.sortingFoundation.first {
+            // A completed room reopened from SwiftData needs an in-world
+            // result too. This is an authored shape-sort exhibit ONLY;
+            // no new lesson attempt, evidence, or mastery is recorded.
+            updateSortingRule(.shape)
+            for (index, object) in exhibit.objects.enumerated() {
+                depositSortingStone(object, into: object.bucket(for: .shape), at: index)
+            }
+        }
 
         if let dial = childNode(withName: "sortingRuleDial") as? SKShapeNode {
             dial.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.35, alpha: 1)
