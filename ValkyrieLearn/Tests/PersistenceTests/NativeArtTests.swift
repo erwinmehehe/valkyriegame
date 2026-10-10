@@ -3308,6 +3308,7 @@ import LearningCore
             let glyph = try XCTUnwrap(
                 scene.childNode(withName: "//stopGoOrbGlyph") as? SKLabelNode
             )
+            if !correct { try await Task.sleep(nanoseconds: 350_000_000) }
             if correct {
                 for _ in active.signals.filter({ $0 == .go }) {
                     try await waitUntil(timeout: 8) { glyph.text == "✦" }
@@ -3345,6 +3346,7 @@ import LearningCore
                     scene.handleTap(at: CGPoint(x: bucket == .left ? 475 : 1035, y: 300))
                     if correct { try await Task.sleep(nanoseconds: 660_000_000) }
                 }
+                if correct { try await Task.sleep(nanoseconds: 240_000_000) }
             }
 
         case .mirrorHall:
