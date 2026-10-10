@@ -3357,7 +3357,7 @@ import LearningCore
         // The captive reflective pane pivots inside the stationary brass frame.
         // Keep the scored arrow/shape fixed so a tilt never gives away or
         // changes the underlying orientation/rotation answer.
-        innerGlass.name = "mirrorTurningPane"
+        innerGlass.name = "decorativeMirrorTurningPane"
         mirror.addChild(innerGlass)
 
         let shine = SKShapeNode(rectOf: CGSize(width: 10, height: 92), cornerRadius: 5)
@@ -3815,7 +3815,7 @@ import LearningCore
             }
             mirror.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.30, alpha: 0.90)
             mirror.glowWidth = 0
-            guard let pane = mirror.childNode(withName: "mirrorTurningPane") as? SKShapeNode else {
+            guard let pane = mirror.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode else {
                 continue
             }
             pane.removeAction(forKey: "mirrorPanePivot")
@@ -3835,7 +3835,7 @@ import LearningCore
     private func reflectChosenMirror(_ mirror: SKShapeNode, aligned: Bool) {
         // Move only the captive glass: the outer fixture, scored direction,
         // accessible hit frame and character path remain anchored.
-        if let pane = mirror.childNode(withName: "mirrorTurningPane") as? SKShapeNode {
+        if let pane = mirror.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode {
             pane.removeAction(forKey: "mirrorPanePivot")
             pane.strokeColor = aligned
                 ? UIColor(red: 0.45, green: 0.94, blue: 0.83, alpha: 1)
