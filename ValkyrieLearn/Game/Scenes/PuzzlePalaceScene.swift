@@ -2235,7 +2235,7 @@ import LearningCore
                 ? "That was a HOLD signal. Tiko will replay the sequence."
                 : "Wait through the double-bar signals. Touch only the star."
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.22 : 0.65),
+                .wait(forDuration: reducedMotion ? 0.70 : 0.95),
                 .run { [weak self] in self?.presentStopGoSignal() }
             ]), withKey: "stopGoRetry")
 
