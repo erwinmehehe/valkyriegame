@@ -2286,7 +2286,7 @@ import LearningCore
             : "That orb is stable. Now try the rhythm independently."
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
+            .wait(forDuration: reducedMotion ? 1.30 : 1.50),
             .run { [weak self] in
                 guard let self else { return }
                 self.inhibitionEncounter = self.state.nextPuzzleStopGoEncounter()
