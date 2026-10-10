@@ -6681,11 +6681,13 @@ import LearningCore
                 .move(to: selected.position, duration: 0.22),
                 .scale(to: 1.19, duration: 0.22)
             ]),
-            .removeFromParent(),
             .run { [weak self, weak selected] in
+                // Restore the original key before removing the temporary
+                // actor: removing an action owner first can drop callbacks.
                 selected?.isHidden = false
                 self?.runeAcceptingInput = true
-            }
+            },
+            .removeFromParent()
         ]), withKey: "runeRefusedKey")
     }
 
