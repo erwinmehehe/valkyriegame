@@ -3261,6 +3261,171 @@ import LearningCore
         XCTAssertFalse(scene.crossingBridge, "Bridge route did not finish within ten seconds")
     }
 
+
+    // These actions operate the real SpriteKit nodes, not mocked-up states.
+    // The visible 4:3 review set must show the mistake and its repair, in
+    // addition to a playable initial room and a fresh restored scene.
+    private func exercisePalaceVisualReview(
+        _ world: AppState.World,
+        scene: PuzzlePalaceScene,
+        state: AppState,
+        correct: Bool
+    ) async throws {
+        let skill: SkillID
+        switch world {
+        case .puzzlePalace:
+            let active = state.nextPuzzleEncounter()
+            skill = active.skillID
+            let choice = try XCTUnwrap(scene.children.first {
+                $0.name == "runeChoice"
+                && (($0.userData?["choice"] as? String) == active.answer) == correct
+            })
+            scene.valkyrie.position = CGPoint(x: max(170, choice.position.x - 92), y: 175)
+            scene.handleTap(at: choice.position)
+
+        case .memoryBridge:
+            let active = try XCTUnwrap(state.nextPuzzleMemoryEncounter())
+            skill = active.skillID
+            try await waitUntil(timeout: 8) {
+                scene.instruction.text == "Now repeat Tiko's rune order to raise the bridge."
+            }
+            let symbols = correct ? active.sequence : [
+                try XCTUnwrap(active.choices.first { $0 != active.sequence[0] })
+            ]
+            for symbol in symbols {
+                let pad = try XCTUnwrap(scene.children.first {
+                    $0.name == "memoryPad"
+                    && ($0.userData?["symbol"] as? String) == symbol
+                })
+                scene.valkyrie.position = CGPoint(x: max(165, pad.position.x - 80), y: 175)
+                scene.handleTap(at: pad.position)
+                try await Task.sleep(nanoseconds: 500_000_000)
+            }
+
+        case .stopGoOrbs:
+            let active = try XCTUnwrap(state.nextPuzzleStopGoEncounter())
+            skill = active.skillID
+            let glyph = try XCTUnwrap(
+                scene.childNode(withName: "//stopGoOrbGlyph") as? SKLabelNode
+            )
+            if correct {
+                for _ in active.signals.filter({ $0 == .go }) {
+                    try await waitUntil(timeout: 8) { glyph.text == "✦" }
+                    scene.handleTap(at: CGPoint(x: 755, y: 365))
+                    try await Task.sleep(nanoseconds: 350_000_000)
+                }
+            } else {
+                try await waitUntil(timeout: 8) { glyph.text == "Ⅱ" }
+                scene.handleTap(at: CGPoint(x: 755, y: 365))
+            }
+
+        case .sortingPedestal:
+            let active = try XCTUnwrap(state.nextPuzzleSortingEncounter())
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            else { try await Task.sleep(nanoseconds: 220_000_000) }
+            for index in (correct ? Array(active.objects.indices) : [0]) {
+                let rightBucket = active.objects[index].bucket(for: active.rules[index])
+                let bucket: PuzzleSortBucket = correct
+                    ? rightBucket : (rightBucket == .left ? .right : .left)
+                scene.handleTap(at: CGPoint(x: bucket == .left ? 530 : 970, y: 355))
+                if correct { try await Task.sleep(nanoseconds: 660_000_000) }
+            }
+
+        case .resortVault:
+            let active = try XCTUnwrap(state.nextPuzzleResortEncounter())
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let rules = correct ? [active.initialRule, active.changedRule] : [active.initialRule]
+            for rule in rules {
+                for index in (correct ? Array(active.objects.indices) : [0]) {
+                    let rightBucket = active.objects[index].bucket(for: rule)
+                    let bucket: PuzzleSortBucket = correct
+                        ? rightBucket : (rightBucket == .left ? .right : .left)
+                    scene.handleTap(at: CGPoint(x: bucket == .left ? 475 : 1035, y: 300))
+                    if correct { try await Task.sleep(nanoseconds: 660_000_000) }
+                }
+            }
+
+        case .mirrorHall:
+            let active = try XCTUnwrap(state.nextPuzzleMirrorHallEncounter())
+            skill = active.skillID
+            let index = try XCTUnwrap(active.choices.indices.first {
+                (active.choices[$0] == active.target) == correct
+            })
+            let mirror = try XCTUnwrap(
+                scene.children.filter { $0.name == "mirrorOrientationChoice" }
+                    .first { ($0.userData?["direction"] as? String) ==
+                        active.choices[index].rawValue }
+            )
+            scene.valkyrie.position = CGPoint(x: mirror.position.x - 235, y: 175)
+            scene.handleTap(at: mirror.position)
+
+        case .pathTiles:
+            let active = try XCTUnwrap(state.nextPuzzlePathTilesEncounter())
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 700_000_000) }
+            let index = try XCTUnwrap(active.choices.indices.first {
+                active.isValidChoice($0) == correct
+            })
+            let yValues: [CGFloat] = [325, 245, 165]
+            scene.handleTap(at: CGPoint(x: 1100, y: yValues[index]))
+
+        case .commandGears:
+            let active = try XCTUnwrap(state.nextPuzzleCommandGearsEncounter())
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let right = active.correctOrder
+            let plan = correct ? right : [right[1], right[0], right[2]]
+            let xs: [CGFloat] = [560, 760, 960]
+            for step in plan {
+                let index = try XCTUnwrap(active.presented.firstIndex(of: step))
+                scene.handleTap(at: CGPoint(x: xs[index], y: 445))
+            }
+            scene.handleTap(at: CGPoint(x: 1100, y: 295))
+
+        case .bugLantern:
+            let active = try XCTUnwrap(state.nextPuzzleBugLanternEncounter())
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let index = correct ? active.brokenIndex : (active.brokenIndex + 1) % active.shown.count
+            let broken = try XCTUnwrap(scene.childNode(withName: "bugStep\(index)"))
+            scene.handleTap(at: broken.position)
+            if correct {
+                try await waitUntil(timeout: 8) {
+                    scene.childNode(withName: "bugReplacement") != nil
+                }
+                let replacement = try XCTUnwrap(scene.childNode(withName: "bugReplacement"))
+                scene.handleTap(at: replacement.position)
+            }
+
+        case .bugLanternRepair:
+            let active = try XCTUnwrap(state.nextPuzzleBugRepairEncounter())
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let indexes: [Int]
+            if correct {
+                indexes = active.swapIndices
+            } else {
+                indexes = active.isCorrectSwap([0, 1]) ? [0, 2] : [0, 1]
+            }
+            for index in indexes {
+                let step = try XCTUnwrap(scene.childNode(withName: "repairStep\(index)"))
+                scene.handleTap(at: step.position)
+            }
+            let lever = try XCTUnwrap(scene.childNode(withName: "repairFix"))
+            scene.handleTap(at: lever.position)
+
+        default:
+            XCTFail("Not a Puzzle Palace review room")
+            return
+        }
+        let result: Outcome = correct ? .correct : .incorrect
+        try await waitUntil(timeout: 10) {
+            state.profile.progress(for: skill).evidence.last?.outcome == result
+        }
+    }
+
     func testIllustratedPalaceRoomsOnFourByThreeIPad() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let controller = UIViewController()
@@ -3322,6 +3487,12 @@ import LearningCore
                 XCTAssertNotNil(scene.childNode(withName: "repairFix"))
             }
             try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
+            try await exercisePalaceVisualReview(world, scene: scene, state: state, correct: false)
+            try await capture(scene, in: view,
+                              name: "Illustrated-Palace-4x3-" + name + "-Incorrect")
+            try await exercisePalaceVisualReview(world, scene: scene, state: state, correct: true)
+            try await capture(scene, in: view,
+                              name: "Illustrated-Palace-4x3-" + name + "-Successful")
             scene.willLeave()
 
             // Progression fixtures deliberately unlock the *next* room.
