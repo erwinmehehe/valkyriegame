@@ -5158,10 +5158,14 @@ import LearningCore
             // A wrong guess only inspects the selected working cassette.
             // It must NOT pretend power passed through an earlier fault.
             // Confirmed jams power only the steps before the failed step.
-            let powered = restored
-                || (jammedIndex != nil
-                    ? index < jammedIndex!
-                    : inspectedIndex == index)
+            let powered: Bool
+            if restored {
+                powered = true
+            } else if let jammedIndex {
+                powered = index < jammedIndex
+            } else {
+                powered = inspectedIndex == index
+            }
             let y: CGFloat = jammed ? 424 : (powered ? 450 : 438)
             piston.removeAction(forKey: "bugPowerPiston")
             if reducedMotion {
