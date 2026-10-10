@@ -2096,8 +2096,8 @@ import LearningCore
         switch signal {
         case .hold:
             instruction.text = support == .independent
-                ? "HOLD — keep your hands off the orb until it changes."
-                : "HOLD — Tiko is guarding the orb. Wait for the star."
+                ? "HOLD — wait. Keep hands off the signal."
+                : "HOLD — wait for the star."
             let duration: TimeInterval
             if reducedMotion {
                 // Keep the reduced-motion interaction deterministic on slower
@@ -2126,7 +2126,7 @@ import LearningCore
             ]), withKey: "stopGoSignal")
 
         case .go:
-            instruction.text = "GO — tap the star orb to let the palace current through."
+            instruction.text = "GO — tap the glowing star signal!"
             tiko.pose(.interact)
         }
     }
@@ -4262,7 +4262,7 @@ import LearningCore
             )
         }
 
-        instruction.text = "Find a safe stone trail, then watch Tiko try it."
+        instruction.text = "Choose a safe stone trail. Watch Tiko cross."
         showAttentionCue(
             at: CGPoint(x: 760, y: 294),
             tint: UIColor(red: 0.95, green: 0.76, blue: 0.48, alpha: 1),
@@ -4604,7 +4604,7 @@ import LearningCore
         guard place == .commandGears, commandAcceptingInput, !solved,
               let activeEncounter = sequenceEncounter else { return }
         guard commandSteps.count == 3 else {
-            instruction.text = "Fill all three command sockets before Tiko runs the chain."
+            instruction.text = "Place three gears, then pull RUN."
             errorFeedback()
             return
         }
@@ -5028,7 +5028,7 @@ import LearningCore
         node.strokeColor = .systemRed
         node.glowWidth = 13
         selectionFeedback()
-        instruction.text = "You found the broken command. Watch Tiko run the plan and see where it fails."
+        instruction.text = "Watch Tiko try the plan. Find where it jams."
         demonstrateBugFailure(at: index) { [weak self] in
             self?.buildBugReplacement()
         }
@@ -5592,7 +5592,7 @@ import LearningCore
         guard place == .bugLanternRepair, repairAcceptingInput, !solved,
               let activeEncounter = repairEncounter else { return }
         guard repairSelection.count == 2 else {
-            instruction.text = "Choose exactly two commands to swap first."
+            instruction.text = "Tap two gears to swap. Then pull TEST."
             errorFeedback()
             return
         }
