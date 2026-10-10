@@ -1483,6 +1483,35 @@ import LearningCore
         clearAttentionCue()
     }
 
+    // Memory Bridge deliberately uses stone cropped from its *existing*
+    // approved room painting. This only textures SpriteKit movable props;
+    // the original background, canonical actors and world composition stay.
+    private lazy var memoryBridgeStoneTexture: SKTexture? = {
+        guard let painting = ArtSystem.texture("PuzzleMemoryBridgeIllustratedV2") else {
+            return nil
+        }
+        return SKTexture(
+            rect: CGRect(x: 0.31, y: 0.06, width: 0.17, height: 0.14), in: painting
+        )
+    }()
+
+    private func memoryBridgeStonePath(width: CGFloat, height: CGFloat) -> CGPath {
+        let w = width / 2
+        let h = height / 2
+        let cut = min(CGFloat(13), min(w, h) * 0.24)
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -w + cut, y: h - 1))
+        path.addLine(to: CGPoint(x: w - cut * 1.2, y: h))
+        path.addLine(to: CGPoint(x: w - 1, y: h - cut * 0.9))
+        path.addLine(to: CGPoint(x: w, y: -h + cut))
+        path.addLine(to: CGPoint(x: w - cut * 1.1, y: -h))
+        path.addLine(to: CGPoint(x: -w + cut, y: -h + 1))
+        path.addLine(to: CGPoint(x: -w, y: -h + cut))
+        path.addLine(to: CGPoint(x: -w + 1, y: h - cut))
+        path.closeSubpath()
+        return path
+    }
+
     private func buildMemoryBridgeWorld() {
         // A broken crossing in the palace floor, not four UI rectangles in
         // front of the waterfall. The four stones form one continuous deck.
@@ -1510,61 +1539,186 @@ import LearningCore
         depth.zPosition = 237
         addChild(depth)
 
-        for index in 0..<4 {
-            let plank = carvedPalaceStone(
-                CGSize(width: 161, height: 107), radius: 12
+        // A real masonry cut and a few subdued reflected glints keep the
+        // deep void legible without painting a giant generic black rectangle
+        // over the approved illustrated palace hall.
+        for (index, y) in [CGFloat(370), 220].enumerated() {
+            let rimPath = CGMutablePath()
+            rimPath.move(to: CGPoint(x: 472, y: y))
+            rimPath.addLine(to: CGPoint(x: 1052, y: y))
+            let rim = SKShapeNode(path: rimPath)
+            rim.name = "decorativeMemoryChasmStoneRim\(index)"
+            rim.strokeColor = UIColor(
+                red: 0.85, green: 0.72, blue: 0.59, alpha: index == 0 ? 0.70 : 0.43
             )
-            plank.strokeColor = UIColor(red: 0.91, green: 0.77, blue: 0.58, alpha: 0.95)
+            rim.lineWidth = index == 0 ? 5 : 3
+            rim.zPosition = 240
+            addChild(rim)
+        }
+        for index in 0..<3 {
+            let glint = SKShapeNode(
+                ellipseOf: CGSize(width: 155, height: 12)
+            )
+            glint.name = "decorativeMemoryChasmGlint"
+            glint.position = CGPoint(x: 592 + CGFloat(index) * 161, y: 244)
+            glint.fillColor = UIColor(red: 0.60, green: 0.61, blue: 0.81, alpha: 0.13)
+            glint.strokeColor = .clear
+            glint.zPosition = 241
+            addChild(glint)
+        }
+
+        // Four individually suspended, faceted bridge stones. Their centers
+        // stay exactly where the authored memory challenge expects them.
+        // Before an answer the lowered slabs remain visibly incomplete.
+        for index in 0..<4 {
+            let x = 532 + CGFloat(index) * 151
+            let plank = SKShapeNode(
+                path: memoryBridgeStonePath(width: 158, height: 111)
+            )
+            plank.name = "memoryBridgePlank\(index)"
+            plank.fillColor = UIColor(red: 0.50, green: 0.46, blue: 0.61, alpha: 1)
+            plank.fillTexture = memoryBridgeStoneTexture
+            plank.strokeColor = UIColor(red: 0.78, green: 0.68, blue: 0.62, alpha: 0.93)
             plank.lineWidth = 4
-            plank.position = CGPoint(x: 532 + CGFloat(index) * 151, y: 278)
+            plank.position = CGPoint(x: x, y: 278)
             plank.yScale = 0.58
             plank.alpha = 0.48
-            plank.name = "memoryBridgePlank\(index)"
             plank.zPosition = 270
-            addChild(plank)
+
+            let underEdge = SKShapeNode(
+                path: memoryBridgeStonePath(width: 154, height: 105)
+            )
+            underEdge.name = "decorativeMemoryPlankDepth"
+            underEdge.position.y = -12
+            underEdge.zPosition = -2
+            underEdge.fillColor = UIColor(red: 0.15, green: 0.12, blue: 0.26, alpha: 1)
+            underEdge.strokeColor = UIColor(red: 0.29, green: 0.24, blue: 0.31, alpha: 1)
+            underEdge.lineWidth = 3
+            plank.addChild(underEdge)
 
             let lip = SKShapeNode(
-                rectOf: CGSize(width: 145, height: 13), cornerRadius: 3
+                path: memoryBridgeStonePath(width: 149, height: 21)
             )
-            lip.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.24, alpha: 1)
-            lip.strokeColor = UIColor(red: 0.81, green: 0.66, blue: 0.43, alpha: 0.91)
-            lip.lineWidth = 2
-            lip.position.y = -43
             lip.name = "memoryPlankFrontEdge"
+            lip.position.y = -44
+            lip.fillColor = UIColor(red: 0.31, green: 0.24, blue: 0.37, alpha: 1)
+            lip.strokeColor = UIColor(red: 0.83, green: 0.66, blue: 0.44, alpha: 1)
+            lip.lineWidth = 3
+            lip.zPosition = 2
             plank.addChild(lip)
 
-            let inset = SKShapeNode(
-                rectOf: CGSize(width: 140, height: 69), cornerRadius: 9
+            let carved = SKShapeNode(
+                path: memoryBridgeStonePath(width: 142, height: 79)
             )
-            inset.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.33, alpha: 0.32)
-            inset.strokeColor = UIColor(red: 0.97, green: 0.82, blue: 0.58, alpha: 0.86)
-            inset.lineWidth = 2
-            inset.position.y = 6
-            inset.name = "memoryPlankCarvedStone"
-            plank.addChild(inset)
+            carved.name = "memoryPlankCarvedStone"
+            carved.position.y = 7
+            carved.fillColor = UIColor(red: 0.70, green: 0.61, blue: 0.73, alpha: 0.99)
+            carved.fillTexture = memoryBridgeStoneTexture
+            carved.strokeColor = UIColor(red: 0.97, green: 0.83, blue: 0.62, alpha: 0.86)
+            carved.lineWidth = 2
+            carved.zPosition = 3
+            plank.addChild(carved)
 
-            for x in [CGFloat(-50), 50] {
+            let inlay = SKShapeNode(
+                path: memoryBridgeStonePath(width: 101, height: 51)
+            )
+            inlay.name = "decorativeMemoryPlankInlay"
+            inlay.position.y = 9
+            inlay.fillColor = UIColor(red: 0.22, green: 0.18, blue: 0.32, alpha: 0.34)
+            inlay.strokeColor = UIColor(red: 0.95, green: 0.77, blue: 0.50, alpha: 0.56)
+            inlay.lineWidth = 2
+            inlay.zPosition = 4
+            plank.addChild(inlay)
+
+            // Each stone exposes the same blank connection emblem: it does
+            // NOT give away the child's unseen sequence.
+            let seal = ArtSystem.label("◈", size: 27)
+            seal.name = "decorativeMemoryPlankSeal"
+            seal.fontColor = UIColor(red: 0.95, green: 0.86, blue: 0.66, alpha: 0.77)
+            seal.position.y = 10
+            seal.zPosition = 5
+            plank.addChild(seal)
+
+            for boltX in [CGFloat(-59), 59] {
                 let bolt = SKShapeNode(circleOfRadius: 5)
-                bolt.position = CGPoint(x: x, y: 3)
-                bolt.fillColor = UIColor(red: 0.92, green: 0.77, blue: 0.48, alpha: 1)
+                bolt.position = CGPoint(x: boltX, y: 2)
+                bolt.fillColor = UIColor(red: 0.93, green: 0.74, blue: 0.45, alpha: 1)
                 bolt.strokeColor = UIColor(red: 0.31, green: 0.22, blue: 0.25, alpha: 1)
-                bolt.lineWidth = 1
+                bolt.lineWidth = 1.5
                 bolt.name = "memoryPlankBolt"
+                bolt.zPosition = 7
                 plank.addChild(bolt)
             }
+            addChild(plank)
+
+            // These captive brass conduits physically join each floor rune
+            // to the relevant part of the bridge. They brighten only AFTER
+            // the correct child action; the memory playback stays unscored.
+            let anchor = memoryPadPoints[index]
+            let conduitPath = CGMutablePath()
+            conduitPath.move(to: CGPoint(x: anchor.x, y: anchor.y + 22))
+            conduitPath.addLine(to: CGPoint(x: x, y: 326))
+            let conduit = SKShapeNode(path: conduitPath)
+            conduit.name = "decorativeMemoryConduit\(index)"
+            conduit.strokeColor = UIColor(red: 0.53, green: 0.41, blue: 0.40, alpha: 0.63)
+            conduit.lineWidth = 7
+            conduit.lineCap = .round
+            conduit.zPosition = 268
+            addChild(conduit)
+
+            let stage = SKShapeNode(circleOfRadius: 13)
+            stage.name = "decorativeMemoryBridgeRelay\(index)"
+            stage.position = CGPoint(x: x, y: 341)
+            stage.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.34, alpha: 1)
+            stage.strokeColor = UIColor(red: 0.91, green: 0.72, blue: 0.46, alpha: 1)
+            stage.lineWidth = 4
+            stage.zPosition = 285
+            let stageGlass = SKShapeNode(circleOfRadius: 6)
+            stageGlass.name = "decorativeMemoryBridgeRelayGlass"
+            stageGlass.fillColor = UIColor(red: 0.36, green: 0.27, blue: 0.48, alpha: 1)
+            stageGlass.strokeColor = UIColor(red: 0.97, green: 0.79, blue: 0.52, alpha: 1)
+            stageGlass.lineWidth = 1.5
+            stage.addChild(stageGlass)
+            addChild(stage)
         }
 
         for x in [CGFloat(420), CGFloat(1100)] {
             let bank = SKShapeNode(
-                rectOf: CGSize(width: 76, height: 131), cornerRadius: 13
+                path: memoryBridgeStonePath(width: 81, height: 139)
             )
-            bank.fillColor = UIColor(red: 0.62, green: 0.56, blue: 0.67, alpha: 0.98)
-            bank.fillTexture = palaceStoneTexture
-            bank.strokeColor = UIColor(red: 0.92, green: 0.76, blue: 0.48, alpha: 1)
+            bank.name = "memoryBridgeBank"
+            bank.fillColor = UIColor(red: 0.63, green: 0.57, blue: 0.69, alpha: 1)
+            bank.fillTexture = memoryBridgeStoneTexture
+            bank.strokeColor = UIColor(red: 0.94, green: 0.78, blue: 0.51, alpha: 1)
             bank.lineWidth = 4
             bank.position = CGPoint(x: x, y: 289)
             bank.zPosition = 265
-            bank.name = "memoryBridgeBank"
+
+            let inner = SKShapeNode(
+                path: memoryBridgeStonePath(width: 65, height: 122)
+            )
+            inner.name = "decorativeMemoryBankRelief"
+            inner.fillColor = UIColor(red: 0.31, green: 0.25, blue: 0.42, alpha: 0.35)
+            inner.strokeColor = UIColor(red: 0.96, green: 0.79, blue: 0.53, alpha: 0.67)
+            inner.lineWidth = 2
+            bank.addChild(inner)
+
+            let sigil = ArtSystem.label("◇", size: 29)
+            sigil.name = "decorativeMemoryBankAnchor"
+            sigil.fontColor = UIColor(red: 0.97, green: 0.84, blue: 0.61, alpha: 1)
+            sigil.zPosition = 2
+            bank.addChild(sigil)
+
+            for boltY in [CGFloat(-54), 54] {
+                let bolt = SKShapeNode(circleOfRadius: 5)
+                bolt.name = "decorativeMemoryBankBolt"
+                bolt.position.y = boltY
+                bolt.fillColor = UIColor(red: 0.93, green: 0.74, blue: 0.45, alpha: 1)
+                bolt.strokeColor = UIColor(red: 0.31, green: 0.22, blue: 0.25, alpha: 1)
+                bolt.lineWidth = 1.5
+                bolt.zPosition = 3
+                bank.addChild(bolt)
+            }
             addChild(bank)
         }
 
@@ -1606,36 +1760,115 @@ import LearningCore
     private func memoryPad(_ symbol: String, index: Int) -> SKNode {
         let root = SKNode()
         root.name = "memoryPad"
-        // These physical rune controls must render above the newly raised
-        // 3D bridge deck and chasm. Otherwise SpriteKit hit-testing selects
-        // the stone scenery and a child's input is silently ignored.
         root.zPosition = 900
         root.userData = NSMutableDictionary(dictionary: ["symbol": symbol])
         let runeName = ["★": "star", "☾": "moon", "◆": "diamond", "●": "circle"][symbol]
             ?? "symbol"
         makeAccessible(root, label: "Memory rune: \(runeName)")
 
-        let stone = carvedPalaceStone(CGSize(width: 91, height: 89), radius: 19)
+        // A carved tablet rises out of the existing floor, not a rounded
+        // generic button hovering in front of the illustrated bridge.
+        // Root name/position and approximately 100pt tap size stay stable.
+        let stone = SKShapeNode(path: memoryBridgeStonePath(width: 97, height: 94))
+        stone.name = "memoryPad"
         stone.fillColor = UIColor(
-            red: 0.73 + CGFloat(index) * 0.015,
-            green: 0.65,
-            blue: 0.79,
+            red: 0.63 + CGFloat(index) * 0.012,
+            green: 0.54,
+            blue: 0.70,
             alpha: 1
         )
-        stone.name = "memoryPad"
+        stone.fillTexture = memoryBridgeStoneTexture
+        stone.strokeColor = UIColor(red: 0.99, green: 0.79, blue: 0.52, alpha: 1)
+        stone.lineWidth = 4
         root.addChild(stone)
 
-        let glyph = ArtSystem.label(symbol, size: 37)
-        glyph.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.48, alpha: 1)
-        glyph.name = "memoryPad"
-        root.addChild(glyph)
+        let stoneDepth = SKShapeNode(
+            path: memoryBridgeStonePath(width: 96, height: 93)
+        )
+        stoneDepth.name = "decorativeMemoryPadDepth"
+        stoneDepth.position.y = -7
+        stoneDepth.fillColor = UIColor(red: 0.16, green: 0.12, blue: 0.22, alpha: 1)
+        stoneDepth.strokeColor = UIColor(red: 0.38, green: 0.28, blue: 0.30, alpha: 1)
+        stoneDepth.lineWidth = 2
+        stoneDepth.zPosition = -2
+        stone.addChild(stoneDepth)
 
-        let foot = carvedPalaceStone(CGSize(width: 104, height: 17), radius: 5)
-        foot.fillColor = UIColor(red: 0.48, green: 0.38, blue: 0.54, alpha: 1)
-        foot.position.y = -55
-        foot.name = "memoryPad"
-        foot.zPosition = -1
-        root.addChild(foot)
+        let inset = SKShapeNode(path: memoryBridgeStonePath(width: 80, height: 77))
+        inset.name = "decorativeMemoryPadInlay"
+        inset.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.34, alpha: 0.84)
+        inset.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.58, alpha: 0.87)
+        inset.lineWidth = 2
+        inset.zPosition = 1
+        stone.addChild(inset)
+
+        let lamp = SKShapeNode(circleOfRadius: 31)
+        lamp.name = "decorativeMemoryPadLens"
+        lamp.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.36, alpha: 0.96)
+        lamp.strokeColor = UIColor(red: 0.93, green: 0.74, blue: 0.48, alpha: 1)
+        lamp.lineWidth = 3
+        lamp.zPosition = 2
+        stone.addChild(lamp)
+
+        let etchedGlass = SKShapeNode(circleOfRadius: 25)
+        etchedGlass.name = "decorativeMemoryPadGlass"
+        etchedGlass.fillColor = UIColor(red: 0.33, green: 0.25, blue: 0.49, alpha: 0.96)
+        etchedGlass.strokeColor = UIColor(red: 0.99, green: 0.87, blue: 0.66, alpha: 0.36)
+        etchedGlass.lineWidth = 2
+        etchedGlass.zPosition = 3
+        stone.addChild(etchedGlass)
+
+        let glyph = ArtSystem.label(symbol, size: 41)
+        glyph.name = "memoryPad"
+        glyph.fontColor = UIColor(red: 1, green: 0.92, blue: 0.69, alpha: 1)
+        glyph.zPosition = 4
+        stone.addChild(glyph)
+
+        // Two tiny captive clips and a three-part stone footing make each
+        // rune a real socket linked to a chasm relay.
+        for x in [CGFloat(-42), 42] {
+            let clip = SKShapeNode(
+                rectOf: CGSize(width: 8, height: 36), cornerRadius: 3
+            )
+            clip.name = "decorativeMemoryPadClasp"
+            clip.position = CGPoint(x: x, y: 0)
+            clip.fillColor = UIColor(red: 0.70, green: 0.48, blue: 0.33, alpha: 1)
+            clip.strokeColor = UIColor(red: 1, green: 0.84, blue: 0.54, alpha: 1)
+            clip.lineWidth = 1.5
+            clip.zPosition = 5
+            stone.addChild(clip)
+        }
+
+        let footShadow = SKShapeNode(ellipseOf: CGSize(width: 127, height: 24))
+        footShadow.name = "decorativeMemoryPadFloorShadow"
+        footShadow.position.y = -66
+        footShadow.fillColor = UIColor(red: 0.08, green: 0.06, blue: 0.15, alpha: 0.65)
+        footShadow.strokeColor = .clear
+        footShadow.zPosition = -4
+        root.addChild(footShadow)
+
+        let base = SKShapeNode(
+            path: memoryBridgeStonePath(width: 118, height: 26)
+        )
+        base.name = "memoryPad"
+        base.position.y = -49
+        base.fillColor = UIColor(red: 0.41, green: 0.33, blue: 0.45, alpha: 1)
+        base.fillTexture = memoryBridgeStoneTexture
+        base.strokeColor = UIColor(red: 0.93, green: 0.71, blue: 0.47, alpha: 1)
+        base.lineWidth = 3
+        base.zPosition = -2
+        root.addChild(base)
+
+        let ledge = SKShapeNode(
+            path: memoryBridgeStonePath(width: 111, height: 17)
+        )
+        ledge.name = "memoryPad"
+        ledge.position.y = -42
+        ledge.fillColor = UIColor(red: 0.57, green: 0.46, blue: 0.56, alpha: 1)
+        ledge.fillTexture = memoryBridgeStoneTexture
+        ledge.strokeColor = UIColor(red: 0.97, green: 0.80, blue: 0.53, alpha: 0.87)
+        ledge.lineWidth = 2
+        ledge.zPosition = -1
+        root.addChild(ledge)
         return root
     }
 
@@ -1647,6 +1880,9 @@ import LearningCore
     private func previewMemorySequence() {
         guard let memoryEncounter else { return }
         memoryAcceptingInput = false
+        // A previous wrong sequence may have briefly jammed a bridge stage.
+        // Clear its physical warning before Tiko's unscored new example.
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
         instruction.text = "Watch Tiko wake the bridge runes. Hold the order in your mind."
 
         let onDuration = reducedMotion ? 0.42 : 0.56
@@ -1686,9 +1922,24 @@ import LearningCore
         }) else { return }
         guard let stone = pad.children.compactMap({ $0 as? SKShapeNode }).first else { return }
         stone.fillColor = highlighted
-            ? UIColor(red: 0.91, green: 0.66, blue: 0.24, alpha: 1)
-            : UIColor(red: 0.26, green: 0.19, blue: 0.39, alpha: 0.98)
-        stone.glowWidth = highlighted ? 16 : 0
+            ? UIColor(red: 0.88, green: 0.70, blue: 0.44, alpha: 1)
+            : UIColor(red: 0.62, green: 0.53, blue: 0.69, alpha: 1)
+        stone.glowWidth = highlighted && !reducedMotion ? 5 : 0
+        if let glass = stone.childNode(
+            withName: "decorativeMemoryPadGlass"
+        ) as? SKShapeNode {
+            glass.fillColor = highlighted
+                ? UIColor(red: 0.99, green: 0.79, blue: 0.45, alpha: 1)
+                : UIColor(red: 0.33, green: 0.25, blue: 0.49, alpha: 0.96)
+            glass.glowWidth = highlighted && !reducedMotion ? 10 : 0
+        }
+        if let lens = stone.childNode(
+            withName: "decorativeMemoryPadLens"
+        ) as? SKShapeNode {
+            lens.strokeColor = highlighted
+                ? UIColor(red: 1, green: 0.97, blue: 0.72, alpha: 1)
+                : UIColor(red: 0.93, green: 0.74, blue: 0.48, alpha: 1)
+        }
         if highlighted && !reducedMotion {
             pad.run(.sequence([
                 .scale(to: 1.12, duration: 0.10),
@@ -1742,17 +1993,33 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            // A wrong rune physically stalls the NEXT unearned bridge stage.
+            // Earlier slabs drop and the child's selected floor tablet wears
+            // a temporary crossed brass rejection, not a generic red halo.
+            let failedStage = memoryInput.count
             memoryInput = []
             resetAttemptPlanks()
-            let rejectedPad = SKShapeNode(ellipseOf: CGSize(width: 98, height: 96))
+            showMemoryBridgeSafetyCatch(at: failedStage)
+            let rejectedPad = SKShapeNode(
+                path: memoryBridgeStonePath(width: 94, height: 91)
+            )
             rejectedPad.name = "memoryRejectedRune"
-            rejectedPad.fillColor = UIColor(red: 0.74, green: 0.18, blue: 0.16, alpha: 0.35)
-            rejectedPad.strokeColor = UIColor(red: 1, green: 0.56, blue: 0.38, alpha: 1)
-            rejectedPad.lineWidth = 6
+            rejectedPad.fillColor = UIColor(red: 0.42, green: 0.20, blue: 0.26, alpha: 0.52)
+            rejectedPad.strokeColor = UIColor(red: 1, green: 0.64, blue: 0.39, alpha: 1)
+            rejectedPad.lineWidth = 4
             rejectedPad.zPosition = 9
+            let stopBar = SKShapeNode(
+                rectOf: CGSize(width: 12, height: 68), cornerRadius: 4
+            )
+            stopBar.name = "decorativeMemoryRejectedClasp"
+            stopBar.zRotation = -.pi / 4
+            stopBar.fillColor = UIColor(red: 0.85, green: 0.37, blue: 0.27, alpha: 1)
+            stopBar.strokeColor = UIColor(red: 1, green: 0.78, blue: 0.49, alpha: 1)
+            stopBar.lineWidth = 2
+            rejectedPad.addChild(stopBar)
             node.addChild(rejectedPad)
             rejectedPad.run(.sequence([
-                .wait(forDuration: 0.65),
+                .wait(forDuration: 1.0),
                 .removeFromParent()
             ]), withKey: "memoryRejected")
             valkyrie.pose(.react)
@@ -1762,7 +2029,10 @@ import LearningCore
                 ? "The bridge forgot that order. Tiko will replay it once."
                 : "Tiko will replay the sequence slowly. Watch each rune, then try again."
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.18 : 0.55),
+                // An incorrect attempt needs a perceptible stopped-machine
+                // state, including the Reduced Motion presentation. Replay
+                // only after the child can notice which bridge stage refused.
+                .wait(forDuration: reducedMotion ? 1.15 : 1.20),
                 .run { [weak self] in self?.previewMemorySequence() }
             ]), withKey: "memoryRetry")
             return
@@ -1774,7 +2044,7 @@ import LearningCore
             .wait(forDuration: 0.14),
             .run { [weak self] in self?.setMemoryPad(symbol, highlighted: false) }
         ]))
-        raiseMemoryPlank(memoryInput.count - 1)
+        raiseMemoryPlank(memoryInput.count - 1, activatedBy: symbol)
 
         guard memoryInput.count == memoryEncounter.sequence.count else {
             memoryAcceptingInput = true
@@ -1816,6 +2086,99 @@ import LearningCore
         ]), withKey: "nextMemoryBridge")
     }
 
+    private func showMemoryBridgeSafetyCatch(at index: Int) {
+        guard index >= 0, index < 4,
+              let relay = childNode(
+                withName: "decorativeMemoryBridgeRelay\(index)"
+              ) as? SKShapeNode else { return }
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
+        let catchPlate = SKNode()
+        catchPlate.name = "memoryBridgeSafetyCatch"
+        catchPlate.position = CGPoint(x: relay.position.x, y: relay.position.y + 8)
+        catchPlate.zPosition = 295
+
+        let foot = SKShapeNode(
+            path: memoryBridgeStonePath(width: 46, height: 20)
+        )
+        foot.name = "decorativeMemoryCatchFoot"
+        foot.fillColor = UIColor(red: 0.38, green: 0.21, blue: 0.23, alpha: 1)
+        foot.strokeColor = UIColor(red: 0.97, green: 0.69, blue: 0.43, alpha: 1)
+        foot.lineWidth = 2.5
+        catchPlate.addChild(foot)
+
+        for diagonal in [CGFloat(-1), 1] {
+            let bar = SKShapeNode(
+                rectOf: CGSize(width: 9, height: 33), cornerRadius: 3
+            )
+            bar.name = "decorativeMemoryCatchBar"
+            bar.position.y = 12
+            bar.zRotation = diagonal * .pi / 5
+            bar.fillColor = UIColor(red: 0.79, green: 0.36, blue: 0.27, alpha: 1)
+            bar.strokeColor = UIColor(red: 1, green: 0.79, blue: 0.48, alpha: 1)
+            bar.lineWidth = 1.8
+            bar.zPosition = 2
+            catchPlate.addChild(bar)
+        }
+
+        let warning = SKShapeNode(circleOfRadius: 6)
+        warning.name = "decorativeMemoryCatchWarning"
+        warning.position.y = 13
+        warning.fillColor = UIColor(red: 0.98, green: 0.54, blue: 0.30, alpha: 1)
+        warning.strokeColor = UIColor(red: 1, green: 0.92, blue: 0.59, alpha: 1)
+        warning.lineWidth = 2
+        warning.zPosition = 3
+        catchPlate.addChild(warning)
+        addChild(catchPlate)
+
+        relay.fillColor = UIColor(red: 0.78, green: 0.28, blue: 0.24, alpha: 1)
+        if let glass = relay.childNode(
+            withName: "decorativeMemoryBridgeRelayGlass"
+        ) as? SKShapeNode {
+            glass.fillColor = UIColor(red: 0.98, green: 0.52, blue: 0.33, alpha: 1)
+        }
+    }
+
+    private func setMemoryBridgeStage(
+        _ index: Int, powered: Bool, fromPadSymbol symbol: String? = nil
+    ) {
+        guard index >= 0, index < 4 else { return }
+        let bright = UIColor(red: 0.78, green: 0.96, blue: 0.70, alpha: 1)
+        let dim = UIColor(red: 0.23, green: 0.18, blue: 0.34, alpha: 1)
+        if let relay = childNode(
+            withName: "decorativeMemoryBridgeRelay\(index)"
+        ) as? SKShapeNode {
+            relay.fillColor = powered ? bright : dim
+            relay.strokeColor = powered
+                ? UIColor(red: 1, green: 0.91, blue: 0.60, alpha: 1)
+                : UIColor(red: 0.91, green: 0.72, blue: 0.46, alpha: 1)
+            relay.glowWidth = powered && !reducedMotion ? 5 : 0
+            if let glass = relay.childNode(
+                withName: "decorativeMemoryBridgeRelayGlass"
+            ) as? SKShapeNode {
+                glass.fillColor = powered ? bright
+                    : UIColor(red: 0.36, green: 0.27, blue: 0.48, alpha: 1)
+            }
+        }
+        if let seal = childNode(withName: "memoryBridgePlank\(index)")?
+            .childNode(withName: "decorativeMemoryPlankSeal") as? SKLabelNode {
+            seal.fontColor = powered
+                ? UIColor(red: 0.97, green: 0.97, blue: 0.75, alpha: 1)
+                : UIColor(red: 0.95, green: 0.86, blue: 0.66, alpha: 0.77)
+        }
+        if powered,
+           let symbol,
+           let chosenPad = memoryEncounter?.choices.firstIndex(of: symbol),
+           let conduit = childNode(
+                withName: "decorativeMemoryConduit\(chosenPad)"
+           ) as? SKShapeNode {
+            // The selected control energizes the common bridge bus; the
+            // corresponding next physical stage then rises. This makes the
+            // actual child's rune and result visibly connected.
+            conduit.strokeColor = UIColor(red: 0.96, green: 0.79, blue: 0.49, alpha: 0.92)
+            conduit.glowWidth = reducedMotion ? 0 : 4
+        }
+    }
+
     private func resetAttemptPlanks() {
         for index in 0..<4 {
             guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
@@ -1827,16 +2190,27 @@ import LearningCore
             plank.alpha = 0.48
             plank.strokeColor = UIColor(red: 0.65, green: 0.54, blue: 0.71, alpha: 0.68)
             plank.glowWidth = 0
+            setMemoryBridgeStage(index, powered: false)
         }
+        for index in 0..<4 {
+            if let conduit = childNode(
+                withName: "decorativeMemoryConduit\(index)"
+            ) as? SKShapeNode {
+                conduit.strokeColor = UIColor(red: 0.53, green: 0.41, blue: 0.40, alpha: 0.63)
+                conduit.glowWidth = 0
+            }
+        }
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
     }
 
-    private func raiseMemoryPlank(_ index: Int) {
+    private func raiseMemoryPlank(_ index: Int, activatedBy symbol: String) {
         guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
             return
         }
         plank.alpha = 1
         plank.strokeColor = UIColor(red: 0.96, green: 0.75, blue: 0.34, alpha: 1)
-        plank.glowWidth = 8
+        plank.glowWidth = reducedMotion ? 0 : 5
+        setMemoryBridgeStage(index, powered: true, fromPadSymbol: symbol)
         if reducedMotion {
             plank.position.y = 292
             plank.yScale = 1
@@ -1887,8 +2261,16 @@ import LearningCore
             plank.alpha = 1
             plank.fillColor = UIColor(red: 0.75, green: 0.69, blue: 0.78, alpha: 1)
             plank.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.36, alpha: 1)
-            plank.glowWidth = 8
+            plank.glowWidth = reducedMotion ? 0 : 5
+            setMemoryBridgeStage(index, powered: true)
+            if let conduit = childNode(
+                withName: "decorativeMemoryConduit\(index)"
+            ) as? SKShapeNode {
+                conduit.strokeColor = UIColor(red: 0.96, green: 0.79, blue: 0.49, alpha: 0.92)
+                conduit.glowWidth = reducedMotion ? 0 : 3
+            }
         }
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
 
         if let chasm = childNode(withName: "memoryChasm") as? SKShapeNode {
             chasm.strokeColor = UIColor(red: 0.84, green: 0.68, blue: 0.46, alpha: 1)
@@ -1901,17 +2283,31 @@ import LearningCore
             let joined = SKNode()
             joined.name = "memoryBridgeJoinedRail"
             joined.zPosition = 281
-            for y in [CGFloat(352), 231] {
-                let rail = SKShapeNode(
-                    rectOf: CGSize(width: 605, height: 10),
-                    cornerRadius: 5
-                )
-                rail.fillColor = UIColor(red: 0.68, green: 0.48, blue: 0.27, alpha: 1)
-                rail.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.46, alpha: 1)
-                rail.lineWidth = 2
-                rail.position = CGPoint(x: 758, y: y)
+            for y in [CGFloat(352), 233] {
+                let railPath = CGMutablePath()
+                railPath.move(to: CGPoint(x: 454, y: y))
+                railPath.addLine(to: CGPoint(x: 1060, y: y))
+                let rail = SKShapeNode(path: railPath)
                 rail.name = "memoryDeckRailing"
+                rail.strokeColor = UIColor(red: 0.92, green: 0.70, blue: 0.43, alpha: 1)
+                rail.lineWidth = 7
+                rail.lineCap = .round
                 joined.addChild(rail)
+                for index in 0..<5 {
+                    let post = SKShapeNode(
+                        path: memoryBridgeStonePath(width: 16, height: 22)
+                    )
+                    post.name = "decorativeMemoryJoinedRailPost"
+                    post.position = CGPoint(
+                        x: 454 + CGFloat(index) * 151, y: y
+                    )
+                    post.fillColor = UIColor(red: 0.53, green: 0.39, blue: 0.37, alpha: 1)
+                    post.fillTexture = memoryBridgeStoneTexture
+                    post.strokeColor = UIColor(red: 1, green: 0.83, blue: 0.53, alpha: 1)
+                    post.lineWidth = 2
+                    post.zPosition = 3
+                    joined.addChild(post)
+                }
             }
             addChild(joined)
         }
