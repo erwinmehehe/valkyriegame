@@ -2106,6 +2106,98 @@ import LearningCore
         XCTAssertEqual(switchEvidence.first?.supportLevel, .independent)
     }
 
+    func testMirrorHallRejectedGlassPivotsThenClearsOnAssistedRepair() async throws {
+        for motionReduced in [true, false] {
+            let state = try AppState(
+                context: ModelContext(try LearningStore.container(inMemory: true))
+            )
+            state.reducedMotion = motionReduced
+            for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzleMirrorHallAvailable)
+            state.travel(to: .mirrorHall)
+
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = motionReduced
+            view.presentScene(scene)
+
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleOrientationEncounter)
+            let mirrors = scene.children.compactMap { $0 as? SKShapeNode }
+                .filter { $0.name == "mirrorOrientationChoice" }
+            let wrong = try XCTUnwrap(mirrors.first {
+                ($0.userData?["direction"] as? String) != active.target.rawValue
+            })
+            let correct = try XCTUnwrap(mirrors.first {
+                ($0.userData?["direction"] as? String) == active.target.rawValue
+            })
+            let wrongGlass = try XCTUnwrap(
+                wrong.childNode(withName: "mirrorTurningPane") as? SKShapeNode
+            )
+            let correctGlass = try XCTUnwrap(
+                correct.childNode(withName: "mirrorTurningPane") as? SKShapeNode
+            )
+            XCTAssertNil(scene.childNode(withName: "mirrorActiveRay"),
+                         "An untouched mirror must not reveal the right answer.")
+            XCTAssertEqual(wrongGlass.xScale, 1, accuracy: 0.01)
+            XCTAssertEqual(scene.targetName(at: wrong.position), "mirrorOrientationChoice")
+
+            scene.valkyrie.position = CGPoint(x: wrong.position.x - 235, y: 175)
+            scene.handleTap(at: wrong.position)
+            try await waitUntil(timeout: 5) {
+                state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count == 1
+            }
+            try await waitUntil(timeout: 3) {
+                abs(wrongGlass.xScale - 0.62) < 0.02
+            }
+            XCTAssertEqual(wrongGlass.zRotation, .pi / 10, accuracy: 0.02)
+            let missedImpact = try XCTUnwrap(scene.childNode(withName: "mirrorActiveImpact"))
+            XCTAssertEqual(missedImpact.position.y, 306, accuracy: 0.01)
+            XCTAssertEqual(
+                state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.first?.outcome,
+                .incorrect
+            )
+
+            scene.valkyrie.position = CGPoint(x: correct.position.x - 235, y: 175)
+            scene.handleTap(at: correct.position)
+            try await waitUntil(timeout: 5) {
+                state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence.count == 2
+            }
+            try await waitUntil(timeout: 3) {
+                abs(wrongGlass.xScale - 1) < 0.02 && abs(correctGlass.xScale - 0.92) < 0.02
+            }
+            XCTAssertEqual(wrongGlass.zRotation, 0, accuracy: 0.02)
+            XCTAssertNotEqual(wrong.strokeColor, .systemRed,
+                              "A solved room cannot leave the earlier mirror falsely rejected.")
+            XCTAssertEqual(correctGlass.zRotation, -.pi / 18, accuracy: 0.02)
+            let repairedImpact = try XCTUnwrap(scene.childNode(withName: "mirrorActiveImpact"))
+            XCTAssertEqual(repairedImpact.position.y, 252, accuracy: 0.01)
+            XCTAssertEqual(repairedImpact.position.x, correct.position.x, accuracy: 0.01)
+            XCTAssertNotNil(scene.childNode(withName: "mirrorActiveRay"))
+            let evidence = state.profile.progress(for: PuzzleSkills.spatialOrientation).evidence
+            XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint])
+            XCTAssertEqual(evidence.last?.encounterID, active.id)
+            XCTAssertFalse(state.puzzleMirrorHallComplete,
+                           "Assisted recovery cannot bypass the independent progression gate.")
+            if motionReduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-Mirror-Hall-Physical-Assisted-Repair")
+            }
+
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
     func testMirrorHallRecordsSpatialOrientationThroughLiveMirrorChoice() async throws {
         let state = try AppState(
             context: ModelContext(try LearningStore.container(inMemory: true))
