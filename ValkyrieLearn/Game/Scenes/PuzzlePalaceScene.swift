@@ -4515,6 +4515,7 @@ import LearningCore
 
     private func finishPathTiles() {
         pathAcceptingInput = false
+        clearAttentionCue()
         // A completed route remains physically visible on revisits.
         clearPathTilesChoices(preserveGrid: true)
         childNode(withName: "pathNext")?.removeFromParent()
