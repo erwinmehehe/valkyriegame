@@ -3075,7 +3075,8 @@ import LearningCore
         XCTAssertGreaterThanOrEqual(testLever.calculateAccumulatedFrame().width, 80)
         for index in 0..<4 {
             let housing = try XCTUnwrap(repairLab.childNode(withName: "repairSocketBase\(index)"))
-            XCTAssertGreaterThanOrEqual(housing.calculateAccumulatedFrame().width, 140)
+            XCTAssertGreaterThanOrEqual(housing.calculateAccumulatedFrame().width, 120,
+                                        "Smaller socket housings still provide a generous iPad target.")
         }
         let repairSteps = repairLab.children.filter {
             $0.name?.hasPrefix("repairStep") == true
@@ -3083,8 +3084,9 @@ import LearningCore
         }
         XCTAssertEqual(repairSteps.count, 4)
         for step in repairSteps {
-            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().width, 130)
-            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().height, 100)
+            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().width, 110)
+            XCTAssertGreaterThanOrEqual(step.calculateAccumulatedFrame().height, 110,
+                                        "The 4:3 iPad gear must remain larger than a 60-point tap target.")
             XCTAssertTrue(step.isAccessibilityElement)
         }
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).state, .new)
@@ -3472,6 +3474,91 @@ import LearningCore
         if correct && (world == .puzzlePalace || world == .stopGoOrbs) {
             scene.speed = 0
         }
+    }
+
+    func testRepairLabWrongSwapPhysicallyStallsAndRetryRemainsAssisted() async throws {
+        let state = try AppState(
+            context: ModelContext(try LearningStore.container(inMemory: true))
+        )
+        state.reducedMotion = true
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            _ = state.recordPuzzle(family[0], outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        for family in PuzzlePalaceEncounterCatalog.commandGearFamilies {
+            _ = state.recordPuzzle(family[0], outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        for family in PuzzlePalaceEncounterCatalog.bugLanternFamilies {
+            _ = state.recordPuzzle(family[0], outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzleBugRepairAvailable)
+        state.travel(to: .bugLanternRepair)
+
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        defer { scene.willLeave(); view.presentScene(nil); window.isHidden = true }
+
+        let encounter = try XCTUnwrap(
+            scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter
+        )
+        let candidates = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]
+        let incorrectSwap = try XCTUnwrap(candidates.first { !encounter.isCorrectSwap($0) })
+        let first = try XCTUnwrap(
+            scene.childNode(withName: "repairStep\(incorrectSwap[0])")
+        )
+        let second = try XCTUnwrap(
+            scene.childNode(withName: "repairStep\(incorrectSwap[1])")
+        )
+        XCTAssertGreaterThanOrEqual(first.calculateAccumulatedFrame().width, 110)
+        let firstX = first.position.x
+        let secondX = second.position.x
+
+        scene.handleTap(at: first.position)
+        scene.handleTap(at: second.position)
+        let testLever = try XCTUnwrap(scene.childNode(withName: "repairFix"))
+        scene.handleTap(at: testLever.position)
+
+        // Incorrect assessment is recorded once, but the selected gears
+        // still visibly change places and the rotor stalls on that outcome.
+        XCTAssertEqual(first.position.x, secondX, accuracy: 0.01)
+        XCTAssertEqual(second.position.x, firstX, accuracy: 0.01)
+        let rotor = try XCTUnwrap(scene.childNode(withName: "//repairMachineRotor"))
+        XCTAssertEqual(rotor.zRotation, -.pi / 10, accuracy: 0.01)
+        let wrongEvidence = state.profile.progress(for: PuzzleSkills.debugSequence).evidence
+        XCTAssertEqual(wrongEvidence.count, 1)
+        XCTAssertEqual(wrongEvidence.last?.outcome, .incorrect)
+        XCTAssertEqual(wrongEvidence.last?.supportLevel, .independent)
+
+        scene.speed = 0
+        try await capture(scene, in: view, name: "Puzzle-Palace-4x3-RepairLab-Wrong-Swap-Stalled")
+        scene.speed = 1
+        try await waitUntil(timeout: 3) {
+            scene.childNode(withName: "repairStep0") != nil
+                && (scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter)?.id != encounter.id
+        }
+        XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).evidence.count, 1,
+                       "Retry must not create an extra correct outcome.")
+
+        let retry = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter)
+        for index in retry.swapIndices {
+            let gear = try XCTUnwrap(scene.childNode(withName: "repairStep\(index)"))
+            scene.handleTap(at: gear.position)
+        }
+        scene.handleTap(at: testLever.position)
+        let outcomes = state.profile.progress(for: PuzzleSkills.debugSequence).evidence
+        XCTAssertEqual(outcomes.count, 2)
+        XCTAssertEqual(outcomes.last?.outcome, .correct)
+        XCTAssertEqual(outcomes.last?.supportLevel, .lightHint,
+                       "Correcting after a wrong try cannot be scored as independent mastery.")
     }
 
     func testIllustratedPalaceRoomsOnFourByThreeIPad() async throws {
