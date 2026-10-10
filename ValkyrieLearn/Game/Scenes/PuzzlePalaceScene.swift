@@ -1965,7 +1965,7 @@ import LearningCore
             rejectedPad.addChild(stopBar)
             node.addChild(rejectedPad)
             rejectedPad.run(.sequence([
-                .wait(forDuration: 0.65),
+                .wait(forDuration: 1.0),
                 .removeFromParent()
             ]), withKey: "memoryRejected")
             valkyrie.pose(.react)
@@ -1975,7 +1975,10 @@ import LearningCore
                 ? "The bridge forgot that order. Tiko will replay it once."
                 : "Tiko will replay the sequence slowly. Watch each rune, then try again."
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.18 : 0.55),
+                // An incorrect attempt needs a perceptible stopped-machine
+                // state, including the Reduced Motion presentation. Replay
+                // only after the child can notice which bridge stage refused.
+                .wait(forDuration: reducedMotion ? 1.15 : 1.20),
                 .run { [weak self] in self?.previewMemorySequence() }
             ]), withKey: "memoryRetry")
             return
