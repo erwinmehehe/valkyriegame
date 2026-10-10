@@ -2097,6 +2097,9 @@ import LearningCore
         stopGoIndex = 0
         stopGoAcceptingTap = false
         stopGoCurrentSignal = nil
+        // A new rhythm starts with the physical latch closed, even if the
+        // previous correct GO left it retracted for its success celebration.
+        updateStopGoOrb(.hold)
         instruction.text = inhibitionEncounter.prompt
         showAttentionCue(
             at: CGPoint(x: 755, y: 365),
@@ -2193,10 +2196,11 @@ import LearningCore
             barrier.strokeColor = held
                 ? UIColor(red: 0.91, green: 0.54, blue: 0.65, alpha: 0.90)
                 : UIColor(red: 0.66, green: 0.94, blue: 0.74, alpha: 0.95)
-            // The gate actually blocks the route on HOLD and retracts on GO.
-            // Scale is a stable physical state, including for Reduced Motion.
-            barrier.xScale = held ? 1 : 0.38
-            barrier.alpha = held ? 0.95 : 0.56
+            // HOLD blocks the way; GO *arms* the latch, but does not open it.
+            // A child must tap the star for the barrier to physically retract.
+            barrier.removeAction(forKey: "stopGoBarrierRelease")
+            barrier.xScale = 1
+            barrier.alpha = 0.95
             barrier.fillColor = held
                 ? UIColor(red: 0.35, green: 0.14, blue: 0.22, alpha: 0.91)
                 : UIColor(red: 0.13, green: 0.39, blue: 0.28, alpha: 0.72)
@@ -2225,6 +2229,23 @@ import LearningCore
                     .scale(to: 1.0, duration: 0.15)
                 ]))
             }
+        }
+    }
+
+    private func releaseStopGoBarrier() {
+        guard let barrier = childNode(withName: "stopGoBarrier") as? SKShapeNode else {
+            return
+        }
+        barrier.removeAction(forKey: "stopGoBarrierRelease")
+        barrier.fillColor = UIColor(red: 0.13, green: 0.39, blue: 0.28, alpha: 0.72)
+        barrier.strokeColor = UIColor(red: 0.66, green: 0.94, blue: 0.74, alpha: 0.95)
+        barrier.alpha = 0.56
+        if reducedMotion {
+            // The physical outcome remains visible without any movement.
+            barrier.xScale = 0.24
+        } else {
+            barrier.run(.scaleX(to: 0.24, duration: 0.28),
+                        withKey: "stopGoBarrierRelease")
         }
     }
 
@@ -2270,9 +2291,12 @@ import LearningCore
             valkyrie.pose(.interact)
             tiko.pose(.interact)
             pulseStopGoOrb()
+            releaseStopGoBarrier()
+            instruction.text = "The latch opened! Watch for the next signal."
             stopGoIndex += 1
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.12 : 0.30),
+                // Let the child see the result before the next HOLD closes it.
+                .wait(forDuration: reducedMotion ? 0.30 : 0.65),
                 .run { [weak self] in self?.presentStopGoSignal() }
             ]), withKey: "stopGoSignal")
         }

@@ -1935,7 +1935,6 @@ import LearningCore
             let state = try AppState(
                 context: ModelContext(try LearningStore.container(inMemory: true))
             )
-            state.reducedMotion = true
             for encounter in PuzzlePalaceEncounterCatalog.runeGate {
                 _ = state.recordPuzzle(encounter, outcome: .correct, support: .independent, attempts: 1, responseTime: 1)
             }
@@ -1946,6 +1945,8 @@ import LearningCore
             return state
         }
 
+        // HOLD is a real blocked state. Tapping it records one incorrect
+        // attempt and never opens the physical barrier.
         do {
             let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
             let controller = UIViewController()
@@ -1954,14 +1955,19 @@ import LearningCore
             window.rootViewController = controller
             window.makeKeyAndVisible()
             let state = try prepareState()
+            state.reducedMotion = true
             let scene = PuzzlePalaceScene(state: state)
             scene.reducedMotion = true
             view.presentScene(scene)
+            let barrier = try XCTUnwrap(scene.childNode(withName: "stopGoBarrier") as? SKShapeNode)
+            let glyph = try XCTUnwrap(scene.childNode(withName: "//stopGoOrbGlyph") as? SKLabelNode)
 
-            try await Task.sleep(nanoseconds: 350_000_000)
+            try await waitUntil(timeout: 4) {
+                glyph.text == "Ⅱ" && (scene.instruction.text ?? "").hasPrefix("HOLD")
+            }
+            XCTAssertEqual(barrier.xScale, 1, accuracy: 0.01)
             scene.handleTap(at: CGPoint(x: 755, y: 365))
-            try await Task.sleep(nanoseconds: 350_000_000)
-
+            XCTAssertEqual(barrier.xScale, 1, accuracy: 0.01)
             let evidence = state.profile.progress(for: PuzzleSkills.responseInhibition).evidence
             XCTAssertEqual(evidence.count, 1)
             XCTAssertEqual(evidence.first?.outcome, .incorrect)
@@ -1972,7 +1978,10 @@ import LearningCore
             window.isHidden = true
         }
 
-        do {
+        // Both motion modes must show a locked GO-ready state before any tap,
+        // a physical release after the tap, and no premature or duplicate
+        // mastery evidence while the rhythm is incomplete.
+        for reducedMotion in [true, false] {
             let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
             let controller = UIViewController()
             let view = SKView(frame: window.bounds)
@@ -1980,19 +1989,40 @@ import LearningCore
             window.rootViewController = controller
             window.makeKeyAndVisible()
             let state = try prepareState()
+            state.reducedMotion = reducedMotion
             let scene = PuzzlePalaceScene(state: state)
-            scene.reducedMotion = true
+            scene.reducedMotion = reducedMotion
             view.presentScene(scene)
+            let encounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleInhibitionEncounter)
+            let barrier = try XCTUnwrap(scene.childNode(withName: "stopGoBarrier") as? SKShapeNode)
+            let glyph = try XCTUnwrap(scene.childNode(withName: "//stopGoOrbGlyph") as? SKLabelNode)
+            let goCount = encounter.signals.filter { $0 == .go }.count
+            XCTAssertGreaterThan(goCount, 0)
 
-            let encounter = try XCTUnwrap(state.nextPuzzleStopGoEncounter())
-            try await Task.sleep(nanoseconds: 1_350_000_000)
-            scene.handleTap(at: CGPoint(x: 755, y: 365))
-            try await Task.sleep(nanoseconds: 1_250_000_000)
-            scene.handleTap(at: CGPoint(x: 755, y: 365))
-            try await Task.sleep(nanoseconds: 500_000_000)
+            for index in 0..<goCount {
+                try await waitUntil(timeout: 6) {
+                    glyph.text == "✦" && (scene.instruction.text ?? "").hasPrefix("GO")
+                }
+                XCTAssertEqual(barrier.xScale, 1, accuracy: 0.01,
+                               "Showing GO must not release the gate before the child taps.")
+                XCTAssertTrue(state.profile.progress(for: PuzzleSkills.responseInhibition).evidence.isEmpty)
+                scene.handleTap(at: CGPoint(x: 755, y: 365))
+                try await waitUntil(timeout: 2) { barrier.xScale < 0.30 }
+                XCTAssertTrue(state.profile.progress(for: PuzzleSkills.responseInhibition).evidence.isEmpty,
+                              "Partial GO sequences must not create mastery evidence.")
+                if index + 1 < goCount {
+                    try await waitUntil(timeout: 6) {
+                        glyph.text == "Ⅱ" && (scene.instruction.text ?? "").hasPrefix("HOLD")
+                    }
+                    XCTAssertEqual(barrier.xScale, 1, accuracy: 0.01,
+                                   "The next HOLD must visibly lock the gate again.")
+                }
+            }
 
+            try await waitUntil(timeout: 3) {
+                state.profile.progress(for: PuzzleSkills.responseInhibition).evidence.count == 1
+            }
             let evidence = state.profile.progress(for: PuzzleSkills.responseInhibition).evidence
-            XCTAssertEqual(evidence.count, 1)
             XCTAssertEqual(evidence.first?.encounterID, encounter.id)
             XCTAssertEqual(evidence.first?.outcome, .correct)
             XCTAssertEqual(evidence.first?.supportLevel, .independent)
