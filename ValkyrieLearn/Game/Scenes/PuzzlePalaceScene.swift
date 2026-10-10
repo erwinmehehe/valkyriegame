@@ -2028,6 +2028,7 @@ import LearningCore
         shutter.name = "decorativeStopGoShutter"
         shutter.zPosition = 4
         orbRoot.addChild(shutter)
+        makeAccessible(orbRoot, label: "Brass orb signal. Wait on HOLD; tap on GO.")
         addChild(orbRoot)
 
         let barrier = SKShapeNode(rectOf: CGSize(width: 82, height: 204), cornerRadius: 38)
@@ -2149,6 +2150,10 @@ import LearningCore
               let halo = root.childNode(withName: "stopGoOrbHalo") as? SKShapeNode else {
             return
         }
+
+        root.accessibilityLabel = signal == .hold
+            ? "HOLD double-bar signal. Wait. The barrier is closed."
+            : "GO star signal. Tap the brass orb to open the barrier."
 
         if let shutter = root.childNode(withName: "decorativeStopGoShutter") as? SKShapeNode {
             shutter.removeAction(forKey: "shutterSlide")
