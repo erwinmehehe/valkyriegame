@@ -1400,50 +1400,101 @@ import LearningCore
         )
     }
 
-    private func runeStone(_ rune: String, name: String) -> SKShapeNode {
-        let stone = carvedPalaceStone(CGSize(width: 62, height: 68), radius: 14)
-        stone.name = name
+    private func runeCarvedOutline(width: CGFloat, height: CGFloat) -> CGPath {
+        // Eight shallow facets use the painted palace's stone vocabulary
+        // instead of a plain rounded UI rectangle.
+        let w = width / 2
+        let h = height / 2
+        let cut: CGFloat = min(12, min(w, h) * 0.34)
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -w + cut, y: h))
+        path.addLine(to: CGPoint(x: w - cut, y: h))
+        path.addLine(to: CGPoint(x: w, y: h - cut))
+        path.addLine(to: CGPoint(x: w, y: -h + cut))
+        path.addLine(to: CGPoint(x: w - cut, y: -h))
+        path.addLine(to: CGPoint(x: -w + cut, y: -h))
+        path.addLine(to: CGPoint(x: -w, y: -h + cut))
+        path.addLine(to: CGPoint(x: -w, y: h - cut))
+        path.closeSubpath()
+        return path
+    }
 
-        let inset = SKShapeNode(
-            rectOf: CGSize(width: 49, height: 55),
-            cornerRadius: 12
-        )
-        inset.fillColor = UIColor(red: 0.22, green: 0.14, blue: 0.28, alpha: 0.36)
-        inset.strokeColor = UIColor(red: 0.94, green: 0.76, blue: 0.48, alpha: 0.78)
-        inset.lineWidth = 2
+    private func runeStone(_ rune: String, name: String) -> SKShapeNode {
+        let stone = SKShapeNode(path: runeCarvedOutline(width: 62, height: 68))
+        stone.name = name
+        stone.fillColor = UIColor(red: 0.64, green: 0.55, blue: 0.69, alpha: 1)
+        stone.fillTexture = palaceStoneTexture
+        stone.strokeColor = UIColor(red: 0.95, green: 0.78, blue: 0.49, alpha: 1)
+        stone.lineWidth = 3
+
+        // A physical shadow lip and a raised light-catching face create a
+        // seated piece of masonry, not an icon on a raised button.
+        let depth = SKShapeNode(path: runeCarvedOutline(width: 61, height: 66))
+        depth.position.y = -5
+        depth.fillColor = UIColor(red: 0.20, green: 0.16, blue: 0.27, alpha: 1)
+        depth.strokeColor = UIColor(red: 0.48, green: 0.37, blue: 0.35, alpha: 1)
+        depth.lineWidth = 2
+        depth.zPosition = -1
+        depth.name = name
+        stone.addChild(depth)
+
+        let inset = SKShapeNode(path: runeCarvedOutline(width: 49, height: 55))
         inset.name = name
+        inset.fillColor = UIColor(red: 0.31, green: 0.22, blue: 0.39, alpha: 0.76)
+        inset.strokeColor = UIColor(red: 0.97, green: 0.81, blue: 0.57, alpha: 0.85)
+        inset.lineWidth = 2
+        inset.zPosition = 1
         stone.addChild(inset)
 
+        let facet = SKShapeNode(path: runeCarvedOutline(width: 40, height: 46))
+        facet.name = name
+        facet.fillColor = UIColor(red: 0.23, green: 0.17, blue: 0.31, alpha: 0.33)
+        facet.strokeColor = UIColor(red: 1, green: 0.94, blue: 0.73, alpha: 0.27)
+        facet.lineWidth = 1
+        facet.zPosition = 2
+        stone.addChild(facet)
+
         let glyph = ArtSystem.label(rune, size: 30)
-        glyph.fontColor = UIColor(red: 1.0, green: 0.85, blue: 0.52, alpha: 1)
+        glyph.fontColor = UIColor(red: 1.0, green: 0.91, blue: 0.65, alpha: 1)
         glyph.name = name
+        glyph.zPosition = 3
         stone.addChild(glyph)
         return stone
     }
 
     private func runeSocket() -> SKShapeNode {
-        let socket = SKShapeNode(
-            rectOf: CGSize(width: 62, height: 68),
-            cornerRadius: 16
-        )
+        let socket = SKShapeNode(path: runeCarvedOutline(width: 62, height: 68))
         socket.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.14, alpha: 1)
         socket.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.40, alpha: 0.96)
         socket.lineWidth = 4
         socket.name = "runeSocket"
 
-        let inlay = SKShapeNode(
-            rectOf: CGSize(width: 48, height: 54),
-            cornerRadius: 11
-        )
+        let inlay = SKShapeNode(path: runeCarvedOutline(width: 48, height: 54))
         inlay.fillColor = UIColor(red: 0.075, green: 0.055, blue: 0.10, alpha: 1)
         inlay.strokeColor = UIColor(red: 0.48, green: 0.34, blue: 0.28, alpha: 0.86)
         inlay.lineWidth = 2
         inlay.name = "runeSocketInlay"
         socket.addChild(inlay)
 
+        // Captive opposing brass jaws make the lock respond physically to a
+        // learner's attempt. They are never themselves tappable or scored.
+        for (suffix, x) in [("Left", CGFloat(-33)), ("Right", CGFloat(33))] {
+            let jaw = SKShapeNode(
+                rectOf: CGSize(width: 10, height: 42), cornerRadius: 3
+            )
+            jaw.name = "decorativeRuneSocketJaw\(suffix)"
+            jaw.position = CGPoint(x: x, y: 0)
+            jaw.fillColor = UIColor(red: 0.65, green: 0.45, blue: 0.30, alpha: 1)
+            jaw.strokeColor = UIColor(red: 1, green: 0.79, blue: 0.48, alpha: 1)
+            jaw.lineWidth = 2
+            jaw.zPosition = 4
+            socket.addChild(jaw)
+        }
+
         let mark = ArtSystem.label("?", size: 29)
         mark.fontColor = UIColor(red: 0.99, green: 0.83, blue: 0.54, alpha: 1)
         mark.name = "runeSocketMark"
+        mark.zPosition = 3
         socket.addChild(mark)
         return socket
     }
@@ -1451,29 +1502,48 @@ import LearningCore
     private func runeChoice(_ rune: String, index: Int) -> SKShapeNode {
         let stone = runeStone(rune, name: "runeChoice")
         stone.setScale(1.19)
-        stone.fillColor = UIColor(red: 0.80, green: 0.71, blue: 0.76, alpha: 1)
+        stone.fillColor = UIColor(red: 0.78, green: 0.69, blue: 0.78, alpha: 1)
 
-        // The selectable piece rests on a low stone plinth at floor level.
-        let ledge = SKShapeNode(
-            rectOf: CGSize(width: 94, height: 21),
-            cornerRadius: 7
-        )
-        ledge.position.y = -50
-        ledge.fillColor = UIColor(red: 0.29, green: 0.22, blue: 0.22, alpha: 0.98)
-        ledge.strokeColor = UIColor(red: 0.88, green: 0.70, blue: 0.44, alpha: 0.85)
-        ledge.lineWidth = 2
-        ledge.name = "runeChoice"
-        stone.addChild(ledge)
-
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: 114, height: 22))
-        shadow.fillColor = UIColor(red: 0.13, green: 0.075, blue: 0.11, alpha: 0.31)
-        shadow.strokeColor = .clear
-        shadow.position.y = -66
-        shadow.zPosition = -2
+        // A cut-stone plinth anchors each key to the existing mural's floor.
+        // Decorative children keep the scored root's stable, >88pt hit area.
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 116, height: 21))
         shadow.name = "runeChoice"
+        shadow.position.y = -64
+        shadow.zPosition = -3
+        shadow.fillColor = UIColor(red: 0.09, green: 0.07, blue: 0.16, alpha: 0.50)
+        shadow.strokeColor = .clear
         stone.addChild(shadow)
 
-        makeAccessible(stone, label: "Place the \(rune) rune in the palace lock")
+        let plinthFoot = SKShapeNode(path: runeCarvedOutline(width: 102, height: 23))
+        plinthFoot.name = "runeChoice"
+        plinthFoot.position = CGPoint(x: 0, y: -51)
+        plinthFoot.zPosition = -2
+        plinthFoot.fillColor = UIColor(red: 0.25, green: 0.19, blue: 0.29, alpha: 1)
+        plinthFoot.strokeColor = UIColor(red: 0.70, green: 0.49, blue: 0.33, alpha: 1)
+        plinthFoot.lineWidth = 3
+        stone.addChild(plinthFoot)
+
+        let ledge = SKShapeNode(path: runeCarvedOutline(width: 94, height: 19))
+        ledge.name = "runeChoice"
+        ledge.position.y = -45
+        ledge.zPosition = -1
+        ledge.fillColor = UIColor(red: 0.51, green: 0.39, blue: 0.44, alpha: 1)
+        ledge.fillTexture = palaceStoneTexture
+        ledge.strokeColor = UIColor(red: 0.96, green: 0.74, blue: 0.45, alpha: 1)
+        ledge.lineWidth = 2.5
+        stone.addChild(ledge)
+
+        // This thin bronze holding rim links the physical rune to its base.
+        let mount = SKShapeNode(ellipseOf: CGSize(width: 67, height: 10))
+        mount.name = "runeChoice"
+        mount.position.y = -35
+        mount.zPosition = 1
+        mount.fillColor = UIColor(red: 0.37, green: 0.26, blue: 0.26, alpha: 1)
+        mount.strokeColor = UIColor(red: 0.97, green: 0.77, blue: 0.47, alpha: 0.75)
+        mount.lineWidth = 1
+        stone.addChild(mount)
+
+        makeAccessible(stone, label: "Place the \(rune) carved stone in the palace lock")
         return stone
     }
 
