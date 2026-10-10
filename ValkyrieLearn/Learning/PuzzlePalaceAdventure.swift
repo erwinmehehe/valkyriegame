@@ -484,6 +484,22 @@ public struct PuzzlePathEncounter: Identifiable, Equatable, Sendable {
         return result
     }
 
+    /// Visual scouting only. Tiko may step on each new, walkable stone but
+    /// must stop *before* a cracked stone, an off-board step or a loop.
+    /// A route that stops short of the star stays traversable but does not
+    /// become a correct answer. This helper never changes assessment evidence.
+    public func traversablePrefix(for choiceIndex: Int) -> [PuzzleTile] {
+        var visited = Set<PuzzleTile>()
+        var safe: [PuzzleTile] = []
+        for tile in route(for: choiceIndex) {
+            guard isInBounds(tile), !blocked.contains(tile), visited.insert(tile).inserted else {
+                break
+            }
+            safe.append(tile)
+        }
+        return safe
+    }
+
     public func isValidChoice(_ choiceIndex: Int) -> Bool {
         guard choices.indices.contains(choiceIndex) else { return false }
         let route = route(for: choiceIndex)
