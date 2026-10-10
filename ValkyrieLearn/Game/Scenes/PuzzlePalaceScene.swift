@@ -5502,10 +5502,10 @@ import LearningCore
         addChild(shaftInlay)
 
         let rail = SKShapeNode(
-            rectOf: CGSize(width: 780, height: 30),
-            cornerRadius: 14
+            rectOf: CGSize(width: 780, height: 22),
+            cornerRadius: 11
         )
-        rail.fillColor = UIColor(red: 0.36, green: 0.25, blue: 0.20, alpha: 1)
+        rail.fillColor = UIColor(red: 0.36, green: 0.25, blue: 0.20, alpha: 0.88)
         rail.strokeColor = UIColor(red: 0.80, green: 0.58, blue: 0.35, alpha: 1)
         rail.lineWidth = 4
         rail.position = CGPoint(x: 760, y: 355)
@@ -5516,17 +5516,17 @@ import LearningCore
         let xs: [CGFloat] = [485, 665, 845, 1025]
         for (index, x) in xs.enumerated() {
             let housing = palaceCog(
-                radius: 83, teeth: 12,
-                fill: UIColor(red: 0.30, green: 0.22, blue: 0.19, alpha: 1),
-                stroke: UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+                radius: 67, teeth: 12,
+                fill: UIColor(red: 0.43, green: 0.31, blue: 0.23, alpha: 1),
+                stroke: UIColor(red: 0.82, green: 0.62, blue: 0.38, alpha: 1)
             )
             housing.position = CGPoint(x: x, y: 355)
             housing.name = "repairSocketBase\(index)"
             housing.zPosition = 785
             addChild(housing)
 
-            let axle = SKShapeNode(circleOfRadius: 46)
-            axle.fillColor = UIColor(red: 0.14, green: 0.11, blue: 0.15, alpha: 1)
+            let axle = SKShapeNode(circleOfRadius: 38)
+            axle.fillColor = UIColor(red: 0.24, green: 0.18, blue: 0.19, alpha: 1)
             axle.strokeColor = UIColor(red: 0.67, green: 0.50, blue: 0.32, alpha: 0.9)
             axle.lineWidth = 3
             axle.name = "repairSocketAxle"
@@ -5731,19 +5731,29 @@ import LearningCore
             // Physically removable brass gears on the shared machine shaft.
             // Preserve step IDs, positions and accessibility for all tests and
             // for the existing evidence/scaffold flow.
+            // Smaller, carved working gears leave the painted workshop visible.
+            // Diameter remains over 110 scene points (more than 60 iPad points
+            // at the supported 4:3 / 16:9 landscape scales).
             let plate = palaceCog(
-                radius: 71, teeth: 11,
-                fill: UIColor(red: 0.45, green: 0.32, blue: 0.22, alpha: 1),
-                stroke: UIColor(red: 0.90, green: 0.70, blue: 0.41, alpha: 1)
+                radius: 57, teeth: 11,
+                fill: UIColor(red: 0.61, green: 0.44, blue: 0.29, alpha: 1),
+                stroke: UIColor(red: 0.96, green: 0.77, blue: 0.48, alpha: 1)
             )
             plate.position = CGPoint(x: xs[index], y: 355)
             plate.name = "repairStep\(index)"
             plate.zPosition = 850
             plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
 
-            let center = SKShapeNode(circleOfRadius: 52)
-            center.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.19, alpha: 1)
-            center.strokeColor = UIColor(red: 0.88, green: 0.67, blue: 0.42, alpha: 0.90)
+            let bezel = SKShapeNode(circleOfRadius: 45)
+            bezel.fillColor = UIColor(red: 0.56, green: 0.40, blue: 0.26, alpha: 1)
+            bezel.strokeColor = UIColor(red: 0.99, green: 0.83, blue: 0.55, alpha: 1)
+            bezel.lineWidth = 4
+            bezel.name = plate.name
+            plate.addChild(bezel)
+
+            let center = SKShapeNode(circleOfRadius: 35)
+            center.fillColor = UIColor(red: 0.30, green: 0.23, blue: 0.22, alpha: 1)
+            center.strokeColor = UIColor(red: 0.90, green: 0.70, blue: 0.44, alpha: 1)
             center.lineWidth = 3
             center.name = plate.name
             plate.addChild(center)
@@ -5751,11 +5761,11 @@ import LearningCore
             let number = ArtSystem.label("\(index + 1)", size: 15)
             number.fontName = "AvenirNext-DemiBold"
             number.fontColor = UIColor(red: 0.97, green: 0.77, blue: 0.47, alpha: 1)
-            number.position = CGPoint(x: -37, y: 39)
+            number.position = CGPoint(x: -28, y: 31)
             number.name = plate.name
             plate.addChild(number)
 
-            let commandGlyph = ArtSystem.label(step.glyph, size: 35)
+            let commandGlyph = ArtSystem.label(step.glyph, size: 31)
             commandGlyph.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.77, alpha: 1)
             commandGlyph.position.y = 2
             commandGlyph.name = plate.name
@@ -5768,7 +5778,7 @@ import LearningCore
             let label = ArtSystem.label(step.title, size: 14)
             label.fontName = "AvenirNext-DemiBold"
             label.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.75, alpha: 1)
-            label.position = CGPoint(x: xs[index], y: 264)
+            label.position = CGPoint(x: xs[index], y: 277)
             label.name = "repairStepLabel\(index)"
             label.zPosition = 850
             addChild(label)
@@ -5863,7 +5873,9 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
 
-        animateRepairSwap(selected, applySwap: correct) { [weak self] in
+        // Physically execute the child's proposed swap even when it is wrong.
+        // The mechanism then stalls and resets without awarding mastery.
+        animateRepairSwap(selected) { [weak self] in
             guard let self else { return }
             if correct {
                 self.solved = true
@@ -5907,13 +5919,8 @@ import LearningCore
 
     private func animateRepairSwap(
         _ indices: [Int],
-        applySwap: Bool,
         completion: @escaping () -> Void
     ) {
-        guard applySwap else {
-            completion()
-            return
-        }
         guard indices.count == 2,
               let first = childNode(withName: "repairStep\(indices[0])"),
               let second = childNode(withName: "repairStep\(indices[1])") else {
