@@ -4571,6 +4571,42 @@ import LearningCore
         return root
     }
 
+    private func showSelectedPathRoute(_ index: Int, valid: Bool) {
+        // The *pressed* physical route reader responds. The choice was
+        // already made before this feedback: nothing here signals an answer
+        // or writes evidence while a child is deciding.
+        for candidate in 0..<3 {
+            guard let choice = childNode(withName: "pathChoice\(candidate)") else { continue }
+            let selected = candidate == index
+            choice.removeAction(forKey: "pathRoutePress")
+            choice.alpha = selected ? 1 : 0.76
+            guard selected else { continue }
+            let result = valid
+                ? UIColor(red: 0.64, green: 0.98, blue: 0.75, alpha: 1)
+                : UIColor(red: 1, green: 0.66, blue: 0.43, alpha: 1)
+
+            if let rim = choice.childNode(
+                withName: "decorativePathChoiceFeedbackRim"
+            ) as? SKShapeNode {
+                rim.strokeColor = result
+                rim.lineWidth = 4
+                rim.glowWidth = reducedMotion ? 0 : 7
+            }
+            if let seal = choice.childNode(
+                withName: "decorativePathChoiceSeal"
+            ) as? SKShapeNode {
+                seal.strokeColor = result
+                seal.fillColor = UIColor(red: 0.28, green: 0.24, blue: 0.34, alpha: 1)
+            }
+            if !reducedMotion {
+                choice.run(.sequence([
+                    .scale(to: 0.965, duration: 0.10),
+                    .scale(to: 1.0, duration: 0.18)
+                ]), withKey: "pathRoutePress")
+            }
+        }
+    }
+
     private func clearPathTilesChoices(preserveGrid: Bool = false) {
         for index in 0..<3 {
             childNode(withName: "pathChoice\(index)")?.removeFromParent()
@@ -4775,6 +4811,7 @@ import LearningCore
     ) {
         guard let grid = childNode(withName: "pathGrid") else { return }
         grid.childNode(withName: "pathRouteTrace")?.removeFromParent()
+        grid.childNode(withName: "decorativePathRouteUnderlight")?.removeFromParent()
 
         // Light travels between the actual floor stones. Raising each safe
         // stone's bevel makes the chosen route legible as a physical walkway,
@@ -4814,6 +4851,16 @@ import LearningCore
             ? UIColor(red: 1.0, green: 0.81, blue: 0.45, alpha: 1)
             : UIColor(red: 0.92, green: 0.46, blue: 0.38, alpha: 1)
         trace.glowWidth = valid && !reducedMotion ? 5 : 0
+        // A subdued under-stone light trench adds depth without a neon HUD.
+        // It sits below the exact, ten-point-wide functional route trace.
+        let warmUnderlight = SKShapeNode(path: tracedPath)
+        warmUnderlight.name = "decorativePathRouteUnderlight"
+        warmUnderlight.lineWidth = 22
+        warmUnderlight.strokeColor = valid
+            ? UIColor(red: 0.98, green: 0.73, blue: 0.41, alpha: 0.23)
+            : UIColor(red: 0.82, green: 0.32, blue: 0.25, alpha: 0.24)
+        warmUnderlight.zPosition = -2
+        grid.addChild(warmUnderlight)
         // Keep the trace between the slabs, below the engraved start/goal symbols.
         trace.zPosition = -1
         grid.addChild(trace)
@@ -4846,20 +4893,42 @@ import LearningCore
                 if let grid = self.childNode(withName: "pathGrid"),
                    let lastSafe = safeTiles.last {
                     grid.childNode(withName: "pathSafeStopMarker")?.removeFromParent()
-                    let marker = SKShapeNode(circleOfRadius: 19)
+                    // A small brass blocking rail rises from the last safe
+                    // stone. The world stops the companion, rather than a
+                    // floating punctuation mark telling the child to pause.
+                    let marker = SKNode()
                     marker.name = "pathSafeStopMarker"
-                    marker.fillColor = UIColor(red: 0.40, green: 0.24, blue: 0.18, alpha: 1)
-                    marker.strokeColor = UIColor(red: 1, green: 0.82, blue: 0.52, alpha: 1)
-                    marker.lineWidth = 4
                     marker.position = CGPoint(
                         x: originX + CGFloat(lastSafe.x) * tileSize - grid.position.x,
-                        y: originY + CGFloat(lastSafe.y) * tileSize - grid.position.y + 32
+                        y: originY + CGFloat(lastSafe.y) * tileSize - grid.position.y + 24
                     )
-                    marker.zPosition = 22
-                    let stopGlyph = ArtSystem.label("Ⅱ", size: 22)
-                    stopGlyph.name = "pathSafeStopGlyph"
-                    stopGlyph.fontColor = UIColor(red: 1, green: 0.92, blue: 0.67, alpha: 1)
-                    marker.addChild(stopGlyph)
+                    marker.zPosition = 65
+                    let foot = SKShapeNode(ellipseOf: CGSize(width: 40, height: 12))
+                    foot.name = "decorativePathStopRailFoot"
+                    foot.fillColor = UIColor(red: 0.30, green: 0.20, blue: 0.20, alpha: 1)
+                    foot.strokeColor = UIColor(red: 1, green: 0.75, blue: 0.49, alpha: 0.94)
+                    foot.lineWidth = 2
+                    marker.addChild(foot)
+                    for x in [CGFloat(-13), 13] {
+                        let post = SKShapeNode(
+                            rectOf: CGSize(width: 6, height: 24), cornerRadius: 2
+                        )
+                        post.name = "decorativePathStopRailPost"
+                        post.fillColor = UIColor(red: 0.70, green: 0.46, blue: 0.31, alpha: 1)
+                        post.strokeColor = UIColor(red: 1, green: 0.76, blue: 0.48, alpha: 1)
+                        post.lineWidth = 1.5
+                        post.position = CGPoint(x: x, y: 14)
+                        marker.addChild(post)
+                    }
+                    let bar = SKShapeNode(
+                        rectOf: CGSize(width: 43, height: 12), cornerRadius: 4
+                    )
+                    bar.name = "decorativePathStopRailBar"
+                    bar.position.y = 24
+                    bar.fillColor = UIColor(red: 0.75, green: 0.41, blue: 0.27, alpha: 1)
+                    bar.strokeColor = UIColor(red: 1, green: 0.78, blue: 0.48, alpha: 1)
+                    bar.lineWidth = 2
+                    marker.addChild(bar)
                     grid.addChild(marker)
                 }
             },
@@ -4879,6 +4948,7 @@ import LearningCore
         let correct = activeEncounter.isValidChoice(index)
         let attemptedRoute = activeEncounter.route(for: index)
         revealAttemptedStoneTrail(attemptedRoute, encounter: activeEncounter, valid: correct)
+        showSelectedPathRoute(index, valid: correct)
 
         _ = state.recordPuzzle(activeEncounter, outcome: correct ? .correct : .incorrect,
                                support: attemptSupport, attempts: attempts,
