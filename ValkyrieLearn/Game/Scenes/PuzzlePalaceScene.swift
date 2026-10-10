@@ -5155,7 +5155,13 @@ import LearningCore
                 withName: "decorativeBugPowerPiston\(index)"
             ) as? SKShapeNode else { continue }
             let jammed = !restored && jammedIndex == index
-            let powered = restored || (inspectedIndex.map { index <= $0 } ?? false)
+            // A wrong guess only inspects the selected working cassette.
+            // It must NOT pretend power passed through an earlier fault.
+            // Confirmed jams power only the steps before the failed step.
+            let powered = restored
+                || (jammedIndex != nil
+                    ? index < jammedIndex!
+                    : inspectedIndex == index)
             let y: CGFloat = jammed ? 424 : (powered ? 450 : 438)
             piston.removeAction(forKey: "bugPowerPiston")
             if reducedMotion {
@@ -5289,13 +5295,14 @@ import LearningCore
         // out for another look; the lamp changes even in Reduced Motion.
         for step in 0..<3 {
             if let socket = childNode(withName: "bugStepSocket\(step)") as? SKShapeNode {
-                let visited = step <= index
+                let visited = confirmedBreak ? step <= index : step == index
                 socket.strokeColor = visited
                     ? UIColor(red: 0.95, green: 0.75, blue: 0.44, alpha: 1)
                     : UIColor(red: 0.48, green: 0.42, blue: 0.53, alpha: 0.6)
             }
             if step < 2 {
-                childNode(withName: "bugFlowArrow\(step)")?.alpha = step < index ? 1 : 0.35
+                childNode(withName: "bugFlowArrow\(step)")?.alpha =
+                    confirmedBreak && step < index ? 1 : 0.35
             }
         }
 
