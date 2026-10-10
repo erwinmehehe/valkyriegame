@@ -5005,6 +5005,51 @@ import LearningCore
             addChild(support)
         }
 
+        // A captive copper bus joins every command cassette to the lantern.
+        // The indicators follow the CHILD'S tested sequence, never revealing
+        // the faulty step in advance. Place the wiring behind the tappable
+        // cassette faces and the existing illustrated lantern fixture.
+        let drivePath = CGMutablePath()
+        drivePath.move(to: CGPoint(x: 555, y: 446))
+        drivePath.addLine(to: CGPoint(x: 965, y: 446))
+        for x in [CGFloat(555), 760, 965] {
+            drivePath.move(to: CGPoint(x: x, y: 416))
+            drivePath.addLine(to: CGPoint(x: x, y: 446))
+        }
+        drivePath.move(to: CGPoint(x: 760, y: 446))
+        drivePath.addLine(to: CGPoint(x: 760, y: 477))
+        let drive = SKShapeNode(path: drivePath)
+        drive.name = "decorativeBugLanternDrive"
+        drive.strokeColor = UIColor(red: 0.58, green: 0.43, blue: 0.31, alpha: 0.95)
+        drive.lineWidth = 10
+        drive.lineCap = .round
+        drive.zPosition = 130
+        addChild(drive)
+
+        for (index, x) in [CGFloat(555), 760, 965].enumerated() {
+            // These sliding brass pistons show what was actually inspected.
+            // Their names deliberately remain decorative; the command
+            // cassettes retain the only answer hit targets at these stations.
+            let piston = SKShapeNode(
+                rectOf: CGSize(width: 25, height: 32),
+                cornerRadius: 8
+            )
+            piston.name = "decorativeBugPowerPiston\(index)"
+            piston.position = CGPoint(x: x, y: 438)
+            piston.fillColor = UIColor(red: 0.37, green: 0.27, blue: 0.25, alpha: 1)
+            piston.strokeColor = UIColor(red: 0.76, green: 0.56, blue: 0.36, alpha: 1)
+            piston.lineWidth = 3
+            piston.zPosition = 838
+            let glass = SKShapeNode(circleOfRadius: 7)
+            glass.name = "decorativeBugPowerGlass"
+            glass.position.y = 6
+            glass.fillColor = UIColor(red: 0.26, green: 0.21, blue: 0.28, alpha: 1)
+            glass.strokeColor = UIColor(red: 0.86, green: 0.69, blue: 0.44, alpha: 1)
+            glass.lineWidth = 1.5
+            piston.addChild(glass)
+            addChild(piston)
+        }
+
         let lanternFrame = ArtSystem.medallion(
             radius: 76,
             fill: UIColor(red: 0.15, green: 0.10, blue: 0.23, alpha: 0.98),
@@ -5097,6 +5142,50 @@ import LearningCore
         back.zPosition = 2050
     }
 
+    private func setBugMachinePower(
+        through inspectedIndex: Int? = nil,
+        failedAt jammedIndex: Int? = nil,
+        restored: Bool = false
+    ) {
+        // Neutral before a child acts. A wrong guess visibly inspects working
+        // cassettes without falsely turning them red; an identified fault
+        // stalls its own piston. A repair raises all three and relights the bus.
+        for index in 0..<3 {
+            guard let piston = childNode(
+                withName: "decorativeBugPowerPiston\(index)"
+            ) as? SKShapeNode else { continue }
+            let jammed = !restored && jammedIndex == index
+            let powered = restored || (inspectedIndex.map { index <= $0 } ?? false)
+            let y: CGFloat = jammed ? 424 : (powered ? 450 : 438)
+            piston.removeAction(forKey: "bugPowerPiston")
+            if reducedMotion {
+                piston.position.y = y
+            } else {
+                piston.run(.moveTo(y: y, duration: 0.22), withKey: "bugPowerPiston")
+            }
+            let bronze = UIColor(red: 0.37, green: 0.27, blue: 0.25, alpha: 1)
+            let gold = UIColor(red: 0.94, green: 0.72, blue: 0.40, alpha: 1)
+            let jam = UIColor(red: 0.73, green: 0.25, blue: 0.20, alpha: 1)
+            let success = UIColor(red: 0.28, green: 0.72, blue: 0.52, alpha: 1)
+            piston.fillColor = restored ? success : (jammed ? jam : (powered ? gold : bronze))
+            piston.strokeColor = restored
+                ? UIColor(red: 0.75, green: 0.98, blue: 0.77, alpha: 1)
+                : UIColor(red: 0.94, green: 0.76, blue: 0.48, alpha: 1)
+            piston.glowWidth = powered && !reducedMotion ? 5 : 0
+            if let glass = piston.childNode(withName: "decorativeBugPowerGlass") as? SKShapeNode {
+                glass.fillColor = piston.fillColor
+            }
+        }
+        if let drive = childNode(withName: "decorativeBugLanternDrive") as? SKShapeNode {
+            drive.strokeColor = restored
+                ? UIColor(red: 0.60, green: 0.93, blue: 0.66, alpha: 1)
+                : (jammedIndex == nil
+                    ? UIColor(red: 0.65, green: 0.50, blue: 0.34, alpha: 1)
+                    : UIColor(red: 0.83, green: 0.42, blue: 0.29, alpha: 1))
+            drive.glowWidth = restored && !reducedMotion ? 5 : 0
+        }
+    }
+
     private func clearBugSteps() {
         for index in 0..<3 {
             childNode(withName: "bugStep\(index)")?.removeFromParent()
@@ -5178,6 +5267,7 @@ import LearningCore
             registerInteraction(plate, clearance: 18)
         }
 
+        setBugMachinePower()
         if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
             core.fillColor = UIColor(red: 0.92, green: 0.55, blue: 0.16, alpha: 0.94)
             core.glowWidth = 12
@@ -5192,6 +5282,7 @@ import LearningCore
     }
 
     private func markBugMachineInspection(step index: Int, confirmedBreak: Bool) {
+        setBugMachinePower(through: index, failedAt: confirmedBreak ? index : nil)
         // Show which physical cassette Tiko is inspecting. This runs only
         // AFTER a child makes a choice, so diagnosis is never leaked beforehand.
         // The selected cassette either sinks into a jammed rail or lifts back
@@ -5246,8 +5337,10 @@ import LearningCore
                 attempts: attempts,
                 responseTime: Date().timeIntervalSince(startedAt)
             )
-            node.strokeColor = .systemRed
-            node.glowWidth = 7
+            // The tapped cassette still works: an incorrect diagnosis must
+            // not show a red, broken-looking component and misteach the child.
+            node.strokeColor = UIColor(red: 0.98, green: 0.80, blue: 0.48, alpha: 1)
+            node.glowWidth = reducedMotion ? 0 : 4
             errorFeedback()
             support = support == .independent ? .lightHint : .strongHint
             valkyrie.pose(.react)
@@ -5392,6 +5485,9 @@ import LearningCore
             self.valkyrie.pose(.celebrate)
             self.tiko.pose(.celebrate)
 
+            // The installed cassette physically reconnects ALL three
+            // pistons to the lantern. Keep the restored state on revisits.
+            self.setBugMachinePower(restored: true)
             if let core = self.childNode(withName: "//bugLanternCore") as? SKShapeNode {
                 core.fillColor = .systemGreen
                 core.glowWidth = 18
@@ -5454,6 +5550,7 @@ import LearningCore
         if let title = childNode(withName: "bugLanternTitle") as? SKLabelNode {
             title.text = "BUG LANTERN RESTORED"
         }
+        setBugMachinePower(restored: true)
         if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
             core.fillColor = .systemGreen
             core.glowWidth = 18
