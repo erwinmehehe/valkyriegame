@@ -24,9 +24,9 @@ for p in (ROOT/'ValkyrieLearn/Learning').rglob('*.swift'):
  assert not re.search(r'import\s+(SpriteKit|SwiftUI|SwiftData|UIKit|AVFoundation)',p.read_text()), p
 for p in (ROOT/'ValkyrieLearn').rglob('*.swift'):
  assert not re.search(r'(WKWebView|import WebKit|import JavaScriptCore)',p.read_text()), p
-# Pinned prototype digest works in shallow CI clones too.
-assert hashlib.sha256((ROOT/'index.html').read_bytes()).hexdigest() == '3ac15b0237acfd5a4e0bc55abe57ba84c46c2e24a66284088f84c0561e9f82fe'
-print('PASS project references, deterministic generation, landscape/iPad configuration, framework separation and unchanged prototype.')
+# The browser prototype has been retired; native app integrity is authoritative.
+assert not (ROOT/'index.html').exists(), 'Retired browser prototype must not be restored.'
+print('PASS project references, deterministic generation, landscape/iPad configuration and native-only framework separation.')
 
 # Validate all imported image bytes and crop dimensions using only the standard library.
 def git_blob_sha(data):
@@ -107,7 +107,7 @@ print('PASS illustrated bridge prop hashes and crop dimensions.')
 
 # Word Garden reference assets are preserved exact v3.31 embedded-source blobs.
 word_garden_art = json.loads((ROOT/'ValkyrieLearn/Resources/WORD_GARDEN_ART_MANIFEST.json').read_text())
-assert git_blob_sha((ROOT/'index.html').read_bytes()) == word_garden_art['sourceBlobSHA']
+assert word_garden_art['sourceBlobSHA'] == '1f4432fa3c9a82156abb733a61d211c58aea9fba', 'Unexpected historic Word Garden provenance'
 for path, metadata in word_garden_art['assets'].items():
     if path in superseded_companion_paths:
         continue
@@ -117,7 +117,7 @@ print('PASS Word Garden v3.31 source-blob provenance.')
 
 # Puzzle Palace reuses the preserved world atlas and imports Tiko from the same v3.31 blob.
 puzzle_art = json.loads((ROOT/'ValkyrieLearn/Resources/PUZZLE_PALACE_ART_MANIFEST.json').read_text())
-assert git_blob_sha((ROOT/'index.html').read_bytes()) == puzzle_art['sourceBlobSHA']
+assert puzzle_art['sourceBlobSHA'] == '1f4432fa3c9a82156abb733a61d211c58aea9fba', 'Unexpected historic Puzzle Palace provenance'
 for path, metadata in puzzle_art['assets'].items():
     if path in superseded_companion_paths:
         continue
