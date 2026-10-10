@@ -4816,6 +4816,8 @@ import LearningCore
     private func buildCommandGearsEncounter(resetSupport: Bool = true) {
         guard let sequenceEncounter else { return }
         clearCommandSourceGears()
+        children.filter { $0.name == "decorativeCommandGearTransfer" }
+            .forEach { $0.removeFromParent() }
         commandSteps.removeAll()
         if let driveRail = childNode(withName: "commandRail") as? SKShapeNode {
             driveRail.fillColor = UIColor(red: 0.42, green: 0.31, blue: 0.18, alpha: 0.96)
@@ -4854,6 +4856,37 @@ import LearningCore
         tiko.pose(.interact)
     }
 
+    private func animateCommandGearInsertion(
+        _ step: PuzzleCommandStep, sourceIndex: Int, socketIndex: Int
+    ) {
+        // The actual learning state and socket update immediately. The visual
+        // transfer is decorative so touch targets never become moving hitboxes.
+        guard !reducedMotion,
+              let source = childNode(withName: "commandSource\(sourceIndex)"),
+              let socket = childNode(withName: "commandSocket\(socketIndex)")
+        else { return }
+        let transferred = palaceCog(
+            radius: 29, teeth: 10,
+            fill: UIColor(red: 0.55, green: 0.38, blue: 0.25, alpha: 1),
+            stroke: UIColor(red: 0.96, green: 0.76, blue: 0.45, alpha: 1)
+        )
+        transferred.name = "decorativeCommandGearTransfer"
+        transferred.position = source.position
+        transferred.zPosition = 890
+        let symbol = ArtSystem.label(step.glyph, size: 22)
+        symbol.name = "decorativeCommandGearTransferGlyph"
+        symbol.fontColor = UIColor(red: 0.98, green: 0.91, blue: 0.71, alpha: 1)
+        transferred.addChild(symbol)
+        addChild(transferred)
+        transferred.run(.sequence([
+            .group([
+                .move(to: socket.position, duration: 0.28),
+                .scale(to: 0.70, duration: 0.28)
+            ]),
+            .removeFromParent()
+        ]))
+    }
+
     private func selectCommandGear(_ sourceIndex: Int) {
         guard place == .commandGears, commandAcceptingInput, !solved,
               let sequenceEncounter,
@@ -4863,6 +4896,9 @@ import LearningCore
         commandSteps.append(step)
         selectionFeedback()
         renderCommandSockets()
+        animateCommandGearInsertion(
+            step, sourceIndex: sourceIndex, socketIndex: commandSteps.count - 1
+        )
         childNode(withName: "commandSource\(sourceIndex)")?.alpha = 0.30
         childNode(withName: "commandSourceLabel\(sourceIndex)")?.alpha = 0.42
         instruction.text = commandSteps.count == 3
@@ -4872,6 +4908,8 @@ import LearningCore
 
     private func resetCommandChain() {
         guard place == .commandGears, commandAcceptingInput else { return }
+        children.filter { $0.name == "decorativeCommandGearTransfer" }
+            .forEach { $0.removeFromParent() }
         commandSteps.removeAll()
         for index in 0..<3 {
             childNode(withName: "commandSource\(index)")?.alpha = 1
@@ -5163,6 +5201,8 @@ import LearningCore
     private func finishCommandGears(celebrate: Bool = false) {
         commandAcceptingInput = false
         clearCommandSourceGears()
+        children.filter { $0.name == "decorativeCommandGearTransfer" }
+            .forEach { $0.removeFromParent() }
         commandSteps.removeAll()
         renderCommandSockets()
         // Completion is a powered, physically open/resting machine on return.
