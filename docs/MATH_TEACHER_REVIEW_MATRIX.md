@@ -83,6 +83,20 @@ For every row, inspect the actual native question and learner action, record the
 | 75 | `MathSkills.clockHalfHour` (`math.time.clockHalfHour`) | Read and Set Half-Hour Times | Grade 1 | measurementDataTimeMoney | Not reviewed |
 | 76 | `MathSkills.clockFiveMinutes` (`math.time.clockFiveMinutes`) | Read and Set Times to Five Minutes | Grade 2 | measurementDataTimeMoney | Not reviewed |
 
+## Source-backed reviewer worksheet export (code check only)
+
+The local teacher-review index is now checked against the **current** Swift descriptor catalog, canonical SkillIDs, developmental order, strand and internal grade-band assignments. CI runs `python3 scripts/verify_math_teacher_matrix.py`; it fails if rows go missing, are duplicated/reordered, or are mislabeled. This protects the inventory against code drift; it **does not** check official DepEd competency alignment or child-level instructional quality.
+
+To create an editable, 76-row CSV for a human teacher review, run:
+
+```sh
+python3 scripts/verify_math_teacher_matrix.py --export-csv math-teacher-review.csv
+```
+
+The export includes actual Swift symbols/IDs and the **existing** worksheet verdicts. It leaves independent human evidence fields blank for: official classification and sources (DepEd/Singapore/internal), competency excerpts, observed child actions and pre-reader language, untouched/incomplete/wrong/correct/hinted evidence, immutability and offline restore, native screenshot+commit SHA, reviewer identity, review date and pedagogical decision. The command refuses to overwrite an existing CSV so it cannot accidentally erase signed teacher notes. Store completed evidence and sign-offs separately from the generated starter worksheet.
+
+**Important:** A green CI result means only that the unreviewed inventory matches code. It does not mean 76 skills have passed pedagogy review, that there is authoritative competency alignment, that a physical iPad has passed, or that the artwork is approved.
+
 ## Release gates
 
 - [ ] 76 official competency-source checks: distinguish DepEd requirements, Singapore enrichment, and internal readiness; never invent competency codes
