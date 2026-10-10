@@ -2171,8 +2171,13 @@ import LearningCore
             try LearningStore.container(inMemory: true)
         ))
         state.reducedMotion = true
-        for encounter in PuzzlePalaceEncounterCatalog.runeGate +
-            PuzzlePalaceEncounterCatalog.memoryBridge {
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+            _ = state.recordPuzzle(
+                encounter, outcome: .correct, support: .independent,
+                attempts: 1, responseTime: 1
+            )
+        }
+        for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
             _ = state.recordPuzzle(
                 encounter, outcome: .correct, support: .independent,
                 attempts: 1, responseTime: 1
