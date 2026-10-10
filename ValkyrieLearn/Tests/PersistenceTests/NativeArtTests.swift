@@ -1976,6 +1976,264 @@ import LearningCore
         XCTAssertEqual(evidence.first?.supportLevel, .independent)
     }
 
+    func testMemoryBridgePhysicalStoneRelaysJamAndAssistedRecovery() async throws {
+        // Real 1024x768 SpriteKit captures from the approved Memory Bridge
+        // illustration. A partial correct memory raises only its earned slab;
+        // a wrong next rune visibly jams the next stage and resets the path.
+        // A corrected memory after this failure remains *assisted* evidence.
+        for reduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = reduced
+            for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+                _ = state.recordPuzzle(
+                    encounter, outcome: .correct, support: .independent,
+                    attempts: 1, responseTime: 1
+                )
+            }
+            state.travel(to: .memoryBridge)
+
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = reduced
+            view.presentScene(scene)
+
+            let encounter = try XCTUnwrap(
+                scene.nativeReviewActiveEncounter as? PuzzleMemoryEncounter
+            )
+            let chasm = try XCTUnwrap(scene.childNode(withName: "memoryChasm"))
+            let planks = try (0..<4).map { index in
+                try XCTUnwrap(scene.childNode(
+                    withName: "memoryBridgePlank\(index)"
+                ) as? SKShapeNode)
+            }
+            let relays = try (0..<4).map { index in
+                try XCTUnwrap(scene.childNode(
+                    withName: "decorativeMemoryBridgeRelay\(index)"
+                ) as? SKShapeNode)
+            }
+            for (index, plank) in planks.enumerated() {
+                XCTAssertGreaterThan(plank.zPosition, chasm.zPosition)
+                XCTAssertNotNil(plank.path)
+                XCTAssertNotNil(plank.fillTexture)
+                XCTAssertNotNil(plank.childNode(
+                    withName: "decorativeMemoryPlankDepth"
+                ), "Every raised slab needs a genuine relief layer.")
+                XCTAssertNotNil(plank.childNode(
+                    withName: "memoryPlankCarvedStone"
+                ))
+                XCTAssertEqual(plank.position.y, 278, accuracy: 0.01)
+                XCTAssertEqual(plank.alpha, 0.48, accuracy: 0.01)
+                XCTAssertNotNil(scene.childNode(
+                    withName: "decorativeMemoryConduit\(index)"
+                ))
+                XCTAssertNotNil(relays[index].childNode(
+                    withName: "decorativeMemoryBridgeRelayGlass"
+                ))
+            }
+
+            let pads = scene.children.filter { $0.name == "memoryPad" }
+            XCTAssertEqual(pads.count, 4)
+            for pad in pads {
+                XCTAssertTrue(pad.isAccessibilityElement)
+                XCTAssertTrue((pad.accessibilityLabel ?? "").hasPrefix("Memory rune:"))
+                XCTAssertEqual(scene.targetName(at: pad.position), "memoryPad")
+                XCTAssertGreaterThanOrEqual(pad.calculateAccumulatedFrame().width, 90)
+                XCTAssertGreaterThanOrEqual(pad.calculateAccumulatedFrame().height, 90)
+                let front = try XCTUnwrap(pad.children.compactMap {
+                    $0 as? SKShapeNode
+                }.first)
+                XCTAssertNotNil(front.path)
+                XCTAssertNotNil(front.fillTexture)
+                XCTAssertNotNil(front.childNode(withName: "decorativeMemoryPadGlass"))
+                XCTAssertNotNil(front.childNode(withName: "decorativeMemoryPadClasp"))
+            }
+            XCTAssertTrue(
+                state.profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence.isEmpty
+            )
+            try await waitUntil(timeout: 8) {
+                scene.instruction.text == "Now repeat Tiko's rune order to raise the bridge."
+            }
+            XCTAssertTrue(
+                state.profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence.isEmpty,
+                "Tiko's demonstration cannot score a child's memory."
+            )
+            if reduced {
+                try await capture(scene, in: view,
+                    name: "Puzzle-Palace-4x3-MemoryBridge-Polished-Initial")
+            }
+
+            func pad(for symbol: String) throws -> SKNode {
+                try XCTUnwrap(pads.first {
+                    ($0.userData?["symbol"] as? String) == symbol
+                })
+            }
+            func tapRune(_ symbol: String) throws {
+                let pressed = try pad(for: symbol)
+                scene.valkyrie.position = CGPoint(
+                    x: max(165, pressed.position.x - 80), y: 175
+                )
+                scene.handleTap(at: pressed.position)
+            }
+
+            try tapRune(encounter.sequence[0])
+            try await waitUntil(timeout: 5) {
+                planks[0].position.y >= 291.5
+            }
+            XCTAssertEqual(planks[1].position.y, 278, accuracy: 0.5,
+                           "A partial sequence cannot lift a later bridge slab.")
+            var red: CGFloat = 0, green: CGFloat = 0
+            var blue: CGFloat = 0, alpha: CGFloat = 0
+            XCTAssertTrue(relays[0].fillColor.getRed(
+                &red, green: &green, blue: &blue, alpha: &alpha
+            ))
+            XCTAssertGreaterThan(green, red,
+                                 "A correctly earned stage should power its physical relay.")
+            XCTAssertTrue(
+                state.profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence.isEmpty,
+                "Raising a single slab must not score the full memory."
+            )
+            if reduced {
+                try await capture(scene, in: view,
+                    name: "Puzzle-Palace-4x3-MemoryBridge-Polished-Partial")
+            }
+
+            let incorrect = try XCTUnwrap(
+                encounter.choices.first { $0 != encounter.sequence[1] }
+            )
+            try tapRune(incorrect)
+            try await waitUntil(timeout: 5) {
+                state.profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence.count == 1
+            }
+            let safetyCatch = try XCTUnwrap(
+                scene.childNode(withName: "memoryBridgeSafetyCatch")
+            )
+            XCTAssertNotNil(safetyCatch.childNode(
+                withName: "decorativeMemoryCatchBar"
+            ))
+            XCTAssertEqual(planks[0].position.y, 278, accuracy: 0.01)
+            XCTAssertEqual(planks[0].alpha, 0.48, accuracy: 0.01)
+            XCTAssertEqual(planks[1].position.y, 278, accuracy: 0.01)
+            let incorrectEvidence = state.profile.progress(
+                for: PuzzleSkills.visualSequenceMemory
+            ).evidence
+            XCTAssertEqual(incorrectEvidence.map(\.outcome), [.incorrect])
+            XCTAssertEqual(incorrectEvidence.map(\.supportLevel), [.independent])
+            XCTAssertFalse(state.puzzleMemoryBridgeComplete)
+            if reduced {
+                try await capture(scene, in: view,
+                    name: "Puzzle-Palace-4x3-MemoryBridge-Polished-Jammed")
+            }
+
+            try await waitUntil(timeout: 9) {
+                scene.instruction.text == "Now repeat Tiko's rune order to raise the bridge."
+                    && scene.childNode(withName: "memoryBridgeSafetyCatch") == nil
+            }
+            for (index, symbol) in encounter.sequence.enumerated() {
+                try tapRune(symbol)
+                try await waitUntil(timeout: 5) {
+                    planks[index].position.y >= 291.5
+                }
+                if index + 1 < planks.count {
+                    XCTAssertEqual(planks[index + 1].position.y, 278, accuracy: 0.5)
+                }
+            }
+            try await waitUntil(timeout: 4) {
+                state.profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence.count == 2
+            }
+            let evidence = state.profile.progress(
+                for: PuzzleSkills.visualSequenceMemory
+            ).evidence
+            XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint])
+            XCTAssertEqual(evidence.last?.encounterID, encounter.id)
+            XCTAssertFalse(state.puzzleMemoryBridgeComplete)
+            XCTAssertNil(scene.childNode(withName: "stopGoRoute"),
+                         "An assisted memory cannot prematurely open the next chamber.")
+            if reduced {
+                try await capture(scene, in: view,
+                    name: "Puzzle-Palace-4x3-MemoryBridge-Polished-Assisted")
+            }
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
+    func testCompletedMemoryBridgeRetainsItsCarvedDeckAndPoweredStages() async throws {
+        let state = try AppState(context: ModelContext(
+            try LearningStore.container(inMemory: true)
+        ))
+        state.reducedMotion = true
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate +
+            PuzzlePalaceEncounterCatalog.memoryBridge {
+            _ = state.recordPuzzle(
+                encounter, outcome: .correct, support: .independent,
+                attempts: 1, responseTime: 1
+            )
+        }
+        XCTAssertTrue(state.puzzleMemoryBridgeComplete)
+        let prior = state.profile.progress(
+            for: PuzzleSkills.visualSequenceMemory
+        ).evidence.count
+        state.travel(to: .memoryBridge)
+
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+
+        XCTAssertTrue(scene.children.filter { $0.name == "memoryPad" }.isEmpty)
+        XCTAssertNotNil(scene.childNode(withName: "memoryBridgeJoinedRail"))
+        XCTAssertNotNil(scene.childNode(withName: "stopGoRoute"))
+        for index in 0..<4 {
+            let plank = try XCTUnwrap(
+                scene.childNode(withName: "memoryBridgePlank\(index)")
+                    as? SKShapeNode
+            )
+            XCTAssertEqual(plank.position.y, 292, accuracy: 0.01)
+            XCTAssertEqual(plank.alpha, 1, accuracy: 0.01)
+            XCTAssertNotNil(plank.childNode(
+                withName: "decorativeMemoryPlankDepth"
+            ))
+            let relay = try XCTUnwrap(
+                scene.childNode(withName: "decorativeMemoryBridgeRelay\(index)")
+                    as? SKShapeNode
+            )
+            var red: CGFloat = 0, green: CGFloat = 0
+            var blue: CGFloat = 0, alpha: CGFloat = 0
+            XCTAssertTrue(relay.fillColor.getRed(
+                &red, green: &green, blue: &blue, alpha: &alpha
+            ))
+            XCTAssertGreaterThan(green, red)
+            let conduit = try XCTUnwrap(
+                scene.childNode(withName: "decorativeMemoryConduit\(index)")
+                    as? SKShapeNode
+            )
+            XCTAssertGreaterThan(conduit.strokeColor.cgColor.alpha, 0.85)
+        }
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.visualSequenceMemory).evidence.count,
+            prior, "Reopening a completed bridge cannot create new memory evidence."
+        )
+        try await capture(scene, in: view,
+            name: "Puzzle-Palace-4x3-MemoryBridge-Polished-Restored")
+        scene.willLeave()
+        view.presentScene(nil)
+        window.isHidden = true
+    }
+
     func testMemoryBridgeCanBeCompletedThroughLiveRunePadInteraction() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
