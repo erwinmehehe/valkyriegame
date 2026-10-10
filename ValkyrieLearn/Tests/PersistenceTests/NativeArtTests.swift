@@ -1939,6 +1939,212 @@ import LearningCore
         XCTAssertTrue(state.profile.progress(for: LiteracySkills.visualLetterMatch).evidence.isEmpty)
     }
 
+    func testRuneGateCarvedKeysPhysicallyRefuseAndSeatWithHonestEvidence() async throws {
+        // Genuine 4:3 iPad gameplay: the wrong shape gets physically blocked
+        // and returns to its plinth; a later correct fit is assisted, not
+        // independent. The source painting and scored touch roots stay intact.
+        for reduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = reduced
+            state.travel(to: .puzzlePalace)
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = reduced
+            view.presentScene(scene)
+
+            let encounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleEncounter)
+            let socket = try XCTUnwrap(
+                scene.childNode(withName: "//runeSocket") as? SKShapeNode
+            )
+            let leftJaw = try XCTUnwrap(socket.childNode(
+                withName: "decorativeRuneSocketJawLeft"
+            ) as? SKShapeNode)
+            let rightJaw = try XCTUnwrap(socket.childNode(
+                withName: "decorativeRuneSocketJawRight"
+            ) as? SKShapeNode)
+            let housing = try XCTUnwrap(
+                scene.childNode(withName: "//runeLockHousing") as? SKShapeNode
+            )
+            XCTAssertNotNil(housing.path)
+            XCTAssertNotNil(housing.childNode(withName: "decorativeRuneHousingRivet"))
+            XCTAssertEqual(leftJaw.position.x, -33, accuracy: 0.01)
+            XCTAssertEqual(rightJaw.position.x, 33, accuracy: 0.01)
+            XCTAssertNil(scene.childNode(withName: "decorativeRuneRejectedKey"))
+            let choices = scene.children.filter { $0.name == "runeChoice" }
+            XCTAssertEqual(choices.count, 3)
+            let wrong = try XCTUnwrap(choices.first {
+                ($0.userData?["choice"] as? String) != encounter.answer
+            })
+            let correct = try XCTUnwrap(choices.first {
+                ($0.userData?["choice"] as? String) == encounter.answer
+            })
+            for key in choices {
+                XCTAssertGreaterThanOrEqual(key.calculateAccumulatedFrame().width, 88)
+                XCTAssertGreaterThanOrEqual(key.calculateAccumulatedFrame().height, 88)
+                XCTAssertNotNil((key as? SKShapeNode)?.path)
+                XCTAssertNotNil((key as? SKShapeNode)?.fillTexture)
+            }
+            let route = try XCTUnwrap(scene.childNode(withName: "runePath"))
+            XCTAssertEqual(route.children.count, 4)
+            for stone in route.children {
+                let carved = try XCTUnwrap(stone as? SKShapeNode)
+                XCTAssertNotNil(carved.path)
+                XCTAssertNotNil(carved.fillTexture)
+                XCTAssertNotNil(carved.childNode(withName: "decorativeRuneStepDepth"))
+            }
+            XCTAssertTrue(
+                state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.isEmpty
+            )
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-RuneGate-Polished-Initial")
+            }
+
+            // Attempt an invalid physical key while the room is unassisted.
+            scene.handleTap(at: wrong.position)
+            try await waitUntil(timeout: 6) {
+                state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.count == 1
+            }
+            try await waitUntil(timeout: 3) {
+                abs(leftJaw.position.x + 24) < 0.6
+                    && abs(rightJaw.position.x - 24) < 0.6
+            }
+            XCTAssertFalse(state.puzzleRuneGateComplete)
+            XCTAssertNil(scene.childNode(withName: "//runeDoorPassage"))
+            let wrongEvidence = state.profile.progress(
+                for: PuzzleSkills.visualPatternContinue
+            ).evidence
+            XCTAssertEqual(wrongEvidence.last?.outcome, .incorrect)
+            XCTAssertEqual(wrongEvidence.last?.supportLevel, .independent)
+            if reduced {
+                XCTAssertNil(scene.childNode(withName: "decorativeRuneRejectedKey"),
+                             "Reduced Motion uses a visible blocked jaw, not flying key travel.")
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-RuneGate-Polished-Refusal")
+            } else {
+                XCTAssertNotNil(scene.childNode(withName: "decorativeRuneRejectedKey"),
+                                "Normal motion must visibly test and eject the wrong key.")
+                XCTAssertNotNil(scene.childNode(withName: "decorativeRuneVacantPedestal"),
+                                "The floor pedestal must not disappear when a key travels.")
+                scene.handleTap(at: correct.position)
+                XCTAssertEqual(
+                    state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.count,
+                    1, "A second tap during a moving key must not create extra evidence."
+                )
+            }
+
+            try await waitUntil(timeout: 5) {
+                abs(leftJaw.position.x + 33) < 0.6
+                    && abs(rightJaw.position.x - 33) < 0.6
+                    && !(wrong.isHidden)
+            }
+            XCTAssertNil(scene.childNode(withName: "decorativeRuneRejectedKey"))
+            XCTAssertNil(scene.childNode(withName: "decorativeRuneVacantPedestal"),
+                         "Rejected key must return to its original plinth.")
+            scene.handleTap(at: correct.position)
+
+            try await waitUntil(timeout: 6) {
+                state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.count == 2
+            }
+            try await waitUntil(timeout: 3) {
+                (scene.childNode(withName: "//runeSocketMark") as? SKLabelNode)?.text
+                    == encounter.answer
+                && abs(leftJaw.position.x + 27) < 0.6
+                && abs(rightJaw.position.x - 27) < 0.6
+            }
+            XCTAssertTrue(correct.isHidden,
+                          "Successful placement physically moves the key off its floor stand.")
+            XCTAssertNotNil(scene.childNode(withName: "decorativeRuneVacantPedestal"),
+                            "Only the accepted key travels; the empty stone plinth remains.")
+            let evidence = state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence
+            XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint])
+            XCTAssertEqual(evidence.last?.encounterID, encounter.id)
+            let lockGear = try XCTUnwrap(
+                scene.childNode(withName: "//puzzleGateLock") as? SKShapeNode
+            )
+            XCTAssertEqual(lockGear.zRotation, 0, accuracy: 0.01,
+                           "Assisted correction cannot advance the independent lock gear.")
+            XCTAssertFalse(state.puzzleRuneGateComplete)
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-RuneGate-Polished-Assisted-Seal")
+            }
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
+    func testRuneGateIndependentKeysAdvanceRealDoorGearAndRestoredStonePath() async throws {
+        let state = try AppState(context: ModelContext(
+            try LearningStore.container(inMemory: true)
+        ))
+        state.reducedMotion = true
+        state.travel(to: .puzzlePalace)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+
+        let encounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleEncounter)
+        let correct = try XCTUnwrap(scene.children.first {
+            $0.name == "runeChoice"
+                && ($0.userData?["choice"] as? String) == encounter.answer
+        })
+        scene.handleTap(at: correct.position)
+        try await waitUntil(timeout: 6) {
+            state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.count == 1
+        }
+        let doorGear = try XCTUnwrap(
+            scene.childNode(withName: "//puzzleGateLock") as? SKShapeNode
+        )
+        XCTAssertEqual(doorGear.zRotation, .pi / 9, accuracy: 0.01,
+                       "The original painted gate lock must turn on independent success.")
+        XCTAssertFalse(state.puzzleRuneGateComplete)
+        scene.willLeave()
+        view.presentScene(nil)
+
+        for remaining in PuzzlePalaceEncounterCatalog.runeGate where remaining.id != encounter.id {
+            _ = state.recordPuzzle(remaining, outcome: .correct, support: .independent,
+                                   attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzleRuneGateComplete)
+        let restored = PuzzlePalaceScene(state: state)
+        restored.reducedMotion = true
+        view.presentScene(restored)
+        XCTAssertNotNil(restored.childNode(withName: "runeDoorPassage"))
+        let gateGear = try XCTUnwrap(
+            restored.childNode(withName: "//puzzleGateLock") as? SKShapeNode
+        )
+        XCTAssertEqual(gateGear.zRotation, .pi / 3, accuracy: 0.01)
+        let path = try XCTUnwrap(restored.childNode(withName: "runePath"))
+        XCTAssertEqual(path.children.count, 4)
+        XCTAssertTrue(path.children.allSatisfy {
+            ($0.userData?["runePathPowered"] as? Bool) == true
+        })
+        XCTAssertEqual(state.profile.progress(
+            for: PuzzleSkills.visualPatternContinue
+        ).evidence.count, 3, "Revisiting a completed gate cannot manufacture evidence.")
+        try await capture(restored, in: view,
+                          name: "Puzzle-Palace-4x3-RuneGate-Polished-Restored")
+        restored.willLeave()
+        view.presentScene(nil)
+        window.isHidden = true
+    }
+
     func testRuneGateIgnoresRapidSecondChoiceWhileActorsResolveFirstChoice() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1280, height: 720))
         let controller = UIViewController()
