@@ -2041,7 +2041,7 @@ import LearningCore
             try await Task.sleep(nanoseconds: 350_000_000)
             for point in points {
                 scene.handleTap(at: point)
-                try await Task.sleep(nanoseconds: 250_000_000)
+                try await Task.sleep(nanoseconds: 650_000_000)
             }
             try await Task.sleep(nanoseconds: 450_000_000)
 
@@ -3323,6 +3323,78 @@ import LearningCore
             }
             try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
             scene.willLeave()
+
+            // Progression fixtures deliberately unlock the *next* room.
+            // Earlier screenshots showed locked rooms with no playable controls.
+            // Keep the capture itself native and use a fresh scene for save/restore.
+            func complete<E>(_ encounters: [E], record: (E) -> Void) {
+                encounters.forEach(record)
+            }
+            switch world {
+            case .puzzlePalace:
+                complete(PuzzlePalaceEncounterCatalog.runeGate) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .memoryBridge:
+                complete(PuzzlePalaceEncounterCatalog.memoryBridge) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .stopGoOrbs:
+                complete(PuzzlePalaceEncounterCatalog.stopGoOrbs) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .sortingPedestal:
+                complete(PuzzlePalaceEncounterCatalog.sortingFoundation +
+                         PuzzlePalaceEncounterCatalog.ruleSwitching) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .resortVault:
+                complete(PuzzlePalaceEncounterCatalog.changedRuleResort) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .mirrorHall:
+                complete(PuzzlePalaceEncounterCatalog.mirrorHallOrientation) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+                complete(PuzzlePalaceEncounterCatalog.mirrorHallRotation) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .pathTiles:
+                complete(PuzzlePalaceEncounterCatalog.pathTileFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .commandGears:
+                complete(PuzzlePalaceEncounterCatalog.commandGearFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .bugLantern:
+                complete(PuzzlePalaceEncounterCatalog.bugLanternFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .bugLanternRepair:
+                complete(PuzzlePalaceEncounterCatalog.bugRepairFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            default:
+                XCTFail("Unexpected Palace review room")
+            }
+            let restored = PuzzlePalaceScene(state: state)
+            restored.reducedMotion = true
+            view.presentScene(restored)
+            try await capture(restored, in: view,
+                              name: "Illustrated-Palace-4x3-" + name + "-Restored")
+            restored.willLeave()
         }
 
         // An actual open passage should replace the painted closed door after
