@@ -2139,10 +2139,10 @@ import LearningCore
                 ($0.userData?["direction"] as? String) == active.target.rawValue
             })
             let wrongGlass = try XCTUnwrap(
-                wrong.childNode(withName: "mirrorTurningPane") as? SKShapeNode
+                wrong.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode
             )
             let correctGlass = try XCTUnwrap(
-                correct.childNode(withName: "mirrorTurningPane") as? SKShapeNode
+                correct.childNode(withName: "decorativeMirrorTurningPane") as? SKShapeNode
             )
             XCTAssertNil(scene.childNode(withName: "mirrorActiveRay"),
                          "An untouched mirror must not reveal the right answer.")
