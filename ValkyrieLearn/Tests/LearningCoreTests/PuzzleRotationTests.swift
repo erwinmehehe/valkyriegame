@@ -243,6 +243,55 @@ final class PuzzleRotationTests: XCTestCase {
         }
     }
 
+    func testPathTileSafeScoutPrefixNeverCrossesABrokenOffBoardOrRepeatedStone() {
+        let start = PuzzleTile(x: 0, y: 0)
+        let north = PuzzleTile(x: 0, y: 1)
+        let east = PuzzleTile(x: 1, y: 1)
+        let encounter = PuzzlePathEncounter(
+            id: "puzzle.path.safeScoutTest",
+            prompt: "Choose a safe route.",
+            gridWidth: 3, gridHeight: 3,
+            start: start, goal: PuzzleTile(x: 2, y: 0),
+            blocked: [PuzzleTile(x: 1, y: 0)],
+            choices: [
+                [.north, .east, .east, .south], // one complete, safe route
+                [.east, .east],                  // blocked on the first step
+                [.west, .north],                 // leaves the floor
+                [.north, .south, .east, .east],  // loops to start
+                [.north, .east]                  // stops short of the star
+            ],
+            answerIndex: 0
+        )
+
+        XCTAssertEqual(encounter.traversablePrefix(for: 0), encounter.route(for: 0))
+        XCTAssertTrue(encounter.isValidChoice(0))
+        XCTAssertEqual(encounter.traversablePrefix(for: 1), [start])
+        XCTAssertEqual(encounter.traversablePrefix(for: 2), [start])
+        XCTAssertEqual(encounter.traversablePrefix(for: 3), [start, north])
+        XCTAssertEqual(encounter.traversablePrefix(for: 4), [start, north, east])
+        for index in 1..<encounter.choices.count {
+            XCTAssertFalse(encounter.isValidChoice(index),
+                           "The visual scouting helper must not change scored planning.")
+        }
+
+        for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+            for published in family {
+                for choice in published.choices.indices {
+                    let safe = published.traversablePrefix(for: choice)
+                    XCTAssertFalse(safe.isEmpty)
+                    XCTAssertEqual(safe.first, published.start)
+                    XCTAssertEqual(Set(safe).count, safe.count)
+                    XCTAssertTrue(safe.allSatisfy {
+                        published.isInBounds($0) && !published.blocked.contains($0)
+                    })
+                    if published.isValidChoice(choice) {
+                        XCTAssertEqual(safe, published.route(for: choice))
+                    }
+                }
+            }
+        }
+    }
+
     func testPathTilesWaitForFullMirrorHallCompletion() {
         var profile = LearnerProfile()
         recordPathPrerequisites(in: &profile, includeRotation: false)
