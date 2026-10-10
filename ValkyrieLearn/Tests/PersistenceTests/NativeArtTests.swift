@@ -2233,8 +2233,11 @@ import LearningCore
                     let bucket = object.bucket(for: rule)
                     let dest = CGPoint(x: bucket == .left ? 530 : 970, y: 355)
                     let earlierToken = try XCTUnwrap(scene.childNode(withName: "sortingObject"))
-                    XCTAssertEqual(scene.targetName(at: dest),
-                                   bucket == .left ? "sortLeftPedestal" : "sortRightPedestal")
+                    let validPedestalTargets = bucket == .left
+                        ? ["sortLeftPedestal", "sortLeftPedestalGlyph"]
+                        : ["sortRightPedestal", "sortRightPedestalGlyph"]
+                    XCTAssertTrue(validPedestalTargets.contains(scene.targetName(at: dest) ?? ""),
+                                  "Decorative retained stones must never steal the pedestal tap.")
                     scene.handleTap(at: dest)
 
                     let runStart = (0...index).reversed().first {
