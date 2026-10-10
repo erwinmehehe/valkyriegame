@@ -4631,57 +4631,122 @@ import LearningCore
         for y in 0..<pathEncounter.gridHeight {
             for x in 0..<pathEncounter.gridWidth {
                 let tile = PuzzleTile(x: x, y: y)
-                let square = SKShapeNode(
-                    rectOf: CGSize(width: 58, height: 58),
-                    cornerRadius: 12
-                )
-                square.position = CGPoint(
+                let point = CGPoint(
                     x: originX + CGFloat(x) * tileSize,
                     y: originY + CGFloat(y) * tileSize
                 )
-                square.name = "pathStone\(x)_\(y)"
-                square.lineWidth = 3
-                square.strokeColor = UIColor(red: 0.85, green: 0.69, blue: 0.48, alpha: 0.91)
-                square.fillColor = UIColor(red: 0.45, green: 0.38, blue: 0.49, alpha: 1)
+
+                // Chipped, irregular stonework rather than a repeated flat UI
+                // square. Original tile centers remain unchanged for Tiko's
+                // real walk and all existing route/evidence calculations.
+                let stone = SKShapeNode(
+                    path: pathChippedStoneOutline(width: 59, height: 59)
+                )
+                stone.position = point
+                stone.name = "pathStone\(x)_\(y)"
+                stone.lineWidth = 3
+                stone.strokeColor = UIColor(red: 0.88, green: 0.70, blue: 0.49, alpha: 0.94)
+                stone.fillColor = UIColor(red: 0.44, green: 0.38, blue: 0.54, alpha: 1)
+                stone.fillTexture = pathMasonryTexture
+
+                let reliefShadow = SKShapeNode(
+                    path: pathChippedStoneOutline(width: 60, height: 58)
+                )
+                reliefShadow.name = "decorativePathStoneDepth"
+                reliefShadow.position = CGPoint(x: 2, y: -7)
+                reliefShadow.fillColor = UIColor(red: 0.10, green: 0.085, blue: 0.19, alpha: 0.95)
+                reliefShadow.strokeColor = UIColor(red: 0.15, green: 0.12, blue: 0.19, alpha: 1)
+                reliefShadow.lineWidth = 2
+                reliefShadow.zPosition = -3
+                stone.addChild(reliefShadow)
 
                 let bevel = SKShapeNode(
-                    rectOf: CGSize(width: 49, height: 46),
-                    cornerRadius: 9
+                    path: pathChippedStoneOutline(width: 49, height: 48)
                 )
                 bevel.position.y = 3
                 bevel.name = "pathStoneBevel"
-                bevel.fillColor = UIColor(red: 0.53, green: 0.46, blue: 0.57, alpha: 1)
-                bevel.strokeColor = UIColor(red: 0.76, green: 0.64, blue: 0.57, alpha: 0.83)
+                bevel.fillColor = [
+                    UIColor(red: 0.61, green: 0.58, blue: 0.69, alpha: 1),
+                    UIColor(red: 0.57, green: 0.55, blue: 0.68, alpha: 1),
+                    UIColor(red: 0.63, green: 0.58, blue: 0.65, alpha: 1)
+                ][(x + 2 * y) % 3]
+                bevel.fillTexture = pathMasonryTexture
+                bevel.strokeColor = UIColor(red: 0.94, green: 0.83, blue: 0.65, alpha: 0.73)
                 bevel.lineWidth = 2
-                square.addChild(bevel)
+                bevel.zPosition = 1
+                stone.addChild(bevel)
+
+                let inset = SKShapeNode(
+                    path: pathChippedStoneOutline(width: 39, height: 36)
+                )
+                inset.name = "decorativePathStoneFacet"
+                inset.position.y = 4
+                inset.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.25, alpha: 0.12)
+                inset.strokeColor = UIColor(red: 1, green: 0.93, blue: 0.74, alpha: 0.21)
+                inset.lineWidth = 1.5
+                inset.zPosition = 2
+                stone.addChild(inset)
 
                 if pathEncounter.blocked.contains(tile) {
-                    square.fillColor = UIColor(red: 0.14, green: 0.12, blue: 0.17, alpha: 1)
-                    bevel.fillColor = UIColor(red: 0.19, green: 0.14, blue: 0.23, alpha: 1)
-                    let crack = CGMutablePath()
-                    crack.move(to: CGPoint(x: -18, y: 19))
-                    crack.addLine(to: CGPoint(x: -4, y: 4))
-                    crack.addLine(to: CGPoint(x: 7, y: 11))
-                    crack.addLine(to: CGPoint(x: 18, y: -18))
-                    let brokenStone = SKShapeNode(path: crack)
-                    brokenStone.strokeColor = UIColor(red: 0.83, green: 0.53, blue: 0.43, alpha: 0.96)
-                    brokenStone.lineWidth = 4
-                    brokenStone.name = "pathBrokenStone"
-                    square.addChild(brokenStone)
-                } else if tile == pathEncounter.start {
-                    square.strokeColor = UIColor(red: 0.88, green: 0.78, blue: 0.58, alpha: 1)
-                    let symbol = ArtSystem.label("◉", size: 27)
-                    symbol.fontColor = UIColor(red: 0.98, green: 0.92, blue: 0.71, alpha: 1)
-                    symbol.name = "pathStartingStone"
-                    square.addChild(symbol)
-                } else if tile == pathEncounter.goal {
-                    square.strokeColor = UIColor(red: 1, green: 0.83, blue: 0.49, alpha: 1)
-                    let symbol = ArtSystem.label("★", size: 31)
-                    symbol.fontColor = UIColor(red: 1, green: 0.88, blue: 0.57, alpha: 1)
-                    symbol.name = "pathDestinationStone"
-                    square.addChild(symbol)
+                    stone.fillColor = UIColor(red: 0.17, green: 0.13, blue: 0.20, alpha: 1)
+                    bevel.fillTexture = nil
+                    bevel.fillColor = UIColor(red: 0.22, green: 0.16, blue: 0.24, alpha: 1)
+                    bevel.strokeColor = UIColor(red: 0.69, green: 0.40, blue: 0.37, alpha: 0.90)
+                    inset.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.16, alpha: 0.64)
+
+                    let fracture = CGMutablePath()
+                    fracture.move(to: CGPoint(x: -21, y: 23))
+                    fracture.addLine(to: CGPoint(x: -7, y: 7))
+                    fracture.addLine(to: CGPoint(x: 1, y: 11))
+                    fracture.addLine(to: CGPoint(x: 5, y: -2))
+                    fracture.addLine(to: CGPoint(x: 17, y: -17))
+                    let crevice = SKShapeNode(path: fracture)
+                    crevice.name = "pathBrokenStone"
+                    crevice.strokeColor = UIColor(red: 0.09, green: 0.07, blue: 0.14, alpha: 1)
+                    crevice.lineWidth = 8
+                    crevice.zPosition = 5
+                    stone.addChild(crevice)
+
+                    let emberSeam = SKShapeNode(path: fracture)
+                    emberSeam.name = "decorativePathBrokenSeam"
+                    emberSeam.strokeColor = UIColor(red: 0.92, green: 0.49, blue: 0.37, alpha: 0.86)
+                    emberSeam.lineWidth = 2.5
+                    emberSeam.zPosition = 6
+                    stone.addChild(emberSeam)
+
+                    let chipPath = CGMutablePath()
+                    chipPath.move(to: CGPoint(x: 7, y: -20))
+                    chipPath.addLine(to: CGPoint(x: 22, y: -21))
+                    chipPath.addLine(to: CGPoint(x: 16, y: -5))
+                    chipPath.closeSubpath()
+                    let chip = SKShapeNode(path: chipPath)
+                    chip.name = "decorativePathBrokenChip"
+                    chip.fillColor = UIColor(red: 0.36, green: 0.26, blue: 0.32, alpha: 1)
+                    chip.strokeColor = UIColor(red: 0.77, green: 0.49, blue: 0.41, alpha: 0.95)
+                    chip.lineWidth = 1.5
+                    chip.zPosition = 8
+                    stone.addChild(chip)
+                } else if tile == pathEncounter.start || tile == pathEncounter.goal {
+                    let destination = tile == pathEncounter.goal
+                    stone.strokeColor = UIColor(red: 1, green: 0.83, blue: 0.48, alpha: 1)
+                    let inlay = SKShapeNode(circleOfRadius: 20)
+                    inlay.name = destination
+                        ? "decorativePathGoalInlay" : "decorativePathStartInlay"
+                    inlay.fillColor = UIColor(red: 0.23, green: 0.20, blue: 0.31, alpha: 0.92)
+                    inlay.strokeColor = UIColor(red: 1, green: 0.84, blue: 0.52, alpha: 1)
+                    inlay.lineWidth = 3
+                    inlay.zPosition = 5
+                    stone.addChild(inlay)
+
+                    let symbol = ArtSystem.label(destination ? "★" : "◉", size: destination ? 27 : 24)
+                    symbol.name = destination ? "pathDestinationStone" : "pathStartingStone"
+                    symbol.fontColor = UIColor(red: 1, green: 0.91, blue: 0.64, alpha: 1)
+                    symbol.position.y = 2
+                    symbol.zPosition = 6
+                    inlay.addChild(symbol)
                 }
-                grid.addChild(square)
+
+                grid.addChild(stone)
             }
         }
 
