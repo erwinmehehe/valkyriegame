@@ -3269,12 +3269,13 @@ import LearningCore
         _ world: AppState.World,
         scene: PuzzlePalaceScene,
         state: AppState,
-        correct: Bool
+        correct: Bool,
+        frozenEncounter: Any
     ) async throws {
         let skill: SkillID
         switch world {
         case .puzzlePalace:
-            let active = state.nextPuzzleEncounter()
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleEncounter)
             skill = active.skillID
             let choice = try XCTUnwrap(scene.children.first {
                 $0.name == "runeChoice"
@@ -3284,7 +3285,7 @@ import LearningCore
             scene.handleTap(at: choice.position)
 
         case .memoryBridge:
-            let active = try XCTUnwrap(state.nextPuzzleMemoryEncounter())
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleMemoryEncounter)
             skill = active.skillID
             try await waitUntil(timeout: 8) {
                 scene.instruction.text == "Now repeat Tiko's rune order to raise the bridge."
@@ -3303,25 +3304,33 @@ import LearningCore
             }
 
         case .stopGoOrbs:
-            let active = try XCTUnwrap(state.nextPuzzleStopGoEncounter())
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleInhibitionEncounter)
             skill = active.skillID
             let glyph = try XCTUnwrap(
                 scene.childNode(withName: "//stopGoOrbGlyph") as? SKLabelNode
             )
-            if !correct { try await Task.sleep(nanoseconds: 350_000_000) }
             if correct {
                 for _ in active.signals.filter({ $0 == .go }) {
-                    try await waitUntil(timeout: 8) { glyph.text == "✦" }
+                    try await waitUntil(timeout: 8) {
+                        glyph.text == "✦"
+                            && (scene.instruction.text ?? "").hasPrefix("GO")
+                    }
                     scene.handleTap(at: CGPoint(x: 755, y: 365))
                     try await Task.sleep(nanoseconds: 350_000_000)
                 }
             } else {
-                try await waitUntil(timeout: 8) { glyph.text == "Ⅱ" }
+                // The initial screenshot consumes much of the short HOLD
+                // window. Do not sleep before tapping; demand a LIVE HOLD
+                // instruction, not an old pause glyph during transition.
+                try await waitUntil(timeout: 2) {
+                    glyph.text == "Ⅱ"
+                        && (scene.instruction.text ?? "").hasPrefix("HOLD")
+                }
                 scene.handleTap(at: CGPoint(x: 755, y: 365))
             }
 
         case .sortingPedestal:
-            let active = try XCTUnwrap(state.nextPuzzleSortingEncounter())
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleSortEncounter)
             skill = active.skillID
             if correct { try await Task.sleep(nanoseconds: 650_000_000) }
             else { try await Task.sleep(nanoseconds: 220_000_000) }
@@ -3334,7 +3343,7 @@ import LearningCore
             }
 
         case .resortVault:
-            let active = try XCTUnwrap(state.nextPuzzleResortEncounter())
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleResortEncounter)
             skill = active.skillID
             if correct { try await Task.sleep(nanoseconds: 650_000_000) }
             let rules = correct ? [active.initialRule, active.changedRule] : [active.initialRule]
@@ -3350,7 +3359,7 @@ import LearningCore
             }
 
         case .mirrorHall:
-            let active = try XCTUnwrap(state.nextPuzzleMirrorHallEncounter())
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleOrientationEncounter)
             skill = active.skillID
             let index = try XCTUnwrap(active.choices.indices.first {
                 (active.choices[$0] == active.target) == correct
@@ -3423,6 +3432,7 @@ import LearningCore
             return
         }
         let result: Outcome = correct ? .correct : .incorrect
+        print("Palace four-state live review: \(world) expecting \(result)")
         try await waitUntil(timeout: 10) {
             state.profile.progress(for: skill).evidence.last?.outcome == result
         }
@@ -3488,11 +3498,39 @@ import LearningCore
                 XCTAssertNotNil(scene.childNode(withName: "//repairMachineRotor"))
                 XCTAssertNotNil(scene.childNode(withName: "repairFix"))
             }
+            // Keep the *scene's initial encounter* for retry validation.
+            // The adaptive director may select a different future encounter
+            // after an incorrect answer, while this scene still displays
+            // its original runes, memory order, sorting rules or mirrors.
+            let frozenEncounter: Any
+            switch world {
+            case .puzzlePalace:
+                frozenEncounter = state.nextPuzzleEncounter()
+            case .memoryBridge:
+                frozenEncounter = try XCTUnwrap(state.nextPuzzleMemoryEncounter())
+            case .stopGoOrbs:
+                frozenEncounter = try XCTUnwrap(state.nextPuzzleStopGoEncounter())
+            case .sortingPedestal:
+                frozenEncounter = try XCTUnwrap(state.nextPuzzleSortingEncounter())
+            case .resortVault:
+                frozenEncounter = try XCTUnwrap(state.nextPuzzleResortEncounter())
+            case .mirrorHall:
+                frozenEncounter = try XCTUnwrap(state.nextPuzzleMirrorHallEncounter())
+            default:
+                // Later rooms rebuild an encounter immediately after error.
+                frozenEncounter = name
+            }
             try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
-            try await exercisePalaceVisualReview(world, scene: scene, state: state, correct: false)
+            try await exercisePalaceVisualReview(
+                world, scene: scene, state: state, correct: false,
+                frozenEncounter: frozenEncounter
+            )
             try await capture(scene, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Incorrect")
-            try await exercisePalaceVisualReview(world, scene: scene, state: state, correct: true)
+            try await exercisePalaceVisualReview(
+                world, scene: scene, state: state, correct: true,
+                frozenEncounter: frozenEncounter
+            )
             try await capture(scene, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Successful")
             scene.willLeave()
