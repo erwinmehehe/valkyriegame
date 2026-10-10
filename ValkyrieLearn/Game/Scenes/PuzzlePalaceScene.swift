@@ -5056,15 +5056,105 @@ import LearningCore
         finishPathTiles()
     }
 
+    private func buildPathTilesRestoredPassage() {
+        // On a completed revisit the three route readers disappear. Their
+        // workbench space becomes a grounded exit to Command Gears rather
+        // than a blank area with two floating circular menu buttons.
+        guard childNode(withName: "decorativePathRestoredPassage") == nil else { return }
+
+        let passage = SKNode()
+        passage.name = "decorativePathRestoredPassage"
+        passage.position = CGPoint(x: 1099, y: 252)
+        passage.zPosition = 830
+        addChild(passage)
+
+        let baseShadow = SKShapeNode(ellipseOf: CGSize(width: 255, height: 53))
+        baseShadow.name = "decorativePathRestoredShadow"
+        baseShadow.position.y = -70
+        baseShadow.fillColor = UIColor(red: 0.06, green: 0.04, blue: 0.13, alpha: 0.55)
+        baseShadow.strokeColor = .clear
+        passage.addChild(baseShadow)
+
+        let floorPlinth = SKShapeNode(
+            path: pathChippedStoneOutline(width: 252, height: 160)
+        )
+        floorPlinth.name = "decorativePathRestoredPlinth"
+        floorPlinth.fillColor = UIColor(red: 0.32, green: 0.29, blue: 0.43, alpha: 1)
+        floorPlinth.fillTexture = pathMasonryTexture
+        floorPlinth.strokeColor = UIColor(red: 0.88, green: 0.72, blue: 0.49, alpha: 1)
+        floorPlinth.lineWidth = 4
+        passage.addChild(floorPlinth)
+
+        let archInterior = SKShapeNode(
+            rectOf: CGSize(width: 147, height: 114), cornerRadius: 45
+        )
+        archInterior.name = "decorativePathRestoredGateway"
+        archInterior.position.y = 8
+        archInterior.fillColor = UIColor(red: 0.13, green: 0.14, blue: 0.27, alpha: 0.96)
+        archInterior.strokeColor = UIColor(red: 0.76, green: 0.63, blue: 0.49, alpha: 0.76)
+        archInterior.lineWidth = 3
+        archInterior.zPosition = 2
+        passage.addChild(archInterior)
+
+        let archPath = CGMutablePath()
+        archPath.move(to: CGPoint(x: -79, y: -47))
+        archPath.addLine(to: CGPoint(x: -79, y: 18))
+        archPath.addQuadCurve(to: CGPoint(x: 79, y: 18),
+                              control: CGPoint(x: 0, y: 136))
+        archPath.addLine(to: CGPoint(x: 79, y: -47))
+        let threshold = SKShapeNode(path: archPath)
+        threshold.name = "decorativePathRestoredArch"
+        threshold.strokeColor = UIColor(red: 0.95, green: 0.74, blue: 0.44, alpha: 1)
+        threshold.lineWidth = 9
+        threshold.lineCap = .round
+        threshold.glowWidth = reducedMotion ? 0 : 2
+        threshold.zPosition = 3
+        passage.addChild(threshold)
+
+        let portalGear = ArtSystem.label("⚙", size: 51)
+        portalGear.name = "decorativePathRestoredGearSigil"
+        portalGear.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.58, alpha: 1)
+        portalGear.position.y = 17
+        portalGear.zPosition = 5
+        passage.addChild(portalGear)
+
+        let thresholdLight = SKShapeNode(ellipseOf: CGSize(width: 134, height: 19))
+        thresholdLight.name = "decorativePathRestoredThreshold"
+        thresholdLight.fillColor = UIColor(red: 0.83, green: 0.69, blue: 0.44, alpha: 0.62)
+        thresholdLight.strokeColor = UIColor(red: 1, green: 0.90, blue: 0.64, alpha: 0.77)
+        thresholdLight.lineWidth = 2
+        thresholdLight.position.y = -53
+        thresholdLight.zPosition = 5
+        passage.addChild(thresholdLight)
+
+        let groove = CGMutablePath()
+        groove.move(to: CGPoint(x: 923, y: 230))
+        groove.addLine(to: CGPoint(x: 966, y: 230))
+        groove.addLine(to: CGPoint(x: 993, y: 210))
+        let inlay = SKShapeNode(path: groove)
+        inlay.name = "decorativePathRestoredFloorLink"
+        inlay.strokeColor = UIColor(red: 0.97, green: 0.81, blue: 0.47, alpha: 0.58)
+        inlay.lineWidth = 7
+        inlay.lineCap = .round
+        inlay.zPosition = 300
+        addChild(inlay)
+    }
+
     private func finishPathTiles() {
         pathAcceptingInput = false
         clearAttentionCue()
         // A completed route remains physically visible on revisits.
         clearPathTilesChoices(preserveGrid: true)
         childNode(withName: "pathNext")?.removeFromParent()
+        buildPathTilesRestoredPassage()
         refreshPathTilesProgress(animated: true)
         if let title = childNode(withName: "pathTilesTitle") as? SKLabelNode {
             title.text = "PATH PLANNING RESTORED"
+            title.fontColor = UIColor(red: 0.80, green: 1, blue: 0.80, alpha: 1)
+        }
+        if let header = childNode(withName: "pathTrailHeader") as? SKLabelNode {
+            header.text = "PASSAGE OPEN"
+            header.fontColor = UIColor(red: 0.85, green: 1, blue: 0.79, alpha: 1)
         }
         if childNode(withName: "pathTilesHome") == nil {
             let home = worldControl("⌂", name: "pathTilesHome",
