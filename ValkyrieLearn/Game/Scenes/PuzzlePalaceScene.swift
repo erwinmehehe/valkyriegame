@@ -4984,8 +4984,34 @@ import LearningCore
             return
         }
 
-        let duration = reducedMotion ? 0 : 0.28
         let actionKey = "commandOutputActuation"
+        func moveX(_ name: String, to x: CGFloat) {
+            guard let node = machine.childNode(withName: name) else { return }
+            node.removeAction(forKey: actionKey)
+            if reducedMotion {
+                node.position.x = x
+            } else {
+                node.run(.moveTo(x: x, duration: 0.28), withKey: actionKey)
+            }
+        }
+        func moveY(_ name: String, to y: CGFloat) {
+            guard let node = machine.childNode(withName: name) else { return }
+            node.removeAction(forKey: actionKey)
+            if reducedMotion {
+                node.position.y = y
+            } else {
+                node.run(.moveTo(y: y, duration: 0.28), withKey: actionKey)
+            }
+        }
+        func turn(_ name: String, to angle: CGFloat) {
+            guard let node = machine.childNode(withName: name) else { return }
+            node.removeAction(forKey: actionKey)
+            if reducedMotion {
+                node.zRotation = angle
+            } else {
+                node.run(.rotate(toAngle: angle, duration: 0.28), withKey: actionKey)
+            }
+        }
         switch step.id {
         case "takeKey", "placeCrystal":
             if let crystal = machine.childNode(
@@ -4995,29 +5021,19 @@ import LearningCore
                 crystal.glowWidth = reducedMotion ? 0 : 7
             }
         case "unlock":
-            machine.childNode(withName: "decorativeCommandOutputLatch")?
-                .run(.moveTo(x: 77, duration: duration), withKey: actionKey)
+            moveX("decorativeCommandOutputLatch", to: 77)
         case "turnGear":
             // The crystal powers a captive clockwork output, not just a
             // different color on the gear that the child tapped.
-            if let shutter = machine.childNode(
-                withName: "decorativeCommandGateShutter"
-            ) as? SKShapeNode {
-                shutter.run(.rotate(toAngle: .pi / 10, duration: duration),
-                            withKey: actionKey)
-            }
+            turn("decorativeCommandGateShutter", to: .pi / 10)
         case "openDoor", "crossDoor":
-            machine.childNode(withName: "decorativeCommandGateShutter")?
-                .run(.moveTo(y: 25, duration: duration), withKey: actionKey)
+            moveY("decorativeCommandGateShutter", to: 25)
         case "lowerBridge":
-            machine.childNode(withName: "decorativeCommandBridgeDeck")?
-                .run(.rotate(toAngle: 0, duration: duration), withKey: actionKey)
+            turn("decorativeCommandBridgeDeck", to: 0)
         case "crossBridge":
-            machine.childNode(withName: "decorativeCommandOutputTraveler")?
-                .run(.moveTo(x: 47, duration: duration), withKey: actionKey)
+            moveX("decorativeCommandOutputTraveler", to: 47)
         case "raiseBridge":
-            machine.childNode(withName: "decorativeCommandBridgeDeck")?
-                .run(.rotate(toAngle: .pi / 5, duration: duration), withKey: actionKey)
+            turn("decorativeCommandBridgeDeck", to: .pi / 5)
         default:
             break
         }
