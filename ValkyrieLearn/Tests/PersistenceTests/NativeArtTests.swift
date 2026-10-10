@@ -2313,6 +2313,15 @@ import LearningCore
             try LearningStore.container(inMemory: true)
         ))
         state.reducedMotion = true
+        // Completion of the sorting skill alone does not open the chamber:
+        // real return visits have already cleared its earlier story rooms.
+        for encounter in PuzzlePalaceEncounterCatalog.runeGate
+            + PuzzlePalaceEncounterCatalog.memoryBridge
+            + PuzzlePalaceEncounterCatalog.stopGoOrbs {
+            _ = state.recordPuzzle(encounter, outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzleSortingAvailable)
         for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation
             + PuzzlePalaceEncounterCatalog.ruleSwitching {
             _ = state.recordPuzzle(encounter, outcome: .correct,
