@@ -1511,6 +1511,9 @@ import LearningCore
             }
             XCTAssertNil(scene.childNode(withName: "//pathSafeStopMarker"),
                          "A new map must not inherit a rejected route's stop marker.")
+            try await waitUntil(timeout: 3) { scene.tiko.position.x <= 420 }
+            XCTAssertLessThanOrEqual(scene.tiko.position.x, 420,
+                                     "Tiko must leave the floor map before the next planning choice.")
             XCTAssertEqual(state.profile.progress(for: PuzzleSkills.pathPlanning).evidence.count, 1)
             let retry = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzlePathEncounter)
             XCTAssertNotEqual(retry.id, active.id)
