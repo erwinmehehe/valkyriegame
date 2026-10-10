@@ -5963,7 +5963,97 @@ import LearningCore
         back.zPosition = 2050
     }
 
+    private func pullRepairWorkbenchLever() {
+        // The input itself is a tangible lever: once TEST is pressed, the
+        // handle lowers and remains held until the next authored challenge.
+        // Its parent 'repairFix' retains its full stable interaction bounds.
+        if let stem = childNode(
+            withName: "//decorativeRepairLeverStem"
+        ) {
+            stem.removeAction(forKey: "repairTestPull")
+            if reducedMotion {
+                stem.zRotation = -.pi / 6
+            } else {
+                stem.run(.rotate(toAngle: -.pi / 6, duration: 0.20),
+                         withKey: "repairTestPull")
+            }
+        }
+        if let grip = childNode(
+            withName: "//decorativeRepairLeverGrip"
+        ) {
+            grip.removeAction(forKey: "repairTestPull")
+            if reducedMotion {
+                grip.position = CGPoint(x: 20, y: 6)
+            } else {
+                grip.run(.move(to: CGPoint(x: 20, y: 6), duration: 0.20),
+                         withKey: "repairTestPull")
+            }
+        }
+    }
+
+    private func showRepairDriveOutput(powered: Bool, jammed: Bool) {
+        let gold = UIColor(red: 0.92, green: 0.72, blue: 0.45, alpha: 1)
+        let restored = UIColor(red: 0.44, green: 0.88, blue: 0.60, alpha: 1)
+        let broken = UIColor(red: 0.95, green: 0.38, blue: 0.29, alpha: 1)
+        let inactive = UIColor(red: 0.25, green: 0.19, blue: 0.25, alpha: 1)
+        let active = powered ? restored : (jammed ? broken : inactive)
+
+        // No stage identifies the child's answer before TEST. On a failed
+        // swap the entire chain visibly fails, without dishonestly marking
+        // one authored command as the specific broken step.
+        for index in 0..<4 {
+            guard let lamp = childNode(
+                withName: "//decorativeRepairStageLens\(index)"
+            ) as? SKShapeNode else { continue }
+            lamp.fillColor = active
+            lamp.strokeColor = (powered || jammed) ? gold
+                : UIColor(red: 0.72, green: 0.53, blue: 0.38, alpha: 1)
+            lamp.glowWidth = powered && !reducedMotion ? 5 : 0
+        }
+
+        if let conduit = childNode(
+            withName: "decorativeRepairPowerBus"
+        ) as? SKShapeNode {
+            conduit.strokeColor = powered ? restored
+                : (jammed ? broken : gold.withAlphaComponent(0.78))
+            conduit.glowWidth = powered && !reducedMotion ? 3 : 0
+        }
+
+        if let clutch = childNode(
+            withName: "//decorativeRepairClutch"
+        ) as? SKShapeNode {
+            clutch.removeAction(forKey: "repairClutchTravel")
+            // A broken chain wedges into the spinning flywheel, while a
+            // repaired one retracts and leaves the machine free to run.
+            let destination: CGFloat = jammed ? 45 : (powered ? 86 : 76)
+            if reducedMotion {
+                clutch.position.x = destination
+            } else {
+                clutch.run(.moveTo(x: destination, duration: 0.22),
+                           withKey: "repairClutchTravel")
+            }
+            clutch.fillColor = jammed ? broken
+                : (powered ? restored : UIColor(
+                    red: 0.69, green: 0.48, blue: 0.32, alpha: 1
+                ))
+            clutch.glowWidth = powered && !reducedMotion ? 4 : 0
+        }
+    }
+
     private func setRepairMachinePowered(_ powered: Bool) {
+        showRepairDriveOutput(powered: powered, jammed: false)
+        if !powered {
+            // A fresh challenge resets the lever independently of the
+            // previously tested swap. No false "tested" pose carries over.
+            if let stem = childNode(withName: "//decorativeRepairLeverStem") {
+                stem.removeAction(forKey: "repairTestPull")
+                stem.zRotation = 0
+            }
+            if let grip = childNode(withName: "//decorativeRepairLeverGrip") {
+                grip.removeAction(forKey: "repairTestPull")
+                grip.position = CGPoint(x: 0, y: 32)
+            }
+        }
         let bronze = UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
         let gold = UIColor(red: 1.0, green: 0.82, blue: 0.43, alpha: 1)
         if let core = childNode(withName: "//repairLanternCore") as? SKShapeNode {
@@ -5992,6 +6082,7 @@ import LearningCore
     }
 
     private func showRepairMachineMiss() {
+        showRepairDriveOutput(powered: false, jammed: true)
         if let rail = childNode(withName: "repairRail") as? SKShapeNode {
             rail.strokeColor = UIColor(red: 1, green: 0.51, blue: 0.36, alpha: 1)
         }
@@ -6216,6 +6307,7 @@ import LearningCore
         }
 
         repairAcceptingInput = false
+        pullRepairWorkbenchLever()
         attempts += 1
         let attemptSupport = support
         let selected = repairSelection
