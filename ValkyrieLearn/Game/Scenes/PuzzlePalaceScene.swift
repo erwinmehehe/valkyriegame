@@ -4368,7 +4368,10 @@ import LearningCore
         // companion to the walkable lane before a new map becomes tappable,
         // otherwise he obscures the next challenge's actual tiles.
         let companionStart = CGPoint(x: 305, y: 190)
-        if tiko.position.y > walkable.maxY {
+        // A failed safe-prefix scout can stop on the lower row (inside the
+        // actor-lane Y range) but still be over the stone puzzle. Return Tiko
+        // whenever he left his companion station, not only above the lane.
+        if tiko.position.y > walkable.maxY || tiko.position.x > 420 {
             pathAcceptingInput = false
             if reducedMotion {
                 tiko.position = companionStart
