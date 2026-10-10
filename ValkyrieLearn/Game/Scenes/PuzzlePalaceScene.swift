@@ -4379,9 +4379,15 @@ import LearningCore
             } else {
                 tiko.run(.sequence([
                     .fadeOut(withDuration: 0.12),
-                    .run { [weak self] in self?.tiko.position = companionStart },
-                    .fadeIn(withDuration: 0.12),
-                    .run { [weak self] in self?.pathAcceptingInput = true }
+                    .run { [weak self] in
+                        guard let self else { return }
+                        self.tiko.position = companionStart
+                        // The new map is safe to tap as soon as Tiko has left
+                        // the floor stones. Do not reject a fast child's next
+                        // choice while an unrelated fade-in finishes.
+                        self.pathAcceptingInput = true
+                    },
+                    .fadeIn(withDuration: 0.12)
                 ]), withKey: "pathCompanionReset")
             }
         } else {
