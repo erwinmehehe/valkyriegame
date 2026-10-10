@@ -4443,60 +4443,129 @@ import LearningCore
         root.zPosition = 900
         root.userData = NSMutableDictionary(dictionary: ["choiceIndex": index])
 
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: 293, height: 26))
-        shadow.position.y = -31
-        shadow.fillColor = UIColor(red: 0.08, green: 0.05, blue: 0.11, alpha: 0.29)
+        // The route reader consists of carved moonstone on a cast-brass
+        // footing. Its size and real interactive root preserve the 4:3 iPad
+        // touch target; no small directional symbol is a separate button.
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 292, height: 24))
+        shadow.name = "decorativePathChoiceShadow"
+        shadow.position = CGPoint(x: 0, y: -34)
+        shadow.fillColor = UIColor(red: 0.055, green: 0.045, blue: 0.12, alpha: 0.65)
         shadow.strokeColor = .clear
-        shadow.zPosition = -2
-        shadow.name = name
+        shadow.zPosition = -3
         root.addChild(shadow)
 
-        // Each route is a linked collection of sculpted stone pieces on a low
-        // workbench, not an A/B/C answer button in a translucent rectangle.
-        let bench = SKShapeNode(
-            rectOf: CGSize(width: 286, height: 70), cornerRadius: 16
+        let lowerRim = SKShapeNode(
+            path: pathChippedStoneOutline(width: 294, height: 76)
         )
-        bench.fillColor = UIColor(red: 0.42, green: 0.32, blue: 0.33, alpha: 0.96)
-        bench.strokeColor = UIColor(red: 0.92, green: 0.72, blue: 0.43, alpha: 1)
-        bench.lineWidth = 3
+        lowerRim.name = name
+        lowerRim.position.y = -4
+        lowerRim.fillColor = UIColor(red: 0.22, green: 0.15, blue: 0.23, alpha: 1)
+        lowerRim.strokeColor = UIColor(red: 0.61, green: 0.44, blue: 0.33, alpha: 1)
+        lowerRim.lineWidth = 4
+        lowerRim.zPosition = -2
+        root.addChild(lowerRim)
+
+        let bench = SKShapeNode(
+            path: pathChippedStoneOutline(width: 290, height: 74)
+        )
         bench.name = name
+        bench.fillColor = UIColor(red: 0.42, green: 0.34, blue: 0.43, alpha: 1)
+        bench.fillTexture = pathMasonryTexture
+        bench.strokeColor = UIColor(red: 0.95, green: 0.75, blue: 0.49, alpha: 0.99)
+        bench.lineWidth = 3
+        bench.zPosition = 0
         root.addChild(bench)
 
-        let inset = SKShapeNode(
-            rectOf: CGSize(width: 270, height: 55), cornerRadius: 11
+        let inlay = SKShapeNode(
+            path: pathChippedStoneOutline(width: 272, height: 57)
         )
-        inset.fillColor = UIColor(red: 0.21, green: 0.17, blue: 0.26, alpha: 0.95)
-        inset.strokeColor = UIColor(red: 0.60, green: 0.49, blue: 0.42, alpha: 0.85)
-        inset.lineWidth = 2
-        inset.name = name
-        bench.addChild(inset)
+        inlay.name = "decorativePathChoiceInlay"
+        inlay.fillColor = UIColor(red: 0.18, green: 0.15, blue: 0.27, alpha: 0.82)
+        inlay.strokeColor = UIColor(red: 0.82, green: 0.66, blue: 0.47, alpha: 0.56)
+        inlay.lineWidth = 1.5
+        inlay.zPosition = 1
+        bench.addChild(inlay)
 
-        let crest = ArtSystem.label(["✦", "◆", "◈"][index], size: 20)
-        crest.fontColor = UIColor(red: 1, green: 0.85, blue: 0.55, alpha: 1)
-        crest.position = CGPoint(x: -125, y: 0)
-        crest.name = name
-        root.addChild(crest)
+        let scoredRim = SKShapeNode(
+            path: pathChippedStoneOutline(width: 284, height: 68)
+        )
+        scoredRim.name = "decorativePathChoiceFeedbackRim"
+        scoredRim.fillColor = .clear
+        scoredRim.strokeColor = UIColor(red: 0.97, green: 0.79, blue: 0.50, alpha: 0.18)
+        scoredRim.lineWidth = 3
+        scoredRim.zPosition = 2
+        root.addChild(scoredRim)
 
+        // The left medallion is a cast identifying seal, not a floating
+        // three-button answer prompt. Each path has a permanent distinct seal.
+        let seal = SKShapeNode(circleOfRadius: 21)
+        seal.name = "decorativePathChoiceSeal"
+        seal.position = CGPoint(x: -119, y: 1)
+        seal.fillColor = UIColor(red: 0.48, green: 0.31, blue: 0.30, alpha: 1)
+        seal.strokeColor = UIColor(red: 0.98, green: 0.78, blue: 0.48, alpha: 1)
+        seal.lineWidth = 3
+        seal.zPosition = 4
+        root.addChild(seal)
+
+        let crest = ArtSystem.label(["✦", "◆", "◈"][index], size: 23)
+        crest.fontColor = UIColor(red: 1, green: 0.93, blue: 0.71, alpha: 1)
+        crest.name = "decorativePathChoiceCrest"
+        crest.position.y = 1
+        seal.addChild(crest)
+
+        // Arrow glyphs are now large ivory inlays in a linked set of uneven
+        // stone runes, instead of dark arrows in a row of generic button UI.
         let spacing: CGFloat = directions.count > 5 ? 34 : 39
-        let startX = -CGFloat(directions.count - 1) * spacing / 2 + 13
-        for (step, direction) in directions.enumerated() {
-            let slate = SKShapeNode(
-                rectOf: CGSize(width: 31, height: 38), cornerRadius: 7
-            )
-            slate.position = CGPoint(x: startX + CGFloat(step) * spacing, y: 0)
-            slate.fillColor = UIColor(red: 0.51, green: 0.43, blue: 0.52, alpha: 1)
-            slate.strokeColor = UIColor(red: 0.91, green: 0.75, blue: 0.51, alpha: 0.98)
-            slate.lineWidth = 2
-            slate.name = name
-            root.addChild(slate)
+        let startX = -CGFloat(directions.count - 1) * spacing / 2 + 17
+        let connector = CGMutablePath()
+        connector.move(to: CGPoint(x: startX, y: 0))
+        connector.addLine(to: CGPoint(
+            x: startX + CGFloat(directions.count - 1) * spacing, y: 0
+        ))
+        let wire = SKShapeNode(path: connector)
+        wire.name = "decorativePathChoiceShaft"
+        wire.lineWidth = 6
+        wire.strokeColor = UIColor(red: 0.95, green: 0.69, blue: 0.40, alpha: 0.42)
+        wire.zPosition = 2
+        root.addChild(wire)
 
-            let engravedArrow = ArtSystem.label(direction.glyph, size: 20)
-            engravedArrow.fontColor = UIColor(red: 0.13, green: 0.10, blue: 0.19, alpha: 1)
-            engravedArrow.name = name
-            slate.addChild(engravedArrow)
+        for (step, direction) in directions.enumerated() {
+            let x = startX + CGFloat(step) * spacing
+            let socket = SKShapeNode(
+                path: pathChippedStoneOutline(width: 31, height: 41)
+            )
+            socket.name = "decorativePathChoiceRune\(step)"
+            socket.position = CGPoint(x: x, y: 0)
+            socket.fillColor = UIColor(red: 0.37, green: 0.30, blue: 0.46, alpha: 1)
+            socket.strokeColor = UIColor(red: 0.94, green: 0.73, blue: 0.46, alpha: 0.99)
+            socket.lineWidth = 2
+            socket.zPosition = 3
+            root.addChild(socket)
+
+            let engravedArrow = ArtSystem.label(direction.glyph, size: 24)
+            engravedArrow.fontColor = UIColor(red: 1, green: 0.94, blue: 0.77, alpha: 1)
+            engravedArrow.name = "decorativePathChoiceArrow"
+            engravedArrow.position = CGPoint(x: 0, y: 1)
+            engravedArrow.zPosition = 4
+            socket.addChild(engravedArrow)
+
+            let lightEdge = SKShapeNode(
+                path: pathChippedStoneOutline(width: 23, height: 33)
+            )
+            lightEdge.name = "decorativePathChoiceRuneBevel"
+            lightEdge.fillColor = .clear
+            lightEdge.strokeColor = UIColor(red: 0.95, green: 0.89, blue: 0.71, alpha: 0.20)
+            lightEdge.lineWidth = 1
+            lightEdge.zPosition = 2
+            socket.addChild(lightEdge)
         }
 
-        makeAccessible(root, label: "Route option \(index + 1): try stone trail")
+        makeAccessible(
+            root,
+            label: "Route option \(index + 1): "
+                + directions.map(\.rawValue).joined(separator: ", "),
+            hint: "Choose this trail to see Tiko test its path."
+        )
         addChild(root)
         registerInteraction(root, clearance: 16)
         return root
