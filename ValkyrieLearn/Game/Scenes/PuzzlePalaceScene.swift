@@ -4267,57 +4267,159 @@ import LearningCore
     }
 
 
+    // Material is cropped from this room's *existing approved painting*.
+    // The stone floor stays in the same authored color/light universe; no
+    // external generic UI asset or environment replacement is introduced.
+    private lazy var pathMasonryTexture: SKTexture? = {
+        guard let art = ArtSystem.texture("PuzzlePathTilesIllustratedV2") else {
+            return nil
+        }
+        return SKTexture(
+            rect: CGRect(x: 0.19, y: 0.07, width: 0.16, height: 0.15), in: art
+        )
+    }()
+
+    private func pathChippedStoneOutline(width: CGFloat, height: CGFloat) -> CGPath {
+        let w = width / 2
+        let h = height / 2
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -w + 9, y: h - 2))
+        path.addLine(to: CGPoint(x: w - 11, y: h))
+        path.addLine(to: CGPoint(x: w, y: h - 12))
+        path.addLine(to: CGPoint(x: w - 2, y: -h + 9))
+        path.addLine(to: CGPoint(x: w - 12, y: -h))
+        path.addLine(to: CGPoint(x: -w + 8, y: -h + 2))
+        path.addLine(to: CGPoint(x: -w, y: -h + 12))
+        path.addLine(to: CGPoint(x: -w + 2, y: h - 11))
+        path.closeSubpath()
+        return path
+    }
+
     private func buildPathTilesWorld() {
-        // The map is now an in-world stone crossing on the floor rather than
-        // a blue classroom grid hanging over a painted palace wall.
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: 500, height: 296))
-        shadow.fillColor = UIColor(red: 0.07, green: 0.055, blue: 0.13, alpha: 0.27)
+        // A low, beveled moonstone dais belongs to the existing palace floor.
+        // Keep its real 4:3 footprint compact and the playable grid positions
+        // unchanged, so neither taps nor Tiko's route coordinates drift.
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 494, height: 282))
+        shadow.fillColor = UIColor(red: 0.06, green: 0.045, blue: 0.14, alpha: 0.48)
         shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 760, y: 288)
-        shadow.zPosition = 96
+        shadow.position = CGPoint(x: 765, y: 279)
+        shadow.zPosition = 95
         shadow.name = "pathFloorShadow"
         addChild(shadow)
 
-        let chamber = SKShapeNode(ellipseOf: CGSize(width: 448, height: 278))
-        chamber.fillColor = UIColor(red: 0.20, green: 0.17, blue: 0.27, alpha: 0.38)
-        chamber.strokeColor = UIColor(red: 0.76, green: 0.59, blue: 0.39, alpha: 0.68)
-        chamber.lineWidth = 4
-        chamber.position = CGPoint(x: 760, y: 295)
+        let plinthPath = CGMutablePath()
+        plinthPath.move(to: CGPoint(x: -207, y: 73))
+        plinthPath.addLine(to: CGPoint(x: -160, y: 124))
+        plinthPath.addLine(to: CGPoint(x: 154, y: 124))
+        plinthPath.addLine(to: CGPoint(x: 213, y: 78))
+        plinthPath.addLine(to: CGPoint(x: 213, y: -82))
+        plinthPath.addLine(to: CGPoint(x: 158, y: -132))
+        plinthPath.addLine(to: CGPoint(x: -153, y: -132))
+        plinthPath.addLine(to: CGPoint(x: -212, y: -85))
+        plinthPath.closeSubpath()
+
+        let base = SKShapeNode(path: plinthPath)
+        base.name = "decorativePathDaisFoot"
+        base.fillColor = UIColor(red: 0.17, green: 0.13, blue: 0.22, alpha: 0.95)
+        base.strokeColor = UIColor(red: 0.47, green: 0.36, blue: 0.39, alpha: 0.93)
+        base.lineWidth = 7
+        base.position = CGPoint(x: 760, y: 282)
+        base.zPosition = 97
+        addChild(base)
+
+        let chamber = SKShapeNode(path: plinthPath)
         chamber.name = "pathTilesChamber"
+        chamber.fillColor = UIColor(red: 0.37, green: 0.32, blue: 0.47, alpha: 0.88)
+        chamber.fillTexture = pathMasonryTexture
+        chamber.strokeColor = UIColor(red: 0.88, green: 0.68, blue: 0.45, alpha: 0.94)
+        chamber.lineWidth = 4
+        chamber.position = CGPoint(x: 760, y: 292)
         chamber.zPosition = 100
         addChild(chamber)
 
-        let stoneRim = SKShapeNode(ellipseOf: CGSize(width: 412, height: 246))
-        stoneRim.fillColor = .clear
-        stoneRim.strokeColor = UIColor(red: 0.97, green: 0.81, blue: 0.55, alpha: 0.25)
-        stoneRim.lineWidth = 3
-        stoneRim.position = CGPoint(x: 760, y: 298)
-        stoneRim.name = "pathFloorStoneRim"
-        stoneRim.zPosition = 105
-        addChild(stoneRim)
+        let innerStone = SKShapeNode(path: pathChippedStoneOutline(width: 400, height: 231))
+        innerStone.name = "pathFloorStoneRim"
+        innerStone.fillColor = UIColor(red: 0.11, green: 0.10, blue: 0.21, alpha: 0.23)
+        innerStone.strokeColor = UIColor(red: 0.94, green: 0.80, blue: 0.57, alpha: 0.43)
+        innerStone.lineWidth = 2
+        innerStone.position = CGPoint(x: 760, y: 296)
+        innerStone.zPosition = 104
+        addChild(innerStone)
 
-        let title = ArtSystem.label("HELP TIKO CROSS", size: 20)
-        title.fontColor = UIColor(red: 1, green: 0.91, blue: 0.72, alpha: 0.96)
-        title.name = "pathTilesTitle"
-        title.position = CGPoint(x: 760, y: 504)
-        title.zPosition = 800
-        addChild(title)
-
-        // Carved progress studs are mounted beside the real floor crossing.
-        for index in 0..<PuzzlePalaceEncounterCatalog.pathTileFamilies.count {
-            let stud = SKShapeNode(circleOfRadius: 12)
-            stud.fillColor = UIColor(red: 0.29, green: 0.21, blue: 0.23, alpha: 1)
-            stud.strokeColor = UIColor(red: 0.91, green: 0.74, blue: 0.47, alpha: 0.95)
-            stud.lineWidth = 3
-            stud.position = CGPoint(x: 690 + CGFloat(index) * 70, y: 475)
-            stud.name = "pathProgress\(index)"
-            stud.zPosition = 820
-            addChild(stud)
+        // A tiny number of inlaid brass pegs fixes the mechanism to the
+        // plinth. These are decoration, never tappable or answer-hint lights.
+        for x in [CGFloat(578), 943] {
+            for y in [CGFloat(216), 375] {
+                let mount = SKShapeNode(circleOfRadius: 5)
+                mount.name = "decorativePathDaisRivet"
+                mount.position = CGPoint(x: x, y: y)
+                mount.fillColor = UIColor(red: 0.79, green: 0.62, blue: 0.38, alpha: 1)
+                mount.strokeColor = UIColor(red: 0.26, green: 0.18, blue: 0.29, alpha: 0.95)
+                mount.lineWidth = 2
+                mount.zPosition = 135
+                addChild(mount)
+            }
         }
 
+        // One small stone nameplate replaces floating writing on the mural.
+        let lintelShadow = SKShapeNode(
+            rectOf: CGSize(width: 340, height: 74), cornerRadius: 20
+        )
+        lintelShadow.position = CGPoint(x: 762, y: 443)
+        lintelShadow.fillColor = UIColor(red: 0.08, green: 0.07, blue: 0.17, alpha: 0.46)
+        lintelShadow.strokeColor = .clear
+        lintelShadow.zPosition = 780
+        lintelShadow.name = "decorativePathNameplateShadow"
+        addChild(lintelShadow)
+
+        let lintel = SKShapeNode(
+            rectOf: CGSize(width: 332, height: 72), cornerRadius: 18
+        )
+        lintel.name = "decorativePathNameplate"
+        lintel.position = CGPoint(x: 760, y: 451)
+        lintel.fillColor = UIColor(red: 0.26, green: 0.20, blue: 0.35, alpha: 0.98)
+        lintel.fillTexture = pathMasonryTexture
+        lintel.strokeColor = UIColor(red: 0.91, green: 0.71, blue: 0.46, alpha: 0.91)
+        lintel.lineWidth = 3
+        lintel.zPosition = 790
+        addChild(lintel)
+
+        let title = ArtSystem.label("HELP TIKO CROSS", size: 21)
+        title.fontColor = UIColor(red: 1, green: 0.93, blue: 0.78, alpha: 1)
+        title.name = "pathTilesTitle"
+        title.position = CGPoint(x: 760, y: 464)
+        title.zPosition = 810
+        addChild(title)
+
+        // Three tiny inset sockets are progress, not competing buttons.
+        for index in 0..<PuzzlePalaceEncounterCatalog.pathTileFamilies.count {
+            let socket = SKShapeNode(circleOfRadius: 10)
+            socket.name = "pathProgress\(index)"
+            socket.fillColor = UIColor(red: 0.20, green: 0.16, blue: 0.29, alpha: 1)
+            socket.strokeColor = UIColor(red: 0.91, green: 0.71, blue: 0.46, alpha: 0.94)
+            socket.lineWidth = 2.5
+            socket.position = CGPoint(x: 700 + CGFloat(index) * 60, y: 435)
+            socket.zPosition = 820
+            addChild(socket)
+        }
+
+        // The choices are engraved into a stone route-reader, not generic
+        // floating cards. Leave 4:3 hit frames and locations untouched.
+        let trailHeaderStone = SKShapeNode(
+            path: pathChippedStoneOutline(width: 264, height: 37)
+        )
+        trailHeaderStone.name = "decorativePathTrailHeaderStone"
+        trailHeaderStone.fillColor = UIColor(red: 0.28, green: 0.21, blue: 0.34, alpha: 0.95)
+        trailHeaderStone.fillTexture = pathMasonryTexture
+        trailHeaderStone.strokeColor = UIColor(red: 0.86, green: 0.65, blue: 0.42, alpha: 0.94)
+        trailHeaderStone.lineWidth = 2.5
+        trailHeaderStone.position = CGPoint(x: 1098, y: 394)
+        trailHeaderStone.zPosition = 805
+        addChild(trailHeaderStone)
+
         let routeHeader = ArtSystem.label("PICK A STONE TRAIL", size: 16)
-        routeHeader.fontColor = UIColor(red: 1, green: 0.88, blue: 0.60, alpha: 0.97)
-        routeHeader.position = CGPoint(x: 1090, y: 393)
+        routeHeader.fontColor = UIColor(red: 1, green: 0.91, blue: 0.72, alpha: 1)
+        routeHeader.position = CGPoint(x: 1098, y: 397)
         routeHeader.zPosition = 820
         routeHeader.name = "pathTrailHeader"
         addChild(routeHeader)
