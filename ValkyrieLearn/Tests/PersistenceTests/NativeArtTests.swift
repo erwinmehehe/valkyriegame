@@ -1619,7 +1619,11 @@ import LearningCore
                            accuracy: 1,
                            "Tiko must stop on the last walkable stone, not the blocked tile.")
             XCTAssertNotNil(initialGrid.childNode(withName: "pathRouteTrace"))
-            XCTAssertNotNil(initialGrid.childNode(withName: "pathSafeStopMarker"))
+            XCTAssertNotNil(initialGrid.childNode(withName: "decorativePathRouteUnderlight"))
+            let stop = try XCTUnwrap(initialGrid.childNode(withName: "pathSafeStopMarker"))
+            XCTAssertNotNil(stop.childNode(withName: "decorativePathStopRailFoot"))
+            XCTAssertNotNil(stop.childNode(withName: "decorativePathStopRailBar"),
+                            "The stop is a real raised rail, not a floating pause glyph.")
             XCTAssertNil(scene.childNode(withName: "pathNext"))
             XCTAssertFalse(state.puzzlePathTilesComplete)
             let wrongEvidence = state.profile.progress(for: PuzzleSkills.pathPlanning).evidence
