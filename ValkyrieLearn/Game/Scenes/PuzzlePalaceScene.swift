@@ -5606,6 +5606,34 @@ import LearningCore
         }
     }
 
+    private lazy var repairWorkshopStoneTexture: SKTexture? = {
+        // Stone tones are derived from this room's *already approved*
+        // illustration; nothing is replaced, upscaled or baked into scenery.
+        guard let art = ArtSystem.texture("PuzzleBugLanternRepairIllustratedV2") else {
+            return nil
+        }
+        return SKTexture(
+            rect: CGRect(x: 0.17, y: 0.10, width: 0.13, height: 0.15), in: art
+        )
+    }()
+
+    private func repairCarvedOutline(width: CGFloat, height: CGFloat) -> CGPath {
+        let halfWidth = width / 2
+        let halfHeight = height / 2
+        let cut: CGFloat = min(14, min(halfWidth, halfHeight) * 0.35)
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -halfWidth + cut, y: halfHeight))
+        path.addLine(to: CGPoint(x: halfWidth - cut, y: halfHeight))
+        path.addLine(to: CGPoint(x: halfWidth, y: halfHeight - cut))
+        path.addLine(to: CGPoint(x: halfWidth, y: -halfHeight + cut))
+        path.addLine(to: CGPoint(x: halfWidth - cut, y: -halfHeight))
+        path.addLine(to: CGPoint(x: -halfWidth + cut, y: -halfHeight))
+        path.addLine(to: CGPoint(x: -halfWidth, y: -halfHeight + cut))
+        path.addLine(to: CGPoint(x: -halfWidth, y: halfHeight - cut))
+        path.closeSubpath()
+        return path
+    }
+
     private func buildBugRepairWorld() {
         // Clockwork workshop: the rail, drive shaft and four gear sockets are
         // physically connected. Keep the illustrated wall and forge visible.
@@ -5614,7 +5642,7 @@ import LearningCore
         drive.addLine(to: CGPoint(x: 760, y: 367))
         let shaft = SKShapeNode(path: drive)
         shaft.strokeColor = UIColor(red: 0.33, green: 0.22, blue: 0.18, alpha: 1)
-        shaft.lineWidth = 26
+        shaft.lineWidth = 20
         shaft.name = "repairDriveShaft"
         shaft.zPosition = 690
         addChild(shaft)
@@ -5638,8 +5666,85 @@ import LearningCore
         rail.zPosition = 760
         addChild(rail)
 
+        // Workshop sockets sit on narrow installed floor posts, never as
+        // unsupported HUD cogs pasted over the illustrated tool wall.
+        let benchFoot = SKShapeNode(
+            rectOf: CGSize(width: 775, height: 22), cornerRadius: 9
+        )
+        benchFoot.name = "decorativeRepairBenchFoot"
+        benchFoot.position = CGPoint(x: 760, y: 296)
+        benchFoot.fillColor = UIColor(red: 0.29, green: 0.20, blue: 0.26, alpha: 0.88)
+        benchFoot.strokeColor = UIColor(red: 0.72, green: 0.53, blue: 0.35, alpha: 0.96)
+        benchFoot.lineWidth = 3
+        benchFoot.zPosition = 729
+        addChild(benchFoot)
+
+        // A thin real conduit connects every socket to the center flywheel.
+        // These stage indicators are not hints: they are inert until TEST.
+        let powerBusPath = CGMutablePath()
+        powerBusPath.move(to: CGPoint(x: 485, y: 422))
+        powerBusPath.addLine(to: CGPoint(x: 1025, y: 422))
+        powerBusPath.move(to: CGPoint(x: 760, y: 422))
+        powerBusPath.addLine(to: CGPoint(x: 760, y: 489))
+        let powerBus = SKShapeNode(path: powerBusPath)
+        powerBus.name = "decorativeRepairPowerBus"
+        powerBus.strokeColor = UIColor(red: 0.68, green: 0.47, blue: 0.31, alpha: 0.78)
+        powerBus.lineWidth = 6
+        powerBus.lineCap = .round
+        powerBus.zPosition = 660
+        addChild(powerBus)
+
         let xs: [CGFloat] = [485, 665, 845, 1025]
         for (index, x) in xs.enumerated() {
+            let post = SKShapeNode(
+                rectOf: CGSize(width: 18, height: 74), cornerRadius: 6
+            )
+            post.name = "decorativeRepairSocketPost\(index)"
+            post.position = CGPoint(x: x, y: 325)
+            post.fillColor = UIColor(red: 0.46, green: 0.31, blue: 0.30, alpha: 1)
+            post.strokeColor = UIColor(red: 0.85, green: 0.64, blue: 0.41, alpha: 1)
+            post.lineWidth = 3
+            post.zPosition = 731
+            addChild(post)
+
+            let foot = SKShapeNode(path: repairCarvedOutline(width: 76, height: 18))
+            foot.name = "decorativeRepairSocketFoot\(index)"
+            foot.position = CGPoint(x: x, y: 294)
+            foot.fillColor = UIColor(red: 0.45, green: 0.32, blue: 0.36, alpha: 1)
+            foot.fillTexture = repairWorkshopStoneTexture
+            foot.strokeColor = UIColor(red: 0.92, green: 0.71, blue: 0.46, alpha: 0.95)
+            foot.lineWidth = 2
+            foot.zPosition = 734
+            addChild(foot)
+
+            let conduitStem = SKShapeNode(
+                rectOf: CGSize(width: 8, height: 25), cornerRadius: 3
+            )
+            conduitStem.name = "decorativeRepairIndicatorStem\(index)"
+            conduitStem.position = CGPoint(x: x, y: 407)
+            conduitStem.fillColor = UIColor(red: 0.68, green: 0.49, blue: 0.34, alpha: 0.96)
+            conduitStem.strokeColor = UIColor(red: 0.87, green: 0.67, blue: 0.43, alpha: 1)
+            conduitStem.lineWidth = 1.5
+            conduitStem.zPosition = 692
+            addChild(conduitStem)
+
+            let indicatorMount = SKShapeNode(circleOfRadius: 13)
+            indicatorMount.name = "decorativeRepairStageMount\(index)"
+            indicatorMount.position = CGPoint(x: x, y: 423)
+            indicatorMount.fillColor = UIColor(red: 0.26, green: 0.19, blue: 0.25, alpha: 1)
+            indicatorMount.strokeColor = UIColor(red: 0.94, green: 0.74, blue: 0.47, alpha: 1)
+            indicatorMount.lineWidth = 2.5
+            indicatorMount.zPosition = 797
+            addChild(indicatorMount)
+
+            let lens = SKShapeNode(circleOfRadius: 7)
+            lens.name = "decorativeRepairStageLens\(index)"
+            lens.fillColor = UIColor(red: 0.22, green: 0.18, blue: 0.24, alpha: 1)
+            lens.strokeColor = UIColor(red: 0.72, green: 0.53, blue: 0.38, alpha: 1)
+            lens.lineWidth = 1.3
+            lens.zPosition = 2
+            indicatorMount.addChild(lens)
+
             let housing = palaceCog(
                 radius: 67, teeth: 12,
                 fill: UIColor(red: 0.43, green: 0.31, blue: 0.23, alpha: 1),
@@ -5656,19 +5761,65 @@ import LearningCore
             axle.lineWidth = 3
             axle.name = "repairSocketAxle"
             housing.addChild(axle)
+
+            // Two captive brass clasps visibly loosen when a gear is lifted.
+            // They stay behind the actual scored repairStep touch target.
+            for (suffix, sign) in [("Left", CGFloat(-1)), ("Right", CGFloat(1))] {
+                let clasp = SKShapeNode(
+                    rectOf: CGSize(width: 10, height: 34), cornerRadius: 3
+                )
+                clasp.name = "decorativeRepairSocketClasp\(suffix)"
+                clasp.position = CGPoint(x: sign * 55, y: 3)
+                clasp.fillColor = UIColor(red: 0.78, green: 0.56, blue: 0.34, alpha: 1)
+                clasp.strokeColor = UIColor(red: 1, green: 0.80, blue: 0.48, alpha: 1)
+                clasp.lineWidth = 2
+                clasp.zPosition = 5
+                housing.addChild(clasp)
+            }
         }
 
+        // An airy carved metal frame replaces the old solid dark rectangle.
+        // The approved stained-glass window and tool wall show through.
         let engine = SKShapeNode(
-            rectOf: CGSize(width: 210, height: 120),
-            cornerRadius: 36
+            path: repairCarvedOutline(width: 206, height: 122)
         )
-        engine.fillColor = UIColor(red: 0.25, green: 0.18, blue: 0.18, alpha: 0.99)
-        engine.strokeColor = UIColor(red: 0.90, green: 0.71, blue: 0.43, alpha: 0.98)
-        engine.lineWidth = 6
+        engine.fillColor = UIColor(red: 0.29, green: 0.21, blue: 0.30, alpha: 0.37)
+        engine.fillTexture = repairWorkshopStoneTexture
+        engine.strokeColor = UIColor(red: 0.94, green: 0.76, blue: 0.48, alpha: 0.99)
+        engine.lineWidth = 5
         engine.position = CGPoint(x: 760, y: 535)
         engine.name = "repairLanternFixture"
         engine.zPosition = 650
         addChild(engine)
+
+        let flywheelBezel = SKShapeNode(circleOfRadius: 55)
+        flywheelBezel.name = "decorativeRepairFlywheelBezel"
+        flywheelBezel.fillColor = UIColor(red: 0.22, green: 0.17, blue: 0.27, alpha: 0.62)
+        flywheelBezel.strokeColor = UIColor(red: 0.97, green: 0.80, blue: 0.52, alpha: 0.95)
+        flywheelBezel.lineWidth = 5
+        flywheelBezel.zPosition = 1
+        engine.addChild(flywheelBezel)
+
+        // The clutch is the *physical reason* the failed machine stalls.
+        // It slides inward only AFTER TEST on a wrong repair selection.
+        let clutch = SKShapeNode(
+            rectOf: CGSize(width: 24, height: 49), cornerRadius: 6
+        )
+        clutch.name = "decorativeRepairClutch"
+        clutch.position = CGPoint(x: 76, y: 0)
+        clutch.fillColor = UIColor(red: 0.69, green: 0.48, blue: 0.32, alpha: 1)
+        clutch.strokeColor = UIColor(red: 0.98, green: 0.80, blue: 0.49, alpha: 1)
+        clutch.lineWidth = 3
+        clutch.zPosition = 8
+        engine.addChild(clutch)
+
+        let clutchPin = SKShapeNode(circleOfRadius: 7)
+        clutchPin.name = "decorativeRepairClutchPin"
+        clutchPin.position.y = 13
+        clutchPin.fillColor = UIColor(red: 0.32, green: 0.22, blue: 0.27, alpha: 1)
+        clutchPin.strokeColor = UIColor(red: 1, green: 0.87, blue: 0.59, alpha: 1)
+        clutchPin.lineWidth = 2
+        clutch.addChild(clutchPin)
 
         for x in [CGFloat(-82), 82] {
             let rivet = SKShapeNode(circleOfRadius: 7)
@@ -5681,8 +5832,8 @@ import LearningCore
         }
 
         let core = SKShapeNode(circleOfRadius: 47)
-        core.fillColor = UIColor(red: 0.15, green: 0.14, blue: 0.23, alpha: 1)
-        core.strokeColor = UIColor(red: 0.80, green: 0.65, blue: 0.43, alpha: 1)
+        core.fillColor = UIColor(red: 0.21, green: 0.16, blue: 0.25, alpha: 0.90)
+        core.strokeColor = UIColor(red: 0.92, green: 0.72, blue: 0.47, alpha: 1)
         core.lineWidth = 3
         core.name = "repairLanternCore"
         engine.addChild(core)
@@ -5701,6 +5852,32 @@ import LearningCore
         hub.lineWidth = 3
         hub.name = "repairMachineHub"
         rotor.addChild(hub)
+
+        // One small inscription is mounted on the existing architecture,
+        // rather than free-floating in the painted stained-glass window.
+        let workshopPlaque = SKShapeNode(
+            path: repairCarvedOutline(width: 353, height: 38)
+        )
+        workshopPlaque.name = "decorativeRepairWorkshopPlaque"
+        workshopPlaque.position = CGPoint(x: 760, y: 628)
+        workshopPlaque.fillColor = UIColor(red: 0.27, green: 0.20, blue: 0.30, alpha: 0.73)
+        workshopPlaque.fillTexture = repairWorkshopStoneTexture
+        workshopPlaque.strokeColor = UIColor(red: 0.84, green: 0.66, blue: 0.44, alpha: 0.85)
+        workshopPlaque.lineWidth = 2
+        workshopPlaque.zPosition = 815
+        addChild(workshopPlaque)
+
+        let cuePlate = SKShapeNode(
+            path: repairCarvedOutline(width: 306, height: 36)
+        )
+        cuePlate.name = "decorativeRepairCuePlate"
+        cuePlate.position = CGPoint(x: 760, y: 457)
+        cuePlate.fillColor = UIColor(red: 0.30, green: 0.23, blue: 0.31, alpha: 0.78)
+        cuePlate.fillTexture = repairWorkshopStoneTexture
+        cuePlate.strokeColor = UIColor(red: 0.91, green: 0.70, blue: 0.45, alpha: 0.80)
+        cuePlate.lineWidth = 2
+        cuePlate.zPosition = 798
+        addChild(cuePlate)
 
         let title = ArtSystem.label("TIKO'S CLOCKWORK WORKSHOP", size: 20)
         title.fontName = "Georgia-Bold"
@@ -5749,19 +5926,19 @@ import LearningCore
             rectOf: CGSize(width: 14, height: 43),
             cornerRadius: 7
         )
+        leverStem.name = "decorativeRepairLeverStem"
         leverStem.position.y = 12
         leverStem.fillColor = UIColor(red: 0.76, green: 0.54, blue: 0.30, alpha: 1)
         leverStem.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.43, alpha: 1)
         leverStem.lineWidth = 2
-        leverStem.name = "repairFix"
         lever.addChild(leverStem)
 
         let handle = SKShapeNode(circleOfRadius: 17)
+        handle.name = "decorativeRepairLeverGrip"
         handle.position.y = 32
         handle.fillColor = UIColor(red: 0.94, green: 0.71, blue: 0.38, alpha: 1)
         handle.strokeColor = UIColor(red: 1, green: 0.91, blue: 0.67, alpha: 1)
         handle.lineWidth = 3
-        handle.name = "repairFix"
         lever.addChild(handle)
 
         let leverLabel = ArtSystem.label("TEST", size: 16)
@@ -5786,7 +5963,97 @@ import LearningCore
         back.zPosition = 2050
     }
 
+    private func pullRepairWorkbenchLever() {
+        // The input itself is a tangible lever: once TEST is pressed, the
+        // handle lowers and remains held until the next authored challenge.
+        // Its parent 'repairFix' retains its full stable interaction bounds.
+        if let stem = childNode(
+            withName: "//decorativeRepairLeverStem"
+        ) {
+            stem.removeAction(forKey: "repairTestPull")
+            if reducedMotion {
+                stem.zRotation = -.pi / 6
+            } else {
+                stem.run(.rotate(toAngle: -.pi / 6, duration: 0.20),
+                         withKey: "repairTestPull")
+            }
+        }
+        if let grip = childNode(
+            withName: "//decorativeRepairLeverGrip"
+        ) {
+            grip.removeAction(forKey: "repairTestPull")
+            if reducedMotion {
+                grip.position = CGPoint(x: 20, y: 6)
+            } else {
+                grip.run(.move(to: CGPoint(x: 20, y: 6), duration: 0.20),
+                         withKey: "repairTestPull")
+            }
+        }
+    }
+
+    private func showRepairDriveOutput(powered: Bool, jammed: Bool) {
+        let gold = UIColor(red: 0.92, green: 0.72, blue: 0.45, alpha: 1)
+        let restored = UIColor(red: 0.44, green: 0.88, blue: 0.60, alpha: 1)
+        let broken = UIColor(red: 0.95, green: 0.38, blue: 0.29, alpha: 1)
+        let inactive = UIColor(red: 0.25, green: 0.19, blue: 0.25, alpha: 1)
+        let active = powered ? restored : (jammed ? broken : inactive)
+
+        // No stage identifies the child's answer before TEST. On a failed
+        // swap the entire chain visibly fails, without dishonestly marking
+        // one authored command as the specific broken step.
+        for index in 0..<4 {
+            guard let lamp = childNode(
+                withName: "//decorativeRepairStageLens\(index)"
+            ) as? SKShapeNode else { continue }
+            lamp.fillColor = active
+            lamp.strokeColor = (powered || jammed) ? gold
+                : UIColor(red: 0.72, green: 0.53, blue: 0.38, alpha: 1)
+            lamp.glowWidth = powered && !reducedMotion ? 5 : 0
+        }
+
+        if let conduit = childNode(
+            withName: "decorativeRepairPowerBus"
+        ) as? SKShapeNode {
+            conduit.strokeColor = powered ? restored
+                : (jammed ? broken : gold.withAlphaComponent(0.78))
+            conduit.glowWidth = powered && !reducedMotion ? 3 : 0
+        }
+
+        if let clutch = childNode(
+            withName: "//decorativeRepairClutch"
+        ) as? SKShapeNode {
+            clutch.removeAction(forKey: "repairClutchTravel")
+            // A broken chain wedges into the spinning flywheel, while a
+            // repaired one retracts and leaves the machine free to run.
+            let destination: CGFloat = jammed ? 45 : (powered ? 86 : 76)
+            if reducedMotion {
+                clutch.position.x = destination
+            } else {
+                clutch.run(.moveTo(x: destination, duration: 0.22),
+                           withKey: "repairClutchTravel")
+            }
+            clutch.fillColor = jammed ? broken
+                : (powered ? restored : UIColor(
+                    red: 0.69, green: 0.48, blue: 0.32, alpha: 1
+                ))
+            clutch.glowWidth = powered && !reducedMotion ? 4 : 0
+        }
+    }
+
     private func setRepairMachinePowered(_ powered: Bool) {
+        showRepairDriveOutput(powered: powered, jammed: false)
+        if !powered {
+            // A fresh challenge resets the lever independently of the
+            // previously tested swap. No false "tested" pose carries over.
+            if let stem = childNode(withName: "//decorativeRepairLeverStem") {
+                stem.removeAction(forKey: "repairTestPull")
+                stem.zRotation = 0
+            }
+            if let grip = childNode(withName: "//decorativeRepairLeverGrip") {
+                grip.removeAction(forKey: "repairTestPull")
+                grip.position = CGPoint(x: 0, y: 32)
+            }
+        }
         let bronze = UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
         let gold = UIColor(red: 1.0, green: 0.82, blue: 0.43, alpha: 1)
         if let core = childNode(withName: "//repairLanternCore") as? SKShapeNode {
@@ -5815,6 +6082,7 @@ import LearningCore
     }
 
     private func showRepairMachineMiss() {
+        showRepairDriveOutput(powered: false, jammed: true)
         if let rail = childNode(withName: "repairRail") as? SKShapeNode {
             rail.strokeColor = UIColor(red: 1, green: 0.51, blue: 0.36, alpha: 1)
         }
@@ -5861,38 +6129,80 @@ import LearningCore
             // at the supported 4:3 / 16:9 landscape scales).
             let plate = palaceCog(
                 radius: 57, teeth: 11,
-                fill: UIColor(red: 0.61, green: 0.44, blue: 0.29, alpha: 1),
-                stroke: UIColor(red: 0.96, green: 0.77, blue: 0.48, alpha: 1)
+                fill: UIColor(red: 0.62, green: 0.49, blue: 0.38, alpha: 1),
+                stroke: UIColor(red: 0.96, green: 0.78, blue: 0.49, alpha: 1)
             )
+            plate.fillTexture = repairWorkshopStoneTexture
             plate.position = CGPoint(x: xs[index], y: 355)
             plate.name = "repairStep\(index)"
             plate.zPosition = 850
             plate.userData = NSMutableDictionary(dictionary: ["stepIndex": index])
 
-            let bezel = SKShapeNode(circleOfRadius: 45)
-            bezel.fillColor = UIColor(red: 0.56, green: 0.40, blue: 0.26, alpha: 1)
+            // Twin concentric machined rings and radial spokes replace
+            // the single solid black command icon disk, without shrinking
+            // the original >110pt scored gear or obscuring the actual glyph.
+            let shadowLip = palaceCog(
+                radius: 55, teeth: 11,
+                fill: UIColor(red: 0.16, green: 0.12, blue: 0.21, alpha: 0.96),
+                stroke: UIColor(red: 0.41, green: 0.28, blue: 0.27, alpha: 1)
+            )
+            shadowLip.name = "decorativeRepairGearDepth"
+            shadowLip.fillTexture = nil
+            shadowLip.position = CGPoint(x: 3, y: -7)
+            shadowLip.zPosition = -2
+            plate.addChild(shadowLip)
+
+            let bezel = SKShapeNode(circleOfRadius: 44)
+            bezel.fillColor = UIColor(red: 0.58, green: 0.43, blue: 0.35, alpha: 1)
+            bezel.fillTexture = repairWorkshopStoneTexture
             bezel.strokeColor = UIColor(red: 0.99, green: 0.83, blue: 0.55, alpha: 1)
             bezel.lineWidth = 4
             bezel.name = plate.name
+            bezel.zPosition = 1
             plate.addChild(bezel)
 
-            let center = SKShapeNode(circleOfRadius: 35)
-            center.fillColor = UIColor(red: 0.30, green: 0.23, blue: 0.22, alpha: 1)
-            center.strokeColor = UIColor(red: 0.90, green: 0.70, blue: 0.44, alpha: 1)
-            center.lineWidth = 3
+            let innerRim = SKShapeNode(circleOfRadius: 37)
+            innerRim.name = "decorativeRepairGearInnerRim"
+            innerRim.fillColor = UIColor(red: 0.25, green: 0.18, blue: 0.24, alpha: 1)
+            innerRim.strokeColor = UIColor(red: 0.91, green: 0.71, blue: 0.45, alpha: 1)
+            innerRim.lineWidth = 2
+            innerRim.zPosition = 2
+            plate.addChild(innerRim)
+
+            let spokePath = CGMutablePath()
+            for spoke in 0..<6 {
+                let a = CGFloat(spoke) * .pi / 3
+                spokePath.move(to: CGPoint(x: cos(a) * 19, y: sin(a) * 19))
+                spokePath.addLine(to: CGPoint(x: cos(a) * 35, y: sin(a) * 35))
+            }
+            let spokes = SKShapeNode(path: spokePath)
+            spokes.name = "decorativeRepairGearSpokes"
+            spokes.strokeColor = UIColor(red: 0.94, green: 0.73, blue: 0.47, alpha: 0.83)
+            spokes.lineWidth = 4
+            spokes.lineCap = .round
+            spokes.zPosition = 3
+            plate.addChild(spokes)
+
+            let center = SKShapeNode(circleOfRadius: 24)
+            center.fillColor = UIColor(red: 0.39, green: 0.26, blue: 0.29, alpha: 1)
+            center.strokeColor = UIColor(red: 0.97, green: 0.79, blue: 0.49, alpha: 1)
+            center.lineWidth = 2.5
             center.name = plate.name
+            center.zPosition = 4
             plate.addChild(center)
 
             let number = ArtSystem.label("\(index + 1)", size: 15)
             number.fontName = "AvenirNext-DemiBold"
-            number.fontColor = UIColor(red: 0.97, green: 0.77, blue: 0.47, alpha: 1)
-            number.position = CGPoint(x: -28, y: 31)
+            number.fontColor = UIColor(red: 0.99, green: 0.82, blue: 0.51, alpha: 1)
+            number.position = CGPoint(x: -28, y: 33)
+            number.zPosition = 5
             number.name = plate.name
             plate.addChild(number)
 
-            let commandGlyph = ArtSystem.label(step.glyph, size: 31)
-            commandGlyph.fontColor = UIColor(red: 1.0, green: 0.93, blue: 0.77, alpha: 1)
+            let commandGlyph = ArtSystem.label(step.glyph, size: 32)
+            commandGlyph.fontColor = UIColor(red: 1.0, green: 0.94, blue: 0.79, alpha: 1)
             commandGlyph.position.y = 2
+            commandGlyph.zPosition = 5
             commandGlyph.name = plate.name
             plate.addChild(commandGlyph)
 
@@ -5963,6 +6273,18 @@ import LearningCore
                 socket.strokeColor = selected
                     ? UIColor(red: 1.0, green: 0.86, blue: 0.49, alpha: 1)
                     : UIColor(red: 0.76, green: 0.55, blue: 0.31, alpha: 1)
+                for (suffix, sign) in [("Left", CGFloat(-1)), ("Right", CGFloat(1))] {
+                    guard let clasp = socket.childNode(
+                        withName: "decorativeRepairSocketClasp\(suffix)"
+                    ) else { continue }
+                    let x = sign * (selected ? CGFloat(67) : 55)
+                    clasp.removeAction(forKey: "repairClaspLift")
+                    if reducedMotion {
+                        clasp.position.x = x
+                    } else {
+                        clasp.run(.moveTo(x: x, duration: 0.14), withKey: "repairClaspLift")
+                    }
+                }
             }
         }
     }
@@ -5985,6 +6307,7 @@ import LearningCore
         }
 
         repairAcceptingInput = false
+        pullRepairWorkbenchLever()
         attempts += 1
         let attemptSupport = support
         let selected = repairSelection
