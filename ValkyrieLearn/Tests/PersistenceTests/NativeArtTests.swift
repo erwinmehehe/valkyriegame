@@ -2153,6 +2153,215 @@ import LearningCore
         }
     }
 
+    func testSortingPedestalKeepsPhysicalStonesUntilTheRuleChanges() async throws {
+        // The child must see their real placements in the carved bowls.
+        // Decorative stored stones never score a submission on their own.
+        for reduced in [true, false] {
+            for foundationComplete in [false, true] {
+                let state = try AppState(context: ModelContext(
+                    try LearningStore.container(inMemory: true)
+                ))
+                state.reducedMotion = reduced
+                for encounter in PuzzlePalaceEncounterCatalog.runeGate {
+                    _ = state.recordPuzzle(encounter, outcome: .correct,
+                                           support: .independent, attempts: 1, responseTime: 1)
+                }
+                for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+                    _ = state.recordPuzzle(encounter, outcome: .correct,
+                                           support: .independent, attempts: 1, responseTime: 1)
+                }
+                for encounter in PuzzlePalaceEncounterCatalog.stopGoOrbs {
+                    _ = state.recordPuzzle(encounter, outcome: .correct,
+                                           support: .independent, attempts: 1, responseTime: 1)
+                }
+                if foundationComplete {
+                    for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation {
+                        _ = state.recordPuzzle(encounter, outcome: .correct,
+                                               support: .independent, attempts: 1, responseTime: 1)
+                    }
+                }
+                state.travel(to: .sortingPedestal)
+                let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+                let controller = UIViewController()
+                let view = SKView(frame: window.bounds)
+                controller.view = view
+                window.rootViewController = controller
+                window.makeKeyAndVisible()
+                let scene = PuzzlePalaceScene(state: state)
+                scene.reducedMotion = reduced
+                view.presentScene(scene)
+                let encounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleSortEncounter)
+                let left = try XCTUnwrap(scene.childNode(withName: "sortLeftPedestal"))
+                let right = try XCTUnwrap(scene.childNode(withName: "sortRightPedestal"))
+                let leftTray = try XCTUnwrap(
+                    left.childNode(withName: "decorativeSortingAcceptedStones")
+                )
+                let rightTray = try XCTUnwrap(
+                    right.childNode(withName: "decorativeSortingAcceptedStones")
+                )
+                func totalRetained() -> Int {
+                    leftTray.children.count + rightTray.children.count
+                }
+                XCTAssertEqual(totalRetained(), 0)
+                try await waitUntil(timeout: 3) {
+                    scene.childNode(withName: "sortingObject") != nil
+                }
+                let initialToken = try XCTUnwrap(scene.childNode(withName: "sortingObject"))
+                let firstExpected = encounter.objects[0].bucket(for: encounter.rules[0])
+                let incorrectPoint = CGPoint(
+                    x: firstExpected == .left ? 970 : 530, y: 355
+                )
+                let firstEvidenceCount = state.profile.progress(for: encounter.skillID).evidence.count
+                scene.handleTap(at: incorrectPoint)
+                XCTAssertEqual(totalRetained(), 0,
+                               "A rejected stone cannot appear in either accepted bowl.")
+                XCTAssertEqual(
+                    state.profile.progress(for: encounter.skillID).evidence.count,
+                    firstEvidenceCount + 1
+                )
+                try await waitUntil(timeout: 4) {
+                    initialToken.action(forKey: "wrongAlcoveReturn") == nil
+                        && initialToken.position.x == 750
+                }
+                // Rejected return finishes before the child may tap again.
+                try await Task.sleep(nanoseconds: reduced ? 360_000_000 : 500_000_000)
+                XCTAssertEqual(totalRetained(), 0)
+
+                for index in encounter.objects.indices {
+                    let object = encounter.objects[index]
+                    let rule = encounter.rules[index]
+                    let bucket = object.bucket(for: rule)
+                    let dest = CGPoint(x: bucket == .left ? 530 : 970, y: 355)
+                    let earlierToken = try XCTUnwrap(scene.childNode(withName: "sortingObject"))
+                    XCTAssertEqual(scene.targetName(at: dest),
+                                   bucket == .left ? "sortLeftPedestal" : "sortRightPedestal")
+                    scene.handleTap(at: dest)
+
+                    let runStart = (0...index).reversed().first {
+                        encounter.rules[$0] != rule
+                    }.map { $0 + 1 } ?? 0
+                    let expectedCount = index - runStart + 1
+                    try await waitUntil(timeout: 3) {
+                        totalRetained() == expectedCount
+                    }
+                    XCTAssertEqual(
+                        state.profile.progress(for: encounter.skillID).evidence.count,
+                        firstEvidenceCount + 1,
+                        "Scored correct evidence requires completing the whole sort, not one placement."
+                    )
+                    let tray = bucket == .left ? leftTray : rightTray
+                    let placed = try XCTUnwrap(tray.childNode(
+                        withName: "decorativeSortingAcceptedStone\(index)"
+                    ) as? SKShapeNode)
+                    let symbol = try XCTUnwrap(
+                        placed.childNode(withName: "decorativeSortingAcceptedGlyph")
+                            as? SKLabelNode
+                    )
+                    let marks = try XCTUnwrap(
+                        placed.childNode(withName: "decorativeSortingAcceptedMarks")
+                            as? SKLabelNode
+                    )
+                    XCTAssertEqual(symbol.text, object.glyph)
+                    XCTAssertEqual(marks.text, object.marks)
+                    XCTAssertLessThanOrEqual(abs(placed.position.x), 60)
+                    XCTAssertEqual(placed.position.y, -29, accuracy: 0.01)
+                    if index == 1 && reduced {
+                        try await capture(
+                            scene, in: view,
+                            name: foundationComplete
+                                ? "Puzzle-Palace-4x3-SortingPedestal-RuleSwitch-Stones"
+                                : "Puzzle-Palace-4x3-SortingPedestal-Stored-Stones"
+                        )
+                    }
+                    if index + 1 < encounter.objects.count {
+                        try await waitUntil(timeout: 4) {
+                            guard let next = scene.childNode(withName: "sortingObject") else {
+                                return false
+                            }
+                            return next !== earlierToken
+                        }
+                        if encounter.rules[index + 1] != rule {
+                            XCTAssertEqual(totalRetained(), 0,
+                                           "Stones classified by an older rule must clear before the next rule.")
+                        } else {
+                            XCTAssertEqual(totalRetained(), expectedCount)
+                        }
+                    }
+                }
+                try await waitUntil(timeout: 3) {
+                    state.profile.progress(for: encounter.skillID).evidence.count
+                        == firstEvidenceCount + 2
+                }
+                let evidence = state.profile.progress(for: encounter.skillID).evidence
+                XCTAssertEqual(evidence.last?.outcome, .correct)
+                XCTAssertEqual(evidence.last?.encounterID, encounter.id)
+                XCTAssertEqual(evidence.last?.supportLevel, .lightHint,
+                               "Correcting a wrong stone cannot award independent evidence.")
+
+                scene.willLeave()
+                view.presentScene(nil)
+                window.isHidden = true
+            }
+        }
+    }
+
+    func testCompletedSortingPedestalRestoresAnUnscoredPhysicalExhibit() async throws {
+        let state = try AppState(context: ModelContext(
+            try LearningStore.container(inMemory: true)
+        ))
+        state.reducedMotion = true
+        for encounter in PuzzlePalaceEncounterCatalog.sortingFoundation
+            + PuzzlePalaceEncounterCatalog.ruleSwitching {
+            _ = state.recordPuzzle(encounter, outcome: .correct,
+                                   support: .independent, attempts: 1, responseTime: 1)
+        }
+        XCTAssertTrue(state.puzzleSortingPedestalComplete)
+        let earlierFoundation = state.profile.progress(
+            for: PuzzleSkills.singleRuleSort
+        ).evidence.count
+        let earlierSwitching = state.profile.progress(
+            for: PuzzleSkills.ruleSwitching
+        ).evidence.count
+        state.travel(to: .sortingPedestal)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        let controller = UIViewController()
+        let view = SKView(frame: window.bounds)
+        controller.view = view
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        let scene = PuzzlePalaceScene(state: state)
+        scene.reducedMotion = true
+        view.presentScene(scene)
+        let first = try XCTUnwrap(PuzzlePalaceEncounterCatalog.sortingFoundation.first)
+        for bucket in [PuzzleSortBucket.left, .right] {
+            let name = bucket == .left ? "sortLeftPedestal" : "sortRightPedestal"
+            let tray = try XCTUnwrap(
+                scene.childNode(withName: name)?
+                    .childNode(withName: "decorativeSortingAcceptedStones")
+            )
+            XCTAssertEqual(
+                tray.children.count,
+                first.objects.filter { $0.bucket(for: .shape) == bucket }.count
+            )
+        }
+        XCTAssertNotNil(scene.childNode(withName: "resortVaultRoute"))
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.singleRuleSort).evidence.count,
+            earlierFoundation
+        )
+        XCTAssertEqual(
+            state.profile.progress(for: PuzzleSkills.ruleSwitching).evidence.count,
+            earlierSwitching
+        )
+        try await capture(
+            scene, in: view,
+            name: "Puzzle-Palace-4x3-SortingPedestal-Restored-Stones"
+        )
+        scene.willLeave()
+        view.presentScene(nil)
+        window.isHidden = true
+    }
+
     func testSortingPedestalRunsStableAndSwitchingRulesThroughLivePedestals() async throws {
         func prepareState(includeFoundation: Bool) throws -> AppState {
             let state = try AppState(
