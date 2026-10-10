@@ -1826,6 +1826,9 @@ import LearningCore
     private func previewMemorySequence() {
         guard let memoryEncounter else { return }
         memoryAcceptingInput = false
+        // A previous wrong sequence may have briefly jammed a bridge stage.
+        // Clear its physical warning before Tiko's unscored new example.
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
         instruction.text = "Watch Tiko wake the bridge runes. Hold the order in your mind."
 
         let onDuration = reducedMotion ? 0.42 : 0.56
@@ -1936,14 +1939,30 @@ import LearningCore
                 responseTime: Date().timeIntervalSince(startedAt)
             )
             support = support == .independent ? .lightHint : .strongHint
+            // A wrong rune physically stalls the NEXT unearned bridge stage.
+            // Earlier slabs drop and the child's selected floor tablet wears
+            // a temporary crossed brass rejection, not a generic red halo.
+            let failedStage = memoryInput.count
             memoryInput = []
             resetAttemptPlanks()
-            let rejectedPad = SKShapeNode(ellipseOf: CGSize(width: 98, height: 96))
+            showMemoryBridgeSafetyCatch(at: failedStage)
+            let rejectedPad = SKShapeNode(
+                path: memoryBridgeStonePath(width: 94, height: 91)
+            )
             rejectedPad.name = "memoryRejectedRune"
-            rejectedPad.fillColor = UIColor(red: 0.74, green: 0.18, blue: 0.16, alpha: 0.35)
-            rejectedPad.strokeColor = UIColor(red: 1, green: 0.56, blue: 0.38, alpha: 1)
-            rejectedPad.lineWidth = 6
+            rejectedPad.fillColor = UIColor(red: 0.42, green: 0.20, blue: 0.26, alpha: 0.52)
+            rejectedPad.strokeColor = UIColor(red: 1, green: 0.64, blue: 0.39, alpha: 1)
+            rejectedPad.lineWidth = 4
             rejectedPad.zPosition = 9
+            let stopBar = SKShapeNode(
+                rectOf: CGSize(width: 12, height: 68), cornerRadius: 4
+            )
+            stopBar.name = "decorativeMemoryRejectedClasp"
+            stopBar.zRotation = -.pi / 4
+            stopBar.fillColor = UIColor(red: 0.85, green: 0.37, blue: 0.27, alpha: 1)
+            stopBar.strokeColor = UIColor(red: 1, green: 0.78, blue: 0.49, alpha: 1)
+            stopBar.lineWidth = 2
+            rejectedPad.addChild(stopBar)
             node.addChild(rejectedPad)
             rejectedPad.run(.sequence([
                 .wait(forDuration: 0.65),
@@ -1968,7 +1987,7 @@ import LearningCore
             .wait(forDuration: 0.14),
             .run { [weak self] in self?.setMemoryPad(symbol, highlighted: false) }
         ]))
-        raiseMemoryPlank(memoryInput.count - 1)
+        raiseMemoryPlank(memoryInput.count - 1, activatedBy: symbol)
 
         guard memoryInput.count == memoryEncounter.sequence.count else {
             memoryAcceptingInput = true
@@ -2010,6 +2029,99 @@ import LearningCore
         ]), withKey: "nextMemoryBridge")
     }
 
+    private func showMemoryBridgeSafetyCatch(at index: Int) {
+        guard index >= 0, index < 4,
+              let relay = childNode(
+                withName: "decorativeMemoryBridgeRelay\(index)"
+              ) as? SKShapeNode else { return }
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
+        let catchPlate = SKNode()
+        catchPlate.name = "memoryBridgeSafetyCatch"
+        catchPlate.position = CGPoint(x: relay.position.x, y: relay.position.y + 8)
+        catchPlate.zPosition = 295
+
+        let foot = SKShapeNode(
+            path: memoryBridgeStonePath(width: 46, height: 20)
+        )
+        foot.name = "decorativeMemoryCatchFoot"
+        foot.fillColor = UIColor(red: 0.38, green: 0.21, blue: 0.23, alpha: 1)
+        foot.strokeColor = UIColor(red: 0.97, green: 0.69, blue: 0.43, alpha: 1)
+        foot.lineWidth = 2.5
+        catchPlate.addChild(foot)
+
+        for diagonal in [CGFloat(-1), 1] {
+            let bar = SKShapeNode(
+                rectOf: CGSize(width: 9, height: 33), cornerRadius: 3
+            )
+            bar.name = "decorativeMemoryCatchBar"
+            bar.position.y = 12
+            bar.zRotation = diagonal * .pi / 5
+            bar.fillColor = UIColor(red: 0.79, green: 0.36, blue: 0.27, alpha: 1)
+            bar.strokeColor = UIColor(red: 1, green: 0.79, blue: 0.48, alpha: 1)
+            bar.lineWidth = 1.8
+            bar.zPosition = 2
+            catchPlate.addChild(bar)
+        }
+
+        let warning = SKShapeNode(circleOfRadius: 6)
+        warning.name = "decorativeMemoryCatchWarning"
+        warning.position.y = 13
+        warning.fillColor = UIColor(red: 0.98, green: 0.54, blue: 0.30, alpha: 1)
+        warning.strokeColor = UIColor(red: 1, green: 0.92, blue: 0.59, alpha: 1)
+        warning.lineWidth = 2
+        warning.zPosition = 3
+        catchPlate.addChild(warning)
+        addChild(catchPlate)
+
+        relay.fillColor = UIColor(red: 0.78, green: 0.28, blue: 0.24, alpha: 1)
+        if let glass = relay.childNode(
+            withName: "decorativeMemoryBridgeRelayGlass"
+        ) as? SKShapeNode {
+            glass.fillColor = UIColor(red: 0.98, green: 0.52, blue: 0.33, alpha: 1)
+        }
+    }
+
+    private func setMemoryBridgeStage(
+        _ index: Int, powered: Bool, fromPadSymbol symbol: String? = nil
+    ) {
+        guard index >= 0, index < 4 else { return }
+        let bright = UIColor(red: 0.78, green: 0.96, blue: 0.70, alpha: 1)
+        let dim = UIColor(red: 0.23, green: 0.18, blue: 0.34, alpha: 1)
+        if let relay = childNode(
+            withName: "decorativeMemoryBridgeRelay\(index)"
+        ) as? SKShapeNode {
+            relay.fillColor = powered ? bright : dim
+            relay.strokeColor = powered
+                ? UIColor(red: 1, green: 0.91, blue: 0.60, alpha: 1)
+                : UIColor(red: 0.91, green: 0.72, blue: 0.46, alpha: 1)
+            relay.glowWidth = powered && !reducedMotion ? 5 : 0
+            if let glass = relay.childNode(
+                withName: "decorativeMemoryBridgeRelayGlass"
+            ) as? SKShapeNode {
+                glass.fillColor = powered ? bright
+                    : UIColor(red: 0.36, green: 0.27, blue: 0.48, alpha: 1)
+            }
+        }
+        if let seal = childNode(withName: "memoryBridgePlank\(index)")?
+            .childNode(withName: "decorativeMemoryPlankSeal") as? SKLabelNode {
+            seal.fontColor = powered
+                ? UIColor(red: 0.97, green: 0.97, blue: 0.75, alpha: 1)
+                : UIColor(red: 0.95, green: 0.86, blue: 0.66, alpha: 0.77)
+        }
+        if powered,
+           let symbol,
+           let chosenPad = memoryEncounter?.choices.firstIndex(of: symbol),
+           let conduit = childNode(
+                withName: "decorativeMemoryConduit\(chosenPad)"
+           ) as? SKShapeNode {
+            // The selected control energizes the common bridge bus; the
+            // corresponding next physical stage then rises. This makes the
+            // actual child's rune and result visibly connected.
+            conduit.strokeColor = UIColor(red: 0.96, green: 0.79, blue: 0.49, alpha: 0.92)
+            conduit.glowWidth = reducedMotion ? 0 : 4
+        }
+    }
+
     private func resetAttemptPlanks() {
         for index in 0..<4 {
             guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
@@ -2021,16 +2133,27 @@ import LearningCore
             plank.alpha = 0.48
             plank.strokeColor = UIColor(red: 0.65, green: 0.54, blue: 0.71, alpha: 0.68)
             plank.glowWidth = 0
+            setMemoryBridgeStage(index, powered: false)
         }
+        for index in 0..<4 {
+            if let conduit = childNode(
+                withName: "decorativeMemoryConduit\(index)"
+            ) as? SKShapeNode {
+                conduit.strokeColor = UIColor(red: 0.53, green: 0.41, blue: 0.40, alpha: 0.63)
+                conduit.glowWidth = 0
+            }
+        }
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
     }
 
-    private func raiseMemoryPlank(_ index: Int) {
+    private func raiseMemoryPlank(_ index: Int, activatedBy symbol: String) {
         guard let plank = childNode(withName: "memoryBridgePlank\(index)") as? SKShapeNode else {
             return
         }
         plank.alpha = 1
         plank.strokeColor = UIColor(red: 0.96, green: 0.75, blue: 0.34, alpha: 1)
-        plank.glowWidth = 8
+        plank.glowWidth = reducedMotion ? 0 : 5
+        setMemoryBridgeStage(index, powered: true, fromPadSymbol: symbol)
         if reducedMotion {
             plank.position.y = 292
             plank.yScale = 1
@@ -2081,8 +2204,16 @@ import LearningCore
             plank.alpha = 1
             plank.fillColor = UIColor(red: 0.75, green: 0.69, blue: 0.78, alpha: 1)
             plank.strokeColor = UIColor(red: 0.98, green: 0.79, blue: 0.36, alpha: 1)
-            plank.glowWidth = 8
+            plank.glowWidth = reducedMotion ? 0 : 5
+            setMemoryBridgeStage(index, powered: true)
+            if let conduit = childNode(
+                withName: "decorativeMemoryConduit\(index)"
+            ) as? SKShapeNode {
+                conduit.strokeColor = UIColor(red: 0.96, green: 0.79, blue: 0.49, alpha: 0.92)
+                conduit.glowWidth = reducedMotion ? 0 : 3
+            }
         }
+        childNode(withName: "memoryBridgeSafetyCatch")?.removeFromParent()
 
         if let chasm = childNode(withName: "memoryChasm") as? SKShapeNode {
             chasm.strokeColor = UIColor(red: 0.84, green: 0.68, blue: 0.46, alpha: 1)
