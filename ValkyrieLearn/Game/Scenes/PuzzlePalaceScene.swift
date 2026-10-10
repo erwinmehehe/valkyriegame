@@ -1371,7 +1371,7 @@ import LearningCore
         // stretching beyond its arch like a horizontal answer menu. Read in
         // ordinary row order: top-left, top-right, bottom-left, bottom-right.
         let housing = SKShapeNode(
-            path: runeCarvedOutline(width: 168, height: 170)
+            path: runeCarvedOutline(width: 162, height: 170)
         )
         housing.fillColor = UIColor(red: 0.28, green: 0.20, blue: 0.33, alpha: 0.41)
         housing.fillTexture = palaceStoneTexture
