@@ -2031,6 +2031,8 @@ import LearningCore
             } else {
                 XCTAssertNotNil(scene.childNode(withName: "decorativeRuneRejectedKey"),
                                 "Normal motion must visibly test and eject the wrong key.")
+                XCTAssertNotNil(scene.childNode(withName: "decorativeRuneVacantPedestal"),
+                                "The floor pedestal must not disappear when a key travels.")
                 scene.handleTap(at: correct.position)
                 XCTAssertEqual(
                     state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence.count,
@@ -2044,6 +2046,8 @@ import LearningCore
                     && !(wrong.isHidden)
             }
             XCTAssertNil(scene.childNode(withName: "decorativeRuneRejectedKey"))
+            XCTAssertNil(scene.childNode(withName: "decorativeRuneVacantPedestal"),
+                         "Rejected key must return to its original plinth.")
             scene.handleTap(at: correct.position)
 
             try await waitUntil(timeout: 6) {
@@ -2055,6 +2059,10 @@ import LearningCore
                 && abs(leftJaw.position.x + 27) < 0.6
                 && abs(rightJaw.position.x - 27) < 0.6
             }
+            XCTAssertTrue(correct.isHidden,
+                          "Successful placement physically moves the key off its floor stand.")
+            XCTAssertNotNil(scene.childNode(withName: "decorativeRuneVacantPedestal"),
+                            "Only the accepted key travels; the empty stone plinth remains.")
             let evidence = state.profile.progress(for: PuzzleSkills.visualPatternContinue).evidence
             XCTAssertEqual(evidence.map(\.outcome), [.incorrect, .correct])
             XCTAssertEqual(evidence.map(\.supportLevel), [.independent, .lightHint])
