@@ -5145,7 +5145,8 @@ import LearningCore
     private func setBugMachinePower(
         through inspectedIndex: Int? = nil,
         failedAt jammedIndex: Int? = nil,
-        restored: Bool = false
+        restored: Bool = false,
+        immediate: Bool = false
     ) {
         // Neutral before a child acts. A wrong guess visibly inspects working
         // cassettes without falsely turning them red; an identified fault
@@ -5168,7 +5169,9 @@ import LearningCore
             }
             let y: CGFloat = jammed ? 424 : (powered ? 450 : 438)
             piston.removeAction(forKey: "bugPowerPiston")
-            if reducedMotion {
+            if reducedMotion || immediate {
+                // A fresh encounter begins fully reset; the previous guess
+                // must never remain partially powered during its first tap.
                 piston.position.y = y
             } else {
                 piston.run(.moveTo(y: y, duration: 0.22), withKey: "bugPowerPiston")
@@ -5277,7 +5280,7 @@ import LearningCore
             registerInteraction(plate, clearance: 18)
         }
 
-        setBugMachinePower()
+        setBugMachinePower(immediate: true)
         if let core = childNode(withName: "//bugLanternCore") as? SKShapeNode {
             core.fillColor = UIColor(red: 0.92, green: 0.55, blue: 0.16, alpha: 0.94)
             core.glowWidth = 12
