@@ -73,6 +73,24 @@ import LearningCore
     private var mirrorPracticeReady = false
     private var mirrorPracticeBusy = false
     private var mirrorApproaching = false
+    // Read-only current encounter for native simulator acceptance tests.
+    // Tests must operate what the child actually sees, never a second adaptive
+    // selection that can disagree with the currently displayed room.
+    var nativeReviewActiveEncounter: Any? {
+        switch place {
+        case .runeGate: return encounter
+        case .memoryBridge: return memoryEncounter
+        case .stopGoOrbs: return inhibitionEncounter
+        case .sortingPedestal: return sortEncounter
+        case .resortVault: return resortEncounter
+        case .mirrorHall: return orientationEncounter
+        case .pathTiles: return pathEncounter
+        case .commandGears: return sequenceEncounter
+        case .bugLantern: return bugEncounter
+        case .bugLanternRepair: return repairEncounter
+        }
+    }
+
     private var lastPalaceKineticReducedMotion: Bool?
     private var routeTransitionPending = false
     private let mirrorChoicePoints = [

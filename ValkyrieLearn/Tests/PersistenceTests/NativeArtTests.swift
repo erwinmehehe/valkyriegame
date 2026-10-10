@@ -3374,7 +3374,7 @@ import LearningCore
             scene.handleTap(at: mirror.position)
 
         case .pathTiles:
-            let active = try XCTUnwrap(state.nextPuzzlePathTilesEncounter())
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzlePathEncounter)
             skill = active.skillID
             if correct { try await Task.sleep(nanoseconds: 700_000_000) }
             let index = try XCTUnwrap(active.choices.indices.first {
@@ -3384,7 +3384,7 @@ import LearningCore
             scene.handleTap(at: CGPoint(x: 1100, y: yValues[index]))
 
         case .commandGears:
-            let active = try XCTUnwrap(state.nextPuzzleCommandGearsEncounter())
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleSequenceEncounter)
             skill = active.skillID
             if correct { try await Task.sleep(nanoseconds: 650_000_000) }
             let right = active.correctOrder
@@ -3397,7 +3397,7 @@ import LearningCore
             scene.handleTap(at: CGPoint(x: 1100, y: 295))
 
         case .bugLantern:
-            let active = try XCTUnwrap(state.nextPuzzleBugLanternEncounter())
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleBugEncounter)
             skill = active.skillID
             if correct { try await Task.sleep(nanoseconds: 650_000_000) }
             let index = correct ? active.brokenIndex : (active.brokenIndex + 1) % active.shown.count
@@ -3412,7 +3412,7 @@ import LearningCore
             }
 
         case .bugLanternRepair:
-            let active = try XCTUnwrap(state.nextPuzzleBugRepairEncounter())
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter)
             skill = active.skillID
             if correct { try await Task.sleep(nanoseconds: 650_000_000) }
             let indexes: [Int]
@@ -3508,24 +3508,12 @@ import LearningCore
             // The adaptive director may select a different future encounter
             // after an incorrect answer, while this scene still displays
             // its original runes, memory order, sorting rules or mirrors.
-            let frozenEncounter: Any
-            switch world {
-            case .puzzlePalace:
-                frozenEncounter = state.nextPuzzleEncounter()
-            case .memoryBridge:
-                frozenEncounter = try XCTUnwrap(state.nextPuzzleMemoryEncounter())
-            case .stopGoOrbs:
-                frozenEncounter = try XCTUnwrap(state.nextPuzzleStopGoEncounter())
-            case .sortingPedestal:
-                frozenEncounter = try XCTUnwrap(state.nextPuzzleSortingEncounter())
-            case .resortVault:
-                frozenEncounter = try XCTUnwrap(state.nextPuzzleResortEncounter())
-            case .mirrorHall:
-                frozenEncounter = try XCTUnwrap(state.nextPuzzleMirrorHallEncounter())
-            default:
-                // Later rooms rebuild an encounter immediately after error.
-                frozenEncounter = name
-            }
+            // Lock onto the scene's actual encounter; querying AppState again
+            // can pick a different adaptive challenge than the visible props.
+            let frozenEncounter = try XCTUnwrap(
+                scene.nativeReviewActiveEncounter,
+                "\(name) should have a playable native encounter."
+            )
             if world == .stopGoOrbs {
                 let signal = try XCTUnwrap(scene.childNode(withName: "stopGoOrb"))
                 XCTAssertTrue(signal.isAccessibilityElement)
