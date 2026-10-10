@@ -242,7 +242,7 @@ import LearningCore
                 return
             }
             if state.puzzlePathTilesComplete {
-                finishPathTiles()
+                restoreCompletedPathTiles()
             } else {
                 pathEncounter = state.nextPuzzlePathTilesEncounter()
                 buildPathTilesEncounter()
@@ -3554,6 +3554,7 @@ import LearningCore
     private func finishMirrorRestoration() {
         mirrorAcceptingInput = false
         clearMirrorChoices()
+        showRestoredMirrorFixtures()
         childNode(withName: "mirrorRotationSource")?.removeFromParent()
         childNode(withName: "mirrorTurnCue")?.removeFromParent()
         for index in 0..<4 { childNode(withName: "rotationQuarterMark\(index)")?.removeFromParent() }
@@ -3576,6 +3577,31 @@ import LearningCore
             route.zPosition = 1500
         }
         instruction.text = "The hall is restored. Tiko found a planning floor beyond the mirrors."
+    }
+
+    // Restored Palace rooms retain the three actual pivot mirrors rather than
+    // presenting an empty rail after the scene clears answer choices.
+    private func showRestoredMirrorFixtures() {
+        for (index, point) in mirrorChoicePoints.enumerated() {
+            guard childNode(withName: "restoredMirrorFixture\(index)") == nil else { continue }
+            let mirror = SKShapeNode(ellipseOf: CGSize(width: 142, height: 176))
+            decorateMirrorGlass(mirror)
+            mirror.position = point
+            mirror.name = "restoredMirrorFixture\(index)"
+            mirror.zPosition = 650
+            mirror.strokeColor = UIColor(red: 0.58, green: 0.90, blue: 0.87, alpha: 1)
+            mirror.glowWidth = reducedMotion ? 0 : 6
+            mirror.isUserInteractionEnabled = false
+
+            let star = ArtSystem.label("✦", size: 46)
+            star.fontColor = UIColor(red: 0.92, green: 0.98, blue: 0.82, alpha: 1)
+            star.name = "decorativeRestoredMirrorGlyph"
+            mirror.addChild(star)
+            addChild(mirror)
+        }
+        if let center = childNode(withName: "restoredMirrorFixture1") as? SKShapeNode {
+            reflectChosenMirror(center, aligned: true)
+        }
     }
 
     private func buildMirrorHallWorld() {
@@ -4209,11 +4235,13 @@ import LearningCore
         return root
     }
 
-    private func clearPathTilesChoices() {
+    private func clearPathTilesChoices(preserveGrid: Bool = false) {
         for index in 0..<3 {
             childNode(withName: "pathChoice\(index)")?.removeFromParent()
         }
-        childNode(withName: "pathGrid")?.removeFromParent()
+        if !preserveGrid {
+            childNode(withName: "pathGrid")?.removeFromParent()
+        }
     }
 
     private func buildPathTilesEncounter(resetSupport: Bool = true) {
@@ -4463,9 +4491,32 @@ import LearningCore
         }
     }
 
+    // Recover the last independently solved route from saved learning evidence.
+    // This is presentation-only; it records no additional mastery.
+    private func restoreCompletedPathTiles() {
+        let completed = state.profile.progress(for: PuzzleSkills.pathPlanning).evidence
+            .last(where: { $0.outcome == .correct && $0.supportLevel == .independent })
+        let authoredRoutes = PuzzlePalaceEncounterCatalog.pathTileFamilies.flatMap { $0 }
+        guard let showcase = authoredRoutes.first(where: { $0.id == completed?.encounterID })
+                ?? authoredRoutes.first else {
+            finishPathTiles()
+            return
+        }
+
+        pathEncounter = showcase
+        buildPathTilesEncounter()
+        if let safe = showcase.choices.indices.first(where: { showcase.isValidChoice($0) }) {
+            revealAttemptedStoneTrail(showcase.route(for: safe),
+                                     encounter: showcase, valid: true)
+        }
+        solved = true
+        finishPathTiles()
+    }
+
     private func finishPathTiles() {
         pathAcceptingInput = false
-        clearPathTilesChoices()
+        // A completed route remains physically visible on revisits.
+        clearPathTilesChoices(preserveGrid: true)
         childNode(withName: "pathNext")?.removeFromParent()
         refreshPathTilesProgress(animated: true)
         if let title = childNode(withName: "pathTilesTitle") as? SKLabelNode {
