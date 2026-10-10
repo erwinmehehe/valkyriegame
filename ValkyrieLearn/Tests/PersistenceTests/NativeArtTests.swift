@@ -3541,8 +3541,11 @@ import LearningCore
         scene.speed = 0
         try await capture(scene, in: view, name: "Puzzle-Palace-4x3-RepairLab-Wrong-Swap-Stalled")
         scene.speed = 1
+        let previousFirstGear = scene.childNode(withName: "repairStep0")
         try await waitUntil(timeout: 3) {
-            scene.childNode(withName: "repairStep0") != nil
+            let freshGear = scene.childNode(withName: "repairStep0")
+            return freshGear != nil
+                && freshGear !== previousFirstGear
                 && (scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter)?.id != encounter.id
         }
         XCTAssertEqual(state.profile.progress(for: PuzzleSkills.debugSequence).evidence.count, 1,
