@@ -3613,6 +3613,22 @@ import LearningCore
             let restored = PuzzlePalaceScene(state: state)
             restored.reducedMotion = true
             view.presentScene(restored)
+            if world == .pathTiles {
+                XCTAssertNotNil(restored.childNode(withName: "pathGrid"),
+                                "Saved safe crossing must still have floor stones.")
+                XCTAssertNotNil(restored.childNode(withName: "//pathRouteTrace"),
+                                "Saved safe route must remain visibly connected.")
+                XCTAssertNil(restored.childNode(withName: "pathChoice0"),
+                             "Completed room cannot reopen answer workbenches.")
+            }
+            if world == .mirrorHall {
+                for index in 0..<3 {
+                    XCTAssertNotNil(restored.childNode(withName: "restoredMirrorFixture\(index)"),
+                                    "Completed Mirror Hall must retain physical mirrors.")
+                }
+                XCTAssertNotNil(restored.childNode(withName: "mirrorActiveRay"),
+                                "Restored light should still reach its receiver.")
+            }
             try await capture(restored, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Restored")
             restored.willLeave()
