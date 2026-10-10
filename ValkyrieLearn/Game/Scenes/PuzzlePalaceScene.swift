@@ -73,6 +73,24 @@ import LearningCore
     private var mirrorPracticeReady = false
     private var mirrorPracticeBusy = false
     private var mirrorApproaching = false
+    // Read-only current encounter for native simulator acceptance tests.
+    // Tests must operate what the child actually sees, never a second adaptive
+    // selection that can disagree with the currently displayed room.
+    var nativeReviewActiveEncounter: Any? {
+        switch place {
+        case .runeGate: return encounter
+        case .memoryBridge: return memoryEncounter
+        case .stopGoOrbs: return inhibitionEncounter
+        case .sortingPedestal: return sortEncounter
+        case .resortVault: return resortEncounter
+        case .mirrorHall: return orientationEncounter
+        case .pathTiles: return pathEncounter
+        case .commandGears: return sequenceEncounter
+        case .bugLantern: return bugEncounter
+        case .bugLanternRepair: return repairEncounter
+        }
+    }
+
     private var lastPalaceKineticReducedMotion: Bool?
     private var routeTransitionPending = false
     private let mirrorChoicePoints = [
@@ -242,7 +260,7 @@ import LearningCore
                 return
             }
             if state.puzzlePathTilesComplete {
-                finishPathTiles()
+                restoreCompletedPathTiles()
             } else {
                 pathEncounter = state.nextPuzzlePathTilesEncounter()
                 buildPathTilesEncounter()
@@ -1726,6 +1744,17 @@ import LearningCore
             support = support == .independent ? .lightHint : .strongHint
             memoryInput = []
             resetAttemptPlanks()
+            let rejectedPad = SKShapeNode(ellipseOf: CGSize(width: 98, height: 96))
+            rejectedPad.name = "memoryRejectedRune"
+            rejectedPad.fillColor = UIColor(red: 0.74, green: 0.18, blue: 0.16, alpha: 0.35)
+            rejectedPad.strokeColor = UIColor(red: 1, green: 0.56, blue: 0.38, alpha: 1)
+            rejectedPad.lineWidth = 6
+            rejectedPad.zPosition = 9
+            node.addChild(rejectedPad)
+            rejectedPad.run(.sequence([
+                .wait(forDuration: 0.65),
+                .removeFromParent()
+            ]), withKey: "memoryRejected")
             valkyrie.pose(.react)
             nudge(node)
             tiko.pose(.react)
@@ -1778,7 +1807,7 @@ import LearningCore
             : "That bridge path is stable. Try the next memory independently."
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
             .run { [weak self] in
                 guard let self else { return }
                 self.memoryEncounter = self.state.nextPuzzleMemoryEncounter()
@@ -2017,6 +2046,7 @@ import LearningCore
         shutter.name = "decorativeStopGoShutter"
         shutter.zPosition = 4
         orbRoot.addChild(shutter)
+        makeAccessible(orbRoot, label: "Brass orb signal. Wait on HOLD; tap on GO.")
         addChild(orbRoot)
 
         let barrier = SKShapeNode(rectOf: CGSize(width: 82, height: 204), cornerRadius: 38)
@@ -2139,6 +2169,10 @@ import LearningCore
             return
         }
 
+        root.accessibilityLabel = signal == .hold
+            ? "HOLD double-bar signal. Wait. The barrier is closed."
+            : "GO star signal. Tap the brass orb to open the barrier."
+
         if let shutter = root.childNode(withName: "decorativeStopGoShutter") as? SKShapeNode {
             shutter.removeAction(forKey: "shutterSlide")
             let isHeld = signal == .hold
@@ -2155,9 +2189,17 @@ import LearningCore
             }
         }
         if let barrier = childNode(withName: "stopGoBarrier") as? SKShapeNode {
-            barrier.strokeColor = signal == .hold
+            let held = signal == .hold
+            barrier.strokeColor = held
                 ? UIColor(red: 0.91, green: 0.54, blue: 0.65, alpha: 0.90)
                 : UIColor(red: 0.66, green: 0.94, blue: 0.74, alpha: 0.95)
+            // The gate actually blocks the route on HOLD and retracts on GO.
+            // Scale is a stable physical state, including for Reduced Motion.
+            barrier.xScale = held ? 1 : 0.38
+            barrier.alpha = held ? 0.95 : 0.56
+            barrier.fillColor = held
+                ? UIColor(red: 0.35, green: 0.14, blue: 0.22, alpha: 0.91)
+                : UIColor(red: 0.13, green: 0.39, blue: 0.28, alpha: 0.72)
         }
 
         switch signal {
@@ -2216,7 +2258,7 @@ import LearningCore
                 ? "That was a HOLD signal. Tiko will replay the sequence."
                 : "Wait through the double-bar signals. Touch only the star."
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.22 : 0.65),
+                .wait(forDuration: reducedMotion ? 0.70 : 0.95),
                 .run { [weak self] in self?.presentStopGoSignal() }
             ]), withKey: "stopGoRetry")
 
@@ -2267,7 +2309,7 @@ import LearningCore
             : "That orb is stable. Now try the rhythm independently."
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.24 : 0.95),
+            .wait(forDuration: reducedMotion ? 1.30 : 1.50),
             .run { [weak self] in
                 guard let self else { return }
                 self.inhibitionEncounter = self.state.nextPuzzleStopGoEncounter()
@@ -2615,6 +2657,36 @@ import LearningCore
         return root
     }
 
+    // A wrong answer must be seen entering and being rejected by the actual
+    // carved alcove, rather than only flashing a hint below the painting.
+    // This is visual feedback only: assessment and retry state are unchanged.
+    private func showRejectedSortingPlacement(
+        token: SKNode?, pedestalName: String, destination: CGPoint
+    ) {
+        guard let token, let pedestal = childNode(withName: pedestalName) else { return }
+        let origin = token.position
+        let rejection = SKShapeNode(ellipseOf: CGSize(width: 176, height: 68))
+        rejection.name = "sortingRejectedAlcove"
+        rejection.position = CGPoint(x: 0, y: 12)
+        rejection.fillColor = UIColor(red: 0.68, green: 0.17, blue: 0.15, alpha: 0.28)
+        rejection.strokeColor = UIColor(red: 1.0, green: 0.61, blue: 0.40, alpha: 1)
+        rejection.lineWidth = 6
+        rejection.zPosition = 12
+        pedestal.addChild(rejection)
+
+        // Reduced Motion removes transitions, not the visible rejected state.
+        let travelDuration: TimeInterval = reducedMotion ? 0 : 0.18
+        token.run(.sequence([
+            .move(to: destination, duration: travelDuration),
+            .wait(forDuration: 0.40),
+            .move(to: origin, duration: travelDuration)
+        ]), withKey: "wrongAlcoveReturn")
+        rejection.run(.sequence([
+            .wait(forDuration: reducedMotion ? 0.50 : 0.85),
+            .removeFromParent()
+        ]), withKey: "wrongAlcoveFlash")
+    }
+
     private func handleSortPedestal(_ bucket: PuzzleSortBucket) {
         guard place == .sortingPedestal,
               sortAcceptingInput,
@@ -2627,6 +2699,11 @@ import LearningCore
         let expected = object.bucket(for: rule)
 
         guard bucket == expected else {
+            showRejectedSortingPlacement(
+                token: childNode(withName: "sortingObject"),
+                pedestalName: bucket == .left ? "sortLeftPedestal" : "sortRightPedestal",
+                destination: CGPoint(x: bucket == .left ? 530 : 970, y: 355)
+            )
             attempts += 1
             let attemptSupport = support
             _ = state.recordPuzzle(
@@ -2645,7 +2722,7 @@ import LearningCore
                 ? sortingHint(for: rule)
                 : "Tiko is pointing to the active rule. Ignore the other feature and try again."
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.16 : 0.55),
+                .wait(forDuration: reducedMotion ? 0.62 : 0.88),
                 .run { [weak self] in
                     self?.sortAcceptingInput = true
                 }
@@ -2670,7 +2747,7 @@ import LearningCore
 
         sortTrialIndex += 1
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.10 : 0.32),
+            .wait(forDuration: reducedMotion ? 0.55 : 0.75),
             .run { [weak self] in self?.presentSortTrial() }
         ]), withKey: "sortNext")
     }
@@ -2734,7 +2811,7 @@ import LearningCore
         }
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
             .run { [weak self] in
                 guard let self else { return }
                 self.sortEncounter = self.state.nextPuzzleSortingEncounter()
@@ -2978,6 +3055,11 @@ import LearningCore
         let expected = object.bucket(for: rule)
 
         guard bucket == expected else {
+            showRejectedSortingPlacement(
+                token: childNode(withName: "resortToken\(resortObjectIndex)"),
+                pedestalName: bucket == .left ? "resortLeftPedestal" : "resortRightPedestal",
+                destination: CGPoint(x: bucket == .left ? 475 : 1035, y: 320)
+            )
             attempts += 1
             let attemptSupport = support
             _ = state.recordPuzzle(
@@ -2996,7 +3078,7 @@ import LearningCore
                 ? sortingHint(for: rule)
                 : "The set stayed the same, but the RULE changed. Follow only the glowing rule."
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0.16 : 0.55),
+                .wait(forDuration: reducedMotion ? 0.62 : 0.88),
                 .run { [weak self] in self?.resortAcceptingInput = true }
             ]), withKey: "resortRetry")
             return
@@ -3017,7 +3099,7 @@ import LearningCore
 
         resortObjectIndex += 1
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.10 : 0.30),
+            .wait(forDuration: reducedMotion ? 0.55 : 0.75),
             .run { [weak self] in self?.presentResortObject() }
         ]), withKey: "resortNext")
     }
@@ -3072,7 +3154,7 @@ import LearningCore
             : "That re-sort is stable. Try the next vault set independently."
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
             .run { [weak self] in
                 guard let self else { return }
                 self.resortEncounter = self.state.nextPuzzleResortEncounter()
@@ -3495,6 +3577,7 @@ import LearningCore
     private func finishMirrorRestoration() {
         mirrorAcceptingInput = false
         clearMirrorChoices()
+        showRestoredMirrorFixtures()
         childNode(withName: "mirrorRotationSource")?.removeFromParent()
         childNode(withName: "mirrorTurnCue")?.removeFromParent()
         for index in 0..<4 { childNode(withName: "rotationQuarterMark\(index)")?.removeFromParent() }
@@ -3517,6 +3600,31 @@ import LearningCore
             route.zPosition = 1500
         }
         instruction.text = "The hall is restored. Tiko found a planning floor beyond the mirrors."
+    }
+
+    // Restored Palace rooms retain the three actual pivot mirrors rather than
+    // presenting an empty rail after the scene clears answer choices.
+    private func showRestoredMirrorFixtures() {
+        for (index, point) in mirrorChoicePoints.enumerated() {
+            guard childNode(withName: "restoredMirrorFixture\(index)") == nil else { continue }
+            let mirror = SKShapeNode(ellipseOf: CGSize(width: 142, height: 176))
+            decorateMirrorGlass(mirror)
+            mirror.position = point
+            mirror.name = "restoredMirrorFixture\(index)"
+            mirror.zPosition = 650
+            mirror.strokeColor = UIColor(red: 0.58, green: 0.90, blue: 0.87, alpha: 1)
+            mirror.glowWidth = reducedMotion ? 0 : 6
+            mirror.isUserInteractionEnabled = false
+
+            let star = ArtSystem.label("✦", size: 46)
+            star.fontColor = UIColor(red: 0.92, green: 0.98, blue: 0.82, alpha: 1)
+            star.name = "decorativeRestoredMirrorGlyph"
+            mirror.addChild(star)
+            addChild(mirror)
+        }
+        if let center = childNode(withName: "restoredMirrorFixture1") as? SKShapeNode {
+            reflectChosenMirror(center, aligned: true)
+        }
     }
 
     private func buildMirrorHallWorld() {
@@ -4150,11 +4258,13 @@ import LearningCore
         return root
     }
 
-    private func clearPathTilesChoices() {
+    private func clearPathTilesChoices(preserveGrid: Bool = false) {
         for index in 0..<3 {
             childNode(withName: "pathChoice\(index)")?.removeFromParent()
         }
-        childNode(withName: "pathGrid")?.removeFromParent()
+        if !preserveGrid {
+            childNode(withName: "pathGrid")?.removeFromParent()
+        }
     }
 
     private func buildPathTilesEncounter(resetSupport: Bool = true) {
@@ -4345,7 +4455,7 @@ import LearningCore
             valkyrie.pose(.react)
             pathEncounter = state.nextPuzzlePathTilesEncounter()
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0 : 0.45),
+                .wait(forDuration: reducedMotion ? 0.65 : 0.85),
                 .run { [weak self] in self?.buildPathTilesEncounter(resetSupport: false) }
             ]))
             return
@@ -4404,9 +4514,33 @@ import LearningCore
         }
     }
 
+    // Recover the last independently solved route from saved learning evidence.
+    // This is presentation-only; it records no additional mastery.
+    private func restoreCompletedPathTiles() {
+        let completed = state.profile.progress(for: PuzzleSkills.pathPlanning).evidence
+            .last(where: { $0.outcome == .correct && $0.supportLevel == .independent })
+        let authoredRoutes = PuzzlePalaceEncounterCatalog.pathTileFamilies.flatMap { $0 }
+        guard let showcase = authoredRoutes.first(where: { $0.id == completed?.encounterID })
+                ?? authoredRoutes.first else {
+            finishPathTiles()
+            return
+        }
+
+        pathEncounter = showcase
+        buildPathTilesEncounter()
+        if let safe = showcase.choices.indices.first(where: { showcase.isValidChoice($0) }) {
+            revealAttemptedStoneTrail(showcase.route(for: safe),
+                                     encounter: showcase, valid: true)
+        }
+        solved = true
+        finishPathTiles()
+    }
+
     private func finishPathTiles() {
         pathAcceptingInput = false
-        clearPathTilesChoices()
+        clearAttentionCue()
+        // A completed route remains physically visible on revisits.
+        clearPathTilesChoices(preserveGrid: true)
         childNode(withName: "pathNext")?.removeFromParent()
         refreshPathTilesProgress(animated: true)
         if let title = childNode(withName: "pathTilesTitle") as? SKLabelNode {
@@ -4508,6 +4642,10 @@ import LearningCore
         guard let sequenceEncounter else { return }
         clearCommandSourceGears()
         commandSteps.removeAll()
+        if let driveRail = childNode(withName: "commandRail") as? SKShapeNode {
+            driveRail.fillColor = UIColor(red: 0.42, green: 0.31, blue: 0.18, alpha: 0.96)
+            driveRail.strokeColor = UIColor(red: 0.88, green: 0.69, blue: 0.34, alpha: 0.88)
+        }
         renderCommandSockets()
         attempts = 0
         if resetSupport { support = .independent }
@@ -4654,7 +4792,7 @@ import LearningCore
                     : "Find the action that makes the next one possible. Build from first to last."
                 self.sequenceEncounter = self.state.nextPuzzleCommandGearsEncounter()
                 self.run(.sequence([
-                    .wait(forDuration: self.reducedMotion ? 0 : 0.55),
+                    .wait(forDuration: self.reducedMotion ? 0.60 : 0.85),
                     .run { [weak self] in self?.buildCommandGearsEncounter(resetSupport: false) }
                 ]))
             }
@@ -4663,8 +4801,20 @@ import LearningCore
 
     private func animateCommandExecution(correct: Bool, completion: @escaping () -> Void) {
         let sockets = (0..<3).compactMap { childNode(withName: "commandSocket\($0)") as? SKShapeNode }
+        // A stalled chain must be recognizable even without animation.
+        if let driveRail = childNode(withName: "commandRail") as? SKShapeNode {
+            driveRail.fillColor = correct
+                ? UIColor(red: 0.17, green: 0.43, blue: 0.31, alpha: 1)
+                : UIColor(red: 0.51, green: 0.18, blue: 0.17, alpha: 1)
+            driveRail.strokeColor = correct
+                ? UIColor(red: 0.70, green: 0.99, blue: 0.72, alpha: 1)
+                : UIColor(red: 1.0, green: 0.55, blue: 0.35, alpha: 1)
+        }
         if reducedMotion {
-            sockets.forEach { $0.glowWidth = correct ? 6 : 0 }
+            sockets.forEach { socket in
+                socket.strokeColor = correct ? .systemGreen : .systemRed
+                socket.glowWidth = 0
+            }
             completion()
             return
         }
@@ -5018,7 +5168,7 @@ import LearningCore
                 : "Compare the three steps to the goal. Only one command does not belong."
             bugEncounter = state.nextPuzzleBugLanternEncounter()
             run(.sequence([
-                .wait(forDuration: reducedMotion ? 0 : 0.55),
+                .wait(forDuration: reducedMotion ? 0.60 : 0.85),
                 .run { [weak self] in self?.buildBugLanternEncounter(resetSupport: false) }
             ]))
             return
@@ -5439,6 +5589,10 @@ import LearningCore
                 housing.strokeColor = powered ? gold : bronze
             }
         }
+        if !powered, let rotor = childNode(withName: "//repairMachineRotor") {
+            rotor.removeAction(forKey: "repairRotor")
+            rotor.zRotation = 0
+        }
         if powered, !reducedMotion,
            let rotor = childNode(withName: "//repairMachineRotor") {
             rotor.removeAction(forKey: "repairRotor")
@@ -5447,13 +5601,22 @@ import LearningCore
     }
 
     private func showRepairMachineMiss() {
-        guard !reducedMotion,
-              let rotor = childNode(withName: "//repairMachineRotor") else { return }
+        if let rail = childNode(withName: "repairRail") as? SKShapeNode {
+            rail.strokeColor = UIColor(red: 1, green: 0.51, blue: 0.36, alpha: 1)
+        }
+        if let core = childNode(withName: "//repairLanternCore") as? SKShapeNode {
+            core.fillColor = UIColor(red: 0.62, green: 0.19, blue: 0.16, alpha: 1)
+        }
+        guard let rotor = childNode(withName: "//repairMachineRotor") else { return }
         rotor.removeAction(forKey: "repairRotor")
-        rotor.run(.sequence([
-            .rotate(byAngle: -.pi / 10, duration: 0.16),
-            .rotate(byAngle: .pi / 10, duration: 0.16)
-        ]), withKey: "repairRotor")
+        if reducedMotion {
+            rotor.zRotation = -.pi / 10 // Stalled gear remains visibly off-axis.
+        } else {
+            rotor.run(.sequence([
+                .rotate(byAngle: -.pi / 10, duration: 0.16),
+                .rotate(byAngle: .pi / 10, duration: 0.16)
+            ]), withKey: "repairRotor")
+        }
     }
 
     private func clearRepairSteps() {
@@ -5646,7 +5809,7 @@ import LearningCore
                     : "Find the first impossible transition, then look for the command that belongs there."
                 self.repairEncounter = self.state.nextPuzzleBugRepairEncounter()
                 self.run(.sequence([
-                    .wait(forDuration: self.reducedMotion ? 0 : 0.55),
+                    .wait(forDuration: self.reducedMotion ? 0.60 : 0.85),
                     .run { [weak self] in self?.buildBugRepairEncounter(resetSupport: false) }
                 ]))
             }
@@ -6181,7 +6344,7 @@ import LearningCore
 
             run(
                 .sequence([
-                    .wait(forDuration: reducedMotion ? 0.2 : 1.0),
+                    .wait(forDuration: reducedMotion ? 0.75 : 1.15),
                     .run { [weak self] in
                         guard let self else { return }
                         self.encounter = self.state.nextPuzzleEncounter()
@@ -6202,6 +6365,18 @@ import LearningCore
             errorFeedback()
             valkyrie.pose(.react)
             nudge(node)
+            // The carved lock visibly refuses the wrong stone, even with Reduced Motion.
+            if let socket = childNode(withName: "//runeSocket") as? SKShapeNode {
+                socket.strokeColor = UIColor(red: 1, green: 0.48, blue: 0.35, alpha: 1)
+                socket.fillColor = UIColor(red: 0.43, green: 0.15, blue: 0.15, alpha: 1)
+                socket.run(.sequence([
+                    .wait(forDuration: 0.65),
+                    .run { [weak socket] in
+                        socket?.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.40, alpha: 0.96)
+                        socket?.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.14, alpha: 1)
+                    }
+                ]), withKey: "runeRejected")
+            }
             showPatternHint()
             instruction.text = support == .lightHint
                 ? "Look for the two-rune beat that repeats."

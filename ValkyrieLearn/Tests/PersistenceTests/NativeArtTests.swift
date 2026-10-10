@@ -13,7 +13,7 @@ import LearningCore
         while !condition(), Date() < deadline {
             try await Task.sleep(nanoseconds: 25_000_000)
         }
-        XCTAssertTrue(condition(), "Timed out waiting for the live SpriteKit interaction to resolve.")
+        _ = try XCTUnwrap(condition() ? true : nil, "Timed out waiting for a live SpriteKit result; do not label this frame as successful.")
     }
 
     func testWeatherTowerWindKiteRescueIsPhysicalRepeatableAndRestores() async throws {
@@ -2041,7 +2041,7 @@ import LearningCore
             try await Task.sleep(nanoseconds: 350_000_000)
             for point in points {
                 scene.handleTap(at: point)
-                try await Task.sleep(nanoseconds: 250_000_000)
+                try await Task.sleep(nanoseconds: 650_000_000)
             }
             try await Task.sleep(nanoseconds: 450_000_000)
 
@@ -3261,6 +3261,189 @@ import LearningCore
         XCTAssertFalse(scene.crossingBridge, "Bridge route did not finish within ten seconds")
     }
 
+
+    // These actions operate the real SpriteKit nodes, not mocked-up states.
+    // The visible 4:3 review set must show the mistake and its repair, in
+    // addition to a playable initial room and a fresh restored scene.
+    private func exercisePalaceVisualReview(
+        _ world: AppState.World,
+        scene: PuzzlePalaceScene,
+        state: AppState,
+        correct: Bool,
+        frozenEncounter: Any
+    ) async throws {
+        let skill: SkillID
+        switch world {
+        case .puzzlePalace:
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleEncounter)
+            skill = active.skillID
+            let choice = try XCTUnwrap(scene.children.first {
+                $0.name == "runeChoice"
+                && (($0.userData?["choice"] as? String) == active.answer) == correct
+            })
+            scene.valkyrie.position = CGPoint(x: max(170, choice.position.x - 92), y: 175)
+            scene.handleTap(at: choice.position)
+
+        case .memoryBridge:
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleMemoryEncounter)
+            skill = active.skillID
+            try await waitUntil(timeout: 8) {
+                scene.instruction.text == "Now repeat Tiko's rune order to raise the bridge."
+            }
+            let symbols = correct ? active.sequence : [
+                try XCTUnwrap(active.choices.first { $0 != active.sequence[0] })
+            ]
+            for symbol in symbols {
+                let pad = try XCTUnwrap(scene.children.first {
+                    $0.name == "memoryPad"
+                    && ($0.userData?["symbol"] as? String) == symbol
+                })
+                scene.valkyrie.position = CGPoint(x: max(165, pad.position.x - 80), y: 175)
+                scene.handleTap(at: pad.position)
+                try await Task.sleep(nanoseconds: 500_000_000)
+            }
+
+        case .stopGoOrbs:
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleInhibitionEncounter)
+            skill = active.skillID
+            let glyph = try XCTUnwrap(
+                scene.childNode(withName: "//stopGoOrbGlyph") as? SKLabelNode
+            )
+            if correct {
+                for _ in active.signals.filter({ $0 == .go }) {
+                    try await waitUntil(timeout: 8) {
+                        glyph.text == "✦"
+                            && (scene.instruction.text ?? "").hasPrefix("GO")
+                    }
+                    scene.handleTap(at: CGPoint(x: 755, y: 365))
+                    try await Task.sleep(nanoseconds: 350_000_000)
+                }
+            } else {
+                // The initial screenshot consumes much of the short HOLD
+                // window. Do not sleep before tapping; demand a LIVE HOLD
+                // instruction, not an old pause glyph during transition.
+                try await waitUntil(timeout: 2) {
+                    glyph.text == "Ⅱ"
+                        && (scene.instruction.text ?? "").hasPrefix("HOLD")
+                }
+                scene.handleTap(at: CGPoint(x: 755, y: 365))
+                // Keep the failed HOLD and closed barrier frozen until the incorrect frame is captured.
+            }
+
+        case .sortingPedestal:
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleSortEncounter)
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            else { try await Task.sleep(nanoseconds: 220_000_000) }
+            for index in (correct ? Array(active.objects.indices) : [0]) {
+                let rightBucket = active.objects[index].bucket(for: active.rules[index])
+                let bucket: PuzzleSortBucket = correct
+                    ? rightBucket : (rightBucket == .left ? .right : .left)
+                scene.handleTap(at: CGPoint(x: bucket == .left ? 530 : 970, y: 355))
+                if correct { try await Task.sleep(nanoseconds: 660_000_000) }
+            }
+
+        case .resortVault:
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleResortEncounter)
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let rules = correct ? [active.initialRule, active.changedRule] : [active.initialRule]
+            for rule in rules {
+                for index in (correct ? Array(active.objects.indices) : [0]) {
+                    let rightBucket = active.objects[index].bucket(for: rule)
+                    let bucket: PuzzleSortBucket = correct
+                        ? rightBucket : (rightBucket == .left ? .right : .left)
+                    scene.handleTap(at: CGPoint(x: bucket == .left ? 475 : 1035, y: 300))
+                    if correct { try await Task.sleep(nanoseconds: 660_000_000) }
+                }
+                if correct { try await Task.sleep(nanoseconds: 240_000_000) }
+            }
+
+        case .mirrorHall:
+            let active = try XCTUnwrap(frozenEncounter as? PuzzleOrientationEncounter)
+            skill = active.skillID
+            let index = try XCTUnwrap(active.choices.indices.first {
+                (active.choices[$0] == active.target) == correct
+            })
+            let mirror = try XCTUnwrap(
+                scene.children.filter { $0.name == "mirrorOrientationChoice" }
+                    .first { ($0.userData?["direction"] as? String) ==
+                        active.choices[index].rawValue }
+            )
+            scene.valkyrie.position = CGPoint(x: mirror.position.x - 235, y: 175)
+            scene.handleTap(at: mirror.position)
+
+        case .pathTiles:
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzlePathEncounter)
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 700_000_000) }
+            let index = try XCTUnwrap(active.choices.indices.first {
+                active.isValidChoice($0) == correct
+            })
+            let yValues: [CGFloat] = [325, 245, 165]
+            scene.handleTap(at: CGPoint(x: 1100, y: yValues[index]))
+
+        case .commandGears:
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleSequenceEncounter)
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let right = active.correctOrder
+            let plan = correct ? right : [right[1], right[0], right[2]]
+            let xs: [CGFloat] = [560, 760, 960]
+            for step in plan {
+                let index = try XCTUnwrap(active.presented.firstIndex(of: step))
+                scene.handleTap(at: CGPoint(x: xs[index], y: 445))
+            }
+            scene.handleTap(at: CGPoint(x: 1100, y: 295))
+
+        case .bugLantern:
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleBugEncounter)
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let index = correct ? active.brokenIndex : (active.brokenIndex + 1) % active.shown.count
+            let broken = try XCTUnwrap(scene.childNode(withName: "bugStep\(index)"))
+            scene.handleTap(at: broken.position)
+            if correct {
+                try await waitUntil(timeout: 8) {
+                    scene.childNode(withName: "bugReplacement") != nil
+                }
+                let replacement = try XCTUnwrap(scene.childNode(withName: "bugReplacement"))
+                scene.handleTap(at: replacement.position)
+            }
+
+        case .bugLanternRepair:
+            let active = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleRepairEncounter)
+            skill = active.skillID
+            if correct { try await Task.sleep(nanoseconds: 650_000_000) }
+            let indexes: [Int]
+            if correct {
+                indexes = active.swapIndices
+            } else {
+                indexes = active.isCorrectSwap([0, 1]) ? [0, 2] : [0, 1]
+            }
+            for index in indexes {
+                let step = try XCTUnwrap(scene.childNode(withName: "repairStep\(index)"))
+                scene.handleTap(at: step.position)
+            }
+            let lever = try XCTUnwrap(scene.childNode(withName: "repairFix"))
+            scene.handleTap(at: lever.position)
+
+        default:
+            XCTFail("Not a Puzzle Palace review room")
+            return
+        }
+        let result: Outcome = correct ? .correct : .incorrect
+        print("Palace four-state live review: \(world) expecting \(result)")
+        try await waitUntil(timeout: 10) {
+            state.profile.progress(for: skill).evidence.last?.outcome == result
+        }
+        // Correct Rune/Stop-Go mechanics immediately update their physical state,
+        // but their next-challenge timers can replace the result during screenshot export.
+        if correct && (world == .puzzlePalace || world == .stopGoOrbs) {
+            scene.speed = 0
+        }
+    }
+
     func testIllustratedPalaceRoomsOnFourByThreeIPad() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let controller = UIViewController()
@@ -3321,8 +3504,131 @@ import LearningCore
                 XCTAssertNotNil(scene.childNode(withName: "//repairMachineRotor"))
                 XCTAssertNotNil(scene.childNode(withName: "repairFix"))
             }
+            // Keep the *scene's initial encounter* for retry validation.
+            // The adaptive director may select a different future encounter
+            // after an incorrect answer, while this scene still displays
+            // its original runes, memory order, sorting rules or mirrors.
+            // Lock onto the scene's actual encounter; querying AppState again
+            // can pick a different adaptive challenge than the visible props.
+            let frozenEncounter = try XCTUnwrap(
+                scene.nativeReviewActiveEncounter,
+                "\(name) should have a playable native encounter."
+            )
+            if world == .stopGoOrbs {
+                let signal = try XCTUnwrap(scene.childNode(withName: "stopGoOrb"))
+                XCTAssertTrue(signal.isAccessibilityElement)
+                XCTAssertFalse((signal.accessibilityLabel ?? "").isEmpty)
+                // The timed HOLD phase is intentionally shorter than the
+                // screenshot exporter. Freeze the live SpriteKit signal while
+                // capturing the initial frame and the deliberate wrong tap.
+                try await waitUntil(timeout: 4) {
+                    (scene.instruction.text ?? "").hasPrefix("HOLD")
+                }
+                scene.speed = 0
+            }
             try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
+            try await exercisePalaceVisualReview(
+                world, scene: scene, state: state, correct: false,
+                frozenEncounter: frozenEncounter
+            )
+            try await capture(scene, in: view,
+                              name: "Illustrated-Palace-4x3-" + name + "-Incorrect")
+            if world == .stopGoOrbs { scene.speed = 1 }
+            try await exercisePalaceVisualReview(
+                world, scene: scene, state: state, correct: true,
+                frozenEncounter: frozenEncounter
+            )
+            try await capture(scene, in: view,
+                              name: "Illustrated-Palace-4x3-" + name + "-Successful")
             scene.willLeave()
+
+            // Progression fixtures deliberately unlock the *next* room.
+            // Earlier screenshots showed locked rooms with no playable controls.
+            // Keep the capture itself native and use a fresh scene for save/restore.
+            func complete<E>(_ encounters: [E], record: (E) -> Void) {
+                encounters.forEach(record)
+            }
+            switch world {
+            case .puzzlePalace:
+                complete(PuzzlePalaceEncounterCatalog.runeGate) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .memoryBridge:
+                complete(PuzzlePalaceEncounterCatalog.memoryBridge) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .stopGoOrbs:
+                complete(PuzzlePalaceEncounterCatalog.stopGoOrbs) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .sortingPedestal:
+                complete(PuzzlePalaceEncounterCatalog.sortingFoundation +
+                         PuzzlePalaceEncounterCatalog.ruleSwitching) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .resortVault:
+                complete(PuzzlePalaceEncounterCatalog.changedRuleResort) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .mirrorHall:
+                complete(PuzzlePalaceEncounterCatalog.mirrorHallOrientation) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+                complete(PuzzlePalaceEncounterCatalog.mirrorHallRotation) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .pathTiles:
+                complete(PuzzlePalaceEncounterCatalog.pathTileFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .commandGears:
+                complete(PuzzlePalaceEncounterCatalog.commandGearFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .bugLantern:
+                complete(PuzzlePalaceEncounterCatalog.bugLanternFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            case .bugLanternRepair:
+                complete(PuzzlePalaceEncounterCatalog.bugRepairFamilies.map { $0[0] }) {
+                    _ = state.recordPuzzle($0, outcome: .correct, support: .independent,
+                                           attempts: 1, responseTime: 1)
+                }
+            default:
+                XCTFail("Unexpected Palace review room")
+            }
+            let restored = PuzzlePalaceScene(state: state)
+            restored.reducedMotion = true
+            view.presentScene(restored)
+            if world == .pathTiles {
+                XCTAssertNotNil(restored.childNode(withName: "pathGrid"),
+                                "Saved safe crossing must still have floor stones.")
+                XCTAssertNotNil(restored.childNode(withName: "//pathRouteTrace"),
+                                "Saved safe route must remain visibly connected.")
+                XCTAssertNil(restored.childNode(withName: "pathChoice0"),
+                             "Completed room cannot reopen answer workbenches.")
+            }
+            if world == .mirrorHall {
+                for index in 0..<3 {
+                    XCTAssertNotNil(restored.childNode(withName: "restoredMirrorFixture\(index)"),
+                                    "Completed Mirror Hall must retain physical mirrors.")
+                }
+                XCTAssertNotNil(restored.childNode(withName: "mirrorActiveRay"),
+                                "Restored light should still reach its receiver.")
+            }
+            try await capture(restored, in: view,
+                              name: "Illustrated-Palace-4x3-" + name + "-Restored")
+            restored.willLeave()
         }
 
         // An actual open passage should replace the painted closed door after
