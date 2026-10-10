@@ -4829,6 +4829,92 @@ import LearningCore
             addChild(lamp)
         }
 
+        // The three gears drive an actual floor-mounted machine, rather
+        // than only recoloring a UI rail when RUN is pulled. The conduit and
+        // its two outcome mechanisms sit below the scored socket targets.
+        let commandShaft = SKShapeNode(
+            rectOf: CGSize(width: 13, height: 83), cornerRadius: 6
+        )
+        commandShaft.name = "decorativeCommandDriveShaft"
+        commandShaft.position = CGPoint(x: 760, y: 236)
+        commandShaft.fillColor = UIColor(red: 0.55, green: 0.40, blue: 0.26, alpha: 0.89)
+        commandShaft.strokeColor = UIColor(red: 0.89, green: 0.72, blue: 0.47, alpha: 0.9)
+        commandShaft.lineWidth = 2
+        commandShaft.zPosition = 125
+        addChild(commandShaft)
+
+        let machine = SKShapeNode(
+            rectOf: CGSize(width: 216, height: 94), cornerRadius: 25
+        )
+        machine.name = "decorativeCommandOutputMachine"
+        machine.position = CGPoint(x: 760, y: 182)
+        machine.fillColor = UIColor(red: 0.32, green: 0.25, blue: 0.26, alpha: 0.92)
+        machine.strokeColor = UIColor(red: 0.85, green: 0.65, blue: 0.42, alpha: 0.95)
+        machine.lineWidth = 4
+        machine.zPosition = 325
+        addChild(machine)
+
+        let outputBridge = sequenceEncounter?.correctOrder.contains {
+            $0.id == "lowerBridge"
+        } ?? false
+
+        // The cassette families operate a stone door or a miniature bridge.
+        // Neither fixture reveals the correct command order before the test.
+        let gate = SKShapeNode(rectOf: CGSize(width: 61, height: 51), cornerRadius: 8)
+        gate.name = "decorativeCommandGateShutter"
+        gate.position = CGPoint(x: 0, y: -9)
+        gate.fillColor = UIColor(red: 0.24, green: 0.22, blue: 0.31, alpha: 1)
+        gate.strokeColor = UIColor(red: 0.94, green: 0.70, blue: 0.44, alpha: 1)
+        gate.lineWidth = 3
+        gate.isHidden = outputBridge
+        machine.addChild(gate)
+
+        let bridge = SKShapeNode(rectOf: CGSize(width: 112, height: 20), cornerRadius: 8)
+        bridge.name = "decorativeCommandBridgeDeck"
+        bridge.position = CGPoint(x: 0, y: -10)
+        bridge.zRotation = .pi / 5
+        bridge.fillColor = UIColor(red: 0.63, green: 0.43, blue: 0.27, alpha: 1)
+        bridge.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.47, alpha: 1)
+        bridge.lineWidth = 3
+        bridge.isHidden = !outputBridge
+        machine.addChild(bridge)
+
+        let latch = SKShapeNode(rectOf: CGSize(width: 14, height: 16), cornerRadius: 4)
+        latch.name = "decorativeCommandOutputLatch"
+        latch.position = CGPoint(x: 47, y: -10)
+        latch.fillColor = UIColor(red: 0.88, green: 0.62, blue: 0.33, alpha: 1)
+        latch.strokeColor = UIColor(red: 0.96, green: 0.78, blue: 0.53, alpha: 1)
+        latch.lineWidth = 2
+        latch.isHidden = outputBridge
+        machine.addChild(latch)
+
+        let crystal = SKShapeNode(circleOfRadius: 10)
+        crystal.name = "decorativeCommandOutputCrystal"
+        crystal.position = CGPoint(x: -82, y: -9)
+        crystal.fillColor = UIColor(red: 0.30, green: 0.24, blue: 0.35, alpha: 1)
+        crystal.strokeColor = UIColor(red: 0.82, green: 0.68, blue: 0.52, alpha: 1)
+        crystal.lineWidth = 2
+        machine.addChild(crystal)
+
+        let traveler = SKShapeNode(circleOfRadius: 9)
+        traveler.name = "decorativeCommandOutputTraveler"
+        traveler.position = CGPoint(x: -48, y: 5)
+        traveler.fillColor = UIColor(red: 0.97, green: 0.83, blue: 0.55, alpha: 1)
+        traveler.strokeColor = UIColor(red: 0.20, green: 0.16, blue: 0.23, alpha: 1)
+        traveler.lineWidth = 2
+        traveler.isHidden = !outputBridge
+        machine.addChild(traveler)
+
+        for index in 0..<3 {
+            let relay = SKShapeNode(circleOfRadius: 8)
+            relay.name = "decorativeCommandRelay\(index)"
+            relay.position = CGPoint(x: -60 + CGFloat(index) * 60, y: 34)
+            relay.fillColor = UIColor(red: 0.24, green: 0.19, blue: 0.26, alpha: 1)
+            relay.strokeColor = UIColor(red: 0.85, green: 0.64, blue: 0.40, alpha: 1)
+            relay.lineWidth = 2
+            machine.addChild(relay)
+        }
+
         let runGear = worldGear("▶", name: "commandRun",
                                 at: CGPoint(x: 1100, y: 295), radius: 40,
                                 accessibilityLabel: "Run command chain")
@@ -4855,12 +4941,15 @@ import LearningCore
     private func buildCommandGearsEncounter(resetSupport: Bool = true) {
         guard let sequenceEncounter else { return }
         clearCommandSourceGears()
+        children.filter { $0.name == "decorativeCommandGearTransfer" }
+            .forEach { $0.removeFromParent() }
         commandSteps.removeAll()
         if let driveRail = childNode(withName: "commandRail") as? SKShapeNode {
             driveRail.fillColor = UIColor(red: 0.42, green: 0.31, blue: 0.18, alpha: 0.96)
             driveRail.strokeColor = UIColor(red: 0.88, green: 0.69, blue: 0.34, alpha: 0.88)
         }
         renderCommandSockets()
+        resetCommandOutputMechanism()
         attempts = 0
         if resetSupport { support = .independent }
         startedAt = Date()
@@ -4892,6 +4981,37 @@ import LearningCore
         tiko.pose(.interact)
     }
 
+    private func animateCommandGearInsertion(
+        _ step: PuzzleCommandStep, sourceIndex: Int, socketIndex: Int
+    ) {
+        // The actual learning state and socket update immediately. The visual
+        // transfer is decorative so touch targets never become moving hitboxes.
+        guard !reducedMotion,
+              let source = childNode(withName: "commandSource\(sourceIndex)"),
+              let socket = childNode(withName: "commandSocket\(socketIndex)")
+        else { return }
+        let transferred = palaceCog(
+            radius: 29, teeth: 10,
+            fill: UIColor(red: 0.55, green: 0.38, blue: 0.25, alpha: 1),
+            stroke: UIColor(red: 0.96, green: 0.76, blue: 0.45, alpha: 1)
+        )
+        transferred.name = "decorativeCommandGearTransfer"
+        transferred.position = source.position
+        transferred.zPosition = 890
+        let symbol = ArtSystem.label(step.glyph, size: 22)
+        symbol.name = "decorativeCommandGearTransferGlyph"
+        symbol.fontColor = UIColor(red: 0.98, green: 0.91, blue: 0.71, alpha: 1)
+        transferred.addChild(symbol)
+        addChild(transferred)
+        transferred.run(.sequence([
+            .group([
+                .move(to: socket.position, duration: 0.28),
+                .scale(to: 0.70, duration: 0.28)
+            ]),
+            .removeFromParent()
+        ]))
+    }
+
     private func selectCommandGear(_ sourceIndex: Int) {
         guard place == .commandGears, commandAcceptingInput, !solved,
               let sequenceEncounter,
@@ -4901,6 +5021,9 @@ import LearningCore
         commandSteps.append(step)
         selectionFeedback()
         renderCommandSockets()
+        animateCommandGearInsertion(
+            step, sourceIndex: sourceIndex, socketIndex: commandSteps.count - 1
+        )
         childNode(withName: "commandSource\(sourceIndex)")?.alpha = 0.30
         childNode(withName: "commandSourceLabel\(sourceIndex)")?.alpha = 0.42
         instruction.text = commandSteps.count == 3
@@ -4910,6 +5033,8 @@ import LearningCore
 
     private func resetCommandChain() {
         guard place == .commandGears, commandAcceptingInput else { return }
+        children.filter { $0.name == "decorativeCommandGearTransfer" }
+            .forEach { $0.removeFromParent() }
         commandSteps.removeAll()
         for index in 0..<3 {
             childNode(withName: "commandSource\(index)")?.alpha = 1
@@ -4952,6 +5077,150 @@ import LearningCore
         }
     }
 
+    private func resetCommandOutputMechanism() {
+        guard let machine = childNode(
+            withName: "decorativeCommandOutputMachine"
+        ) as? SKShapeNode else { return }
+        machine.strokeColor = UIColor(red: 0.85, green: 0.65, blue: 0.42, alpha: 0.95)
+        machine.glowWidth = 0
+
+        // The room artwork and output machine are built before the next
+        // assessment is selected. Reconfigure the physical output on every
+        // fresh encounter, including bridge transfers and wrong-plan retries.
+        let bridgeMode = sequenceEncounter?.correctOrder.contains {
+            $0.id == "lowerBridge"
+        } ?? false
+        machine.childNode(withName: "decorativeCommandGateShutter")?
+            .isHidden = bridgeMode
+        machine.childNode(withName: "decorativeCommandOutputLatch")?
+            .isHidden = bridgeMode
+        machine.childNode(withName: "decorativeCommandBridgeDeck")?
+            .isHidden = !bridgeMode
+        machine.childNode(withName: "decorativeCommandOutputTraveler")?
+            .isHidden = !bridgeMode
+
+        for index in 0..<3 {
+            guard let relay = machine.childNode(
+                withName: "decorativeCommandRelay\(index)"
+            ) as? SKShapeNode else { continue }
+            relay.fillColor = UIColor(red: 0.24, green: 0.19, blue: 0.26, alpha: 1)
+            relay.glowWidth = 0
+        }
+        if let shutter = machine.childNode(
+            withName: "decorativeCommandGateShutter"
+        ) as? SKShapeNode {
+            shutter.removeAction(forKey: "commandOutputActuation")
+            shutter.position.y = -9
+        }
+        if let latch = machine.childNode(
+            withName: "decorativeCommandOutputLatch"
+        ) as? SKShapeNode {
+            latch.removeAction(forKey: "commandOutputActuation")
+            latch.position.x = 47
+        }
+        if let bridge = machine.childNode(
+            withName: "decorativeCommandBridgeDeck"
+        ) as? SKShapeNode {
+            bridge.removeAction(forKey: "commandOutputActuation")
+            bridge.zRotation = .pi / 5
+        }
+        if let traveler = machine.childNode(
+            withName: "decorativeCommandOutputTraveler"
+        ) as? SKShapeNode {
+            traveler.removeAction(forKey: "commandOutputActuation")
+            traveler.position.x = -48
+        }
+        if let crystal = machine.childNode(
+            withName: "decorativeCommandOutputCrystal"
+        ) as? SKShapeNode {
+            crystal.fillColor = UIColor(red: 0.30, green: 0.24, blue: 0.35, alpha: 1)
+            crystal.glowWidth = 0
+        }
+    }
+
+    private func executeCommandOutputStep(
+        _ step: PuzzleCommandStep, index: Int, runs: Bool
+    ) {
+        guard let machine = childNode(
+            withName: "decorativeCommandOutputMachine"
+        ) as? SKShapeNode else { return }
+        let activeColor = UIColor(red: 0.44, green: 0.91, blue: 0.65, alpha: 1)
+        let stalledColor = UIColor(red: 0.95, green: 0.40, blue: 0.28, alpha: 1)
+        if let socket = childNode(withName: "commandSocket\(index)") as? SKShapeNode {
+            socket.strokeColor = runs ? activeColor : stalledColor
+            socket.glowWidth = !reducedMotion && runs ? 9 : 0
+        }
+        if let relay = machine.childNode(
+            withName: "decorativeCommandRelay\(index)"
+        ) as? SKShapeNode {
+            relay.fillColor = runs ? activeColor : stalledColor
+            relay.glowWidth = runs && !reducedMotion ? 6 : 0
+        }
+        if !runs {
+            machine.strokeColor = stalledColor
+            machine.glowWidth = 0
+            return
+        }
+
+        let actionKey = "commandOutputActuation"
+        func moveX(_ name: String, to x: CGFloat) {
+            guard let node = machine.childNode(withName: name) else { return }
+            node.removeAction(forKey: actionKey)
+            if reducedMotion {
+                node.position.x = x
+            } else {
+                node.run(.moveTo(x: x, duration: 0.28), withKey: actionKey)
+            }
+        }
+        func moveY(_ name: String, to y: CGFloat) {
+            guard let node = machine.childNode(withName: name) else { return }
+            node.removeAction(forKey: actionKey)
+            if reducedMotion {
+                node.position.y = y
+            } else {
+                node.run(.moveTo(y: y, duration: 0.28), withKey: actionKey)
+            }
+        }
+        func turn(_ name: String, to angle: CGFloat) {
+            guard let node = machine.childNode(withName: name) else { return }
+            node.removeAction(forKey: actionKey)
+            if reducedMotion {
+                node.zRotation = angle
+            } else {
+                node.run(.rotate(toAngle: angle, duration: 0.28), withKey: actionKey)
+            }
+        }
+        switch step.id {
+        case "takeKey", "placeCrystal":
+            if let crystal = machine.childNode(
+                withName: "decorativeCommandOutputCrystal"
+            ) as? SKShapeNode {
+                crystal.fillColor = UIColor(red: 1, green: 0.85, blue: 0.45, alpha: 1)
+                crystal.glowWidth = reducedMotion ? 0 : 7
+            }
+        case "unlock":
+            moveX("decorativeCommandOutputLatch", to: 77)
+        case "turnGear":
+            // The crystal powers a captive clockwork output, not just a
+            // different color on the gear that the child tapped.
+            turn("decorativeCommandGateShutter", to: .pi / 10)
+        case "openDoor", "crossDoor":
+            moveY("decorativeCommandGateShutter", to: 25)
+        case "lowerBridge":
+            turn("decorativeCommandBridgeDeck", to: 0)
+        case "crossBridge":
+            moveX("decorativeCommandOutputTraveler", to: 47)
+        case "raiseBridge":
+            turn("decorativeCommandBridgeDeck", to: .pi / 5)
+        default:
+            break
+        }
+        if index == 2 {
+            machine.strokeColor = activeColor
+            machine.glowWidth = reducedMotion ? 0 : 6
+        }
+    }
+
     private func runCommandChain() {
         guard place == .commandGears, commandAcceptingInput, !solved,
               let activeEncounter = sequenceEncounter else { return }
@@ -4974,7 +5243,7 @@ import LearningCore
             responseTime: Date().timeIntervalSince(startedAt)
         )
 
-        animateCommandExecution(correct: correct) { [weak self] in
+        animateCommandExecution(encounter: activeEncounter) { [weak self] in
             guard let self else { return }
             if correct {
                 self.solved = true
@@ -5013,9 +5282,13 @@ import LearningCore
         }
     }
 
-    private func animateCommandExecution(correct: Bool, completion: @escaping () -> Void) {
-        let sockets = (0..<3).compactMap { childNode(withName: "commandSocket\($0)") as? SKShapeNode }
-        // A stalled chain must be recognizable even without animation.
+    private func animateCommandExecution(
+        encounter: PuzzleSequenceEncounter, completion: @escaping () -> Void
+    ) {
+        // A tested sequence powers its physical stages in order and STOPS at
+        // the first command that cannot yet work. Children only see this
+        // diagnosis after RUN, never while deciding their own answer.
+        let correct = encounter.isCorrect(commandSteps)
         if let driveRail = childNode(withName: "commandRail") as? SKShapeNode {
             driveRail.fillColor = correct
                 ? UIColor(red: 0.17, green: 0.43, blue: 0.31, alpha: 1)
@@ -5024,29 +5297,26 @@ import LearningCore
                 ? UIColor(red: 0.70, green: 0.99, blue: 0.72, alpha: 1)
                 : UIColor(red: 1.0, green: 0.55, blue: 0.35, alpha: 1)
         }
+
         if reducedMotion {
-            sockets.forEach { socket in
-                socket.strokeColor = correct ? .systemGreen : .systemRed
-                socket.glowWidth = 0
+            for index in commandSteps.indices {
+                let valid = commandSteps[index].id == encounter.correctOrder[index].id
+                executeCommandOutputStep(commandSteps[index], index: index, runs: valid)
+                if !valid { break }
             }
             completion()
             return
         }
 
         var actions: [SKAction] = []
-        for (index, socket) in sockets.enumerated() {
-            actions += [
-                .run {
-                    socket.glowWidth = 10
-                    socket.setScale(1.08)
-                },
-                .wait(forDuration: 0.20),
-                .run {
-                    socket.glowWidth = 0
-                    socket.setScale(1)
-                }
-            ]
-            if index < 2 { actions.append(.wait(forDuration: 0.06)) }
+        for index in commandSteps.indices {
+            let step = commandSteps[index]
+            let valid = step.id == encounter.correctOrder[index].id
+            actions.append(.run { [weak self] in
+                self?.executeCommandOutputStep(step, index: index, runs: valid)
+            })
+            actions.append(.wait(forDuration: 0.42))
+            if !valid { break }
         }
         actions.append(.run(completion))
         run(.sequence(actions), withKey: "commandExecution")
@@ -5071,8 +5341,33 @@ import LearningCore
     private func finishCommandGears(celebrate: Bool = false) {
         commandAcceptingInput = false
         clearCommandSourceGears()
+        children.filter { $0.name == "decorativeCommandGearTransfer" }
+            .forEach { $0.removeFromParent() }
         commandSteps.removeAll()
         renderCommandSockets()
+        // Completion is a powered, physically open/resting machine on return.
+        resetCommandOutputMechanism()
+        if let stage = childNode(
+            withName: "decorativeCommandOutputMachine"
+        ) as? SKShapeNode {
+            stage.strokeColor = UIColor(red: 0.44, green: 0.91, blue: 0.65, alpha: 1)
+            if let gate = stage.childNode(withName: "decorativeCommandGateShutter") {
+                gate.position.y = 25
+            }
+            if let bridge = stage.childNode(withName: "decorativeCommandBridgeDeck") {
+                bridge.zRotation = .pi / 5
+            }
+            if let traveler = stage.childNode(withName: "decorativeCommandOutputTraveler") {
+                traveler.position.x = 47
+            }
+            for index in 0..<3 {
+                if let lamp = stage.childNode(
+                    withName: "decorativeCommandRelay\(index)"
+                ) as? SKShapeNode {
+                    lamp.fillColor = UIColor(red: 0.44, green: 0.91, blue: 0.65, alpha: 1)
+                }
+            }
+        }
         childNode(withName: "commandNext")?.removeFromParent()
         refreshCommandGearsProgress(animated: true)
         if let title = childNode(withName: "commandGearsTitle") as? SKLabelNode {

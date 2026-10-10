@@ -1534,6 +1534,214 @@ import LearningCore
         }
     }
 
+    func testCommandGearsPhysicalRunStallsOnFirstWrongStepThenOpensGate() async throws {
+        // End-to-end real SpriteKit 4:3 regression: a failed plan cannot
+        // open a gate, and a later assisted plan cannot earn independence.
+        for reduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = reduced
+            for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzleCommandGearsAvailable)
+            state.travel(to: .commandGears)
+
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = reduced
+            view.presentScene(scene)
+
+            let first = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleSequenceEncounter)
+            let machine = try XCTUnwrap(
+                scene.childNode(withName: "decorativeCommandOutputMachine") as? SKShapeNode
+            )
+            let shutter = try XCTUnwrap(
+                machine.childNode(withName: "decorativeCommandGateShutter")
+            )
+            let latch = try XCTUnwrap(
+                machine.childNode(withName: "decorativeCommandOutputLatch")
+            )
+            XCTAssertNotNil(scene.childNode(withName: "decorativeCommandDriveShaft"))
+            XCTAssertFalse(shutter.isHidden)
+            XCTAssertEqual(shutter.position.y, -9, accuracy: 0.01)
+            let firstRelay = try XCTUnwrap(
+                machine.childNode(withName: "decorativeCommandRelay0") as? SKShapeNode
+            )
+            let initialSource = scene.childNode(withName: "commandSource0")
+
+            // First available plan begins with GO THROUGH instead of TAKE KEY.
+            // Its first command jams; later cogs must stay neutral.
+            XCTAssertFalse(first.isCorrect(first.presented))
+            for index in 0..<3 {
+                let source = try XCTUnwrap(scene.childNode(withName: "commandSource\(index)"))
+                XCTAssertEqual(scene.targetName(at: source.position), source.name)
+                scene.handleTap(at: source.position)
+            }
+            if reduced {
+                XCTAssertFalse(scene.children.contains {
+                    $0.name == "decorativeCommandGearTransfer"
+                }, "Reduced Motion uses an immediate, stable socket state.")
+            } else {
+                XCTAssertTrue(scene.children.contains {
+                    $0.name == "decorativeCommandGearTransfer"
+                }, "Source gears must visibly feed their assigned sockets.")
+            }
+            scene.handleTap(at: CGPoint(x: 1100, y: 295))
+            try await waitUntil(timeout: 4) {
+                let red = firstRelay.fillColor.cgColor.components?.first ?? 0
+                return red > 0.85
+            }
+            XCTAssertEqual(shutter.position.y, -9, accuracy: 0.5,
+                           "A command chain cannot open the door after its first invalid step.")
+            XCTAssertEqual(latch.position.x, 47, accuracy: 0.5)
+            let pendingRelay = try XCTUnwrap(
+                machine.childNode(withName: "decorativeCommandRelay1") as? SKShapeNode
+            )
+            XCTAssertEqual(pendingRelay.glowWidth, 0, accuracy: 0.01)
+            let wrongEvidence = state.profile.progress(for: PuzzleSkills.actionSequencing).evidence
+            XCTAssertEqual(wrongEvidence.count, 1)
+            XCTAssertEqual(wrongEvidence.last?.outcome, .incorrect)
+            XCTAssertEqual(wrongEvidence.last?.supportLevel, .independent)
+            if reduced {
+                scene.speed = 0
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-CommandGears-First-Step-Jammed")
+                scene.speed = 1
+            }
+
+            try await waitUntil(timeout: 6) {
+                let source = scene.childNode(withName: "commandSource0")
+                return source != nil && source !== initialSource
+            }
+            XCTAssertEqual(shutter.position.y, -9, accuracy: 0.01)
+            let retry = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleSequenceEncounter)
+            XCTAssertNotEqual(retry.id, first.id)
+            for step in retry.correctOrder {
+                let index = try XCTUnwrap(retry.presented.firstIndex(of: step))
+                let source = try XCTUnwrap(scene.childNode(withName: "commandSource\(index)"))
+                scene.handleTap(at: source.position)
+            }
+            scene.handleTap(at: CGPoint(x: 1100, y: 295))
+            try await waitUntil(timeout: 5) {
+                abs(shutter.position.y - 25) < 0.5
+                    && abs(latch.position.x - 77) < 0.5
+            }
+            XCTAssertFalse(shutter.isHidden)
+            for index in 0..<3 {
+                let relay = try XCTUnwrap(machine.childNode(
+                    withName: "decorativeCommandRelay\(index)"
+                ) as? SKShapeNode)
+                var red: CGFloat = 0, green: CGFloat = 0
+                var blue: CGFloat = 0, alpha: CGFloat = 0
+                XCTAssertTrue(relay.fillColor.getRed(
+                    &red, green: &green, blue: &blue, alpha: &alpha
+                ))
+                XCTAssertGreaterThan(green, red,
+                                     "All three executed commands must visibly power the machine.")
+            }
+            let finalEvidence = state.profile.progress(for: PuzzleSkills.actionSequencing).evidence
+            XCTAssertEqual(finalEvidence.map(\.outcome), [.incorrect, .correct])
+            XCTAssertEqual(finalEvidence.map(\.supportLevel), [.independent, .lightHint])
+            XCTAssertFalse(state.puzzleCommandGearsComplete,
+                           "An assisted repair cannot bypass the other independent command families.")
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-CommandGears-Gate-Opened")
+            }
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
+    func testCommandGearsBridgePhysicallyLowersCrossesAndReturnsToSafety() async throws {
+        for reduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = reduced
+            for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for family in PuzzlePalaceEncounterCatalog.pathTileFamilies {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for family in PuzzlePalaceEncounterCatalog.commandGearFamilies.prefix(2) {
+                _ = state.recordPuzzle(family[0], outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzleCommandGearsAvailable)
+            state.travel(to: .commandGears)
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = reduced
+            view.presentScene(scene)
+
+            let encounter = try XCTUnwrap(scene.nativeReviewActiveEncounter as? PuzzleSequenceEncounter)
+            XCTAssertEqual(encounter.correctOrder.map(\.id),
+                           ["lowerBridge", "crossBridge", "raiseBridge"])
+            let machine = try XCTUnwrap(
+                scene.childNode(withName: "decorativeCommandOutputMachine")
+            )
+            let bridge = try XCTUnwrap(machine.childNode(
+                withName: "decorativeCommandBridgeDeck"
+            ))
+            let traveler = try XCTUnwrap(machine.childNode(
+                withName: "decorativeCommandOutputTraveler"
+            ))
+            XCTAssertFalse(bridge.isHidden)
+            XCTAssertFalse(traveler.isHidden)
+            XCTAssertEqual(bridge.zRotation, .pi / 5, accuracy: 0.01)
+            XCTAssertEqual(traveler.position.x, -48, accuracy: 0.01)
+            for step in encounter.correctOrder {
+                let index = try XCTUnwrap(encounter.presented.firstIndex(of: step))
+                let source = try XCTUnwrap(scene.childNode(withName: "commandSource\(index)"))
+                scene.handleTap(at: source.position)
+            }
+            scene.handleTap(at: CGPoint(x: 1100, y: 295))
+            if !reduced {
+                try await waitUntil(timeout: 3) { abs(bridge.zRotation) < 0.04 }
+                try await waitUntil(timeout: 3) { traveler.position.x > 25 }
+            }
+            try await waitUntil(timeout: 5) {
+                state.puzzleCommandGearsComplete
+                    && abs(traveler.position.x - 47) < 0.5
+                    && abs(bridge.zRotation - .pi / 5) < 0.04
+            }
+            let evidence = state.profile.progress(for: PuzzleSkills.actionSequencing).evidence
+            XCTAssertEqual(evidence.last?.encounterID, encounter.id)
+            XCTAssertEqual(evidence.last?.outcome, .correct)
+            XCTAssertEqual(evidence.last?.supportLevel, .independent)
+            XCTAssertTrue(state.puzzleCommandGearsComplete)
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-CommandGears-Bridge-Safely-Raised")
+            }
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
     func testTikoReturnsToTheWalkableLaneBetweenPathTileMaps() async throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
         let view = SKView(frame: window.bounds)
@@ -4066,6 +4274,28 @@ import LearningCore
                 }
                 XCTAssertNotNil(restored.childNode(withName: "mirrorActiveRay"),
                                 "Restored light should still reach its receiver.")
+            }
+            if world == .commandGears {
+                let output = try XCTUnwrap(
+                    restored.childNode(withName: "decorativeCommandOutputMachine")
+                )
+                let gate = try XCTUnwrap(output.childNode(
+                    withName: "decorativeCommandGateShutter"
+                ))
+                XCTAssertEqual(gate.position.y, 25, accuracy: 0.01,
+                               "On revisit, the restored engine must keep its physical gate open.")
+                for index in 0..<3 {
+                    let relay = try XCTUnwrap(output.childNode(
+                        withName: "decorativeCommandRelay\(index)"
+                    ) as? SKShapeNode)
+                    var red: CGFloat = 0, green: CGFloat = 0
+                    var blue: CGFloat = 0, alpha: CGFloat = 0
+                    XCTAssertTrue(relay.fillColor.getRed(
+                        &red, green: &green, blue: &blue, alpha: &alpha
+                    ))
+                    XCTAssertGreaterThan(green, red,
+                                         "All three command stages must remain powered on revisit.")
+                }
             }
             try await capture(restored, in: view,
                               name: "Illustrated-Palace-4x3-" + name + "-Restored")
