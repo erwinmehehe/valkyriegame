@@ -6623,9 +6623,76 @@ import LearningCore
         return nil
     }
 
+    private func moveRuneSocketJaws(to offset: CGFloat, tint: UIColor) {
+        guard let socket = childNode(withName: "//runeSocket") as? SKShapeNode else {
+            return
+        }
+        for (suffix, sign) in [("Left", CGFloat(-1)), ("Right", CGFloat(1))] {
+            guard let jaw = socket.childNode(
+                withName: "decorativeRuneSocketJaw\(suffix)"
+            ) as? SKShapeNode else { continue }
+            jaw.removeAction(forKey: "runeJawShift")
+            jaw.fillColor = tint
+            if reducedMotion {
+                jaw.position.x = sign * offset
+            } else {
+                jaw.run(.moveTo(x: sign * offset, duration: 0.19),
+                        withKey: "runeJawShift")
+            }
+        }
+    }
+
+    private func resetRuneSocketRefusal() {
+        guard let socket = childNode(withName: "//runeSocket") as? SKShapeNode else {
+            return
+        }
+        socket.removeAction(forKey: "runeRejected")
+        socket.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.40, alpha: 0.96)
+        socket.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.14, alpha: 1)
+        moveRuneSocketJaws(
+            to: 33, tint: UIColor(red: 0.65, green: 0.45, blue: 0.30, alpha: 1)
+        )
+    }
+
+    private func rejectCarvedRune(from selected: SKNode, value: String) {
+        // The child's wrong physical key travels to the door, visibly fails
+        // the mechanical fit, and returns to the SAME plinth. The assessment
+        // was already recorded as incorrect; this animation never re-scores.
+        guard !reducedMotion,
+              let socket = childNode(withName: "//runeSocket") else {
+            runeAcceptingInput = true
+            return
+        }
+        let destination = socket.parent?.convert(socket.position, to: self) ?? socket.position
+        let bouncedKey = runeStone(value, name: "decorativeRuneRejectedKey")
+        bouncedKey.position = selected.position
+        bouncedKey.setScale(1.19)
+        bouncedKey.zPosition = 1800
+        selected.isHidden = true
+        addChild(bouncedKey)
+
+        bouncedKey.run(.sequence([
+            .group([
+                .move(to: destination, duration: 0.23),
+                .scale(to: 0.90, duration: 0.23)
+            ]),
+            .wait(forDuration: 0.08),
+            .group([
+                .move(to: selected.position, duration: 0.22),
+                .scale(to: 1.19, duration: 0.22)
+            ]),
+            .removeFromParent(),
+            .run { [weak self, weak selected] in
+                selected?.isHidden = false
+                self?.runeAcceptingInput = true
+            }
+        ]), withKey: "runeRefusedKey")
+    }
+
     private func approachRune(_ node: SKNode, value: String) {
         guard runeAcceptingInput, !solved else { return }
         runeAcceptingInput = false
+        resetRuneSocketRefusal()
         let destination = CGPoint(x: max(170, node.position.x - 92), y: 175)
         valkyrie.walk(to: destination) { [weak self] in
             guard let self else { return }
@@ -6700,24 +6767,24 @@ import LearningCore
             support = support == .independent ? .lightHint : .strongHint
             errorFeedback()
             valkyrie.pose(.react)
-            nudge(node)
-            // The carved lock visibly refuses the wrong stone, even with Reduced Motion.
+            // The lock's opposing jaws physically reject a misfit, so the
+            // child sees an obstruction rather than a generic red outline.
+            moveRuneSocketJaws(
+                to: 24, tint: UIColor(red: 0.88, green: 0.39, blue: 0.29, alpha: 1)
+            )
             if let socket = childNode(withName: "//runeSocket") as? SKShapeNode {
                 socket.strokeColor = UIColor(red: 1, green: 0.48, blue: 0.35, alpha: 1)
                 socket.fillColor = UIColor(red: 0.43, green: 0.15, blue: 0.15, alpha: 1)
                 socket.run(.sequence([
-                    .wait(forDuration: 0.65),
-                    .run { [weak socket] in
-                        socket?.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.40, alpha: 0.96)
-                        socket?.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.14, alpha: 1)
-                    }
+                    .wait(forDuration: reducedMotion ? 0.80 : 0.68),
+                    .run { [weak self] in self?.resetRuneSocketRefusal() }
                 ]), withKey: "runeRejected")
             }
             showPatternHint()
             instruction.text = support == .lightHint
                 ? "Look for the two-rune beat that repeats."
                 : "Tiko lit matching positions. Follow the repeating pair, then try again."
-            runeAcceptingInput = true
+            rejectCarvedRune(from: node, value: value)
         }
     }
 
@@ -6761,6 +6828,11 @@ import LearningCore
         socket.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.43, alpha: 1)
         socket.fillColor = UIColor(red: 0.42, green: 0.29, blue: 0.18, alpha: 1)
         socket.glowWidth = reducedMotion ? 0 : 8
+        // The captive jaws seat over the accepted key. Reduced Motion and
+        // animated mode end in the exact same locked-in mechanical state.
+        moveRuneSocketJaws(
+            to: 27, tint: UIColor(red: 0.97, green: 0.79, blue: 0.44, alpha: 1)
+        )
     }
 
     private func showPatternHint() {
@@ -6801,6 +6873,18 @@ import LearningCore
         if let crest = childNode(withName: "//puzzleGateCrest") as? SKShapeNode {
             crest.alpha = min(1, 0.55 + CGFloat(count) * 0.15)
             crest.glowWidth = reducedMotion ? 0 : CGFloat(count) * 4
+        }
+        if let lock = childNode(withName: "//puzzleGateLock") as? SKShapeNode {
+            // Each independently solved pattern advances a *real door gear*.
+            // Assisted attempts keep the educational gate locked until earned.
+            let angle = CGFloat(count) * .pi / 9
+            lock.removeAction(forKey: "runeGateLockAdvance")
+            if reducedMotion || !animated {
+                lock.zRotation = angle
+            } else {
+                lock.run(.rotate(toAngle: angle, duration: 0.34),
+                         withKey: "runeGateLockAdvance")
+            }
         }
     }
 
