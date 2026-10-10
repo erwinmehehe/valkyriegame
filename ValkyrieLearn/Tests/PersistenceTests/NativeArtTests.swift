@@ -1425,6 +1425,139 @@ import LearningCore
     }
 
 
+    func testPathTilesArtDirectionUsesCarvedPhysicalPropsAndReadableRoutes() async throws {
+        // Screenshot and hit-testing contract for the CURRENT approved room
+        // painting; new materials are native scenery, never substitute art.
+        for reduced in [true, false] {
+            let state = try AppState(context: ModelContext(
+                try LearningStore.container(inMemory: true)
+            ))
+            state.reducedMotion = reduced
+            for encounter in PuzzlePalaceEncounterCatalog.memoryBridge {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.changedRuleResort {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.mirrorHallOrientation {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            for encounter in PuzzlePalaceEncounterCatalog.mirrorHallRotation {
+                _ = state.recordPuzzle(encounter, outcome: .correct,
+                                       support: .independent, attempts: 1, responseTime: 1)
+            }
+            XCTAssertTrue(state.puzzlePathTilesAvailable)
+            state.travel(to: .pathTiles)
+
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+            let controller = UIViewController()
+            let view = SKView(frame: window.bounds)
+            controller.view = view
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            let scene = PuzzlePalaceScene(state: state)
+            scene.reducedMotion = reduced
+            view.presentScene(scene)
+
+            let encounter = try XCTUnwrap(
+                scene.nativeReviewActiveEncounter as? PuzzlePathEncounter
+            )
+            let chamber = try XCTUnwrap(
+                scene.childNode(withName: "pathTilesChamber") as? SKShapeNode
+            )
+            XCTAssertNotNil(chamber.path,
+                            "The playable floor must be carved stone, not a plain UI ellipse.")
+            XCTAssertNotNil(chamber.fillTexture,
+                            "Stone material must be derived from the approved illustrated room.")
+            XCTAssertLessThan(chamber.calculateAccumulatedFrame().width, 500)
+            XCTAssertNotNil(scene.childNode(withName: "decorativePathDaisFoot"))
+            XCTAssertNotNil(scene.childNode(withName: "decorativePathNameplate"))
+            XCTAssertNotNil(scene.childNode(withName: "decorativePathTrailHeaderStone"))
+
+            let grid = try XCTUnwrap(scene.childNode(withName: "pathGrid"))
+            let tile = try XCTUnwrap(
+                grid.childNode(withName: "pathStone0_0") as? SKShapeNode
+            )
+            XCTAssertNotNil(tile.path)
+            XCTAssertNotNil(tile.fillTexture)
+            XCTAssertNotNil(tile.childNode(withName: "decorativePathStoneDepth"))
+            XCTAssertNotNil(tile.childNode(withName: "decorativePathStoneFacet"))
+            XCTAssertNotNil(tile.childNode(withName: "pathStoneBevel"))
+
+            let firstBroken = try XCTUnwrap(encounter.blocked.first)
+            let cracked = try XCTUnwrap(grid.childNode(
+                withName: "pathStone\(firstBroken.x)_\(firstBroken.y)"
+            ))
+            XCTAssertNotNil(cracked.childNode(withName: "pathBrokenStone"))
+            XCTAssertNotNil(cracked.childNode(withName: "decorativePathBrokenSeam"))
+            XCTAssertNotNil(cracked.childNode(withName: "decorativePathBrokenChip"))
+
+            let choiceY: [CGFloat] = [325, 245, 165]
+            for index in encounter.choices.indices {
+                let reader = try XCTUnwrap(
+                    scene.childNode(withName: "pathChoice\(index)")
+                )
+                XCTAssertGreaterThanOrEqual(reader.calculateAccumulatedFrame().width, 280)
+                XCTAssertGreaterThanOrEqual(reader.calculateAccumulatedFrame().height, 60)
+                XCTAssertNotNil(reader.childNode(withName: "decorativePathChoiceFeedbackRim"))
+                XCTAssertNotNil(reader.childNode(withName: "decorativePathChoiceSeal"))
+                XCTAssertNotNil(reader.childNode(withName: "decorativePathChoiceShaft"))
+                XCTAssertNotNil(reader.childNode(withName: "decorativePathChoiceRune0"))
+                XCTAssertTrue(reader.isAccessibilityElement)
+                XCTAssertTrue((reader.accessibilityLabel ?? "").contains(
+                    encounter.choices[index][0].rawValue
+                ), "The spoken route must explain the actual direction sequence.")
+                XCTAssertEqual(
+                    scene.targetName(at: CGPoint(x: 1100, y: choiceY[index])),
+                    "pathChoice\(index)",
+                    "Decorative engraved stones cannot steal a scored trail touch."
+                )
+            }
+
+            XCTAssertTrue(
+                state.profile.progress(for: PuzzleSkills.pathPlanning).evidence.isEmpty
+            )
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-PathTiles-Polished-Initial")
+            }
+            let correctIndex = try XCTUnwrap(encounter.choices.indices.first {
+                encounter.isValidChoice($0)
+            })
+            let chosen = try XCTUnwrap(
+                scene.childNode(withName: "pathChoice\(correctIndex)")
+            )
+            scene.handleTap(at: CGPoint(x: 1100, y: choiceY[correctIndex]))
+            let chosenRim = try XCTUnwrap(chosen.childNode(
+                withName: "decorativePathChoiceFeedbackRim"
+            ) as? SKShapeNode)
+            var red: CGFloat = 0, green: CGFloat = 0
+            var blue: CGFloat = 0, alpha: CGFloat = 0
+            XCTAssertTrue(chosenRim.strokeColor.getRed(
+                &red, green: &green, blue: &blue, alpha: &alpha
+            ))
+            XCTAssertGreaterThan(green, red,
+                                 "Correct route reader must physically confirm the selection.")
+            XCTAssertNotNil(grid.childNode(withName: "pathRouteTrace"))
+            XCTAssertNotNil(grid.childNode(withName: "decorativePathRouteUnderlight"))
+            XCTAssertEqual(
+                state.profile.progress(for: PuzzleSkills.pathPlanning).evidence.count, 1,
+                "Visual ornamentation must never write an extra learning outcome."
+            )
+            if reduced {
+                try await capture(scene, in: view,
+                                  name: "Puzzle-Palace-4x3-PathTiles-Polished-Selected")
+            }
+
+            scene.willLeave()
+            view.presentScene(nil)
+            window.isHidden = true
+        }
+    }
+
     func testPathTilesWrongPlanMakesTikoStopSafelyBeforeAssistedRetry() async throws {
         for motionReduced in [true, false] {
             let state = try AppState(context: ModelContext(
@@ -1486,7 +1619,11 @@ import LearningCore
                            accuracy: 1,
                            "Tiko must stop on the last walkable stone, not the blocked tile.")
             XCTAssertNotNil(initialGrid.childNode(withName: "pathRouteTrace"))
-            XCTAssertNotNil(initialGrid.childNode(withName: "pathSafeStopMarker"))
+            XCTAssertNotNil(initialGrid.childNode(withName: "decorativePathRouteUnderlight"))
+            let stop = try XCTUnwrap(initialGrid.childNode(withName: "pathSafeStopMarker"))
+            XCTAssertNotNil(stop.childNode(withName: "decorativePathStopRailFoot"))
+            XCTAssertNotNil(stop.childNode(withName: "decorativePathStopRailBar"),
+                            "The stop is a real raised rail, not a floating pause glyph.")
             XCTAssertNil(scene.childNode(withName: "pathNext"))
             XCTAssertFalse(state.puzzlePathTilesComplete)
             let wrongEvidence = state.profile.progress(for: PuzzleSkills.pathPlanning).evidence
@@ -4058,6 +4195,21 @@ import LearningCore
                                 "Saved safe route must remain visibly connected.")
                 XCTAssertNil(restored.childNode(withName: "pathChoice0"),
                              "Completed room cannot reopen answer workbenches.")
+                let completedPassage = try XCTUnwrap(
+                    restored.childNode(withName: "decorativePathRestoredPassage")
+                )
+                XCTAssertNotNil(completedPassage.childNode(
+                    withName: "decorativePathRestoredArch"
+                ), "Returning to Path Tiles should show a physical exit into Command Gears.")
+                XCTAssertNotNil(completedPassage.childNode(
+                    withName: "decorativePathRestoredThreshold"
+                ))
+                XCTAssertNotNil(restored.childNode(withName: "decorativePathRestoredFloorLink"))
+                let routeHeader = try XCTUnwrap(restored.childNode(
+                    withName: "pathTrailHeader"
+                ) as? SKLabelNode)
+                XCTAssertEqual(routeHeader.text, "PASSAGE OPEN",
+                               "After completion, do not tell a child to pick a route that is gone.")
             }
             if world == .mirrorHall {
                 for index in 0..<3 {
