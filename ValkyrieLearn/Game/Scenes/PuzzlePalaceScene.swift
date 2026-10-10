@@ -1594,7 +1594,11 @@ import LearningCore
 
     private func clearRuneObjects() {
         childNode(withName: "runeBoard")?.removeFromParent()
-        children.filter { $0.name == "runeChoice" }.forEach { $0.removeFromParent() }
+        children.filter { $0.name == "runeChoice"
+            || $0.name == "decorativeRuneVacantPedestal"
+            || $0.name == "decorativeRuneRejectedKey"
+            || $0.name == "decorativeRuneInTransit"
+        }.forEach { $0.removeFromParent() }
         clearAttentionCue()
     }
 
@@ -6654,6 +6658,42 @@ import LearningCore
         )
     }
 
+    @discardableResult
+    private func showVacantRunePedestal(at point: CGPoint) -> SKNode {
+        // The physical stand must remain on the floor when its key travels.
+        // It is decorative, outside the assessment and never intercepts taps.
+        let pedestal = SKNode()
+        pedestal.name = "decorativeRuneVacantPedestal"
+        pedestal.position = point
+        pedestal.zPosition = 5
+
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 118, height: 21))
+        shadow.name = "decorativeRuneVacantShadow"
+        shadow.position.y = -76
+        shadow.fillColor = UIColor(red: 0.10, green: 0.075, blue: 0.15, alpha: 0.46)
+        shadow.strokeColor = .clear
+        pedestal.addChild(shadow)
+
+        let foot = SKShapeNode(path: runeCarvedOutline(width: 118, height: 28))
+        foot.name = "decorativeRuneVacantFoot"
+        foot.position.y = -58
+        foot.fillColor = UIColor(red: 0.35, green: 0.26, blue: 0.34, alpha: 1)
+        foot.fillTexture = palaceStoneTexture
+        foot.strokeColor = UIColor(red: 0.84, green: 0.65, blue: 0.43, alpha: 1)
+        foot.lineWidth = 3
+        pedestal.addChild(foot)
+
+        let seat = SKShapeNode(ellipseOf: CGSize(width: 85, height: 14))
+        seat.name = "decorativeRuneVacantSeat"
+        seat.position.y = -42
+        seat.fillColor = UIColor(red: 0.17, green: 0.13, blue: 0.25, alpha: 1)
+        seat.strokeColor = UIColor(red: 0.96, green: 0.75, blue: 0.46, alpha: 0.83)
+        seat.lineWidth = 2
+        pedestal.addChild(seat)
+        addChild(pedestal)
+        return pedestal
+    }
+
     private func rejectCarvedRune(from selected: SKNode, value: String) {
         // The child's wrong physical key travels to the door, visibly fails
         // the mechanical fit, and returns to the SAME plinth. The assessment
@@ -6668,6 +6708,7 @@ import LearningCore
         bouncedKey.position = selected.position
         bouncedKey.setScale(1.19)
         bouncedKey.zPosition = 1800
+        let vacantPedestal = showVacantRunePedestal(at: selected.position)
         selected.isHidden = true
         addChild(bouncedKey)
 
@@ -6681,10 +6722,11 @@ import LearningCore
                 .move(to: selected.position, duration: 0.22),
                 .scale(to: 1.19, duration: 0.22)
             ]),
-            .run { [weak self, weak selected] in
+            .run { [weak self, weak selected, weak vacantPedestal] in
                 // Restore the original key before removing the temporary
                 // actor: removing an action owner first can drop callbacks.
                 selected?.isHidden = false
+                vacantPedestal?.removeFromParent()
                 self?.runeAcceptingInput = true
             },
             .removeFromParent()
@@ -6725,7 +6767,8 @@ import LearningCore
         if value == encounter.answer {
             solved = true
             clearAttentionCue()
-            pulse(node)
+            // The true key travels to the lock; a generic scale pulse would
+            // shrink the floor key without seating it in the carved stone.
             seatCarvedRune(from: node, value: value)
             _ = state.recordPuzzle(
                 encounter,
@@ -6795,7 +6838,11 @@ import LearningCore
             fillSocket(with: value)
             return
         }
+        showVacantRunePedestal(at: selected.position)
         guard !reducedMotion else {
+            // The same seated-key and vacant-floor-plinth state is visible
+            // immediately without moving sprites in Reduced Motion.
+            selected.isHidden = true
             fillSocket(with: value)
             return
         }
