@@ -3327,6 +3327,7 @@ import LearningCore
                         && (scene.instruction.text ?? "").hasPrefix("HOLD")
                 }
                 scene.handleTap(at: CGPoint(x: 755, y: 365))
+                scene.speed = 1 // Resume the timed replay after evidence is recorded.
             }
 
         case .sortingPedestal:
@@ -3519,6 +3520,15 @@ import LearningCore
             default:
                 // Later rooms rebuild an encounter immediately after error.
                 frozenEncounter = name
+            }
+            if world == .stopGoOrbs {
+                // The timed HOLD phase is intentionally shorter than the
+                // screenshot exporter. Freeze the live SpriteKit signal while
+                // capturing the initial frame and the deliberate wrong tap.
+                try await waitUntil(timeout: 4) {
+                    (scene.instruction.text ?? "").hasPrefix("HOLD")
+                }
+                scene.speed = 0
             }
             try await capture(scene, in: view, name: "Illustrated-Palace-4x3-" + name)
             try await exercisePalaceVisualReview(
