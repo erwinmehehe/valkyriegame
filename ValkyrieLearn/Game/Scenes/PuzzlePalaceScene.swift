@@ -1706,36 +1706,115 @@ import LearningCore
     private func memoryPad(_ symbol: String, index: Int) -> SKNode {
         let root = SKNode()
         root.name = "memoryPad"
-        // These physical rune controls must render above the newly raised
-        // 3D bridge deck and chasm. Otherwise SpriteKit hit-testing selects
-        // the stone scenery and a child's input is silently ignored.
         root.zPosition = 900
         root.userData = NSMutableDictionary(dictionary: ["symbol": symbol])
         let runeName = ["★": "star", "☾": "moon", "◆": "diamond", "●": "circle"][symbol]
             ?? "symbol"
         makeAccessible(root, label: "Memory rune: \(runeName)")
 
-        let stone = carvedPalaceStone(CGSize(width: 91, height: 89), radius: 19)
+        // A carved tablet rises out of the existing floor, not a rounded
+        // generic button hovering in front of the illustrated bridge.
+        // Root name/position and approximately 100pt tap size stay stable.
+        let stone = SKShapeNode(path: memoryBridgeStonePath(width: 97, height: 94))
+        stone.name = "memoryPad"
         stone.fillColor = UIColor(
-            red: 0.73 + CGFloat(index) * 0.015,
-            green: 0.65,
-            blue: 0.79,
+            red: 0.63 + CGFloat(index) * 0.012,
+            green: 0.54,
+            blue: 0.70,
             alpha: 1
         )
-        stone.name = "memoryPad"
+        stone.fillTexture = memoryBridgeStoneTexture
+        stone.strokeColor = UIColor(red: 0.99, green: 0.79, blue: 0.52, alpha: 1)
+        stone.lineWidth = 4
         root.addChild(stone)
 
-        let glyph = ArtSystem.label(symbol, size: 37)
-        glyph.fontColor = UIColor(red: 1.0, green: 0.88, blue: 0.48, alpha: 1)
-        glyph.name = "memoryPad"
-        root.addChild(glyph)
+        let stoneDepth = SKShapeNode(
+            path: memoryBridgeStonePath(width: 96, height: 93)
+        )
+        stoneDepth.name = "decorativeMemoryPadDepth"
+        stoneDepth.position.y = -7
+        stoneDepth.fillColor = UIColor(red: 0.16, green: 0.12, blue: 0.22, alpha: 1)
+        stoneDepth.strokeColor = UIColor(red: 0.38, green: 0.28, blue: 0.30, alpha: 1)
+        stoneDepth.lineWidth = 2
+        stoneDepth.zPosition = -2
+        stone.addChild(stoneDepth)
 
-        let foot = carvedPalaceStone(CGSize(width: 104, height: 17), radius: 5)
-        foot.fillColor = UIColor(red: 0.48, green: 0.38, blue: 0.54, alpha: 1)
-        foot.position.y = -55
-        foot.name = "memoryPad"
-        foot.zPosition = -1
-        root.addChild(foot)
+        let inset = SKShapeNode(path: memoryBridgeStonePath(width: 80, height: 77))
+        inset.name = "decorativeMemoryPadInlay"
+        inset.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.34, alpha: 0.84)
+        inset.strokeColor = UIColor(red: 0.98, green: 0.82, blue: 0.58, alpha: 0.87)
+        inset.lineWidth = 2
+        inset.zPosition = 1
+        stone.addChild(inset)
+
+        let lamp = SKShapeNode(circleOfRadius: 31)
+        lamp.name = "decorativeMemoryPadLens"
+        lamp.fillColor = UIColor(red: 0.23, green: 0.18, blue: 0.36, alpha: 0.96)
+        lamp.strokeColor = UIColor(red: 0.93, green: 0.74, blue: 0.48, alpha: 1)
+        lamp.lineWidth = 3
+        lamp.zPosition = 2
+        stone.addChild(lamp)
+
+        let etchedGlass = SKShapeNode(circleOfRadius: 25)
+        etchedGlass.name = "decorativeMemoryPadGlass"
+        etchedGlass.fillColor = UIColor(red: 0.33, green: 0.25, blue: 0.49, alpha: 0.96)
+        etchedGlass.strokeColor = UIColor(red: 0.99, green: 0.87, blue: 0.66, alpha: 0.36)
+        etchedGlass.lineWidth = 2
+        etchedGlass.zPosition = 3
+        stone.addChild(etchedGlass)
+
+        let glyph = ArtSystem.label(symbol, size: 41)
+        glyph.name = "memoryPad"
+        glyph.fontColor = UIColor(red: 1, green: 0.92, blue: 0.69, alpha: 1)
+        glyph.zPosition = 4
+        stone.addChild(glyph)
+
+        // Two tiny captive clips and a three-part stone footing make each
+        // rune a real socket linked to a chasm relay.
+        for x in [CGFloat(-42), 42] {
+            let clip = SKShapeNode(
+                rectOf: CGSize(width: 8, height: 36), cornerRadius: 3
+            )
+            clip.name = "decorativeMemoryPadClasp"
+            clip.position = CGPoint(x: x, y: 0)
+            clip.fillColor = UIColor(red: 0.70, green: 0.48, blue: 0.33, alpha: 1)
+            clip.strokeColor = UIColor(red: 1, green: 0.84, blue: 0.54, alpha: 1)
+            clip.lineWidth = 1.5
+            clip.zPosition = 5
+            stone.addChild(clip)
+        }
+
+        let footShadow = SKShapeNode(ellipseOf: CGSize(width: 127, height: 24))
+        footShadow.name = "decorativeMemoryPadFloorShadow"
+        footShadow.position.y = -66
+        footShadow.fillColor = UIColor(red: 0.08, green: 0.06, blue: 0.15, alpha: 0.65)
+        footShadow.strokeColor = .clear
+        footShadow.zPosition = -4
+        root.addChild(footShadow)
+
+        let base = SKShapeNode(
+            path: memoryBridgeStonePath(width: 118, height: 26)
+        )
+        base.name = "memoryPad"
+        base.position.y = -49
+        base.fillColor = UIColor(red: 0.41, green: 0.33, blue: 0.45, alpha: 1)
+        base.fillTexture = memoryBridgeStoneTexture
+        base.strokeColor = UIColor(red: 0.93, green: 0.71, blue: 0.47, alpha: 1)
+        base.lineWidth = 3
+        base.zPosition = -2
+        root.addChild(base)
+
+        let ledge = SKShapeNode(
+            path: memoryBridgeStonePath(width: 111, height: 17)
+        )
+        ledge.name = "memoryPad"
+        ledge.position.y = -42
+        ledge.fillColor = UIColor(red: 0.57, green: 0.46, blue: 0.56, alpha: 1)
+        ledge.fillTexture = memoryBridgeStoneTexture
+        ledge.strokeColor = UIColor(red: 0.97, green: 0.80, blue: 0.53, alpha: 0.87)
+        ledge.lineWidth = 2
+        ledge.zPosition = -1
+        root.addChild(ledge)
         return root
     }
 
@@ -1786,9 +1865,24 @@ import LearningCore
         }) else { return }
         guard let stone = pad.children.compactMap({ $0 as? SKShapeNode }).first else { return }
         stone.fillColor = highlighted
-            ? UIColor(red: 0.91, green: 0.66, blue: 0.24, alpha: 1)
-            : UIColor(red: 0.26, green: 0.19, blue: 0.39, alpha: 0.98)
-        stone.glowWidth = highlighted ? 16 : 0
+            ? UIColor(red: 0.88, green: 0.70, blue: 0.44, alpha: 1)
+            : UIColor(red: 0.62, green: 0.53, blue: 0.69, alpha: 1)
+        stone.glowWidth = highlighted && !reducedMotion ? 5 : 0
+        if let glass = stone.childNode(
+            withName: "decorativeMemoryPadGlass"
+        ) as? SKShapeNode {
+            glass.fillColor = highlighted
+                ? UIColor(red: 0.99, green: 0.79, blue: 0.45, alpha: 1)
+                : UIColor(red: 0.33, green: 0.25, blue: 0.49, alpha: 0.96)
+            glass.glowWidth = highlighted && !reducedMotion ? 10 : 0
+        }
+        if let lens = stone.childNode(
+            withName: "decorativeMemoryPadLens"
+        ) as? SKShapeNode {
+            lens.strokeColor = highlighted
+                ? UIColor(red: 1, green: 0.97, blue: 0.72, alpha: 1)
+                : UIColor(red: 0.93, green: 0.74, blue: 0.48, alpha: 1)
+        }
         if highlighted && !reducedMotion {
             pad.run(.sequence([
                 .scale(to: 1.12, duration: 0.10),
