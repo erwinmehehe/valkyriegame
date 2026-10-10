@@ -1301,12 +1301,35 @@ import LearningCore
             CGPoint(x: 1035, y: 218)
         ]
         for (index, point) in steppingPoints.enumerated() {
-            let stone = SKShapeNode(ellipseOf: CGSize(width: 58, height: 26))
-            stone.fillColor = UIColor(red: 0.24, green: 0.19, blue: 0.34, alpha: 0.54)
-            stone.strokeColor = UIColor(red: 0.66, green: 0.55, blue: 0.88, alpha: 0.34)
-            stone.lineWidth = 2
+            let stone = SKShapeNode(
+                path: runeCarvedOutline(width: 58, height: 31)
+            )
+            stone.name = "runePathStone\(index)"
             stone.position = point
             stone.zRotation = index.isMultiple(of: 2) ? 0.04 : -0.05
+            stone.fillColor = UIColor(red: 0.29, green: 0.22, blue: 0.37, alpha: 0.67)
+            stone.fillTexture = palaceStoneTexture
+            stone.strokeColor = UIColor(red: 0.75, green: 0.62, blue: 0.49, alpha: 0.62)
+            stone.lineWidth = 2.5
+            let depth = SKShapeNode(
+                path: runeCarvedOutline(width: 56, height: 29)
+            )
+            depth.name = "decorativeRuneStepDepth"
+            depth.position.y = -5
+            depth.zPosition = -1
+            depth.fillColor = UIColor(red: 0.10, green: 0.075, blue: 0.15, alpha: 0.81)
+            depth.strokeColor = UIColor(red: 0.28, green: 0.20, blue: 0.23, alpha: 0.90)
+            depth.lineWidth = 1.5
+            stone.addChild(depth)
+            let brass = SKShapeNode(
+                path: runeCarvedOutline(width: 45, height: 19)
+            )
+            brass.name = "decorativeRuneStepInlay"
+            brass.fillColor = UIColor(red: 0.34, green: 0.23, blue: 0.26, alpha: 0.44)
+            brass.strokeColor = UIColor(red: 0.91, green: 0.73, blue: 0.44, alpha: 0.44)
+            brass.lineWidth = 1
+            brass.zPosition = 1
+            stone.addChild(brass)
             pathRoot.addChild(stone)
         }
         addChild(pathRoot)
@@ -1348,14 +1371,36 @@ import LearningCore
         // stretching beyond its arch like a horizontal answer menu. Read in
         // ordinary row order: top-left, top-right, bottom-left, bottom-right.
         let housing = SKShapeNode(
-            rectOf: CGSize(width: 161, height: 164), cornerRadius: 24
+            path: runeCarvedOutline(width: 168, height: 170)
         )
-        housing.fillColor = UIColor(red: 0.18, green: 0.12, blue: 0.23, alpha: 0.29)
-        housing.strokeColor = UIColor(red: 0.90, green: 0.72, blue: 0.44, alpha: 0.77)
+        housing.fillColor = UIColor(red: 0.28, green: 0.20, blue: 0.33, alpha: 0.41)
+        housing.fillTexture = palaceStoneTexture
+        housing.strokeColor = UIColor(red: 0.95, green: 0.76, blue: 0.47, alpha: 0.91)
         housing.lineWidth = 3
         housing.name = "runeLockHousing"
         housing.zPosition = -3
         board.addChild(housing)
+
+        let lockRim = SKShapeNode(path: runeCarvedOutline(width: 157, height: 159))
+        lockRim.name = "decorativeRuneHousingInlay"
+        lockRim.fillColor = UIColor(red: 0.16, green: 0.11, blue: 0.22, alpha: 0.28)
+        lockRim.strokeColor = UIColor(red: 1, green: 0.87, blue: 0.62, alpha: 0.32)
+        lockRim.lineWidth = 2
+        lockRim.zPosition = -2
+        housing.addChild(lockRim)
+
+        for x in [CGFloat(-76), 76] {
+            for y in [CGFloat(-76), 76] {
+                let pin = SKShapeNode(circleOfRadius: 3)
+                pin.name = "decorativeRuneHousingRivet"
+                pin.position = CGPoint(x: x, y: y)
+                pin.fillColor = UIColor(red: 0.93, green: 0.74, blue: 0.45, alpha: 1)
+                pin.strokeColor = UIColor(red: 0.27, green: 0.18, blue: 0.23, alpha: 1)
+                pin.lineWidth = 1
+                pin.zPosition = 5
+                housing.addChild(pin)
+            }
+        }
 
         let engravedTrail = CGMutablePath()
         engravedTrail.move(to: CGPoint(x: -40, y: 38))
