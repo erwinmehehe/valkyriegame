@@ -1726,6 +1726,17 @@ import LearningCore
             support = support == .independent ? .lightHint : .strongHint
             memoryInput = []
             resetAttemptPlanks()
+            let rejectedPad = SKShapeNode(ellipseOf: CGSize(width: 98, height: 96))
+            rejectedPad.name = "memoryRejectedRune"
+            rejectedPad.fillColor = UIColor(red: 0.74, green: 0.18, blue: 0.16, alpha: 0.35)
+            rejectedPad.strokeColor = UIColor(red: 1, green: 0.56, blue: 0.38, alpha: 1)
+            rejectedPad.lineWidth = 6
+            rejectedPad.zPosition = 9
+            node.addChild(rejectedPad)
+            rejectedPad.run(.sequence([
+                .wait(forDuration: 0.65),
+                .removeFromParent()
+            ]), withKey: "memoryRejected")
             valkyrie.pose(.react)
             nudge(node)
             tiko.pose(.react)
@@ -1778,7 +1789,7 @@ import LearningCore
             : "That bridge path is stable. Try the next memory independently."
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
             .run { [weak self] in
                 guard let self else { return }
                 self.memoryEncounter = self.state.nextPuzzleMemoryEncounter()
@@ -2275,7 +2286,7 @@ import LearningCore
             : "That orb is stable. Now try the rhythm independently."
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.24 : 0.95),
+            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
             .run { [weak self] in
                 guard let self else { return }
                 self.inhibitionEncounter = self.state.nextPuzzleStopGoEncounter()
@@ -2713,7 +2724,7 @@ import LearningCore
 
         sortTrialIndex += 1
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.10 : 0.32),
+            .wait(forDuration: reducedMotion ? 0.55 : 0.75),
             .run { [weak self] in self?.presentSortTrial() }
         ]), withKey: "sortNext")
     }
@@ -2777,7 +2788,7 @@ import LearningCore
         }
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
             .run { [weak self] in
                 guard let self else { return }
                 self.sortEncounter = self.state.nextPuzzleSortingEncounter()
@@ -3065,7 +3076,7 @@ import LearningCore
 
         resortObjectIndex += 1
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.10 : 0.30),
+            .wait(forDuration: reducedMotion ? 0.55 : 0.75),
             .run { [weak self] in self?.presentResortObject() }
         ]), withKey: "resortNext")
     }
@@ -3120,7 +3131,7 @@ import LearningCore
             : "That re-sort is stable. Try the next vault set independently."
 
         run(.sequence([
-            .wait(forDuration: reducedMotion ? 0.22 : 0.95),
+            .wait(forDuration: reducedMotion ? 0.75 : 1.15),
             .run { [weak self] in
                 guard let self else { return }
                 self.resortEncounter = self.state.nextPuzzleResortEncounter()
@@ -6258,7 +6269,7 @@ import LearningCore
 
             run(
                 .sequence([
-                    .wait(forDuration: reducedMotion ? 0.2 : 1.0),
+                    .wait(forDuration: reducedMotion ? 0.75 : 1.15),
                     .run { [weak self] in
                         guard let self else { return }
                         self.encounter = self.state.nextPuzzleEncounter()
@@ -6279,6 +6290,18 @@ import LearningCore
             errorFeedback()
             valkyrie.pose(.react)
             nudge(node)
+            // The carved lock visibly refuses the wrong stone, even with Reduced Motion.
+            if let socket = childNode(withName: "//runeSocket") as? SKShapeNode {
+                socket.strokeColor = UIColor(red: 1, green: 0.48, blue: 0.35, alpha: 1)
+                socket.fillColor = UIColor(red: 0.43, green: 0.15, blue: 0.15, alpha: 1)
+                socket.run(.sequence([
+                    .wait(forDuration: 0.65),
+                    .run { [weak socket] in
+                        socket?.strokeColor = UIColor(red: 0.96, green: 0.76, blue: 0.40, alpha: 0.96)
+                        socket?.fillColor = UIColor(red: 0.11, green: 0.08, blue: 0.14, alpha: 1)
+                    }
+                ]), withKey: "runeRejected")
+            }
             showPatternHint()
             instruction.text = support == .lightHint
                 ? "Look for the two-rune beat that repeats."
