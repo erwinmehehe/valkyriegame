@@ -6026,7 +6026,9 @@ import LearningCore
             // A broken chain wedges into the spinning flywheel, while a
             // repaired one retracts and leaves the machine free to run.
             let destination: CGFloat = jammed ? 45 : (powered ? 86 : 76)
-            if reducedMotion {
+            // A fresh attempt must start with a cleared flywheel before
+            // its new controls are interactive. Keep motion for test results.
+            if reducedMotion || (!powered && !jammed) {
                 clutch.position.x = destination
             } else {
                 clutch.run(.moveTo(x: destination, duration: 0.22),
